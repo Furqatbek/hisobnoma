@@ -23,5 +23,6 @@ public interface ProductAttributeMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "version", ignore = true)
     ProductAttribute toEntity(CreateProductRequest.CreateAttributeRequest request);
 }

@@ -26,5 +26,6 @@ public interface ProductVariantMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "version", ignore = true)
     ProductVariant toEntity(CreateProductRequest.CreateVariantRequest request);
 }
