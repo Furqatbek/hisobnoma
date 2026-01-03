@@ -9,45 +9,49 @@ CREATE TABLE customers (
     id BIGSERIAL PRIMARY KEY,
     tenant_id BIGINT NOT NULL,
     code VARCHAR(50) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    legal_name VARCHAR(255),
+    name VARCHAR(200) NOT NULL,
+    legal_name VARCHAR(200),
     tax_id VARCHAR(50),
-    email VARCHAR(255),
+    email VARCHAR(100),
     phone VARCHAR(50),
+    alt_phone VARCHAR(50),
+    mobile_phone VARCHAR(50),
     website VARCHAR(255),
 
-    -- Billing Address
-    billing_address_line1 VARCHAR(255),
-    billing_address_line2 VARCHAR(255),
-    billing_city VARCHAR(100),
-    billing_state VARCHAR(100),
-    billing_postal_code VARCHAR(20),
-    billing_country VARCHAR(100),
-
-    -- Shipping Address
-    shipping_address_line1 VARCHAR(255),
-    shipping_address_line2 VARCHAR(255),
-    shipping_city VARCHAR(100),
-    shipping_state VARCHAR(100),
-    shipping_postal_code VARCHAR(20),
-    shipping_country VARCHAR(100),
+    -- Address (simplified)
+    address VARCHAR(500),
+    shipping_address VARCHAR(500),
+    city VARCHAR(100),
+    state VARCHAR(100),
+    country VARCHAR(100),
+    postal_code VARCHAR(20),
 
     -- Terms and Limits
-    payment_terms INTEGER DEFAULT 30,
-    credit_limit DECIMAL(15, 2),
+    payment_terms VARCHAR(100),
+    payment_terms_days INTEGER,
+    credit_limit DECIMAL(18, 4),
     credit_hold BOOLEAN NOT NULL DEFAULT FALSE,
 
     -- Balances
-    current_balance DECIMAL(15, 2) NOT NULL DEFAULT 0,
-    total_invoiced DECIMAL(15, 2) NOT NULL DEFAULT 0,
-    total_received DECIMAL(15, 2) NOT NULL DEFAULT 0,
+    current_balance DECIMAL(18, 4) NOT NULL DEFAULT 0,
+    total_invoiced DECIMAL(18, 4) NOT NULL DEFAULT 0,
+    total_received DECIMAL(18, 4) NOT NULL DEFAULT 0,
 
-    -- Price List Reference
+    -- Currency and Accounts
+    default_currency VARCHAR(3) DEFAULT 'UZS',
+    ar_account_id BIGINT,
+    revenue_account_id BIGINT,
     price_list_id BIGINT,
+    discount_percent DECIMAL(5, 2),
+
+    -- Classification
+    customer_type VARCHAR(50),
+    sales_rep_id BIGINT,
 
     -- Status
     active BOOLEAN NOT NULL DEFAULT TRUE,
-    notes TEXT,
+    notes VARCHAR(1000),
+    internal_notes VARCHAR(1000),
 
     -- Audit
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -59,6 +63,8 @@ CREATE TABLE customers (
 );
 
 CREATE INDEX idx_customers_tenant ON customers(tenant_id);
+CREATE INDEX idx_customers_code ON customers(code);
+CREATE INDEX idx_customers_email ON customers(email);
 CREATE INDEX idx_customers_active ON customers(tenant_id, active);
 CREATE INDEX idx_customers_credit_hold ON customers(tenant_id, credit_hold);
 
@@ -68,12 +74,13 @@ CREATE INDEX idx_customers_credit_hold ON customers(tenant_id, credit_hold);
 CREATE TABLE customer_contacts (
     id BIGSERIAL PRIMARY KEY,
     customer_id BIGINT NOT NULL,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100),
+    name VARCHAR(100) NOT NULL,
     title VARCHAR(100),
-    email VARCHAR(255),
+    department VARCHAR(100),
+    email VARCHAR(100),
     phone VARCHAR(50),
-    mobile VARCHAR(50),
+    mobile_phone VARCHAR(50),
+    fax VARCHAR(50),
 
     -- Role Flags
     is_primary BOOLEAN NOT NULL DEFAULT FALSE,
@@ -81,7 +88,7 @@ CREATE TABLE customer_contacts (
     is_shipping_contact BOOLEAN NOT NULL DEFAULT FALSE,
 
     active BOOLEAN NOT NULL DEFAULT TRUE,
-    notes TEXT,
+    notes VARCHAR(500),
 
     -- Audit
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -92,7 +99,6 @@ CREATE TABLE customer_contacts (
 );
 
 CREATE INDEX idx_customer_contacts_customer ON customer_contacts(customer_id);
-CREATE INDEX idx_customer_contacts_email ON customer_contacts(customer_id, email);
 CREATE INDEX idx_customer_contacts_primary ON customer_contacts(customer_id, is_primary);
 
 -- ============================================
@@ -103,39 +109,74 @@ CREATE TABLE ar_invoices (
     tenant_id BIGINT NOT NULL,
     invoice_number VARCHAR(50) NOT NULL,
     customer_id BIGINT NOT NULL,
+    customer_name VARCHAR(200),
+    customer_email VARCHAR(100),
 
     -- Dates
     invoice_date DATE NOT NULL,
     due_date DATE NOT NULL,
 
-    -- Amounts
-    subtotal DECIMAL(15, 2) NOT NULL DEFAULT 0,
-    discount_percent DECIMAL(5, 2) DEFAULT 0,
-    discount_amount DECIMAL(15, 2) DEFAULT 0,
-    tax_amount DECIMAL(15, 2) DEFAULT 0,
-    total_amount DECIMAL(15, 2) NOT NULL,
-    paid_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
-    balance_due DECIMAL(15, 2) NOT NULL,
-
     -- Status
-    status VARCHAR(50) NOT NULL DEFAULT 'DRAFT',
-
-    -- Payment Terms
-    payment_terms INTEGER,
+    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
 
     -- POS Integration
     pos_transaction_id BIGINT,
     pos_transaction_number VARCHAR(50),
 
-    -- References
-    purchase_order_number VARCHAR(100),
+    -- Sales Order Reference
     sales_order_id BIGINT,
     sales_order_number VARCHAR(50),
 
-    -- GL Reference
-    gl_journal_entry_id BIGINT,
+    -- Amounts
+    subtotal DECIMAL(18, 4) NOT NULL DEFAULT 0,
+    discount_amount DECIMAL(18, 4) DEFAULT 0,
+    discount_percent DECIMAL(5, 2),
+    tax_amount DECIMAL(18, 4) DEFAULT 0,
+    shipping_amount DECIMAL(18, 4) DEFAULT 0,
+    total_amount DECIMAL(18, 4) NOT NULL DEFAULT 0,
+    paid_amount DECIMAL(18, 4) NOT NULL DEFAULT 0,
+    credit_applied DECIMAL(18, 4) DEFAULT 0,
+    balance_due DECIMAL(18, 4) NOT NULL DEFAULT 0,
 
-    notes TEXT,
+    -- Currency
+    currency VARCHAR(3) DEFAULT 'UZS',
+    exchange_rate DECIMAL(18, 8) DEFAULT 1,
+
+    -- Terms
+    payment_terms VARCHAR(100),
+    payment_terms_days INTEGER,
+
+    -- Account References
+    ar_account_id BIGINT,
+    revenue_account_id BIGINT,
+
+    -- Description and Notes
+    description VARCHAR(1000),
+    notes VARCHAR(1000),
+    internal_notes VARCHAR(1000),
+
+    -- Addresses
+    billing_address VARCHAR(500),
+    shipping_address VARCHAR(500),
+
+    -- GL References
+    gl_posted BOOLEAN NOT NULL DEFAULT FALSE,
+    gl_journal_entry_id BIGINT,
+    gl_posted_at TIMESTAMP,
+
+    -- Sent tracking
+    sent_at TIMESTAMP,
+    sent_by BIGINT,
+
+    -- Cancellation
+    cancelled_by BIGINT,
+    cancelled_at TIMESTAMP,
+    cancellation_reason VARCHAR(500),
+
+    -- Write-off
+    written_off_by BIGINT,
+    written_off_at TIMESTAMP,
+    write_off_reason VARCHAR(500),
 
     -- Audit
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -151,6 +192,7 @@ CREATE TABLE ar_invoices (
 );
 
 CREATE INDEX idx_ar_invoices_tenant ON ar_invoices(tenant_id);
+CREATE INDEX idx_ar_invoices_number ON ar_invoices(invoice_number);
 CREATE INDEX idx_ar_invoices_customer ON ar_invoices(tenant_id, customer_id);
 CREATE INDEX idx_ar_invoices_status ON ar_invoices(tenant_id, status);
 CREATE INDEX idx_ar_invoices_date ON ar_invoices(tenant_id, invoice_date);
@@ -170,17 +212,17 @@ CREATE TABLE ar_invoice_lines (
     description VARCHAR(500) NOT NULL,
 
     -- Quantities and Prices
-    quantity DECIMAL(15, 4) NOT NULL,
-    unit_price DECIMAL(15, 4) NOT NULL,
-    unit_cost DECIMAL(15, 4),
+    quantity DECIMAL(18, 4) NOT NULL,
+    unit_price DECIMAL(18, 4) NOT NULL,
+    unit_cost DECIMAL(18, 4),
 
     -- Calculations
     discount_percent DECIMAL(5, 2) DEFAULT 0,
-    tax_amount DECIMAL(15, 2) DEFAULT 0,
-    line_total DECIMAL(15, 2) NOT NULL,
+    tax_amount DECIMAL(18, 4) DEFAULT 0,
+    line_total DECIMAL(18, 4) NOT NULL,
 
     -- Margin
-    profit_margin DECIMAL(15, 2),
+    profit_margin DECIMAL(18, 2),
 
     -- Audit
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -210,6 +252,13 @@ CREATE TABLE credit_notes (
     -- Dates
     credit_note_date DATE NOT NULL,
 
+    -- Status
+    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+
+    -- Reason
+    reason_code VARCHAR(50),
+    reason VARCHAR(500),
+
     -- Amounts
     credit_amount DECIMAL(18, 4) NOT NULL,
     subtotal DECIMAL(18, 4),
@@ -218,13 +267,6 @@ CREATE TABLE credit_notes (
     applied_amount DECIMAL(18, 4) NOT NULL DEFAULT 0,
     balance DECIMAL(18, 4) NOT NULL,
     refunded_amount DECIMAL(18, 4) DEFAULT 0,
-
-    -- Status
-    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
-
-    -- Reason
-    reason_code VARCHAR(50),
-    reason VARCHAR(500),
 
     -- Currency
     currency VARCHAR(3) DEFAULT 'UZS',
@@ -267,6 +309,7 @@ CREATE TABLE credit_notes (
 );
 
 CREATE INDEX idx_credit_notes_tenant ON credit_notes(tenant_id);
+CREATE INDEX idx_credit_notes_number ON credit_notes(credit_note_number);
 CREATE INDEX idx_credit_notes_customer ON credit_notes(tenant_id, customer_id);
 CREATE INDEX idx_credit_notes_status ON credit_notes(tenant_id, status);
 CREATE INDEX idx_credit_notes_original_invoice ON credit_notes(original_invoice_id);
@@ -279,29 +322,65 @@ CREATE TABLE ar_payments (
     tenant_id BIGINT NOT NULL,
     payment_number VARCHAR(50) NOT NULL,
     customer_id BIGINT NOT NULL,
+    customer_name VARCHAR(200),
 
     -- Payment Details
     payment_date DATE NOT NULL,
-    payment_amount DECIMAL(15, 2) NOT NULL,
-    payment_method VARCHAR(50) NOT NULL,
-
-    -- Bank Details
-    bank_reference VARCHAR(100),
-    check_number VARCHAR(50),
-    deposited BOOLEAN NOT NULL DEFAULT FALSE,
-    deposit_date DATE,
+    payment_amount DECIMAL(18, 4) NOT NULL,
+    payment_method VARCHAR(20) NOT NULL,
 
     -- Allocation Tracking
-    allocated_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
-    unallocated_amount DECIMAL(15, 2) NOT NULL,
+    allocated_amount DECIMAL(18, 4) NOT NULL DEFAULT 0,
+    unallocated_amount DECIMAL(18, 4) NOT NULL,
+
+    -- Currency
+    currency VARCHAR(3) DEFAULT 'UZS',
+    exchange_rate DECIMAL(18, 8) DEFAULT 1,
+
+    -- Account References
+    bank_account_id BIGINT,
+    bank_account_name VARCHAR(200),
+    cash_account_id BIGINT,
+    ar_account_id BIGINT,
+
+    -- Reference Numbers
+    reference_number VARCHAR(50),
+    check_number VARCHAR(50),
+    check_date DATE,
+    card_last_four VARCHAR(4),
+    card_type VARCHAR(20),
+    transaction_id VARCHAR(100),
+
+    memo VARCHAR(200),
+    notes VARCHAR(1000),
 
     -- Status
-    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
 
-    -- GL Reference
+    -- GL References
+    gl_posted BOOLEAN NOT NULL DEFAULT FALSE,
     gl_journal_entry_id BIGINT,
+    gl_posted_at TIMESTAMP,
 
-    notes TEXT,
+    -- Deposit
+    deposited BOOLEAN NOT NULL DEFAULT FALSE,
+    deposited_at TIMESTAMP,
+    deposited_by BIGINT,
+    deposit_reference VARCHAR(100),
+
+    -- Processing
+    processed_by BIGINT,
+    processed_at TIMESTAMP,
+
+    -- Refund
+    refunded_by BIGINT,
+    refunded_at TIMESTAMP,
+    refund_reason VARCHAR(500),
+
+    -- Cancellation
+    cancelled_by BIGINT,
+    cancelled_at TIMESTAMP,
+    cancellation_reason VARCHAR(500),
 
     -- Audit
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -317,6 +396,7 @@ CREATE TABLE ar_payments (
 );
 
 CREATE INDEX idx_ar_payments_tenant ON ar_payments(tenant_id);
+CREATE INDEX idx_ar_payments_number ON ar_payments(payment_number);
 CREATE INDEX idx_ar_payments_customer ON ar_payments(tenant_id, customer_id);
 CREATE INDEX idx_ar_payments_status ON ar_payments(tenant_id, status);
 CREATE INDEX idx_ar_payments_date ON ar_payments(tenant_id, payment_date);
@@ -331,10 +411,19 @@ CREATE TABLE ar_payment_allocations (
     ar_invoice_id BIGINT,
     credit_note_id BIGINT,
 
+    -- Invoice Reference
+    invoice_number VARCHAR(50),
+    invoice_amount DECIMAL(18, 4),
+    invoice_balance_before DECIMAL(18, 4),
+
     -- Amounts
-    allocated_amount DECIMAL(15, 2) NOT NULL,
-    discount_taken DECIMAL(15, 2) DEFAULT 0,
-    write_off_amount DECIMAL(15, 2) DEFAULT 0,
+    allocated_amount DECIMAL(18, 4) NOT NULL,
+    discount_taken DECIMAL(18, 4) DEFAULT 0,
+    write_off_amount DECIMAL(18, 4) DEFAULT 0,
+
+    -- Balance After
+    invoice_balance_after DECIMAL(18, 4),
+    notes VARCHAR(500),
 
     -- Audit
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -379,15 +468,8 @@ WHERE r.name = 'ACCOUNTANT' AND p.name IN ('FINANCE_AR_READ', 'FINANCE_AR_WRITE'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- ============================================
--- ADD AR-RELATED ACCOUNTS TO DEFAULT CHART OF ACCOUNTS
+-- TABLE COMMENTS
 -- ============================================
--- Note: These accounts should be added in a tenant-specific setup
--- This is just a reference for the account codes used in GL integration
-
--- 4200 - Sales Discounts (contra-revenue for discounts given)
--- 4300 - Sales Returns & Allowances (contra-revenue for credit notes)
--- 6200 - Bad Debt Expense (for write-offs)
-
 COMMENT ON TABLE customers IS 'Customer master records for accounts receivable';
 COMMENT ON TABLE customer_contacts IS 'Contact persons for each customer';
 COMMENT ON TABLE ar_invoices IS 'Accounts receivable invoices';
