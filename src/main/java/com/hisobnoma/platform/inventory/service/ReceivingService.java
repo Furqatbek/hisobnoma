@@ -189,7 +189,7 @@ public class ReceivingService {
                 // Receive stock
                 StockReceiveRequest stockRequest = StockReceiveRequest.builder()
                         .locationId(targetLocation.getId())
-                        .referenceType(MovementReferenceType.RECEIVING)
+                        .referenceType(MovementReferenceType.RECEIVING_ORDER)
                         .referenceId(ro.getId())
                         .referenceNumber(ro.getReceivingNumber())
                         .notes("Received from " + ro.getVendor().getName())

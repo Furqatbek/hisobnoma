@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.inventory.dto;
 
+import com.hisobnoma.platform.inventory.entity.MovementReferenceType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -21,6 +22,10 @@ public class StockAdjustRequest {
 
     @NotNull(message = "Location ID is required")
     private Long locationId;
+
+    private MovementReferenceType referenceType;
+    private Long referenceId;
+    private String referenceNumber;
 
     @NotBlank(message = "Reason is required")
     @Size(max = 200, message = "Reason must not exceed 200 characters")
@@ -59,6 +64,9 @@ public class StockAdjustRequest {
 
         // Serial tracking - which serials to adjust
         private List<String> serialNumbers;
+
+        @Size(max = 200, message = "Reason must not exceed 200 characters")
+        private String reason;
 
         @Size(max = 500, message = "Notes must not exceed 500 characters")
         private String notes;

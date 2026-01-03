@@ -261,7 +261,7 @@ public class InventoryCountService {
             if (line.hasVariance()) {
                 StockAdjustRequest adjustRequest = StockAdjustRequest.builder()
                         .locationId(ic.getLocation().getId())
-                        .referenceType(MovementReferenceType.COUNT)
+                        .referenceType(MovementReferenceType.INVENTORY_COUNT)
                         .referenceId(ic.getId())
                         .referenceNumber(ic.getCountNumber())
                         .reason("Inventory count adjustment")
