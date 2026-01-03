@@ -754,6 +754,592 @@ Paginated responses include:
 
 ---
 
+---
+
+## Inventory Module - Product Catalog (Block 3)
+
+All inventory endpoints require `INVENTORY_PRODUCT_READ`, `INVENTORY_PRODUCT_CREATE`, `INVENTORY_PRODUCT_UPDATE`, or `INVENTORY_PRODUCT_DELETE` permissions.
+
+---
+
+## Category APIs
+
+### GET /inventory/categories
+List all categories.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "code": "ELECTRONICS",
+      "name": "Electronics",
+      "description": "Electronic devices and accessories",
+      "imageUrl": null,
+      "parentId": null,
+      "parentName": null,
+      "sortOrder": 0,
+      "active": true,
+      "level": 0,
+      "path": "/1",
+      "children": null
+    }
+  ]
+}
+```
+
+---
+
+### GET /inventory/categories/tree
+Get category tree with nested children.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "code": "ELECTRONICS",
+      "name": "Electronics",
+      "children": [
+        {
+          "id": 6,
+          "code": "PHONES",
+          "name": "Phones",
+          "parentId": 1,
+          "children": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### GET /inventory/categories/roots
+Get root-level categories only.
+
+---
+
+### GET /inventory/categories/{id}
+Get category by ID.
+
+---
+
+### GET /inventory/categories/{id}/children
+Get child categories of a specific category.
+
+---
+
+### GET /inventory/categories/search
+Search categories.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| q | string | Yes | Search query |
+| page | int | No | Page number (0-based) |
+| size | int | No | Page size |
+
+---
+
+### POST /inventory/categories
+Create a new category.
+
+**Request:**
+```json
+{
+  "code": "PHONES",
+  "name": "Phones",
+  "description": "Mobile phones and accessories",
+  "imageUrl": "https://example.com/phones.jpg",
+  "parentId": 1,
+  "sortOrder": 0,
+  "active": true
+}
+```
+
+**Response:** (HTTP 201 Created)
+```json
+{
+  "success": true,
+  "data": {
+    "id": 6,
+    "code": "PHONES",
+    "name": "Phones",
+    "description": "Mobile phones and accessories",
+    "parentId": 1,
+    "parentName": "Electronics",
+    "level": 1,
+    "path": "/1/6",
+    "active": true
+  }
+}
+```
+
+---
+
+### PUT /inventory/categories/{id}
+Update a category.
+
+**Request:**
+```json
+{
+  "name": "Mobile Phones",
+  "description": "Smartphones and accessories",
+  "sortOrder": 1,
+  "active": true
+}
+```
+
+---
+
+### DELETE /inventory/categories/{id}
+Delete a category (only if no children or products are associated).
+
+---
+
+## Brand APIs
+
+### GET /inventory/brands
+List all brands.
+
+---
+
+### GET /inventory/brands/paginated
+List brands with pagination.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| page | int | 0 | Page number |
+| size | int | 20 | Page size |
+| sort | string | name,asc | Sort field and direction |
+
+---
+
+### GET /inventory/brands/active
+List only active brands.
+
+---
+
+### GET /inventory/brands/{id}
+Get brand by ID.
+
+---
+
+### GET /inventory/brands/search
+Search brands.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| q | string | Yes | Search query |
+
+---
+
+### POST /inventory/brands
+Create a new brand.
+
+**Request:**
+```json
+{
+  "code": "APPLE",
+  "name": "Apple",
+  "description": "Apple Inc. products",
+  "logoUrl": "https://example.com/apple-logo.png",
+  "website": "https://apple.com",
+  "sortOrder": 0,
+  "active": true
+}
+```
+
+**Response:** (HTTP 201 Created)
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "code": "APPLE",
+    "name": "Apple",
+    "description": "Apple Inc. products",
+    "logoUrl": "https://example.com/apple-logo.png",
+    "website": "https://apple.com",
+    "sortOrder": 0,
+    "active": true
+  }
+}
+```
+
+---
+
+### PUT /inventory/brands/{id}
+Update a brand.
+
+---
+
+### DELETE /inventory/brands/{id}
+Delete a brand.
+
+---
+
+## Unit of Measure APIs
+
+### GET /inventory/uom
+List all units of measure.
+
+---
+
+### GET /inventory/uom/paginated
+List UOMs with pagination.
+
+---
+
+### GET /inventory/uom/active
+List only active UOMs.
+
+---
+
+### GET /inventory/uom/base
+List only base units (not derived units).
+
+---
+
+### GET /inventory/uom/{id}
+Get UOM by ID.
+
+---
+
+### GET /inventory/uom/code/{code}
+Get UOM by code.
+
+---
+
+### GET /inventory/uom/search
+Search UOMs.
+
+---
+
+### POST /inventory/uom
+Create a new unit of measure.
+
+**Request:**
+```json
+{
+  "code": "CASE",
+  "name": "Case",
+  "symbol": "cs",
+  "description": "Case of 24 units",
+  "baseUomId": 1,
+  "conversionFactor": 24,
+  "active": true,
+  "isBaseUnit": false
+}
+```
+
+---
+
+### PUT /inventory/uom/{id}
+Update a unit of measure.
+
+---
+
+### DELETE /inventory/uom/{id}
+Delete a unit of measure (only if not used as base for other units).
+
+---
+
+### GET /inventory/uom/convert
+Convert quantity between units.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| quantity | decimal | Yes | Quantity to convert |
+| fromUomId | long | Yes | Source UOM ID |
+| toUomId | long | Yes | Target UOM ID |
+
+**Response:**
+```json
+{
+  "result": 24.000000
+}
+```
+
+---
+
+## Product APIs
+
+### GET /inventory/products
+List products with pagination.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| page | int | 0 | Page number |
+| size | int | 20 | Page size |
+| sort | string | name,asc | Sort field and direction |
+
+---
+
+### GET /inventory/products/active
+List only active products.
+
+---
+
+### GET /inventory/products/{id}
+Get product by ID with full details (variants, images, attributes).
+
+---
+
+### GET /inventory/products/sku/{sku}
+Get product by SKU.
+
+---
+
+### GET /inventory/products/barcode/{barcode}
+Get product by barcode.
+
+---
+
+### GET /inventory/products/search
+Search products by name, SKU, barcode, or description.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| q | string | Yes | Search query |
+
+---
+
+### GET /inventory/products/category/{categoryId}
+Get products by category.
+
+---
+
+### GET /inventory/products/brand/{brandId}
+Get products by brand.
+
+---
+
+### POST /inventory/products
+Create a new product.
+
+**Request:**
+```json
+{
+  "name": "iPhone 15 Pro",
+  "sku": "IPHONE15PRO-256-BLK",
+  "barcode": "1234567890123",
+  "description": "Apple iPhone 15 Pro 256GB Black",
+  "shortDescription": "iPhone 15 Pro 256GB",
+  "categoryId": 6,
+  "brandId": 1,
+  "baseUomId": 1,
+  "costPrice": 999.00,
+  "sellingPrice": 1299.00,
+  "minSellingPrice": 1199.00,
+  "wholesalePrice": 1149.00,
+  "trackInventory": true,
+  "allowNegativeStock": false,
+  "minStockLevel": 5,
+  "reorderPoint": 10,
+  "reorderQuantity": 20,
+  "active": true,
+  "service": false,
+  "sellable": true,
+  "purchasable": true,
+  "trackBatch": false,
+  "trackSerial": true,
+  "weight": 0.187,
+  "weightUnit": "kg",
+  "primaryImageUrl": "https://example.com/iphone15pro.jpg",
+  "manufacturer": "Apple",
+  "manufacturerPartNumber": "MTUX3LL/A",
+  "taxCode": "STANDARD",
+  "notes": "Premium smartphone",
+  "tags": "phone,apple,smartphone",
+  "variants": [
+    {
+      "name": "256GB Space Black",
+      "sku": "IPHONE15PRO-256-BLK",
+      "option1Name": "Storage",
+      "option1Value": "256GB",
+      "option2Name": "Color",
+      "option2Value": "Space Black",
+      "priceDifference": 0,
+      "active": true
+    }
+  ],
+  "attributes": [
+    {
+      "attributeName": "Screen Size",
+      "attributeValue": "6.1 inches",
+      "attributeType": "TEXT",
+      "attributeGroup": "Display",
+      "visible": true,
+      "searchable": true,
+      "filterable": true
+    }
+  ]
+}
+```
+
+**Response:** (HTTP 201 Created)
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "sku": "IPHONE15PRO-256-BLK",
+    "name": "iPhone 15 Pro",
+    "categoryId": 6,
+    "categoryName": "Phones",
+    "brandId": 1,
+    "brandName": "Apple",
+    "costPrice": 999.00,
+    "sellingPrice": 1299.00,
+    "margin": 30.03,
+    "markup": 23.09,
+    "active": true,
+    "variants": [...],
+    "images": [...],
+    "attributes": [...]
+  }
+}
+```
+
+---
+
+### PUT /inventory/products/{id}
+Update a product.
+
+---
+
+### DELETE /inventory/products/{id}
+Delete a product.
+
+---
+
+### GET /inventory/products/count
+Get product counts.
+
+**Response:**
+```json
+{
+  "total": 150,
+  "active": 142
+}
+```
+
+---
+
+## SKU Generation APIs
+
+### GET /inventory/products/generate-sku
+Generate a unique SKU.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| prefix | string | No | Optional prefix for SKU |
+
+**Response:**
+```json
+{
+  "sku": "PRD-20260103-001"
+}
+```
+
+---
+
+### GET /inventory/products/generate-sku-from-name
+Generate SKU from product name.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| name | string | Yes | Product name |
+
+**Response:**
+```json
+{
+  "sku": "IPHONE-15-PRO-256GB"
+}
+```
+
+---
+
+### GET /inventory/products/validate-sku/{sku}
+Validate a SKU.
+
+**Response:**
+```json
+{
+  "valid": true,
+  "exists": false,
+  "available": true
+}
+```
+
+---
+
+## Barcode APIs
+
+### GET /inventory/products/generate-barcode
+Generate an internal barcode.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| prefix | string | No | Optional prefix |
+
+**Response:**
+```json
+{
+  "barcode": "INT1234567890"
+}
+```
+
+---
+
+### GET /inventory/products/generate-ean13
+Generate an EAN-13 barcode.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| countryCode | string | 200 | Country code (3 digits) |
+| companyCode | string | - | Company code (optional) |
+
+**Response:**
+```json
+{
+  "barcode": "2001234567890"
+}
+```
+
+---
+
+### GET /inventory/products/validate-barcode/{barcode}
+Validate a barcode.
+
+**Response:**
+```json
+{
+  "valid": true,
+  "exists": false,
+  "available": true,
+  "type": "EAN13"
+}
+```
+
+---
+
 ## OpenAPI / Swagger
 
 Interactive API documentation is available at:

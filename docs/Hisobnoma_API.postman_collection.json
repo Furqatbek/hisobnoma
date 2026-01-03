@@ -642,6 +642,1041 @@
         }
       ],
       "description": "Role management endpoints. Requires ADMIN_ROLE_MANAGE permission."
+    },
+    {
+      "name": "Inventory - Categories",
+      "item": [
+        {
+          "name": "List All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "categories"]
+            },
+            "description": "Get all categories as a flat list. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "List Categories (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/categories/paginated?page=0&size=20&sort=name,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "categories", "paginated"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "name,asc"
+                }
+              ]
+            },
+            "description": "Get categories with pagination. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category Tree",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/categories/tree",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "categories", "tree"]
+            },
+            "description": "Get full hierarchical category tree. Root categories with nested children. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/categories/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "categories", "active"]
+            },
+            "description": "Get only active categories. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/categories/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "categories", "1"]
+            },
+            "description": "Get a specific category by ID. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category Children",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/categories/1/children",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "categories", "1", "children"]
+            },
+            "description": "Get direct children of a category. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/categories/search?q=electronics&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "categories", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "electronics"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Search categories by name or code. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"ELECTRONICS\",\n  \"name\": \"Electronics\",\n  \"description\": \"Electronic devices and accessories\",\n  \"parentId\": null,\n  \"sortOrder\": 1,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "categories"]
+            },
+            "description": "Create a new category. Use parentId for subcategories. Requires INVENTORY_PRODUCT_CREATE permission."
+          },
+          "response": [
+            {
+              "name": "Category Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"id\": 1,\n  \"code\": \"ELECTRONICS\",\n  \"name\": \"Electronics\",\n  \"description\": \"Electronic devices and accessories\",\n  \"parentId\": null,\n  \"level\": 0,\n  \"path\": \"/1/\",\n  \"sortOrder\": 1,\n  \"active\": true,\n  \"productCount\": 0,\n  \"children\": []\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"ELECTRONICS\",\n  \"name\": \"Electronics & Gadgets\",\n  \"description\": \"Electronic devices, gadgets and accessories\",\n  \"parentId\": null,\n  \"sortOrder\": 1,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/categories/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "categories", "1"]
+            },
+            "description": "Update an existing category. Requires INVENTORY_PRODUCT_UPDATE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/categories/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "categories", "1"]
+            },
+            "description": "Delete a category. Cannot delete if has children or products. Requires INVENTORY_PRODUCT_DELETE permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Product category management with hierarchical structure support."
+    },
+    {
+      "name": "Inventory - Brands",
+      "item": [
+        {
+          "name": "List All Brands",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/brands",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "brands"]
+            },
+            "description": "Get all brands as a flat list. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "List Brands (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/brands/paginated?page=0&size=20&sort=name,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "brands", "paginated"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "name,asc"
+                }
+              ]
+            },
+            "description": "Get brands with pagination. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Brands",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/brands/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "brands", "active"]
+            },
+            "description": "Get only active brands. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Brand by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/brands/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "brands", "1"]
+            },
+            "description": "Get a specific brand by ID. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Brands",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/brands/search?q=apple&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "brands", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "apple"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Search brands by name or code. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Brand",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"APPLE\",\n  \"name\": \"Apple\",\n  \"description\": \"Apple Inc.\",\n  \"website\": \"https://www.apple.com\",\n  \"logoUrl\": \"https://example.com/logos/apple.png\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/brands",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "brands"]
+            },
+            "description": "Create a new brand. Requires INVENTORY_PRODUCT_CREATE permission."
+          },
+          "response": [
+            {
+              "name": "Brand Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"id\": 1,\n  \"code\": \"APPLE\",\n  \"name\": \"Apple\",\n  \"description\": \"Apple Inc.\",\n  \"website\": \"https://www.apple.com\",\n  \"logoUrl\": \"https://example.com/logos/apple.png\",\n  \"active\": true,\n  \"productCount\": 0\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Brand",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"APPLE\",\n  \"name\": \"Apple Inc.\",\n  \"description\": \"Apple Inc. - Think Different\",\n  \"website\": \"https://www.apple.com\",\n  \"logoUrl\": \"https://example.com/logos/apple-new.png\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/brands/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "brands", "1"]
+            },
+            "description": "Update an existing brand. Requires INVENTORY_PRODUCT_UPDATE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Brand",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/brands/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "brands", "1"]
+            },
+            "description": "Delete a brand. Cannot delete if has products. Requires INVENTORY_PRODUCT_DELETE permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Product brand management."
+    },
+    {
+      "name": "Inventory - Units of Measure",
+      "item": [
+        {
+          "name": "List All UoMs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/uom",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "uom"]
+            },
+            "description": "Get all units of measure. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "List UoMs (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/uom/paginated?page=0&size=20&sort=name,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "uom", "paginated"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "name,asc"
+                }
+              ]
+            },
+            "description": "Get UoMs with pagination. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active UoMs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/uom/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "uom", "active"]
+            },
+            "description": "Get only active units of measure. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Base UoMs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/uom/base",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "uom", "base"]
+            },
+            "description": "Get only base units of measure (without parent). Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get UoM by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/uom/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "uom", "1"]
+            },
+            "description": "Get a specific UoM by ID. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get UoM by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/uom/code/PCS",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "uom", "code", "PCS"]
+            },
+            "description": "Get a UoM by its code. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search UoMs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/uom/search?q=piece&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "uom", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "piece"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Search UoMs by name or code. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert Units",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/uom/convert?quantity=1000&fromUomId=2&toUomId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "uom", "convert"],
+              "query": [
+                {
+                  "key": "quantity",
+                  "value": "1000"
+                },
+                {
+                  "key": "fromUomId",
+                  "value": "2"
+                },
+                {
+                  "key": "toUomId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Convert quantity between units. Returns {result: value}. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": [
+            {
+              "name": "Conversion Result",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"result\": 1.0\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create UoM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"PCS\",\n  \"name\": \"Piece\",\n  \"symbol\": \"pc\",\n  \"description\": \"Individual piece\",\n  \"baseUomId\": null,\n  \"conversionFactor\": 1,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/uom",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "uom"]
+            },
+            "description": "Create a new unit of measure. Use baseUomId and conversionFactor for derived units. Requires INVENTORY_PRODUCT_CREATE permission."
+          },
+          "response": [
+            {
+              "name": "UoM Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"id\": 1,\n  \"code\": \"PCS\",\n  \"name\": \"Piece\",\n  \"symbol\": \"pc\",\n  \"description\": \"Individual piece\",\n  \"baseUomId\": null,\n  \"conversionFactor\": 1,\n  \"active\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update UoM",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"PCS\",\n  \"name\": \"Piece\",\n  \"symbol\": \"pcs\",\n  \"description\": \"Individual piece unit\",\n  \"baseUomId\": null,\n  \"conversionFactor\": 1,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/uom/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "uom", "1"]
+            },
+            "description": "Update a unit of measure. Requires INVENTORY_PRODUCT_UPDATE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete UoM",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/uom/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "uom", "1"]
+            },
+            "description": "Delete a unit of measure. Cannot delete if used by products. Requires INVENTORY_PRODUCT_DELETE permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Unit of Measure management with conversion support."
+    },
+    {
+      "name": "Inventory - Products",
+      "item": [
+        {
+          "name": "List Products (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products?page=0&size=20&sort=name,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "name,asc"
+                }
+              ]
+            },
+            "description": "Get products with pagination. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "1"]
+            },
+            "description": "Get a specific product with all details. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product by SKU",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/sku/ELEC-PHONE-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "sku", "ELEC-PHONE-001"]
+            },
+            "description": "Get a product by its SKU. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product by Barcode",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/barcode/1234567890123",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "barcode", "1234567890123"]
+            },
+            "description": "Get a product by its barcode. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/search?q=iphone&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "iphone"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Search products by name, SKU, or barcode. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Products by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/category/1?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "category", "1"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get products by category ID. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Products by Brand",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/brand/1?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "brand", "1"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get products by brand ID. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/active?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "active"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get only active products. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Low Stock Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/low-stock?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "low-stock"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get products below reorder point. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"ELEC-PHONE-001\",\n  \"barcode\": \"1234567890123\",\n  \"name\": \"iPhone 15 Pro\",\n  \"description\": \"Apple iPhone 15 Pro with A17 chip\",\n  \"shortDescription\": \"iPhone 15 Pro 256GB\",\n  \"categoryId\": 1,\n  \"brandId\": 1,\n  \"baseUomId\": 1,\n  \"costPrice\": 899.00,\n  \"sellingPrice\": 1199.00,\n  \"minSellingPrice\": 1099.00,\n  \"wholesalePrice\": 999.00,\n  \"trackInventory\": true,\n  \"allowNegativeStock\": false,\n  \"minStockLevel\": 5,\n  \"reorderPoint\": 10,\n  \"reorderQuantity\": 50,\n  \"maxStockLevel\": 200,\n  \"active\": true,\n  \"service\": false,\n  \"sellable\": true,\n  \"purchasable\": true,\n  \"trackBatch\": false,\n  \"trackSerial\": true,\n  \"weight\": 0.187,\n  \"weightUnit\": \"kg\",\n  \"length\": 14.67,\n  \"width\": 7.15,\n  \"height\": 0.83,\n  \"dimensionUnit\": \"cm\",\n  \"primaryImageUrl\": \"https://example.com/images/iphone15pro.jpg\",\n  \"manufacturer\": \"Apple Inc.\",\n  \"manufacturerPartNumber\": \"MTUX3\",\n  \"taxCode\": \"STANDARD\",\n  \"notes\": \"Popular flagship phone\",\n  \"tags\": \"phone,apple,flagship\",\n  \"variants\": [\n    {\n      \"name\": \"Black Titanium\",\n      \"sku\": \"ELEC-PHONE-001-BLK\",\n      \"option1Name\": \"Color\",\n      \"option1Value\": \"Black Titanium\",\n      \"priceDifference\": 0,\n      \"active\": true\n    },\n    {\n      \"name\": \"White Titanium\",\n      \"sku\": \"ELEC-PHONE-001-WHT\",\n      \"option1Name\": \"Color\",\n      \"option1Value\": \"White Titanium\",\n      \"priceDifference\": 0,\n      \"active\": true\n    }\n  ],\n  \"attributes\": [\n    {\n      \"attributeName\": \"Storage\",\n      \"attributeValue\": \"256GB\",\n      \"attributeType\": \"text\",\n      \"attributeGroup\": \"Specifications\",\n      \"visible\": true,\n      \"searchable\": true,\n      \"filterable\": true\n    },\n    {\n      \"attributeName\": \"Display\",\n      \"attributeValue\": \"6.1 inch Super Retina XDR\",\n      \"attributeType\": \"text\",\n      \"attributeGroup\": \"Specifications\",\n      \"visible\": true,\n      \"searchable\": false,\n      \"filterable\": false\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products"]
+            },
+            "description": "Create a new product with optional variants and attributes. Requires INVENTORY_PRODUCT_CREATE permission."
+          },
+          "response": [
+            {
+              "name": "Product Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"id\": 1,\n  \"sku\": \"ELEC-PHONE-001\",\n  \"barcode\": \"1234567890123\",\n  \"name\": \"iPhone 15 Pro\",\n  \"description\": \"Apple iPhone 15 Pro with A17 chip\",\n  \"categoryId\": 1,\n  \"categoryName\": \"Electronics\",\n  \"brandId\": 1,\n  \"brandName\": \"Apple\",\n  \"baseUomId\": 1,\n  \"baseUomName\": \"Piece\",\n  \"costPrice\": 899.00,\n  \"sellingPrice\": 1199.00,\n  \"active\": true,\n  \"variants\": [...],\n  \"attributes\": [...]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"iPhone 15 Pro Max\",\n  \"description\": \"Apple iPhone 15 Pro Max with A17 chip - Updated\",\n  \"sellingPrice\": 1299.00,\n  \"baseUomId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "1"]
+            },
+            "description": "Update an existing product. Requires INVENTORY_PRODUCT_UPDATE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "1"]
+            },
+            "description": "Delete a product. Requires INVENTORY_PRODUCT_DELETE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate SKU",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/sku/generate?categoryCode=ELEC&brandCode=APPLE&productCode=PHONE",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "sku", "generate"],
+              "query": [
+                {
+                  "key": "categoryCode",
+                  "value": "ELEC"
+                },
+                {
+                  "key": "brandCode",
+                  "value": "APPLE"
+                },
+                {
+                  "key": "productCode",
+                  "value": "PHONE"
+                }
+              ]
+            },
+            "description": "Generate SKU from category, brand, and product codes. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": [
+            {
+              "name": "SKU Generated",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"sku\": \"ELEC-APPLE-PHONE-001\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Generate SKU from Name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/sku/generate-from-name?name=iPhone%2015%20Pro",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "sku", "generate-from-name"],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "iPhone 15 Pro"
+                }
+              ]
+            },
+            "description": "Generate SKU from product name. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": [
+            {
+              "name": "SKU Generated from Name",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"sku\": \"IPHONE-15-PRO-001\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Validate SKU",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/sku/validate?sku=ELEC-PHONE-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "sku", "validate"],
+              "query": [
+                {
+                  "key": "sku",
+                  "value": "ELEC-PHONE-001"
+                }
+              ]
+            },
+            "description": "Check if SKU is unique and available. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": [
+            {
+              "name": "SKU Available",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"available\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "Generate Internal Barcode",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/barcode/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "barcode", "generate"]
+            },
+            "description": "Generate unique internal barcode. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": [
+            {
+              "name": "Barcode Generated",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"barcode\": \"INT2026010312345\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Generate EAN-13 Barcode",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/barcode/generate-ean13?prefix=200",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "barcode", "generate-ean13"],
+              "query": [
+                {
+                  "key": "prefix",
+                  "value": "200"
+                }
+              ]
+            },
+            "description": "Generate EAN-13 barcode with optional prefix. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": [
+            {
+              "name": "EAN-13 Generated",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"barcode\": \"2001234567890\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Validate Barcode",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/barcode/validate?barcode=1234567890123",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "barcode", "validate"],
+              "query": [
+                {
+                  "key": "barcode",
+                  "value": "1234567890123"
+                }
+              ]
+            },
+            "description": "Validate barcode format and uniqueness. Requires INVENTORY_PRODUCT_READ permission."
+          },
+          "response": [
+            {
+              "name": "Barcode Validation",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"valid\": true,\n  \"available\": true,\n  \"format\": \"EAN-13\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Product management with variants, attributes, SKU generation, and barcode utilities."
     }
   ]
 }
