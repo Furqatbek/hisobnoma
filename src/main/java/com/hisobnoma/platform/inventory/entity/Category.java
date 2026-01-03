@@ -33,7 +33,7 @@ public class Category extends TenantAwareEntity {
     @Column(length = 500)
     private String description;
 
-    @Column(length = 500)
+    @Column(name = "image_url", length = 500)
     private String imageUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -44,7 +44,7 @@ public class Category extends TenantAwareEntity {
     @Builder.Default
     private List<Category> children = new ArrayList<>();
 
-    @Column(nullable = false)
+    @Column(name = "sort_order", nullable = false)
     @Builder.Default
     private Integer sortOrder = 0;
 

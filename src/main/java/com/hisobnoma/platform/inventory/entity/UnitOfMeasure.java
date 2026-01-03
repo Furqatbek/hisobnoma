@@ -46,7 +46,7 @@ public class UnitOfMeasure extends TenantAwareEntity {
     @Builder.Default
     private boolean active = true;
 
-    @Column(nullable = false)
+    @Column(name = "is_base_unit", nullable = false)
     @Builder.Default
     private boolean isBaseUnit = true;
 

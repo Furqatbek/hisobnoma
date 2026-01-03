@@ -24,23 +24,23 @@ public class ProductImage extends TenantAwareEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(nullable = false, length = 500)
+    @Column(name = "image_url", nullable = false, length = 500)
     private String imageUrl;
 
-    @Column(length = 500)
+    @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
 
-    @Column(length = 200)
+    @Column(name = "alt_text", length = 200)
     private String altText;
 
     @Column(length = 200)
     private String title;
 
-    @Column(nullable = false)
+    @Column(name = "sort_order", nullable = false)
     @Builder.Default
     private Integer sortOrder = 0;
 
-    @Column(nullable = false)
+    @Column(name = "\"primary\"", nullable = false)
     @Builder.Default
     private boolean primary = false;
 

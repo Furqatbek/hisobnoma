@@ -38,7 +38,7 @@ public class ProductAttribute extends TenantAwareEntity {
     @Column(name = "attribute_group", length = 100)
     private String attributeGroup;
 
-    @Column(nullable = false)
+    @Column(name = "sort_order", nullable = false)
     @Builder.Default
     private Integer sortOrder = 0;
 

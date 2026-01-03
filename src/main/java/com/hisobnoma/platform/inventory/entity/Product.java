@@ -40,7 +40,7 @@ public class Product extends TenantAwareEntity {
     @Column(length = 2000)
     private String description;
 
-    @Column(length = 500)
+    @Column(name = "short_description", length = 500)
     private String shortDescription;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -122,7 +122,7 @@ public class Product extends TenantAwareEntity {
     @Column(precision = 10, scale = 3)
     private BigDecimal weight;
 
-    @Column(length = 20)
+    @Column(name = "weight_unit", length = 20)
     private String weightUnit;
 
     @Column(precision = 10, scale = 2)
@@ -134,19 +134,19 @@ public class Product extends TenantAwareEntity {
     @Column(precision = 10, scale = 2)
     private BigDecimal height;
 
-    @Column(length = 20)
+    @Column(name = "dimension_unit", length = 20)
     private String dimensionUnit;
 
-    @Column(length = 500)
+    @Column(name = "primary_image_url", length = 500)
     private String primaryImageUrl;
 
     @Column(length = 200)
     private String manufacturer;
 
-    @Column(length = 100)
+    @Column(name = "manufacturer_part_number", length = 100)
     private String manufacturerPartNumber;
 
-    @Column(length = 100)
+    @Column(name = "tax_code", length = 100)
     private String taxCode;
 
     @Column(length = 2000)

@@ -37,22 +37,22 @@ public class ProductVariant extends TenantAwareEntity {
     @Column(nullable = false, length = 200)
     private String name;
 
-    @Column(length = 100)
+    @Column(name = "option1_name", length = 100)
     private String option1Name;
 
-    @Column(length = 100)
+    @Column(name = "option1_value", length = 100)
     private String option1Value;
 
-    @Column(length = 100)
+    @Column(name = "option2_name", length = 100)
     private String option2Name;
 
-    @Column(length = 100)
+    @Column(name = "option2_value", length = 100)
     private String option2Value;
 
-    @Column(length = 100)
+    @Column(name = "option3_name", length = 100)
     private String option3Name;
 
-    @Column(length = 100)
+    @Column(name = "option3_value", length = 100)
     private String option3Value;
 
     @Column(name = "cost_price", precision = 18, scale = 4)
@@ -68,10 +68,10 @@ public class ProductVariant extends TenantAwareEntity {
     @Column(precision = 10, scale = 3)
     private BigDecimal weight;
 
-    @Column(length = 500)
+    @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    @Column(nullable = false)
+    @Column(name = "sort_order", nullable = false)
     @Builder.Default
     private Integer sortOrder = 0;
 

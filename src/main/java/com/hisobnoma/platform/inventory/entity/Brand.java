@@ -28,13 +28,13 @@ public class Brand extends TenantAwareEntity {
     @Column(length = 500)
     private String description;
 
-    @Column(length = 500)
+    @Column(name = "logo_url", length = 500)
     private String logoUrl;
 
     @Column(length = 255)
     private String website;
 
-    @Column(nullable = false)
+    @Column(name = "sort_order", nullable = false)
     @Builder.Default
     private Integer sortOrder = 0;
 
