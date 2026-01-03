@@ -103,4 +103,11 @@ public class Vendor extends TenantAwareEntity {
 
     @Column(name = "min_order_amount", precision = 18, scale = 4)
     private BigDecimal minOrderAmount;
+
+    /**
+     * Default GL expense account for this vendor's invoices.
+     * Links to the finance module's Account entity.
+     */
+    @Column(name = "default_expense_account_id")
+    private Long defaultExpenseAccountId;
 }

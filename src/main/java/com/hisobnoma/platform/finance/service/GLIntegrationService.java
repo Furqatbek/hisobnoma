@@ -4,8 +4,8 @@ import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.finance.dto.CreateJournalEntryRequest;
 import com.hisobnoma.platform.finance.dto.CreateJournalLineRequest;
-import com.hisobnoma.platform.finance.entity.JournalEntry;
-import com.hisobnoma.platform.finance.entity.JournalSource;
+import com.hisobnoma.platform.finance.entity.*;
+import com.hisobnoma.platform.finance.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Integration service for posting journal entries from other modules.
@@ -27,6 +28,7 @@ public class GLIntegrationService {
 
     private final JournalEntryService journalEntryService;
     private final SecurityContextHelper securityContextHelper;
+    private final AccountRepository accountRepository;
 
     // Account codes - these should be configurable per tenant
     // For now, these are placeholder values that should be set up in the chart of accounts
@@ -295,22 +297,184 @@ public class GLIntegrationService {
 
     /**
      * Resolves an account ID from an account code.
-     * In a real implementation, this would look up the account from the database.
-     * For now, returns a placeholder that should be configured properly.
+     * Looks up the account from the database for the current tenant.
      */
     private Long resolveAccountId(String accountCode) {
-        // TODO: Implement proper account lookup by code
-        // For now, return a placeholder value
-        // The actual implementation should query the AccountRepository
-        return switch (accountCode) {
-            case CASH_ACCOUNT -> 1L;
-            case ACCOUNTS_RECEIVABLE -> 2L;
-            case INVENTORY_ACCOUNT -> 3L;
-            case ACCOUNTS_PAYABLE -> 4L;
-            case SALES_REVENUE_ACCOUNT -> 5L;
-            case COGS_ACCOUNT -> 6L;
-            case PURCHASE_EXPENSE -> 7L;
-            default -> throw new BusinessException("Unknown account code: " + accountCode);
-        };
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        Optional<Account> account = accountRepository.findByCodeAndTenantId(accountCode, tenantId);
+        return account.map(Account::getId)
+                .orElseThrow(() -> new BusinessException("Account not found with code: " + accountCode));
+    }
+
+    /**
+     * Resolves an account ID from an account code for a specific tenant.
+     */
+    private Long resolveAccountId(String accountCode, Long tenantId) {
+        Optional<Account> account = accountRepository.findByCodeAndTenantId(accountCode, tenantId);
+        return account.map(Account::getId)
+                .orElseThrow(() -> new BusinessException("Account not found with code: " + accountCode));
+    }
+
+    // ============ AP Invoice Integration ============
+
+    /**
+     * Posts an AP Invoice to the general ledger.
+     * Creates a journal entry that debits expense accounts and credits AP.
+     *
+     * @param invoice The AP invoice to post
+     * @return The ID of the created journal entry
+     */
+    @Transactional
+    public Long postAPInvoice(APInvoice invoice) {
+        Long tenantId = invoice.getTenantId();
+
+        List<CreateJournalLineRequest> lines = new ArrayList<>();
+
+        // Debit expense accounts from invoice lines
+        for (APInvoiceLine line : invoice.getLines()) {
+            Long expenseAccountId = line.getExpenseAccountId();
+            if (expenseAccountId == null) {
+                expenseAccountId = invoice.getExpenseAccountId();
+            }
+            if (expenseAccountId == null) {
+                expenseAccountId = resolveAccountId(PURCHASE_EXPENSE, tenantId);
+            }
+
+            lines.add(CreateJournalLineRequest.builder()
+                    .accountId(expenseAccountId)
+                    .debitAmount(line.getLineTotal())
+                    .creditAmount(BigDecimal.ZERO)
+                    .description("Invoice line: " + line.getDescription())
+                    .build());
+        }
+
+        // Credit Accounts Payable for total
+        Long apAccountId = invoice.getApAccountId();
+        if (apAccountId == null) {
+            apAccountId = resolveAccountId(ACCOUNTS_PAYABLE, tenantId);
+        }
+
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(apAccountId)
+                .debitAmount(BigDecimal.ZERO)
+                .creditAmount(invoice.getTotalAmount())
+                .description("Payable to " + invoice.getVendorName())
+                .build());
+
+        CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
+                .entryDate(invoice.getInvoiceDate())
+                .description("AP Invoice " + invoice.getInvoiceNumber() + " - " + invoice.getVendorName())
+                .source(JournalSource.ACCOUNTS_PAYABLE)
+                .referenceType("AP_INVOICE")
+                .referenceId(invoice.getId())
+                .referenceNumber(invoice.getInvoiceNumber())
+                .lines(lines)
+                .build();
+
+        log.info("Posting AP Invoice {} to GL: {}", invoice.getInvoiceNumber(), invoice.getTotalAmount());
+        JournalEntry entry = journalEntryService.createAndPostEntry(request, tenantId);
+        return entry.getId();
+    }
+
+    /**
+     * Reverses an AP Invoice posting in the general ledger.
+     *
+     * @param invoice The AP invoice to reverse
+     */
+    @Transactional
+    public void reverseAPInvoice(APInvoice invoice) {
+        if (invoice.getGlJournalEntryId() == null) {
+            throw new BusinessException("Invoice has not been posted to GL");
+        }
+
+        journalEntryService.reverseEntry(invoice.getGlJournalEntryId());
+        log.info("Reversed GL posting for AP Invoice {}", invoice.getInvoiceNumber());
+    }
+
+    // ============ AP Payment Integration ============
+
+    /**
+     * Posts an AP Payment to the general ledger.
+     * Creates a journal entry that debits AP and credits cash/bank.
+     *
+     * @param payment The AP payment to post
+     * @return The ID of the created journal entry
+     */
+    @Transactional
+    public Long postAPPayment(APPayment payment) {
+        Long tenantId = payment.getTenantId();
+
+        List<CreateJournalLineRequest> lines = new ArrayList<>();
+
+        // Debit Accounts Payable
+        Long apAccountId = payment.getApAccountId();
+        if (apAccountId == null) {
+            apAccountId = resolveAccountId(ACCOUNTS_PAYABLE, tenantId);
+        }
+
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(apAccountId)
+                .debitAmount(payment.getPaymentAmount())
+                .creditAmount(BigDecimal.ZERO)
+                .description("Payment to " + payment.getVendorName())
+                .build());
+
+        // Handle discounts taken
+        BigDecimal totalDiscount = payment.getAllocations().stream()
+                .map(a -> a.getDiscountTaken() != null ? a.getDiscountTaken() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (totalDiscount.compareTo(BigDecimal.ZERO) > 0) {
+            Long discountAccountId = resolveAccountId("5200", tenantId); // Purchase Discounts
+            lines.add(CreateJournalLineRequest.builder()
+                    .accountId(discountAccountId)
+                    .debitAmount(BigDecimal.ZERO)
+                    .creditAmount(totalDiscount)
+                    .description("Purchase discount taken")
+                    .build());
+        }
+
+        // Credit Cash/Bank
+        Long cashAccountId = payment.getCashAccountId();
+        if (cashAccountId == null) {
+            cashAccountId = resolveAccountId(CASH_ACCOUNT, tenantId);
+        }
+
+        BigDecimal cashAmount = payment.getPaymentAmount().subtract(totalDiscount);
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(cashAccountId)
+                .debitAmount(BigDecimal.ZERO)
+                .creditAmount(cashAmount)
+                .description("Cash disbursement - " + payment.getPaymentMethod())
+                .build());
+
+        CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
+                .entryDate(payment.getPaymentDate())
+                .description("AP Payment " + payment.getPaymentNumber() + " - " + payment.getVendorName())
+                .source(JournalSource.PAYMENT)
+                .referenceType("AP_PAYMENT")
+                .referenceId(payment.getId())
+                .referenceNumber(payment.getPaymentNumber())
+                .lines(lines)
+                .build();
+
+        log.info("Posting AP Payment {} to GL: {}", payment.getPaymentNumber(), payment.getPaymentAmount());
+        JournalEntry entry = journalEntryService.createAndPostEntry(request, tenantId);
+        return entry.getId();
+    }
+
+    /**
+     * Reverses an AP Payment posting in the general ledger.
+     *
+     * @param payment The AP payment to reverse
+     */
+    @Transactional
+    public void reverseAPPayment(APPayment payment) {
+        if (payment.getGlJournalEntryId() == null) {
+            throw new BusinessException("Payment has not been posted to GL");
+        }
+
+        journalEntryService.reverseEntry(payment.getGlJournalEntryId());
+        log.info("Reversed GL posting for AP Payment {}", payment.getPaymentNumber());
     }
 }
