@@ -3,6 +3,7 @@ package com.hisobnoma.platform.auth.entity;
 import com.hisobnoma.platform.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 
@@ -13,9 +14,8 @@ import java.time.Instant;
 })
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class PasswordResetToken extends BaseEntity {
 
     @Column(nullable = false, unique = true)

@@ -3,6 +3,7 @@ package com.hisobnoma.platform.auth.entity;
 import com.hisobnoma.platform.common.entity.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -16,9 +17,8 @@ import java.util.Set;
 })
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Role extends TenantAwareEntity {
 
     @Column(nullable = false, length = 50)

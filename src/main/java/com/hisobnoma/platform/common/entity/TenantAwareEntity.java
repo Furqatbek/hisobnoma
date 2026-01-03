@@ -3,7 +3,9 @@ package com.hisobnoma.platform.common.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Tenant-aware entity class that extends AuditableEntity.
@@ -12,6 +14,8 @@ import lombok.Setter;
  */
 @Getter
 @Setter
+@SuperBuilder
+@NoArgsConstructor
 @MappedSuperclass
 public abstract class TenantAwareEntity extends AuditableEntity {
 

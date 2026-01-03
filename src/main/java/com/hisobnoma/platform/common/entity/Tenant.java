@@ -2,6 +2,7 @@ package com.hisobnoma.platform.common.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 
@@ -11,9 +12,8 @@ import java.time.Instant;
 })
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Tenant extends BaseEntity {
 
     @Column(nullable = false, length = 100)
