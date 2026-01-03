@@ -206,33 +206,3 @@ CREATE INDEX idx_product_attrs_product ON product_attributes(product_id);
 CREATE INDEX idx_product_attrs_name ON product_attributes(attribute_name);
 CREATE INDEX idx_product_attrs_tenant ON product_attributes(tenant_id);
 CREATE INDEX idx_product_attrs_group ON product_attributes(attribute_group);
-
--- Insert default units of measure
-INSERT INTO units_of_measure (code, name, symbol, description, is_base_unit) VALUES
-('PCS', 'Pieces', 'pcs', 'Individual pieces/units', TRUE),
-('BOX', 'Box', 'box', 'Box containing multiple units', TRUE),
-('KG', 'Kilogram', 'kg', 'Weight in kilograms', TRUE),
-('G', 'Gram', 'g', 'Weight in grams', FALSE),
-('L', 'Liter', 'L', 'Volume in liters', TRUE),
-('ML', 'Milliliter', 'mL', 'Volume in milliliters', FALSE),
-('M', 'Meter', 'm', 'Length in meters', TRUE),
-('CM', 'Centimeter', 'cm', 'Length in centimeters', FALSE),
-('SET', 'Set', 'set', 'Set of items', TRUE),
-('PACK', 'Pack', 'pack', 'Package/Pack of items', TRUE),
-('DOZEN', 'Dozen', 'dz', '12 units', FALSE),
-('PAIR', 'Pair', 'pr', '2 units', FALSE);
-
--- Set up unit conversions
-UPDATE units_of_measure SET base_uom_id = (SELECT id FROM units_of_measure WHERE code = 'KG'), conversion_factor = 0.001 WHERE code = 'G';
-UPDATE units_of_measure SET base_uom_id = (SELECT id FROM units_of_measure WHERE code = 'L'), conversion_factor = 0.001 WHERE code = 'ML';
-UPDATE units_of_measure SET base_uom_id = (SELECT id FROM units_of_measure WHERE code = 'M'), conversion_factor = 0.01 WHERE code = 'CM';
-UPDATE units_of_measure SET base_uom_id = (SELECT id FROM units_of_measure WHERE code = 'PCS'), conversion_factor = 12 WHERE code = 'DOZEN';
-UPDATE units_of_measure SET base_uom_id = (SELECT id FROM units_of_measure WHERE code = 'PCS'), conversion_factor = 2 WHERE code = 'PAIR';
-
--- Insert sample categories
-INSERT INTO categories (code, name, description, level, path, active) VALUES
-('ELECTRONICS', 'Electronics', 'Electronic devices and accessories', 0, '/1', TRUE),
-('CLOTHING', 'Clothing', 'Apparel and fashion items', 0, '/2', TRUE),
-('FOOD', 'Food & Beverages', 'Food items and drinks', 0, '/3', TRUE),
-('HOME', 'Home & Living', 'Home improvement and furniture', 0, '/4', TRUE),
-('OFFICE', 'Office Supplies', 'Office and stationery items', 0, '/5', TRUE);

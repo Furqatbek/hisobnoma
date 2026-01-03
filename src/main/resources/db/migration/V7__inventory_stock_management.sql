@@ -275,9 +275,3 @@ AND NOT EXISTS (
     SELECT 1 FROM role_permissions rp
     WHERE rp.role_id = r.id AND rp.permission_id = p.id
 );
-
--- ===========================================
--- Create default warehouse location
--- ===========================================
-INSERT INTO locations (code, name, description, location_type, active, is_default)
-VALUES ('MAIN-WH', 'Main Warehouse', 'Primary warehouse location', 'WAREHOUSE', TRUE, TRUE);
