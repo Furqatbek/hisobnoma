@@ -21,7 +21,7 @@ public class ForbiddenException extends BusinessException {
         super(message, code, HttpStatus.FORBIDDEN);
     }
 
-    public ForbiddenException(String resource, String action) {
-        super(String.format("You don't have permission to %s %s", action, resource), DEFAULT_CODE, HttpStatus.FORBIDDEN);
+    public static ForbiddenException forAction(String resource, String action) {
+        return new ForbiddenException(String.format("You don't have permission to %s %s", action, resource));
     }
 }
