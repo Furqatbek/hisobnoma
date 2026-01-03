@@ -43,4 +43,7 @@ public interface UnitOfMeasureRepository extends JpaRepository<UnitOfMeasure, Lo
 
     @Query("SELECT u FROM UnitOfMeasure u WHERE u.baseUom.id = :baseUomId")
     List<UnitOfMeasure> findByBaseUomId(@Param("baseUomId") Long baseUomId);
+
+    @Query("SELECT u FROM UnitOfMeasure u WHERE u.id = :id AND (u.tenantId = :tenantId OR u.tenantId IS NULL)")
+    Optional<UnitOfMeasure> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);
 }
