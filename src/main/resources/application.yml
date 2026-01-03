@@ -1,0 +1,140 @@
+spring:
+  application:
+    name: hisobnoma-platform
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # JPA Configuration
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+        order_inserts: true
+        order_updates: true
+        batch_size: 25
+    show-sql: false
+
+  # Flyway Configuration
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+    time-zone: UTC
+
+  # Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+
+  # Mail Configuration (placeholder)
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: never
+    include-exception: false
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.hisobnoma: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: false
+
+# Application Custom Configuration
+app:
+  name: Hisobnoma Platform
+  version: 0.0.1
+
+  # JWT Configuration
+  jwt:
+    secret: ${JWT_SECRET:your-256-bit-secret-key-here-change-in-production-environment}
+    access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}      # 1 hour
+    refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
+    issuer: hisobnoma-platform
+
+  # OTP Configuration
+  otp:
+    expiration-minutes: 5
+    length: 6
+    max-attempts: 3
+
+  # Pagination Defaults
+  pagination:
+    default-page-size: 20
+    max-page-size: 100
+
+  # File Upload
+  upload:
+    max-file-size: 10MB
+    allowed-extensions: jpg,jpeg,png,gif,pdf,xlsx,csv
+
+  # Security
+  security:
+    password-min-length: 8
+    max-login-attempts: 5
+    lockout-duration-minutes: 30
