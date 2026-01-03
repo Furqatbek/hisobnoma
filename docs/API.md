@@ -47,7 +47,7 @@ Login with username/phone and password.
 ```json
 {
   "username": "admin",
-  "password": "Admin123!"
+  "password": "admin123"
 }
 ```
 
@@ -157,7 +157,7 @@ Change the current user's password. Requires authentication.
 **Request:**
 ```json
 {
-  "currentPassword": "OldPassword123!",
+  "currentPassword": "admin123",
   "newPassword": "NewPassword456!",
   "confirmPassword": "NewPassword456!"
 }

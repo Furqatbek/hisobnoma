@@ -68,7 +68,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin123!\"\n}"
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -84,7 +84,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin123!\"\n}"
+                  "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
                 }
               },
               "status": "OK",
@@ -176,7 +176,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"currentPassword\": \"Admin123!\",\n  \"newPassword\": \"NewPassword456!\",\n  \"confirmPassword\": \"NewPassword456!\"\n}"
+              "raw": "{\n  \"currentPassword\": \"admin123\",\n  \"newPassword\": \"NewPassword456!\",\n  \"confirmPassword\": \"NewPassword456!\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/change-password",
