@@ -1009,16 +1009,24 @@ com.hisobnoma.platform/
 ## BLOCK 14: Web E-commerce Module
 **Complexity: High**
 
-### Checkpoint 14.1: Web Customer Authentication
-- [ ] POST /api/v1/web/auth/register - Customer registration
-- [ ] POST /api/v1/web/auth/login - Customer login
-- [ ] POST /api/v1/web/auth/forgot-password - Password reset request
-- [ ] POST /api/v1/web/auth/reset-password - Reset password
-- [ ] GET /api/v1/web/auth/verify-email/{token} - Email verification
-- [ ] POST /api/v1/web/auth/social/google - Google OAuth login
-- [ ] POST /api/v1/web/auth/social/facebook - Facebook OAuth login
-- [ ] GET /api/v1/web/auth/me - Get customer profile
-- [ ] PUT /api/v1/web/auth/me - Update customer profile
+> **Authentication Model:**
+> - All browsing, cart, and pre-checkout APIs are **PUBLIC** (no login required)
+> - Authentication via **Phone Number + OTP** only (no email/social login)
+> - Login required only when: placing order, managing addresses, wishlist, writing reviews
+
+### Checkpoint 14.1: Web Customer Authentication (Phone + OTP Only)
+- [ ] POST /api/v1/web/auth/send-otp - Send OTP to phone number
+- [ ] POST /api/v1/web/auth/verify-otp - Verify OTP and login/register
+  - Auto-creates account if phone number is new
+  - Returns JWT token on success
+- [ ] POST /api/v1/web/auth/resend-otp - Resend OTP code
+- [ ] POST /api/v1/web/auth/refresh - Refresh access token
+- [ ] POST /api/v1/web/auth/logout - Logout and invalidate token
+- [ ] GET /api/v1/web/auth/me - Get customer profile (authenticated)
+- [ ] PUT /api/v1/web/auth/me - Update customer profile (authenticated)
+- [ ] Create OTP entity (phoneNumber, code, expiresAt, verified)
+- [ ] Integrate SMS gateway for OTP delivery
+- [ ] OTP expiration (5 minutes) and rate limiting
 
 ### Checkpoint 14.2: Product Catalog APIs (Public)
 - [ ] GET /api/v1/web/products - List products (paginated, filterable)
@@ -1042,16 +1050,17 @@ com.hisobnoma.platform/
   - quantity, unitPrice, totalPrice
 - [ ] Write migrations
 
-### Checkpoint 14.4: Shopping Cart APIs
-- [ ] POST /api/v1/web/cart - Create cart (guest or authenticated)
-- [ ] GET /api/v1/web/cart - Get current cart
+### Checkpoint 14.4: Shopping Cart APIs (Public - No Auth Required)
+- [ ] POST /api/v1/web/cart - Create cart (uses session/device ID)
+- [ ] GET /api/v1/web/cart - Get current cart by session
 - [ ] POST /api/v1/web/cart/items - Add item to cart
 - [ ] PUT /api/v1/web/cart/items/{itemId} - Update item quantity
 - [ ] DELETE /api/v1/web/cart/items/{itemId} - Remove item from cart
 - [ ] DELETE /api/v1/web/cart - Clear cart
-- [ ] POST /api/v1/web/cart/merge - Merge guest cart with user cart on login
 - [ ] POST /api/v1/web/cart/apply-coupon - Apply coupon code
 - [ ] DELETE /api/v1/web/cart/coupon - Remove coupon
+- [ ] Cart identified by session token (stored in header/cookie)
+- [ ] Cart persisted in Redis with TTL (24 hours)
 
 ### Checkpoint 14.5: Web Order Domain
 - [ ] Create WebOrder entity
@@ -1066,10 +1075,16 @@ com.hisobnoma.platform/
 - [ ] Write migrations
 
 ### Checkpoint 14.6: Checkout APIs
+**Public (No Auth):**
 - [ ] POST /api/v1/web/checkout/validate - Validate cart before checkout
 - [ ] GET /api/v1/web/checkout/shipping-methods - Available shipping methods
 - [ ] POST /api/v1/web/checkout/calculate - Calculate totals with shipping
-- [ ] POST /api/v1/web/orders - Place order
+
+**Requires Phone OTP Authentication:**
+- [ ] POST /api/v1/web/orders - Place order (requires authenticated user)
+  - If not logged in, prompt for phone + OTP first
+  - Links cart to customer account
+  - Creates order with customer's phone number
 - [ ] GET /api/v1/web/orders - Customer order history
 - [ ] GET /api/v1/web/orders/{id} - Order details
 - [ ] GET /api/v1/web/orders/{id}/track - Order tracking
@@ -1084,23 +1099,24 @@ com.hisobnoma.platform/
   - [ ] PayPal
   - [ ] Cash on Delivery (COD)
 
-### Checkpoint 14.8: Customer Address Management
+### Checkpoint 14.8: Customer Address Management (Authenticated)
 - [ ] GET /api/v1/web/addresses - List saved addresses
 - [ ] POST /api/v1/web/addresses - Add new address
 - [ ] PUT /api/v1/web/addresses/{id} - Update address
 - [ ] DELETE /api/v1/web/addresses/{id} - Delete address
 - [ ] PUT /api/v1/web/addresses/{id}/default - Set as default
 
-### Checkpoint 14.9: Wishlist
+### Checkpoint 14.9: Wishlist (Authenticated)
 - [ ] GET /api/v1/web/wishlist - Get wishlist
 - [ ] POST /api/v1/web/wishlist/{productId} - Add to wishlist
 - [ ] DELETE /api/v1/web/wishlist/{productId} - Remove from wishlist
 - [ ] POST /api/v1/web/wishlist/{productId}/move-to-cart - Move to cart
 
-### Checkpoint 14.10: Product Reviews
-- [ ] POST /api/v1/web/products/{id}/reviews - Submit review
-- [ ] PUT /api/v1/web/reviews/{id} - Update own review
-- [ ] DELETE /api/v1/web/reviews/{id} - Delete own review
+### Checkpoint 14.10: Product Reviews (Authenticated for Write)
+- [ ] GET /api/v1/web/products/{id}/reviews - View reviews (public)
+- [ ] POST /api/v1/web/products/{id}/reviews - Submit review (authenticated)
+- [ ] PUT /api/v1/web/reviews/{id} - Update own review (authenticated)
+- [ ] DELETE /api/v1/web/reviews/{id} - Delete own review (authenticated)
 - [ ] Review moderation (admin side)
 
 ### Checkpoint 14.11: Web Module Integration
