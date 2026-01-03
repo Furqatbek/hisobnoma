@@ -1,5 +1,5 @@
 # Backend Implementation Plan
-## Inventory Management Platform
+## Inventory Management Platform - Monolithic Architecture
 
 ---
 
@@ -12,10 +12,8 @@
 | **Spring Boot** | 3.3.x | Application framework |
 | **Spring Security** | 6.x | Authentication & authorization |
 | **Spring Data JPA** | 3.x | Data persistence |
-| **Spring Cloud** | 2024.x | Microservices infrastructure |
 | **PostgreSQL** | 16 | Primary database |
 | **Redis** | 7.x | Caching & session management |
-| **Apache Kafka** | 3.7.x | Event streaming & async messaging |
 
 ### Boilerplate Reduction & Productivity
 | Tool | Purpose |
@@ -23,7 +21,6 @@
 | **Lombok** | Reduce boilerplate (getters, setters, builders) |
 | **MapStruct** | Type-safe object mapping (DTO ↔ Entity) |
 | **Springdoc OpenAPI** | Auto-generate API documentation |
-| **JHipster JDL** | Entity & relationship code generation |
 | **Spring Boot DevTools** | Hot reload during development |
 
 ### Database & Migrations
@@ -41,39 +38,102 @@
 | **Mockito** | Mocking framework |
 | **ArchUnit** | Architecture testing |
 | **JaCoCo** | Code coverage |
-| **SonarQube** | Code quality analysis |
 
 ### Infrastructure
 | Tool | Purpose |
 |------|---------|
 | **Docker** | Containerization |
-| **Kubernetes** | Container orchestration |
-| **Helm** | K8s package management |
+| **Docker Compose** | Local development & simple deployment |
 | **GitHub Actions** | CI/CD pipeline |
 | **Prometheus + Grafana** | Monitoring & alerting |
-| **ELK Stack** | Centralized logging |
 
 ---
 
-## Architecture Overview
+## Monolithic Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         API Gateway (Kong/Spring Cloud Gateway)     │
-├─────────────────────────────────────────────────────────────────────┤
-│                              │                                       │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────┐ │
-│  │   Auth       │  │  Inventory   │  │   Finance    │  │   POS    │ │
-│  │   Service    │  │   Service    │  │   Service    │  │  Service │ │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────┬─────┘ │
-│         │                 │                 │               │       │
-├─────────┴─────────────────┴─────────────────┴───────────────┴───────┤
-│                         Apache Kafka (Event Bus)                     │
-├─────────────────────────────────────────────────────────────────────┤
-│                         Redis Cache Layer                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                    PostgreSQL (Per-Service DB)                       │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         MONOLITHIC APPLICATION                               │
+│                         (Single Spring Boot App)                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                        REST API Layer                                │    │
+│  │    /api/v1/auth  /api/v1/inventory  /api/v1/finance  /api/v1/pos    │    │
+│  │    /api/v1/admin  /api/v1/mobile  /api/v1/reports                   │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                    │                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                      Service Layer (Business Logic)                  │    │
+│  ├──────────┬──────────┬──────────┬──────────┬──────────┬─────────────┤    │
+│  │   Auth   │ Inventory│ Finance  │   POS    │  Admin   │   Mobile    │    │
+│  │  Module  │  Module  │  Module  │  Module  │  Module  │   Module    │    │
+│  └──────────┴──────────┴──────────┴──────────┴──────────┴─────────────┘    │
+│                                    │                                         │
+│                    Direct Method Calls (No Message Queue)                    │
+│                                    │                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                      Repository Layer (Data Access)                  │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                    │                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                              Redis Cache                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                         PostgreSQL Database                                  │
+│                         (Single Database)                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Package Structure (Monolith)
+```
+com.hisobnoma.platform/
+├── HisobnomaApplication.java
+├── config/                          # All configurations
+│   ├── SecurityConfig.java
+│   ├── CacheConfig.java
+│   ├── WebConfig.java
+│   └── OpenApiConfig.java
+├── common/                          # Shared utilities
+│   ├── entity/
+│   ├── dto/
+│   ├── exception/
+│   └── util/
+├── auth/                            # Authentication module
+│   ├── controller/
+│   ├── service/
+│   ├── repository/
+│   ├── entity/
+│   └── dto/
+├── inventory/                       # Inventory module
+│   ├── controller/
+│   ├── service/
+│   ├── repository/
+│   ├── entity/
+│   └── dto/
+├── finance/                         # Finance module
+│   ├── controller/
+│   ├── service/
+│   ├── repository/
+│   ├── entity/
+│   └── dto/
+├── pos/                             # POS module
+│   ├── controller/
+│   ├── service/
+│   ├── repository/
+│   ├── entity/
+│   └── dto/
+├── admin/                           # Admin dashboard module
+│   ├── controller/
+│   ├── service/
+│   └── dto/
+├── mobile/                          # Mobile API module
+│   ├── controller/
+│   ├── service/
+│   └── dto/
+└── reporting/                       # Reporting module
+    ├── controller/
+    ├── service/
+    └── dto/
 ```
 
 ---
@@ -82,1057 +142,1086 @@
 
 ---
 
-## BLOCK 1: Project Foundation & Infrastructure Setup
-**Estimated Complexity: Medium**
+## BLOCK 1: Project Foundation & Setup
+**Complexity: Medium**
 
-### Checkpoint 1.1: Multi-Module Project Structure
-- [ ] Create parent POM with dependency management
-- [ ] Configure Spring Boot 3.3.x parent
-- [ ] Setup common module for shared utilities
-- [ ] Setup domain-common module for shared domain objects
-- [ ] Configure Lombok, MapStruct in parent POM
-- [ ] Setup code formatting (Spotless/Checkstyle)
-
-```
-inventory-platform/
-├── pom.xml (parent)
-├── common/                    # Shared utilities
-├── domain-common/             # Shared domain objects
-├── auth-service/              # Authentication
-├── inventory-service/         # Inventory management
-├── finance-service/           # Finance module
-├── pos-service/               # Point of sale
-├── gateway-service/           # API Gateway
-├── notification-service/      # Email, SMS, Push
-└── reporting-service/         # Reports & Analytics
-```
+### Checkpoint 1.1: Project Initialization
+- [ ] Create Spring Boot 3.3.x project with Spring Initializr
+- [ ] Configure Maven with all dependencies
+- [ ] Setup package structure as defined above
+- [ ] Configure application.yml for multiple profiles (dev, test, prod)
+- [ ] Setup Lombok and MapStruct annotation processors
 
 ### Checkpoint 1.2: Common Module Setup
-- [ ] Create base entity classes (BaseEntity, AuditableEntity)
-- [ ] Create common DTOs (PageResponse, ErrorResponse, ApiResponse)
-- [ ] Create common exceptions (BusinessException, NotFoundException, etc.)
-- [ ] Create global exception handler (@ControllerAdvice)
-- [ ] Setup common validation utilities
-- [ ] Create common constants and enums
+- [ ] Create BaseEntity with id, createdAt, updatedAt
+- [ ] Create AuditableEntity extending BaseEntity with createdBy, updatedBy
+- [ ] Create TenantAwareEntity for multi-tenancy
+- [ ] Create ApiResponse wrapper class
+- [ ] Create PageResponse for pagination
+- [ ] Create ErrorResponse for error handling
 
-### Checkpoint 1.3: Docker & Local Development Environment
-- [ ] Create docker-compose.yml for local development
-  - [ ] PostgreSQL container
-  - [ ] Redis container
-  - [ ] Kafka & Zookeeper containers
-  - [ ] Mailhog (email testing)
-- [ ] Create Dockerfile for each service
-- [ ] Setup docker-compose profiles (dev, test)
-- [ ] Create initialization scripts for databases
+### Checkpoint 1.3: Exception Handling
+- [ ] Create BusinessException base class
+- [ ] Create NotFoundException
+- [ ] Create ValidationException
+- [ ] Create UnauthorizedException
+- [ ] Create ForbiddenException
+- [ ] Create GlobalExceptionHandler (@ControllerAdvice)
 
-### Checkpoint 1.4: CI/CD Pipeline Setup
-- [ ] Create GitHub Actions workflow for build
-- [ ] Create workflow for running tests
-- [ ] Create workflow for code quality (SonarQube)
-- [ ] Create workflow for Docker image build & push
-- [ ] Setup branch protection rules
+### Checkpoint 1.4: Docker Development Environment
+- [ ] Create docker-compose.yml with PostgreSQL and Redis
+- [ ] Create Dockerfile for the application
+- [ ] Create database initialization scripts
+- [ ] Setup environment variable configuration
+
+### Checkpoint 1.5: CI/CD Pipeline
+- [ ] Create GitHub Actions workflow for build & test
+- [ ] Create workflow for Docker image build
+- [ ] Setup code quality checks (Checkstyle)
+- [ ] Configure test coverage reporting
 
 **Deliverables:**
-- Working multi-module Maven project
-- Local development environment with Docker
-- CI/CD pipeline running on commits
+- Working Spring Boot project with proper structure
+- Docker development environment
+- CI/CD pipeline
 
 ---
 
-## BLOCK 2: Authentication & Authorization Service
-**Estimated Complexity: High**
+## BLOCK 2: Role-Based Access Control (RBAC) System
+**Complexity: High**
 
-### Checkpoint 2.1: Auth Service Project Setup
-- [ ] Create auth-service module structure
-- [ ] Configure Spring Security 6
-- [ ] Setup PostgreSQL database config
-- [ ] Configure Flyway migrations
-- [ ] Setup Redis for session/token storage
-
-### Checkpoint 2.2: User Management Domain
-- [ ] Create User entity with audit fields
-- [ ] Create Role entity (RBAC)
+### Checkpoint 2.1: RBAC Domain Model
+- [ ] Create User entity
+  - id, username, email, passwordHash, firstName, lastName
+  - enabled, locked, emailVerified
+  - lastLoginAt, failedLoginAttempts, lockedUntil
+  - tenantId (for multi-tenancy)
+- [ ] Create Role entity
+  - id, name, code, description
+  - isSystemRole (cannot be deleted)
+  - tenantId
 - [ ] Create Permission entity
-- [ ] Create UserRole and RolePermission mappings
-- [ ] Create Tenant entity (multi-tenancy)
-- [ ] Create UserSession entity
-- [ ] Write Flyway migrations (V1__create_user_tables.sql)
+  - id, name, code, description
+  - module (INVENTORY, FINANCE, POS, ADMIN, REPORTS)
+  - action (CREATE, READ, UPDATE, DELETE, EXPORT, APPROVE)
+- [ ] Create UserRole join entity (user_id, role_id)
+- [ ] Create RolePermission join entity (role_id, permission_id)
+- [ ] Write Flyway migrations
 
-### Checkpoint 2.3: Authentication Implementation
-- [ ] Implement JWT token generation & validation
-- [ ] Implement login endpoint (/api/v1/auth/login)
-- [ ] Implement logout endpoint (/api/v1/auth/logout)
-- [ ] Implement refresh token mechanism
-- [ ] Implement password reset flow
-- [ ] Implement account lockout after failed attempts
-- [ ] Add rate limiting on auth endpoints
+### Checkpoint 2.2: Default Roles & Permissions Setup
+- [ ] Create migration for default permissions:
+  ```
+  # Inventory Permissions
+  INVENTORY_PRODUCT_CREATE, INVENTORY_PRODUCT_READ, INVENTORY_PRODUCT_UPDATE, INVENTORY_PRODUCT_DELETE
+  INVENTORY_STOCK_READ, INVENTORY_STOCK_ADJUST, INVENTORY_STOCK_TRANSFER
+  INVENTORY_RECEIVING_CREATE, INVENTORY_RECEIVING_APPROVE
+  INVENTORY_COUNT_CREATE, INVENTORY_COUNT_APPROVE
 
-### Checkpoint 2.4: Authorization & RBAC
-- [ ] Implement permission-based access control
-- [ ] Create custom @RequiresPermission annotation
-- [ ] Implement role hierarchy
-- [ ] Create default roles (ADMIN, MANAGER, CASHIER, etc.)
-- [ ] Implement multi-location access control
-- [ ] Create authorization cache with Redis
+  # Finance Permissions
+  FINANCE_GL_READ, FINANCE_GL_POST, FINANCE_GL_CLOSE_PERIOD
+  FINANCE_AP_CREATE, FINANCE_AP_APPROVE, FINANCE_AP_PAY
+  FINANCE_AR_CREATE, FINANCE_AR_RECEIVE_PAYMENT
+  FINANCE_REPORTS_VIEW, FINANCE_REPORTS_EXPORT
 
-### Checkpoint 2.5: Two-Factor Authentication (2FA)
-- [ ] Implement TOTP-based 2FA
-- [ ] Create 2FA setup endpoints
-- [ ] Create 2FA verification flow
-- [ ] Implement backup codes
+  # POS Permissions
+  POS_SALE_CREATE, POS_SALE_VOID, POS_SALE_REFUND
+  POS_DISCOUNT_APPLY, POS_DISCOUNT_OVERRIDE
+  POS_DRAWER_OPEN, POS_DRAWER_CLOSE, POS_DRAWER_RECONCILE
+  POS_REPORTS_VIEW
+
+  # Admin Permissions
+  ADMIN_USER_MANAGE, ADMIN_ROLE_MANAGE, ADMIN_PERMISSION_MANAGE
+  ADMIN_TENANT_MANAGE, ADMIN_SETTINGS_MANAGE
+  ADMIN_AUDIT_VIEW, ADMIN_SYSTEM_MONITOR
+
+  # Report Permissions
+  REPORTS_INVENTORY_VIEW, REPORTS_FINANCE_VIEW, REPORTS_SALES_VIEW
+  REPORTS_EXPORT, REPORTS_SCHEDULE
+  ```
+- [ ] Create default roles:
+  - SUPER_ADMIN (all permissions)
+  - ADMIN (all except system settings)
+  - INVENTORY_MANAGER (all inventory + inventory reports)
+  - FINANCE_MANAGER (all finance + finance reports)
+  - ACCOUNTANT (finance read + create, no approve)
+  - STORE_MANAGER (POS + inventory read + sales reports)
+  - CASHIER (POS sale only, no void/refund)
+  - WAREHOUSE_STAFF (inventory operations, no approve)
+  - VIEWER (read-only access)
+
+### Checkpoint 2.3: Spring Security Configuration
+- [ ] Configure SecurityFilterChain
+- [ ] Implement JwtAuthenticationFilter
+- [ ] Implement JwtTokenProvider (generate, validate, refresh)
+- [ ] Configure password encoder (BCrypt)
+- [ ] Configure CORS settings
+- [ ] Configure session management (stateless)
+
+### Checkpoint 2.4: Permission Checking Infrastructure
+- [ ] Create @RequiresPermission annotation
+- [ ] Create PermissionAspect for checking permissions
+- [ ] Create SecurityContextHelper utility
+- [ ] Implement permission caching with Redis
+- [ ] Create permission evaluation service
+
+### Checkpoint 2.5: Authentication APIs
+- [ ] POST /api/v1/auth/login - Login with username/password
+- [ ] POST /api/v1/auth/logout - Invalidate token
+- [ ] POST /api/v1/auth/refresh - Refresh access token
+- [ ] POST /api/v1/auth/forgot-password - Request password reset
+- [ ] POST /api/v1/auth/reset-password - Reset with token
+- [ ] GET /api/v1/auth/me - Get current user profile
+- [ ] PUT /api/v1/auth/change-password - Change own password
 
 ### Checkpoint 2.6: User Management APIs
-- [ ] Create user CRUD endpoints
-- [ ] Create role management endpoints
-- [ ] Create permission management endpoints
-- [ ] Implement user search with filters
-- [ ] Implement user import/export
-- [ ] Add password policy enforcement
+- [ ] GET /api/v1/users - List users (paginated, filterable)
+- [ ] GET /api/v1/users/{id} - Get user details
+- [ ] POST /api/v1/users - Create user
+- [ ] PUT /api/v1/users/{id} - Update user
+- [ ] DELETE /api/v1/users/{id} - Soft delete user
+- [ ] PUT /api/v1/users/{id}/roles - Assign roles to user
+- [ ] PUT /api/v1/users/{id}/lock - Lock/unlock user
+- [ ] PUT /api/v1/users/{id}/reset-password - Admin reset password
 
-### Checkpoint 2.7: Auth Service Tests
-- [ ] Write unit tests for auth logic
-- [ ] Write integration tests with Testcontainers
-- [ ] Write security tests (penetration basics)
-- [ ] Achieve 80%+ code coverage
+### Checkpoint 2.7: Role Management APIs
+- [ ] GET /api/v1/roles - List roles
+- [ ] GET /api/v1/roles/{id} - Get role with permissions
+- [ ] POST /api/v1/roles - Create custom role
+- [ ] PUT /api/v1/roles/{id} - Update role
+- [ ] DELETE /api/v1/roles/{id} - Delete role (if not system)
+- [ ] PUT /api/v1/roles/{id}/permissions - Assign permissions
+- [ ] GET /api/v1/permissions - List all permissions
+
+### Checkpoint 2.8: Multi-Tenancy Support
+- [ ] Create Tenant entity (id, name, code, settings)
+- [ ] Implement TenantFilter for automatic tenant filtering
+- [ ] Implement TenantContext (ThreadLocal)
+- [ ] Configure tenant resolution from JWT
+
+### Checkpoint 2.9: RBAC Tests
+- [ ] Unit tests for permission checking
+- [ ] Integration tests for authentication flow
+- [ ] Tests for role-based access control
+- [ ] Tests for multi-tenancy isolation
 
 **Deliverables:**
-- Fully functional authentication service
-- JWT-based auth with refresh tokens
-- RBAC with granular permissions
-- 2FA support
-- Comprehensive test coverage
+- Complete RBAC system
+- User authentication with JWT
+- Role and permission management
+- Multi-tenancy support
 
 ---
 
-## BLOCK 3: API Gateway & Service Discovery
-**Estimated Complexity: Medium**
+## BLOCK 3: Inventory Module - Product Catalog
+**Complexity: Medium**
 
-### Checkpoint 3.1: Gateway Service Setup
-- [ ] Create gateway-service module
-- [ ] Configure Spring Cloud Gateway
-- [ ] Setup route configurations for all services
-- [ ] Configure CORS policies
-- [ ] Implement request/response logging
-
-### Checkpoint 3.2: Security at Gateway Level
-- [ ] Integrate with Auth Service for JWT validation
-- [ ] Implement rate limiting per client/IP
-- [ ] Setup request throttling
-- [ ] Configure SSL/TLS termination
-- [ ] Add security headers (HSTS, CSP, etc.)
-
-### Checkpoint 3.3: API Management Features
-- [ ] Implement API versioning (v1, v2)
-- [ ] Setup request tracing (Sleuth/Micrometer)
-- [ ] Configure circuit breaker (Resilience4j)
-- [ ] Implement request/response transformation
-- [ ] Add API analytics collection
-
-### Checkpoint 3.4: Service Discovery (Optional - for K8s)
-- [ ] Configure Kubernetes service discovery
-- [ ] OR Configure Eureka for non-K8s deployment
-- [ ] Setup health check endpoints
-- [ ] Configure load balancing
-
-**Deliverables:**
-- Working API Gateway
-- Centralized security enforcement
-- Rate limiting and throttling
-- Request tracing and logging
-
----
-
-## BLOCK 4: Inventory Service - Core Setup
-**Estimated Complexity: Medium**
-
-### Checkpoint 4.1: Inventory Service Structure
-- [ ] Create inventory-service module
-- [ ] Configure database connection
-- [ ] Setup Flyway migrations
-- [ ] Configure Kafka producer/consumer
-- [ ] Setup Redis caching
-- [ ] Configure MapStruct
-
-### Checkpoint 4.2: Product Catalog Domain
-- [ ] Create Product entity
-- [ ] Create ProductVariant entity (size, color, etc.)
-- [ ] Create Category entity (hierarchical)
+### Checkpoint 3.1: Product Domain Model
+- [ ] Create Category entity (hierarchical with parentId)
 - [ ] Create Brand entity
 - [ ] Create UnitOfMeasure entity
+- [ ] Create Product entity
+  - id, sku, barcode, name, description
+  - categoryId, brandId, baseUomId
+  - costPrice, sellingPrice
+  - trackInventory, allowNegativeStock
+  - minStockLevel, reorderPoint
+  - isActive, isService
+- [ ] Create ProductVariant entity (size, color combinations)
 - [ ] Create ProductImage entity
 - [ ] Create ProductAttribute entity (custom fields)
-- [ ] Write migrations (V1__create_product_tables.sql)
+- [ ] Write Flyway migrations
 
-### Checkpoint 4.3: Product Catalog APIs
-- [ ] Implement Product CRUD endpoints
-- [ ] Implement category management endpoints
-- [ ] Implement variant management endpoints
-- [ ] Implement product search with filters
-- [ ] Implement product import/export (CSV/Excel)
-- [ ] Add product image upload endpoint
-- [ ] Implement barcode generation
+### Checkpoint 3.2: Product Catalog APIs
+- [ ] CRUD for Categories (with hierarchy support)
+- [ ] CRUD for Brands
+- [ ] CRUD for Units of Measure
+- [ ] CRUD for Products
+- [ ] Product variant management
+- [ ] Product image upload/delete
+- [ ] Product search with filters (name, sku, category, brand)
+- [ ] Product barcode lookup
+- [ ] Product import from CSV/Excel
+- [ ] Product export to CSV/Excel
 
-### Checkpoint 4.4: SKU & Barcode Management
-- [ ] Create SKU generation service
-- [ ] Implement custom SKU assignment
-- [ ] Implement barcode generation (Code128, EAN13)
-- [ ] Create barcode validation service
-- [ ] Implement barcode lookup API
+### Checkpoint 3.3: SKU & Barcode Services
+- [ ] Create SKUGeneratorService (configurable patterns)
+- [ ] Create BarcodeGeneratorService (Code128, EAN13)
+- [ ] Create BarcodeValidatorService
 
-### Checkpoint 4.5: Product Catalog Tests
-- [ ] Write unit tests for product services
-- [ ] Write integration tests
-- [ ] Write API tests
-- [ ] Test search functionality
+### Checkpoint 3.4: Product Catalog Tests
+- [ ] Unit tests for services
+- [ ] Integration tests for APIs
+- [ ] Test category hierarchy operations
 
 **Deliverables:**
 - Product catalog management
 - Category hierarchy
-- Variant management
 - Barcode/SKU system
 
 ---
 
-## BLOCK 5: Inventory Service - Location & Stock Management
-**Estimated Complexity: High**
+## BLOCK 4: Inventory Module - Stock Management
+**Complexity: High**
 
-### Checkpoint 5.1: Location Domain
-- [ ] Create Location entity (warehouse, store, virtual)
+### Checkpoint 4.1: Location Domain Model
+- [ ] Create Location entity
+  - id, code, name, type (WAREHOUSE, STORE, VIRTUAL)
+  - address, isActive
+  - parentLocationId (for zones/bins)
 - [ ] Create LocationType enum
-- [ ] Create Zone/Bin entity (for warehouse management)
-- [ ] Create LocationHierarchy for nested locations
-- [ ] Write migrations
+- [ ] Write Flyway migrations
 
-### Checkpoint 5.2: Stock Level Domain
-- [ ] Create Stock entity (product + location)
+### Checkpoint 4.2: Stock Domain Model
+- [ ] Create Stock entity
+  - id, productId, locationId
+  - quantityOnHand, quantityReserved, quantityAvailable
 - [ ] Create StockMovement entity
-- [ ] Create MovementType enum (IN, OUT, TRANSFER, ADJUSTMENT)
-- [ ] Create StockReservation entity
+  - id, productId, fromLocationId, toLocationId
+  - quantity, movementType, referenceType, referenceId
+  - reason, notes, createdBy, createdAt
+- [ ] Create MovementType enum (STOCK_IN, STOCK_OUT, TRANSFER, ADJUSTMENT)
 - [ ] Create StockBatch entity (for batch tracking)
+  - id, productId, locationId, batchNumber
+  - quantity, expiryDate, manufactureDate
 - [ ] Create SerialNumber entity (for serial tracking)
-- [ ] Write migrations
+- [ ] Write Flyway migrations
 
-### Checkpoint 5.3: Stock Level APIs
-- [ ] Implement stock query endpoints
-- [ ] Implement stock by location endpoints
-- [ ] Implement available stock calculation (total - reserved)
-- [ ] Implement low stock alerts endpoint
-- [ ] Implement stock valuation endpoint
-- [ ] Add real-time stock websocket updates
+### Checkpoint 4.3: Stock Query APIs
+- [ ] GET /api/v1/stock - Get stock levels (filterable by product, location)
+- [ ] GET /api/v1/stock/product/{productId} - Stock by product across locations
+- [ ] GET /api/v1/stock/location/{locationId} - All stock at location
+- [ ] GET /api/v1/stock/low-stock - Products below reorder point
+- [ ] GET /api/v1/stock/movements - Stock movement history
+- [ ] GET /api/v1/stock/valuation - Inventory valuation report
 
-### Checkpoint 5.4: Stock Movements
-- [ ] Implement stock-in operations
-- [ ] Implement stock-out operations
-- [ ] Implement inter-location transfer
-- [ ] Implement stock adjustments with reason codes
-- [ ] Create movement approval workflow
-- [ ] Publish stock events to Kafka
+### Checkpoint 4.4: Stock Movement APIs
+- [ ] POST /api/v1/stock/receive - Stock in (receiving)
+- [ ] POST /api/v1/stock/issue - Stock out (issue)
+- [ ] POST /api/v1/stock/transfer - Inter-location transfer
+- [ ] POST /api/v1/stock/adjust - Stock adjustment with reason
+- [ ] Implement automatic stock updates on POS sale (internal call)
 
-### Checkpoint 5.5: Batch & Serial Tracking
-- [ ] Implement batch creation and tracking
-- [ ] Implement serial number assignment
-- [ ] Implement batch/serial lookup
-- [ ] Implement expiry date tracking
-- [ ] Create expiry alerts service
+### Checkpoint 4.5: Batch & Serial Tracking
+- [ ] Batch creation on receiving
+- [ ] Serial number assignment
+- [ ] Batch/serial lookup APIs
+- [ ] Expiry date tracking
+- [ ] Expiry alerts
 
-### Checkpoint 5.6: Stock Management Tests
-- [ ] Write unit tests for stock calculations
-- [ ] Write concurrent stock update tests
+### Checkpoint 4.6: Stock Integration with Other Modules
+- [ ] Create StockService with methods for POS to call directly
+- [ ] Create InventoryEventPublisher for internal events
+- [ ] Implement stock reservation for pending sales
+- [ ] Implement automatic stock deduction on sale completion
+
+### Checkpoint 4.7: Stock Management Tests
+- [ ] Unit tests for stock calculations
+- [ ] Concurrent stock update tests
 - [ ] Test stock reservation logic
-- [ ] Test movement validation
+- [ ] Integration tests
 
 **Deliverables:**
 - Multi-location stock management
 - Real-time stock tracking
-- Batch and serial number support
-- Stock movement audit trail
+- Batch and serial support
+- Internal integration with POS
 
 ---
 
-## BLOCK 6: Inventory Service - Operations
-**Estimated Complexity: High**
+## BLOCK 5: Inventory Module - Operations
+**Complexity: High**
 
-### Checkpoint 6.1: Receiving & Putaway
+### Checkpoint 5.1: Purchase Order Domain
+- [ ] Create PurchaseOrder entity
+  - id, poNumber, vendorId, status
+  - orderDate, expectedDate
+  - totalAmount, notes
+- [ ] Create PurchaseOrderLine entity
+- [ ] Create POStatus enum (DRAFT, APPROVED, PARTIAL, RECEIVED, CANCELLED)
+- [ ] Write migrations
+
+### Checkpoint 5.2: Purchase Order APIs
+- [ ] CRUD for Purchase Orders
+- [ ] PO approval workflow
+- [ ] PO line management
+
+### Checkpoint 5.3: Receiving Domain & APIs
 - [ ] Create ReceivingOrder entity
 - [ ] Create ReceivingLine entity
-- [ ] Implement PO receiving with variance handling
-- [ ] Implement partial receiving
-- [ ] Implement quality inspection status
-- [ ] Create putaway suggestion algorithm
-- [ ] Publish receiving events
+- [ ] POST /api/v1/receiving - Create receiving from PO
+- [ ] PUT /api/v1/receiving/{id}/receive - Confirm receiving
+- [ ] Handle partial receiving
+- [ ] Handle variances (over/under receiving)
+- [ ] Auto-update stock on receiving (direct service call)
+- [ ] Auto-create AP invoice on receiving (direct service call to Finance)
 
-### Checkpoint 6.2: Picking & Fulfillment
-- [ ] Create PickList entity
-- [ ] Create PickLine entity
-- [ ] Implement wave picking creation
-- [ ] Implement pick route optimization
-- [ ] Implement pick confirmation API
-- [ ] Create packing slip generation
-- [ ] Implement backorder management
-
-### Checkpoint 6.3: Inventory Counting
+### Checkpoint 5.4: Inventory Counting
 - [ ] Create InventoryCount entity
-- [ ] Create CountSchedule entity
-- [ ] Implement cycle count scheduling
-- [ ] Implement blind count workflow
-- [ ] Implement variance calculation
-- [ ] Create count approval workflow
-- [ ] Implement count reconciliation
+- [ ] Create InventoryCountLine entity
+- [ ] Create CountStatus enum (DRAFT, IN_PROGRESS, COMPLETED, APPROVED)
+- [ ] POST /api/v1/inventory-count - Create count
+- [ ] PUT /api/v1/inventory-count/{id}/count - Submit counts
+- [ ] PUT /api/v1/inventory-count/{id}/approve - Approve with adjustments
+- [ ] Auto-create adjustments on approval (direct call)
 
-### Checkpoint 6.4: Inventory Planning
-- [ ] Implement reorder point calculation
-- [ ] Implement safety stock calculation
-- [ ] Implement EOQ suggestions
-- [ ] Create ABC analysis service
-- [ ] Implement slow-moving stock identification
-- [ ] Implement demand forecasting (simple algorithms)
+### Checkpoint 5.5: Inventory Planning APIs
+- [ ] GET /api/v1/inventory/reorder-suggestions
+- [ ] GET /api/v1/inventory/abc-analysis
+- [ ] GET /api/v1/inventory/slow-moving
+- [ ] GET /api/v1/inventory/dead-stock
 
-### Checkpoint 6.5: Operations Tests
+### Checkpoint 5.6: Operations Tests
 - [ ] Test receiving workflows
-- [ ] Test picking algorithms
-- [ ] Test counting reconciliation
+- [ ] Test counting and adjustments
 - [ ] Test planning calculations
 
 **Deliverables:**
-- Complete receiving workflow
-- Picking and fulfillment system
-- Inventory counting module
-- Basic inventory planning
+- Purchase order management
+- Receiving workflow
+- Inventory counting
+- Planning tools
 
 ---
 
-## BLOCK 7: Finance Service - Core Accounting
-**Estimated Complexity: Very High**
+## BLOCK 6: Finance Module - General Ledger
+**Complexity: Very High**
 
-### Checkpoint 7.1: Finance Service Setup
-- [ ] Create finance-service module
-- [ ] Configure database and Flyway
-- [ ] Setup Kafka integration
-- [ ] Configure double-entry accounting rules
-- [ ] Create fiscal period utilities
-
-### Checkpoint 7.2: Chart of Accounts Domain
-- [ ] Create Account entity (hierarchical)
+### Checkpoint 6.1: Chart of Accounts Domain
+- [ ] Create Account entity
+  - id, code, name, accountType
+  - parentAccountId (hierarchical)
+  - isActive, isSystemAccount
+  - normalBalance (DEBIT, CREDIT)
 - [ ] Create AccountType enum (ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE)
-- [ ] Create AccountGroup entity
 - [ ] Create default chart of accounts template
-- [ ] Implement account code generation
 - [ ] Write migrations
 
-### Checkpoint 7.3: Chart of Accounts APIs
-- [ ] Implement account CRUD endpoints
-- [ ] Implement account hierarchy endpoints
-- [ ] Implement account search
-- [ ] Implement account activation/deactivation
-- [ ] Implement chart of accounts import
+### Checkpoint 6.2: Chart of Accounts APIs
+- [ ] CRUD for Accounts
+- [ ] Account hierarchy management
+- [ ] Account activation/deactivation
+- [ ] Chart of accounts import
 
-### Checkpoint 7.4: Journal Entry Domain
-- [ ] Create JournalEntry entity
-- [ ] Create JournalLine entity
-- [ ] Create JournalEntryStatus enum
-- [ ] Create RecurringJournalTemplate entity
-- [ ] Implement double-entry validation
-- [ ] Write migrations
-
-### Checkpoint 7.5: Journal Entry APIs
-- [ ] Implement journal entry creation
-- [ ] Implement journal entry posting
-- [ ] Implement journal entry reversal
-- [ ] Implement recurring journal processing
-- [ ] Create journal entry approval workflow
-- [ ] Implement auto-posting from Kafka events
-
-### Checkpoint 7.6: Fiscal Period Management
+### Checkpoint 6.3: Fiscal Period Domain
 - [ ] Create FiscalYear entity
-- [ ] Create FiscalPeriod entity
-- [ ] Implement period open/close logic
-- [ ] Implement year-end closing process
-- [ ] Create retained earnings calculation
+- [ ] Create FiscalPeriod entity (12 periods per year)
+- [ ] Create PeriodStatus enum (OPEN, CLOSED, LOCKED)
+- [ ] Period open/close logic
+- [ ] Year-end closing process
 
-### Checkpoint 7.7: Multi-Currency Support
+### Checkpoint 6.4: Journal Entry Domain
+- [ ] Create JournalEntry entity
+  - id, entryNumber, entryDate
+  - description, status, source
+  - postedAt, postedBy
+- [ ] Create JournalLine entity
+  - id, journalEntryId, accountId
+  - debitAmount, creditAmount
+  - description
+- [ ] Create JournalStatus enum (DRAFT, POSTED, REVERSED)
+- [ ] Implement double-entry validation (debits = credits)
+- [ ] Write migrations
+
+### Checkpoint 6.5: Journal Entry APIs
+- [ ] POST /api/v1/gl/journal-entries - Create entry
+- [ ] PUT /api/v1/gl/journal-entries/{id}/post - Post entry
+- [ ] POST /api/v1/gl/journal-entries/{id}/reverse - Reverse entry
+- [ ] GET /api/v1/gl/journal-entries - List entries
+- [ ] Recurring journal template support
+
+### Checkpoint 6.6: GL Integration Service
+- [ ] Create GLIntegrationService for other modules to call
+- [ ] Method: postInventoryMovement(movement) - COGS entries
+- [ ] Method: postSalesTransaction(sale) - Revenue entries
+- [ ] Method: postPurchaseInvoice(invoice) - AP entries
+- [ ] Method: postPayment(payment) - Cash/Bank entries
+
+### Checkpoint 6.7: Multi-Currency Support
 - [ ] Create Currency entity
 - [ ] Create ExchangeRate entity
-- [ ] Implement exchange rate service
-- [ ] Implement multi-currency transactions
-- [ ] Implement realized/unrealized gain/loss calculation
+- [ ] Exchange rate service
+- [ ] Multi-currency transaction handling
 
-### Checkpoint 7.8: Core Accounting Tests
+### Checkpoint 6.8: GL Tests
 - [ ] Test double-entry validation
 - [ ] Test trial balance calculation
 - [ ] Test period closing
-- [ ] Test multi-currency conversions
+- [ ] Test integration postings
 
 **Deliverables:**
 - Complete general ledger
-- Chart of accounts management
+- Chart of accounts
 - Journal entry system
-- Multi-currency support
-- Fiscal period management
+- Integration service for other modules
 
 ---
 
-## BLOCK 8: Finance Service - Accounts Payable
-**Estimated Complexity: High**
+## BLOCK 7: Finance Module - Accounts Payable
+**Complexity: High**
 
-### Checkpoint 8.1: Vendor Management Domain
+### Checkpoint 7.1: Vendor Domain
 - [ ] Create Vendor entity
+  - id, code, name, taxId
+  - email, phone, address
+  - paymentTerms, creditLimit
+  - defaultExpenseAccountId
 - [ ] Create VendorContact entity
-- [ ] Create VendorBankAccount entity
-- [ ] Create PaymentTerms entity
 - [ ] Write migrations
 
-### Checkpoint 8.2: Vendor Management APIs
-- [ ] Implement vendor CRUD endpoints
-- [ ] Implement vendor search with filters
-- [ ] Implement vendor statement generation
-- [ ] Implement vendor import/export
+### Checkpoint 7.2: Vendor APIs
+- [ ] CRUD for Vendors
+- [ ] Vendor search and filtering
+- [ ] Vendor statement generation
 
-### Checkpoint 8.3: Purchase Invoice Domain
-- [ ] Create PurchaseInvoice entity
-- [ ] Create PurchaseInvoiceLine entity
-- [ ] Create InvoiceMatchingResult entity
-- [ ] Create PaymentSchedule entity
+### Checkpoint 7.3: AP Invoice Domain
+- [ ] Create APInvoice entity
+  - id, invoiceNumber, vendorId
+  - invoiceDate, dueDate
+  - totalAmount, paidAmount, balanceDue
+  - status (DRAFT, APPROVED, PARTIAL, PAID, CANCELLED)
+  - purchaseOrderId, receivingOrderId (for matching)
+- [ ] Create APInvoiceLine entity
 - [ ] Write migrations
 
-### Checkpoint 8.4: Purchase Invoice Processing
-- [ ] Implement invoice entry
-- [ ] Implement 3-way matching (PO, Receipt, Invoice)
-- [ ] Implement invoice approval workflow
-- [ ] Implement credit/debit note processing
-- [ ] Implement recurring invoice creation
-- [ ] Generate GL postings on approval
+### Checkpoint 7.4: AP Invoice APIs
+- [ ] POST /api/v1/ap/invoices - Create invoice
+- [ ] PUT /api/v1/ap/invoices/{id}/approve - Approve invoice
+- [ ] 3-way matching validation (PO, Receiving, Invoice)
+- [ ] Auto-create from receiving (called by Inventory module)
+- [ ] Post to GL on approval (call GLIntegrationService)
 
-### Checkpoint 8.5: Payment Processing
-- [ ] Create PaymentBatch entity
-- [ ] Create PaymentTransaction entity
-- [ ] Implement payment scheduling
-- [ ] Implement batch payment processing
-- [ ] Implement early payment discount tracking
-- [ ] Generate payment files (various formats)
+### Checkpoint 7.5: Payment Processing
+- [ ] Create APPayment entity
+- [ ] Create APPaymentAllocation entity
+- [ ] POST /api/v1/ap/payments - Create payment
+- [ ] Payment allocation to invoices
+- [ ] Post to GL on payment (call GLIntegrationService)
 
-### Checkpoint 8.6: AP Reports
-- [ ] Implement AP aging report
-- [ ] Implement vendor balance report
-- [ ] Implement payment history report
-- [ ] Implement accrual report
+### Checkpoint 7.6: AP Reports
+- [ ] GET /api/v1/ap/aging - AP aging report
+- [ ] GET /api/v1/ap/vendor-balance - Vendor balances
 
-### Checkpoint 8.7: AP Tests
-- [ ] Test 3-way matching logic
-- [ ] Test payment scheduling
-- [ ] Test aging calculations
+### Checkpoint 7.7: AP Tests
+- [ ] Test 3-way matching
+- [ ] Test payment allocation
 - [ ] Test GL integration
 
 **Deliverables:**
 - Vendor management
-- Invoice processing with matching
+- AP invoice processing
 - Payment processing
 - AP reporting
 
 ---
 
-## BLOCK 9: Finance Service - Accounts Receivable
-**Estimated Complexity: High**
+## BLOCK 8: Finance Module - Accounts Receivable
+**Complexity: High**
 
-### Checkpoint 9.1: Customer Management Domain
+### Checkpoint 8.1: Customer Domain
 - [ ] Create Customer entity
+  - id, code, name, taxId
+  - email, phone, address
+  - paymentTerms, creditLimit, currentBalance
+  - priceListId
 - [ ] Create CustomerContact entity
-- [ ] Create CustomerCreditLimit entity
-- [ ] Create CustomerPriceList entity
 - [ ] Write migrations
 
-### Checkpoint 9.2: Customer Management APIs
-- [ ] Implement customer CRUD endpoints
-- [ ] Implement customer search
-- [ ] Implement credit limit management
-- [ ] Implement customer statement generation
+### Checkpoint 8.2: Customer APIs
+- [ ] CRUD for Customers
+- [ ] Customer search and filtering
+- [ ] Credit limit management
+- [ ] Customer statement generation
 
-### Checkpoint 9.3: Sales Invoice Domain
-- [ ] Create SalesInvoice entity
-- [ ] Create SalesInvoiceLine entity
+### Checkpoint 8.3: AR Invoice Domain
+- [ ] Create ARInvoice entity
+  - id, invoiceNumber, customerId
+  - invoiceDate, dueDate
+  - totalAmount, paidAmount, balanceDue
+  - status, posTransactionId
+- [ ] Create ARInvoiceLine entity
 - [ ] Create CreditNote entity
 - [ ] Write migrations
 
-### Checkpoint 9.4: Invoicing
-- [ ] Implement invoice creation from POS events
-- [ ] Implement manual invoice creation
-- [ ] Implement credit note processing
-- [ ] Generate GL postings
+### Checkpoint 8.4: AR Invoice APIs
+- [ ] POST /api/v1/ar/invoices - Create invoice
+- [ ] Auto-create from POS sale (called by POS module)
+- [ ] Credit note processing
+- [ ] Post to GL (call GLIntegrationService)
 
-### Checkpoint 9.5: Payment Collection
-- [ ] Create CustomerPayment entity
-- [ ] Implement payment receipt entry
-- [ ] Implement payment allocation to invoices
-- [ ] Implement advance payment handling
-- [ ] Handle over/under payments
+### Checkpoint 8.5: Payment Collection
+- [ ] Create ARPayment entity
+- [ ] Create ARPaymentAllocation entity
+- [ ] POST /api/v1/ar/payments - Record payment
+- [ ] Payment allocation to invoices
+- [ ] Post to GL (call GLIntegrationService)
 
-### Checkpoint 9.6: Dunning & Collections
-- [ ] Create DunningLevel entity
-- [ ] Create DunningHistory entity
-- [ ] Implement dunning letter generation
-- [ ] Implement payment reminder scheduling
-- [ ] Implement bad debt write-off
+### Checkpoint 8.6: AR Reports
+- [ ] GET /api/v1/ar/aging - AR aging report
+- [ ] GET /api/v1/ar/customer-balance - Customer balances
 
-### Checkpoint 9.7: AR Reports
-- [ ] Implement AR aging report
-- [ ] Implement customer balance report
-- [ ] Implement collection report
-- [ ] Implement DSO calculation
-
-### Checkpoint 9.8: AR Tests
+### Checkpoint 8.7: AR Tests
+- [ ] Test invoice creation from POS
 - [ ] Test payment allocation
-- [ ] Test credit limit enforcement
-- [ ] Test dunning process
-- [ ] Test aging calculations
+- [ ] Test GL integration
 
 **Deliverables:**
 - Customer management
-- Invoicing system
+- AR invoicing (auto from POS)
 - Payment collection
-- Dunning management
 - AR reporting
 
 ---
 
-## BLOCK 10: Finance Service - Cash & Banking
-**Estimated Complexity: Medium**
+## BLOCK 9: Finance Module - Banking & Tax
+**Complexity: Medium**
 
-### Checkpoint 10.1: Bank Account Domain
+### Checkpoint 9.1: Bank Account Domain
 - [ ] Create BankAccount entity
 - [ ] Create BankTransaction entity
-- [ ] Create BankReconciliation entity
-- [ ] Create PettyCash entity
 - [ ] Write migrations
 
-### Checkpoint 10.2: Bank Account Management
-- [ ] Implement bank account CRUD
-- [ ] Implement bank balance tracking
-- [ ] Implement multi-currency bank accounts
+### Checkpoint 9.2: Banking APIs
+- [ ] CRUD for Bank Accounts
+- [ ] Bank transaction recording
+- [ ] Bank reconciliation process
+- [ ] Cash flow tracking
 
-### Checkpoint 10.3: Bank Reconciliation
-- [ ] Implement manual bank statement import
-- [ ] Implement CSV/OFX file import
-- [ ] Implement automatic matching algorithm
-- [ ] Implement manual matching
-- [ ] Implement reconciliation finalization
-- [ ] Generate discrepancy report
+### Checkpoint 9.3: Tax Configuration
+- [ ] Create TaxCode entity
+- [ ] Create TaxRate entity
+- [ ] Tax calculation service
+- [ ] Inclusive/exclusive tax support
 
-### Checkpoint 10.4: Cash Flow Management
-- [ ] Implement cash flow forecast
-- [ ] Implement petty cash management
-- [ ] Implement check printing integration
+### Checkpoint 9.4: Tax APIs
+- [ ] CRUD for Tax Codes
+- [ ] Tax calculation endpoints
+- [ ] Tax reports (VAT/GST summary)
 
-### Checkpoint 10.5: Banking Tests
-- [ ] Test reconciliation matching
-- [ ] Test cash flow calculations
-- [ ] Test multi-currency handling
+### Checkpoint 9.5: Banking & Tax Tests
+- [ ] Test reconciliation
+- [ ] Test tax calculations
 
 **Deliverables:**
 - Bank account management
 - Bank reconciliation
-- Cash flow forecasting
-- Petty cash management
-
----
-
-## BLOCK 11: Finance Service - Cost Accounting & Tax
-**Estimated Complexity: High**
-
-### Checkpoint 11.1: Inventory Valuation
-- [ ] Implement FIFO valuation
-- [ ] Implement LIFO valuation
-- [ ] Implement Weighted Average valuation
-- [ ] Implement Specific Identification
-- [ ] Create valuation adjustment process
-
-### Checkpoint 11.2: Cost of Goods Sold
-- [ ] Implement automatic COGS calculation
-- [ ] Consume inventory movement events
-- [ ] Create COGS journal entries
-- [ ] Implement landed cost allocation
-
-### Checkpoint 11.3: Standard Costing
-- [ ] Create StandardCost entity
-- [ ] Implement standard cost setup
-- [ ] Implement variance calculation
-- [ ] Create variance reports
-
-### Checkpoint 11.4: Tax Configuration
-- [ ] Create TaxCode entity
-- [ ] Create TaxRate entity
-- [ ] Create TaxJurisdiction entity
-- [ ] Implement tax calculation service
-- [ ] Support inclusive/exclusive pricing
-
-### Checkpoint 11.5: Tax Reporting
-- [ ] Implement VAT/GST return generation
-- [ ] Implement tax summary reports
-- [ ] Create tax audit trail
-
-### Checkpoint 11.6: Cost & Tax Tests
-- [ ] Test valuation methods
-- [ ] Test COGS calculations
-- [ ] Test tax calculations
-- [ ] Test multi-jurisdiction tax
-
-**Deliverables:**
-- Multiple inventory valuation methods
-- Automatic COGS posting
-- Tax management
+- Tax configuration
 - Tax reporting
 
 ---
 
-## BLOCK 12: POS Service - Core Transaction Processing
-**Estimated Complexity: Very High**
+## BLOCK 10: POS Module - Core Transactions
+**Complexity: Very High**
 
-### Checkpoint 12.1: POS Service Setup
-- [ ] Create pos-service module
-- [ ] Configure database and Flyway
-- [ ] Setup Kafka integration
-- [ ] Configure offline-capable design
-- [ ] Setup websocket for real-time updates
-
-### Checkpoint 12.2: Terminal & Register Domain
+### Checkpoint 10.1: POS Domain Model
 - [ ] Create POSTerminal entity
-- [ ] Create Register entity (cash drawer)
 - [ ] Create Shift entity
-- [ ] Create ShiftCashCount entity
-- [ ] Write migrations
-
-### Checkpoint 12.3: Terminal Management APIs
-- [ ] Implement terminal registration
-- [ ] Implement shift open/close
-- [ ] Implement cash drawer operations
-- [ ] Implement terminal configuration
-
-### Checkpoint 12.4: Transaction Domain
+  - id, terminalId, cashierId
+  - openedAt, closedAt, status
+  - openingCash, closingCash
 - [ ] Create POSTransaction entity
-- [ ] Create TransactionLine entity
-- [ ] Create TransactionPayment entity
-- [ ] Create TransactionDiscount entity
-- [ ] Create TransactionTax entity
-- [ ] Create HoldTransaction entity
+  - id, transactionNumber, terminalId, shiftId
+  - customerId, transactionType (SALE, RETURN, EXCHANGE)
+  - subtotal, discountAmount, taxAmount, totalAmount
+  - status (PENDING, COMPLETED, VOIDED, HELD)
+  - completedAt
+- [ ] Create POSTransactionLine entity
+- [ ] Create POSPayment entity
 - [ ] Write migrations
 
-### Checkpoint 12.5: Sales Transaction APIs
-- [ ] Implement create new transaction
-- [ ] Implement add/remove line items
-- [ ] Implement apply discounts
-- [ ] Implement calculate totals
-- [ ] Implement hold/recall transaction
-- [ ] Implement void transaction
-- [ ] Implement complete transaction
+### Checkpoint 10.2: Terminal & Shift APIs
+- [ ] POST /api/v1/pos/terminals - Register terminal
+- [ ] POST /api/v1/pos/shifts/open - Open shift
+- [ ] POST /api/v1/pos/shifts/close - Close shift with reconciliation
+- [ ] GET /api/v1/pos/shifts/current - Get current shift
 
-### Checkpoint 12.6: Payment Processing
-- [ ] Implement cash payment
-- [ ] Implement card payment integration
-- [ ] Implement split payment
-- [ ] Implement store credit/gift card
-- [ ] Implement change calculation
-- [ ] Implement payment reversal
+### Checkpoint 10.3: Transaction APIs
+- [ ] POST /api/v1/pos/transactions - Start new transaction
+- [ ] PUT /api/v1/pos/transactions/{id}/lines - Add/remove line items
+- [ ] PUT /api/v1/pos/transactions/{id}/discount - Apply discount
+- [ ] PUT /api/v1/pos/transactions/{id}/hold - Hold transaction
+- [ ] GET /api/v1/pos/transactions/held - Get held transactions
+- [ ] PUT /api/v1/pos/transactions/{id}/recall - Recall held
+- [ ] DELETE /api/v1/pos/transactions/{id} - Void transaction
 
-### Checkpoint 12.7: Returns & Exchanges
-- [ ] Create ReturnTransaction entity
-- [ ] Implement return with receipt
-- [ ] Implement return without receipt
-- [ ] Implement exchange processing
-- [ ] Implement refund processing
-- [ ] Create return reason management
+### Checkpoint 10.4: Payment APIs
+- [ ] POST /api/v1/pos/transactions/{id}/payments - Add payment
+- [ ] Support multiple payment types (CASH, CARD, CREDIT, GIFT_CARD)
+- [ ] Split payment support
+- [ ] Change calculation
+- [ ] POST /api/v1/pos/transactions/{id}/complete - Complete sale
 
-### Checkpoint 12.8: POS Event Publishing
-- [ ] Publish sale completed events
-- [ ] Publish payment events
-- [ ] Publish return events
-- [ ] Consume stock update confirmations
+### Checkpoint 10.5: POS Integration with Other Modules
+- [ ] On sale complete:
+  - [ ] Call StockService.deductStock() - reduce inventory
+  - [ ] Call ARService.createInvoice() - create AR invoice if credit sale
+  - [ ] Call GLIntegrationService.postSales() - post to GL
+- [ ] Use @Transactional for atomicity
 
-### Checkpoint 12.9: POS Core Tests
-- [ ] Test transaction calculations
+### Checkpoint 10.6: Returns & Refunds
+- [ ] POST /api/v1/pos/returns - Create return transaction
+- [ ] Return with original receipt lookup
+- [ ] Refund processing
+- [ ] Auto-adjust stock and GL (direct calls)
+
+### Checkpoint 10.7: POS Tests
+- [ ] Test transaction flow
 - [ ] Test payment processing
+- [ ] Test integration with inventory and finance
 - [ ] Test concurrent transactions
-- [ ] Test offline queue handling
 
 **Deliverables:**
 - Complete POS transaction processing
 - Multiple payment methods
-- Returns and exchanges
-- Event-driven integration
+- Returns and refunds
+- Integrated with Inventory and Finance
 
 ---
 
-## BLOCK 13: POS Service - Pricing & Promotions
-**Estimated Complexity: High**
+## BLOCK 11: POS Module - Pricing & Promotions
+**Complexity: High**
 
-### Checkpoint 13.1: Pricing Domain
+### Checkpoint 11.1: Pricing Domain
 - [ ] Create PriceList entity
-- [ ] Create PriceListItem entity
-- [ ] Create TieredPrice entity
-- [ ] Create CustomerGroupPrice entity
+- [ ] Create PriceListItem entity (product-specific prices)
+- [ ] Create CustomerPriceList mapping
 - [ ] Write migrations
 
-### Checkpoint 13.2: Pricing Engine
-- [ ] Implement base price lookup
-- [ ] Implement customer-specific pricing
-- [ ] Implement tiered pricing (quantity breaks)
-- [ ] Implement location-specific pricing
-- [ ] Implement price list priority
+### Checkpoint 11.2: Pricing Engine
+- [ ] Create PricingService
+- [ ] Base price lookup
+- [ ] Customer-specific pricing
+- [ ] Quantity-based pricing (tiered)
+- [ ] Location-specific pricing
 
-### Checkpoint 13.3: Promotion Domain
+### Checkpoint 11.3: Promotion Domain
 - [ ] Create Promotion entity
-- [ ] Create PromotionRule entity
-- [ ] Create PromotionAction entity
+  - id, name, type, startDate, endDate
+  - isActive, priority
+- [ ] Create PromotionCondition entity (what triggers it)
+- [ ] Create PromotionAction entity (what discount to apply)
 - [ ] Create Coupon entity
 - [ ] Write migrations
 
-### Checkpoint 13.4: Promotion Engine
-- [ ] Implement percentage discount
-- [ ] Implement fixed discount
-- [ ] Implement BOGO promotions
-- [ ] Implement bundle promotions
-- [ ] Implement time-based promotions
-- [ ] Implement coupon redemption
-- [ ] Implement promotion stacking rules
+### Checkpoint 11.4: Promotion Engine
+- [ ] Create PromotionService
+- [ ] Percentage discount
+- [ ] Fixed amount discount
+- [ ] Buy X Get Y (BOGO)
+- [ ] Bundle pricing
+- [ ] Coupon redemption
+- [ ] Promotion stacking rules
 
-### Checkpoint 13.5: Loyalty Program
-- [ ] Create LoyaltyProgram entity
-- [ ] Create LoyaltyMember entity
-- [ ] Create LoyaltyPoints entity
-- [ ] Implement point earning rules
-- [ ] Implement point redemption
-- [ ] Implement tier-based benefits
+### Checkpoint 11.5: Pricing & Promo APIs
+- [ ] CRUD for Price Lists
+- [ ] CRUD for Promotions
+- [ ] POST /api/v1/pos/calculate-price - Calculate final price
+- [ ] POST /api/v1/pos/apply-coupon - Validate and apply coupon
 
-### Checkpoint 13.6: Pricing & Promo Tests
-- [ ] Test price calculation
+### Checkpoint 11.6: Pricing Tests
+- [ ] Test price calculation scenarios
 - [ ] Test promotion stacking
 - [ ] Test coupon validation
-- [ ] Test loyalty calculations
 
 **Deliverables:**
 - Flexible pricing engine
-- Comprehensive promotion engine
-- Loyalty program support
+- Promotion management
+- Coupon support
 
 ---
 
-## BLOCK 14: Notification Service
-**Estimated Complexity: Medium**
+## BLOCK 12: Admin Dashboard Module
+**Complexity: High**
 
-### Checkpoint 14.1: Notification Service Setup
-- [ ] Create notification-service module
-- [ ] Configure Kafka consumers
-- [ ] Setup email (Spring Mail + templates)
-- [ ] Setup SMS integration (Twilio/similar)
-- [ ] Setup push notifications (Firebase)
+### Checkpoint 12.1: System Configuration
+- [ ] Create SystemSetting entity
+- [ ] Create TenantSetting entity
+- [ ] Configuration APIs
+  - GET/PUT /api/v1/admin/settings - System settings
+  - GET/PUT /api/v1/admin/settings/tenant - Tenant settings
 
-### Checkpoint 14.2: Notification Domain
+### Checkpoint 12.2: User Activity Monitoring
+- [ ] Create UserActivity entity (login, logout, actions)
+- [ ] GET /api/v1/admin/users/activity - User activity log
+- [ ] GET /api/v1/admin/users/online - Currently online users
+- [ ] GET /api/v1/admin/users/login-history - Login history
+
+### Checkpoint 12.3: Audit Trail
+- [ ] Configure Hibernate Envers for entity auditing
+- [ ] Create AuditLog entity for action logging
+- [ ] GET /api/v1/admin/audit - Audit trail with filters
+- [ ] GET /api/v1/admin/audit/entity/{type}/{id} - Entity change history
+
+### Checkpoint 12.4: System Monitoring APIs
+- [ ] GET /api/v1/admin/system/health - System health status
+- [ ] GET /api/v1/admin/system/metrics - Key system metrics
+  - Active users count
+  - Transactions today
+  - Database connection pool status
+  - Cache hit/miss rates
+- [ ] GET /api/v1/admin/system/storage - Storage usage
+
+### Checkpoint 12.5: Business Overview APIs
+- [ ] GET /api/v1/admin/dashboard/summary - Executive summary
+  - Total revenue (today, week, month)
+  - Total transactions
+  - Inventory value
+  - Pending AP/AR
+- [ ] GET /api/v1/admin/dashboard/trends - Trend data
+  - Revenue trend (last 30 days)
+  - Transaction count trend
+  - Top selling products
+  - Top customers
+
+### Checkpoint 12.6: Data Management
+- [ ] POST /api/v1/admin/data/export - Export data (CSV/Excel)
+- [ ] POST /api/v1/admin/data/import - Import data
+- [ ] POST /api/v1/admin/data/backup - Trigger backup
+- [ ] GET /api/v1/admin/data/backups - List backups
+
+### Checkpoint 12.7: Tenant Management (Super Admin)
+- [ ] CRUD for Tenants
+- [ ] Tenant activation/deactivation
+- [ ] Tenant data isolation verification
+- [ ] Tenant usage statistics
+
+### Checkpoint 12.8: Notification Management
 - [ ] Create NotificationTemplate entity
-- [ ] Create NotificationLog entity
-- [ ] Create NotificationPreference entity
-- [ ] Write migrations
+- [ ] CRUD for notification templates
+- [ ] Email template management
+- [ ] SMS template management
 
-### Checkpoint 14.3: Email Notifications
-- [ ] Setup Thymeleaf email templates
-- [ ] Implement order confirmation emails
-- [ ] Implement invoice emails
-- [ ] Implement password reset emails
-- [ ] Implement low stock alerts
-- [ ] Implement payment reminder emails
-
-### Checkpoint 14.4: SMS Notifications
-- [ ] Implement SMS sending service
-- [ ] Implement OTP via SMS
-- [ ] Implement order status SMS
-- [ ] Implement payment confirmation SMS
-
-### Checkpoint 14.5: In-App Notifications
-- [ ] Implement notification storage
-- [ ] Implement read/unread status
-- [ ] Implement notification preferences
-- [ ] Create notification websocket endpoint
-
-### Checkpoint 14.6: Notification Tests
-- [ ] Test email rendering
-- [ ] Test notification preferences
-- [ ] Test async processing
+### Checkpoint 12.9: Admin Dashboard Tests
+- [ ] Test audit trail completeness
+- [ ] Test metrics calculation
+- [ ] Test tenant isolation
 
 **Deliverables:**
-- Email notification system
-- SMS integration
-- In-app notifications
-- Notification preferences
+- System configuration management
+- User activity monitoring
+- Complete audit trail
+- System health monitoring
+- Executive dashboard APIs
 
 ---
 
-## BLOCK 15: Reporting Service
-**Estimated Complexity: High**
+## BLOCK 13: Mobile App Integration Module
+**Complexity: High**
 
-### Checkpoint 15.1: Reporting Service Setup
-- [ ] Create reporting-service module
-- [ ] Configure read replica database connection
-- [ ] Setup report generation engine
-- [ ] Configure export capabilities (PDF, Excel, CSV)
+### Checkpoint 13.1: Mobile Authentication
+- [ ] POST /api/v1/mobile/auth/login - Mobile login
+- [ ] POST /api/v1/mobile/auth/refresh - Refresh token
+- [ ] POST /api/v1/mobile/auth/register-device - Register for push notifications
+- [ ] Support for biometric authentication tokens
 
-### Checkpoint 15.2: Report Framework
+### Checkpoint 13.2: Revenue & Sales APIs
+- [ ] GET /api/v1/mobile/dashboard/revenue - Revenue summary
+  - Today's revenue
+  - Yesterday's revenue
+  - This week's revenue
+  - This month's revenue
+  - Revenue comparison (vs previous period)
+- [ ] GET /api/v1/mobile/dashboard/revenue/chart - Revenue chart data
+  - Hourly breakdown (today)
+  - Daily breakdown (this month)
+  - Monthly breakdown (this year)
+- [ ] GET /api/v1/mobile/sales/transactions - Recent transactions
+- [ ] GET /api/v1/mobile/sales/by-location - Sales by location
+- [ ] GET /api/v1/mobile/sales/by-category - Sales by category
+- [ ] GET /api/v1/mobile/sales/top-products - Top selling products
+
+### Checkpoint 13.3: Inventory Status APIs
+- [ ] GET /api/v1/mobile/inventory/summary - Inventory overview
+  - Total SKU count
+  - Total inventory value
+  - Low stock items count
+  - Out of stock items count
+- [ ] GET /api/v1/mobile/inventory/low-stock - Low stock alerts
+- [ ] GET /api/v1/mobile/inventory/out-of-stock - Out of stock items
+- [ ] GET /api/v1/mobile/inventory/search - Quick product search
+- [ ] GET /api/v1/mobile/inventory/product/{id} - Product details with stock
+- [ ] GET /api/v1/mobile/inventory/movements - Recent stock movements
+
+### Checkpoint 13.4: Financial Overview APIs
+- [ ] GET /api/v1/mobile/finance/summary - Financial overview
+  - Cash balance
+  - Bank balance
+  - AR outstanding
+  - AP outstanding
+  - Profit margin
+- [ ] GET /api/v1/mobile/finance/cashflow - Cash flow summary
+- [ ] GET /api/v1/mobile/finance/receivables - AR summary
+- [ ] GET /api/v1/mobile/finance/payables - AP summary
+
+### Checkpoint 13.5: Alerts & Notifications
+- [ ] GET /api/v1/mobile/alerts - All alerts
+  - Low stock alerts
+  - Expiring inventory alerts
+  - Overdue AR alerts
+  - Large transaction alerts
+  - System alerts
+- [ ] PUT /api/v1/mobile/alerts/{id}/read - Mark as read
+- [ ] GET /api/v1/mobile/alerts/settings - Alert preferences
+- [ ] PUT /api/v1/mobile/alerts/settings - Update preferences
+
+### Checkpoint 13.6: Quick Actions
+- [ ] GET /api/v1/mobile/inventory/barcode/{barcode} - Barcode lookup
+- [ ] POST /api/v1/mobile/inventory/quick-count - Quick stock count
+- [ ] POST /api/v1/mobile/pos/quick-sale - Simple quick sale
+- [ ] GET /api/v1/mobile/customers/search - Customer lookup
+
+### Checkpoint 13.7: Push Notification Service
+- [ ] Create DeviceToken entity
+- [ ] Firebase Cloud Messaging (FCM) integration
+- [ ] Push notification for:
+  - Low stock alerts
+  - Large sales alerts
+  - Daily summary
+  - Payment received
+  - System alerts
+
+### Checkpoint 13.8: Mobile Offline Support
+- [ ] GET /api/v1/mobile/sync/products - Product catalog for offline
+- [ ] GET /api/v1/mobile/sync/customers - Customer list for offline
+- [ ] GET /api/v1/mobile/sync/last-updated - Check for updates
+- [ ] Lightweight response formats for mobile
+
+### Checkpoint 13.9: Mobile API Tests
+- [ ] Test all mobile endpoints
+- [ ] Test push notification delivery
+- [ ] Test offline sync data
+- [ ] Performance testing for mobile APIs
+
+**Deliverables:**
+- Complete mobile API layer
+- Revenue and sales dashboards
+- Inventory monitoring
+- Financial overview
+- Push notifications
+- Offline support
+
+---
+
+## BLOCK 14: Reporting Module
+**Complexity: High**
+
+### Checkpoint 14.1: Report Framework
 - [ ] Create Report entity (report definitions)
 - [ ] Create ReportSchedule entity
-- [ ] Create ReportExecution entity
-- [ ] Implement report parameter handling
-- [ ] Implement report caching
+- [ ] Report parameter handling
+- [ ] Export to PDF, Excel, CSV
 
-### Checkpoint 15.3: Inventory Reports
-- [ ] Implement Stock on Hand report
-- [ ] Implement Stock Movement report
-- [ ] Implement Inventory Valuation report
-- [ ] Implement Reorder report
-- [ ] Implement ABC Analysis report
-- [ ] Implement Dead Stock report
+### Checkpoint 14.2: Inventory Reports
+- [ ] Stock on Hand report
+- [ ] Stock Movement report
+- [ ] Inventory Valuation report
+- [ ] Reorder report
+- [ ] ABC Analysis report
+- [ ] Expiry report
 
-### Checkpoint 15.4: Financial Reports
-- [ ] Implement Trial Balance
-- [ ] Implement Balance Sheet
-- [ ] Implement Income Statement
-- [ ] Implement Cash Flow Statement
-- [ ] Implement AP/AR Aging reports
-- [ ] Implement General Ledger Detail
+### Checkpoint 14.3: Financial Reports
+- [ ] Trial Balance
+- [ ] Balance Sheet
+- [ ] Income Statement (P&L)
+- [ ] Cash Flow Statement
+- [ ] AP Aging report
+- [ ] AR Aging report
+- [ ] General Ledger Detail
 
-### Checkpoint 15.5: Sales Reports
-- [ ] Implement Daily Sales Summary
-- [ ] Implement Sales by Product/Category
-- [ ] Implement Sales by Payment Method
-- [ ] Implement Cashier Performance
-- [ ] Implement Returns Analysis
+### Checkpoint 14.4: Sales Reports
+- [ ] Daily Sales Summary
+- [ ] Sales by Product/Category
+- [ ] Sales by Location
+- [ ] Sales by Payment Method
+- [ ] Cashier Performance
+- [ ] Returns Analysis
+- [ ] Hourly Sales Analysis
 
-### Checkpoint 15.6: Report Scheduling
-- [ ] Implement scheduled report generation
-- [ ] Implement email delivery
-- [ ] Implement report subscription
+### Checkpoint 14.5: Report APIs
+- [ ] GET /api/v1/reports/list - Available reports
+- [ ] POST /api/v1/reports/{code}/generate - Generate report
+- [ ] GET /api/v1/reports/{code}/export - Export report
+- [ ] Report scheduling APIs
 
-### Checkpoint 15.7: Dashboard APIs
-- [ ] Implement KPI calculation endpoints
-- [ ] Implement trend data endpoints
-- [ ] Implement comparison data endpoints
-- [ ] Implement real-time metrics websocket
-
-### Checkpoint 15.8: Reporting Tests
+### Checkpoint 14.6: Reporting Tests
 - [ ] Test report generation
 - [ ] Test export formats
-- [ ] Test scheduling
 - [ ] Test data accuracy
 
 **Deliverables:**
 - Comprehensive reporting engine
-- All major reports implemented
+- All major reports
 - Export capabilities
-- Dashboard APIs
 
 ---
 
-## BLOCK 16: Integration & External APIs
-**Estimated Complexity: High**
+## BLOCK 15: Notifications & Alerts
+**Complexity: Medium**
+
+### Checkpoint 15.1: Notification Infrastructure
+- [ ] Create NotificationLog entity
+- [ ] Create NotificationPreference entity
+- [ ] Email service (Spring Mail)
+- [ ] SMS service integration
+
+### Checkpoint 15.2: Email Notifications
+- [ ] Thymeleaf email templates
+- [ ] Order confirmation emails
+- [ ] Invoice emails
+- [ ] Password reset emails
+- [ ] Low stock alerts
+- [ ] Payment reminders
+
+### Checkpoint 15.3: In-App Notifications
+- [ ] Notification storage
+- [ ] Read/unread status
+- [ ] GET /api/v1/notifications - User notifications
+- [ ] PUT /api/v1/notifications/{id}/read - Mark as read
+- [ ] WebSocket for real-time notifications
+
+### Checkpoint 15.4: Scheduled Alerts
+- [ ] Daily summary email
+- [ ] Low stock alerts
+- [ ] Expiry alerts
+- [ ] AR overdue alerts
+
+### Checkpoint 15.5: Notification Tests
+- [ ] Test email rendering
+- [ ] Test notification delivery
+- [ ] Test preferences
+
+**Deliverables:**
+- Email notifications
+- In-app notifications
+- Scheduled alerts
+
+---
+
+## BLOCK 16: External Integrations
+**Complexity: Medium**
 
 ### Checkpoint 16.1: Webhook System
 - [ ] Create Webhook entity
-- [ ] Create WebhookEvent entity
-- [ ] Implement webhook registration API
-- [ ] Implement event publishing
-- [ ] Implement retry mechanism
-- [ ] Implement webhook signature verification
+- [ ] Webhook registration API
+- [ ] Event publishing
+- [ ] Retry mechanism
+- [ ] Signature verification
 
-### Checkpoint 16.2: Public API Documentation
-- [ ] Setup Springdoc OpenAPI
+### Checkpoint 16.2: API Documentation
+- [ ] Springdoc OpenAPI configuration
 - [ ] Document all endpoints
-- [ ] Create API versioning strategy
-- [ ] Generate SDK documentation
-- [ ] Create sandbox environment
+- [ ] Create Postman collection
+- [ ] API versioning
 
-### Checkpoint 16.3: OAuth2 for External Apps
-- [ ] Implement OAuth2 authorization server
-- [ ] Create API key management
-- [ ] Implement scope-based access
-- [ ] Implement API rate limiting
+### Checkpoint 16.3: Payment Gateway Integration
+- [ ] Abstract payment gateway interface
+- [ ] Stripe integration (sample)
+- [ ] Payment callback handling
 
-### Checkpoint 16.4: Integration Connectors
-- [ ] Create abstract connector interface
-- [ ] Implement e-commerce connector (Shopify sample)
-- [ ] Implement payment gateway connector (Stripe sample)
-- [ ] Implement accounting export (QuickBooks format)
-
-### Checkpoint 16.5: Integration Tests
+### Checkpoint 16.4: Integration Tests
 - [ ] Test webhook delivery
-- [ ] Test OAuth2 flows
-- [ ] Test connector implementations
+- [ ] Test payment flow
 
 **Deliverables:**
 - Webhook system
-- OAuth2 for third-party apps
-- Sample integration connectors
 - API documentation
+- Payment gateway sample
 
 ---
 
-## BLOCK 17: Audit, Logging & Monitoring
-**Estimated Complexity: Medium**
+## BLOCK 17: Performance & Security
+**Complexity: High**
 
-### Checkpoint 17.1: Audit System
-- [ ] Configure Hibernate Envers for entities
-- [ ] Create AuditLog entity for actions
-- [ ] Implement audit trail API
-- [ ] Implement data change history
-- [ ] Implement user action logging
+### Checkpoint 17.1: Caching Strategy
+- [ ] Redis caching for products
+- [ ] Redis caching for prices
+- [ ] Cache invalidation
+- [ ] Cache metrics
 
-### Checkpoint 17.2: Centralized Logging
-- [ ] Configure structured logging (JSON)
-- [ ] Setup correlation ID propagation
-- [ ] Configure log levels per service
-- [ ] Setup ELK stack integration
-- [ ] Create log search API
+### Checkpoint 17.2: Database Optimization
+- [ ] Add proper indexes
+- [ ] Query optimization
+- [ ] Connection pooling (HikariCP)
+- [ ] Slow query logging
 
-### Checkpoint 17.3: Monitoring & Metrics
-- [ ] Configure Micrometer metrics
-- [ ] Setup Prometheus endpoints
-- [ ] Create custom business metrics
-- [ ] Setup Grafana dashboards
-- [ ] Configure alerting rules
+### Checkpoint 17.3: Security Hardening
+- [ ] Input validation
+- [ ] SQL injection prevention (JPA handles)
+- [ ] XSS prevention
+- [ ] CORS configuration
+- [ ] Rate limiting
+- [ ] Security headers
+- [ ] Sensitive data encryption
 
-### Checkpoint 17.4: Health & Observability
-- [ ] Implement health check endpoints
-- [ ] Implement readiness/liveness probes
-- [ ] Setup distributed tracing (Zipkin/Jaeger)
-- [ ] Create system status dashboard
+### Checkpoint 17.4: Performance Testing
+- [ ] Gatling/JMeter tests
+- [ ] Load testing
+- [ ] Bottleneck identification
 
-### Checkpoint 17.5: Monitoring Tests
-- [ ] Verify audit trail completeness
-- [ ] Test metrics accuracy
-- [ ] Test alert triggering
-
-**Deliverables:**
-- Complete audit trail
-- Centralized logging
-- Monitoring dashboards
-- Alerting system
-
----
-
-## BLOCK 18: Performance & Security Hardening
-**Estimated Complexity: High**
-
-### Checkpoint 18.1: Caching Strategy
-- [ ] Implement Redis caching for products
-- [ ] Implement price caching
-- [ ] Implement session caching
-- [ ] Implement cache invalidation
-- [ ] Add cache metrics
-
-### Checkpoint 18.2: Database Optimization
-- [ ] Add database indexes
-- [ ] Implement query optimization
-- [ ] Setup connection pooling (HikariCP)
-- [ ] Implement read replica routing
-- [ ] Setup database partitioning for large tables
-
-### Checkpoint 18.3: Security Hardening
-- [ ] Implement input validation everywhere
-- [ ] Implement SQL injection prevention
-- [ ] Implement XSS prevention
-- [ ] Configure CORS properly
-- [ ] Implement rate limiting
-- [ ] Add security headers
-- [ ] Implement sensitive data encryption
-
-### Checkpoint 18.4: Performance Testing
-- [ ] Setup Gatling/JMeter tests
-- [ ] Run load tests
-- [ ] Identify bottlenecks
-- [ ] Optimize hot paths
-
-### Checkpoint 18.5: Security Testing
-- [ ] Run OWASP dependency check
-- [ ] Run static code analysis
-- [ ] Perform basic penetration testing
-- [ ] Document security measures
+### Checkpoint 17.5: Security Testing
+- [ ] OWASP dependency check
+- [ ] Static code analysis
 
 **Deliverables:**
 - Optimized caching
-- Database performance tuned
 - Security hardened
-- Performance benchmarks
+- Performance tested
 
 ---
 
-## BLOCK 19: Kubernetes Deployment
-**Estimated Complexity: High**
+## BLOCK 18: Deployment & DevOps
+**Complexity: Medium**
 
-### Checkpoint 19.1: Kubernetes Manifests
-- [ ] Create namespace configuration
-- [ ] Create ConfigMaps for each service
-- [ ] Create Secrets management
-- [ ] Create Deployment manifests
-- [ ] Create Service manifests
-- [ ] Create Ingress configuration
+### Checkpoint 18.1: Docker Deployment
+- [ ] Production Dockerfile
+- [ ] docker-compose for production
+- [ ] Environment configuration
+- [ ] Health checks
 
-### Checkpoint 19.2: Helm Charts
-- [ ] Create Helm chart structure
-- [ ] Create values files (dev, staging, prod)
-- [ ] Parameterize all configurations
-- [ ] Add resource limits/requests
-- [ ] Configure autoscaling (HPA)
+### Checkpoint 18.2: Monitoring Setup
+- [ ] Prometheus metrics endpoint
+- [ ] Grafana dashboards
+- [ ] Alert rules
+- [ ] Log aggregation
 
-### Checkpoint 19.3: Database Deployment
-- [ ] Configure PostgreSQL on K8s (or cloud managed)
-- [ ] Setup database backups
-- [ ] Configure Redis cluster
-- [ ] Configure Kafka cluster
+### Checkpoint 18.3: Backup & Recovery
+- [ ] Database backup scripts
+- [ ] Backup scheduling
+- [ ] Recovery procedures
 
-### Checkpoint 19.4: CI/CD for Kubernetes
-- [ ] Setup GitOps with ArgoCD (or Flux)
-- [ ] Configure automated deployments
-- [ ] Setup rollback procedures
-- [ ] Configure blue-green deployments
-
-### Checkpoint 19.5: Deployment Tests
-- [ ] Test deployment scripts
-- [ ] Test rollback procedures
-- [ ] Test scaling behavior
+### Checkpoint 18.4: CI/CD Finalization
+- [ ] Production deployment workflow
+- [ ] Rollback procedures
+- [ ] Blue-green deployment (optional)
 
 **Deliverables:**
-- Complete Kubernetes setup
-- Helm charts
-- CI/CD integration
 - Production-ready deployment
+- Monitoring setup
+- Backup procedures
 
 ---
 
-## BLOCK 20: Documentation & Finalization
-**Estimated Complexity: Low**
+## BLOCK 19: Documentation & Testing
+**Complexity: Low**
 
-### Checkpoint 20.1: API Documentation
+### Checkpoint 19.1: API Documentation
 - [ ] Complete OpenAPI specifications
-- [ ] Create Postman collections
-- [ ] Write API usage guides
-- [ ] Create authentication guide
+- [ ] Postman collections
+- [ ] API usage guides
 
-### Checkpoint 20.2: Developer Documentation
-- [ ] Write architecture overview
-- [ ] Document database schema
-- [ ] Write local development guide
-- [ ] Document deployment procedures
-- [ ] Create troubleshooting guide
+### Checkpoint 19.2: Developer Documentation
+- [ ] Architecture overview
+- [ ] Database schema documentation
+- [ ] Local development guide
+- [ ] Module integration guide
 
-### Checkpoint 20.3: Operations Documentation
-- [ ] Create runbooks
-- [ ] Document monitoring and alerting
-- [ ] Create incident response procedures
-- [ ] Document backup/restore procedures
-
-### Checkpoint 20.4: Final Testing
-- [ ] End-to-end integration tests
-- [ ] User acceptance testing support
-- [ ] Performance baseline documentation
+### Checkpoint 19.3: Final Testing
+- [ ] End-to-end tests
+- [ ] Integration test suite
+- [ ] UAT support
 
 **Deliverables:**
-- Complete API documentation
-- Developer guides
-- Operations documentation
-- Tested and documented system
+- Complete documentation
+- Test suite
 
 ---
 
@@ -1141,72 +1230,111 @@ inventory-platform/
 | Block | Name | Dependencies | Complexity |
 |-------|------|--------------|------------|
 | 1 | Project Foundation | None | Medium |
-| 2 | Auth Service | Block 1 | High |
-| 3 | API Gateway | Block 1, 2 | Medium |
-| 4 | Inventory Core | Block 1, 3 | Medium |
-| 5 | Stock Management | Block 4 | High |
-| 6 | Inventory Operations | Block 5 | High |
-| 7 | Finance Core | Block 1, 3 | Very High |
-| 8 | Accounts Payable | Block 7 | High |
-| 9 | Accounts Receivable | Block 7 | High |
-| 10 | Cash & Banking | Block 7 | Medium |
-| 11 | Cost Accounting & Tax | Block 7, 5 | High |
-| 12 | POS Core | Block 1, 3, 5 | Very High |
-| 13 | Pricing & Promotions | Block 12 | High |
-| 14 | Notification Service | Block 1 | Medium |
-| 15 | Reporting Service | All modules | High |
-| 16 | Integration APIs | All modules | High |
-| 17 | Audit & Monitoring | All modules | Medium |
-| 18 | Performance & Security | All modules | High |
-| 19 | Kubernetes Deployment | All modules | High |
-| 20 | Documentation | All modules | Low |
+| 2 | RBAC System | Block 1 | High |
+| 3 | Inventory - Product Catalog | Block 2 | Medium |
+| 4 | Inventory - Stock Management | Block 3 | High |
+| 5 | Inventory - Operations | Block 4 | High |
+| 6 | Finance - General Ledger | Block 2 | Very High |
+| 7 | Finance - Accounts Payable | Block 5, 6 | High |
+| 8 | Finance - Accounts Receivable | Block 6 | High |
+| 9 | Finance - Banking & Tax | Block 6 | Medium |
+| 10 | POS - Core Transactions | Block 4, 6 | Very High |
+| 11 | POS - Pricing & Promotions | Block 10 | High |
+| 12 | Admin Dashboard | Block 2, 6 | High |
+| 13 | Mobile App Integration | All modules | High |
+| 14 | Reporting | All modules | High |
+| 15 | Notifications & Alerts | Block 2 | Medium |
+| 16 | External Integrations | All modules | Medium |
+| 17 | Performance & Security | All modules | High |
+| 18 | Deployment & DevOps | All modules | Medium |
+| 19 | Documentation & Testing | All modules | Low |
 
 ---
 
-## Parallel Development Tracks
+## Module Integration Points
 
-For faster delivery, teams can work in parallel:
+Since this is a **monolithic architecture**, modules communicate via **direct method calls** within the same JVM. This simplifies integration significantly.
 
-**Track A: Foundation & Infrastructure**
-- Block 1 → Block 2 → Block 3 → Block 14 → Block 17
+### Key Integration Flows:
 
-**Track B: Inventory Domain**
-- Block 4 → Block 5 → Block 6
+**1. POS Sale → Inventory → Finance**
+```java
+@Transactional
+public POSTransaction completeSale(Long transactionId) {
+    POSTransaction tx = posRepository.findById(transactionId);
 
-**Track C: Finance Domain**
-- Block 7 → Block 8 → Block 9 → Block 10 → Block 11
+    // Deduct inventory (direct call)
+    stockService.deductStock(tx.getLines());
 
-**Track D: POS Domain**
-- Block 12 → Block 13
+    // Create AR invoice if credit sale (direct call)
+    if (tx.isCredit()) {
+        arService.createInvoiceFromPOS(tx);
+    }
 
-**Track E: Cross-Cutting**
-- Block 15 → Block 16 → Block 18 → Block 19 → Block 20
+    // Post to GL (direct call)
+    glService.postSalesTransaction(tx);
 
----
+    return posRepository.save(tx);
+}
+```
 
-## Quick Start Command (After Block 1)
+**2. Receiving → Inventory → Finance (AP)**
+```java
+@Transactional
+public ReceivingOrder completeReceiving(Long receivingId) {
+    ReceivingOrder receiving = receivingRepository.findById(receivingId);
 
-```bash
-# Clone and setup
-git clone <repository>
-cd inventory-platform
+    // Add stock (direct call)
+    stockService.addStock(receiving.getLines());
 
-# Start local infrastructure
-docker-compose up -d
+    // Create AP invoice (direct call)
+    apService.createInvoiceFromReceiving(receiving);
 
-# Run all services
-./mvnw spring-boot:run -pl auth-service &
-./mvnw spring-boot:run -pl inventory-service &
-./mvnw spring-boot:run -pl finance-service &
-./mvnw spring-boot:run -pl pos-service &
-./mvnw spring-boot:run -pl gateway-service &
+    return receivingRepository.save(receiving);
+}
+```
 
-# Access
-# API Gateway: http://localhost:8080
-# Swagger UI: http://localhost:8080/swagger-ui.html
+**3. Stock Adjustment → Finance (COGS)**
+```java
+@Transactional
+public StockMovement adjustStock(StockAdjustmentRequest request) {
+    StockMovement movement = stockService.adjust(request);
+
+    // Post COGS adjustment (direct call)
+    glService.postInventoryAdjustment(movement);
+
+    return movement;
+}
 ```
 
 ---
 
-*Document Version: 1.0*
-*Created: 2026-01-03*
+## Quick Start Commands
+
+```bash
+# Clone and setup
+git clone <repository>
+cd hisobnoma
+
+# Start infrastructure (PostgreSQL + Redis)
+docker-compose up -d
+
+# Run application
+./mvnw spring-boot:run
+
+# Access
+# API: http://localhost:8080/api/v1
+# Swagger UI: http://localhost:8080/swagger-ui.html
+
+# Run tests
+./mvnw test
+
+# Build Docker image
+docker build -t hisobnoma:latest .
+```
+
+---
+
+*Document Version: 2.0*
+*Updated: 2026-01-03*
+*Architecture: Monolithic*
