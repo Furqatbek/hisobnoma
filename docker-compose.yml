@@ -38,17 +38,7 @@ services:
     networks:
       - hisobnoma-network
 
-  # MailHog for email testing
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: hisobnoma-mailhog
-    ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Web UI
-    networks:
-      - hisobnoma-network
-
-  # Application (optional - for production-like testing)
+  # Application
   app:
     build:
       context: .
@@ -68,8 +58,6 @@ services:
       DB_PASSWORD: postgres
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      MAIL_HOST: mailhog
-      MAIL_PORT: 1025
     ports:
       - "8080:8080"
     networks:
