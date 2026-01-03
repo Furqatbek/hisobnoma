@@ -17,16 +17,17 @@ public class ARAgingReportDto {
     private LocalDate reportDate;
     private Long tenantId;
 
-    // Summary totals
-    private BigDecimal totalReceivable;
-    private BigDecimal current;          // Not yet due
-    private BigDecimal overdue1To30;     // 1-30 days overdue
-    private BigDecimal overdue31To60;    // 31-60 days overdue
-    private BigDecimal overdue61To90;    // 61-90 days overdue
-    private BigDecimal overdueOver90;    // >90 days overdue
-
     // Customer breakdown
-    private List<CustomerAgingDto> customerAging;
+    private List<CustomerAgingDto> customerAgingList;
+
+    // Summary totals
+    private BigDecimal totalCurrent;
+    private BigDecimal total1To30Days;
+    private BigDecimal total31To60Days;
+    private BigDecimal total61To90Days;
+    private BigDecimal totalOver90Days;
+    private BigDecimal grandTotal;
+    private int customerCount;
 
     @Data
     @Builder
@@ -36,12 +37,13 @@ public class ARAgingReportDto {
         private Long customerId;
         private String customerCode;
         private String customerName;
+        private BigDecimal currentAmount;
+        private BigDecimal days1To30;
+        private BigDecimal days31To60;
+        private BigDecimal days61To90;
+        private BigDecimal over90Days;
         private BigDecimal totalBalance;
-        private BigDecimal current;
-        private BigDecimal overdue1To30;
-        private BigDecimal overdue31To60;
-        private BigDecimal overdue61To90;
-        private BigDecimal overdueOver90;
-        private int invoiceCount;
+        private BigDecimal creditLimit;
+        private BigDecimal availableCredit;
     }
 }

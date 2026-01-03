@@ -278,7 +278,7 @@ public class ARPaymentService {
         }
 
         payment.setDeposited(true);
-        payment.setBankReference(bankReference);
+        payment.setDepositReference(bankReference);
         payment = arPaymentRepository.save(payment);
 
         log.info("Marked payment {} as deposited with reference: {}", payment.getPaymentNumber(), bankReference);

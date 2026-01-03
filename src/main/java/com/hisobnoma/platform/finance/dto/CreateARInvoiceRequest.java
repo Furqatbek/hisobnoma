@@ -40,6 +40,13 @@ public class CreateARInvoiceRequest {
     @DecimalMin(value = "0.0", message = "Shipping amount must be non-negative")
     private BigDecimal shippingAmount;
 
+    @DecimalMin(value = "0.0", message = "Tax amount must be non-negative")
+    private BigDecimal taxAmount;
+
+    @NotNull(message = "Total amount is required")
+    @DecimalMin(value = "0.01", message = "Total amount must be positive")
+    private BigDecimal totalAmount;
+
     @Size(max = 3, message = "Currency code cannot exceed 3 characters")
     @Builder.Default
     private String currency = "UZS";
@@ -47,10 +54,7 @@ public class CreateARInvoiceRequest {
     @DecimalMin(value = "0.0001", message = "Exchange rate must be positive")
     private BigDecimal exchangeRate;
 
-    @Size(max = 100, message = "Payment terms cannot exceed 100 characters")
-    private String paymentTerms;
-
-    private Integer paymentTermsDays;
+    private Integer paymentTerms;
 
     private Long arAccountId;
 

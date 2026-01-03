@@ -185,6 +185,17 @@ public class JournalEntryService {
         return journalEntryMapper.toDto(entry);
     }
 
+    /**
+     * Reverses a journal entry using today's date.
+     * Convenience method for GL integration.
+     */
+    @Transactional
+    public JournalEntry reverseEntry(Long id) {
+        JournalEntryDto dto = reverseJournalEntry(id, LocalDate.now());
+        return journalEntryRepository.findById(dto.getId())
+                .orElseThrow(() -> new NotFoundException("Reversing entry not found"));
+    }
+
     @Transactional
     public JournalEntryDto reverseJournalEntry(Long id, LocalDate reversalDate) {
         Long tenantId = securityContextHelper.getCurrentTenantId();

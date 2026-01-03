@@ -201,31 +201,55 @@ CREATE TABLE credit_notes (
     tenant_id BIGINT NOT NULL,
     credit_note_number VARCHAR(50) NOT NULL,
     customer_id BIGINT NOT NULL,
+    customer_name VARCHAR(200),
 
     -- Original Invoice Reference
     original_invoice_id BIGINT,
+    original_invoice_number VARCHAR(50),
 
     -- Dates
     credit_note_date DATE NOT NULL,
 
     -- Amounts
-    credit_amount DECIMAL(15, 2) NOT NULL,
-    subtotal DECIMAL(15, 2),
-    tax_amount DECIMAL(15, 2),
-    total_amount DECIMAL(15, 2),
-    applied_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
-    balance DECIMAL(15, 2) NOT NULL,
+    credit_amount DECIMAL(18, 4) NOT NULL,
+    subtotal DECIMAL(18, 4),
+    tax_amount DECIMAL(18, 4),
+    total_amount DECIMAL(18, 4),
+    applied_amount DECIMAL(18, 4) NOT NULL DEFAULT 0,
+    balance DECIMAL(18, 4) NOT NULL,
+    refunded_amount DECIMAL(18, 4) DEFAULT 0,
 
     -- Status
-    status VARCHAR(50) NOT NULL DEFAULT 'DRAFT',
+    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
 
     -- Reason
-    reason TEXT NOT NULL,
+    reason_code VARCHAR(50),
+    reason VARCHAR(500),
 
-    -- GL Reference
+    -- Currency
+    currency VARCHAR(3) DEFAULT 'UZS',
+    exchange_rate DECIMAL(18, 8) DEFAULT 1,
+
+    -- Account References
+    ar_account_id BIGINT,
+    revenue_account_id BIGINT,
+
+    description VARCHAR(1000),
+    notes VARCHAR(1000),
+
+    -- GL References
+    gl_posted BOOLEAN NOT NULL DEFAULT FALSE,
     gl_journal_entry_id BIGINT,
+    gl_posted_at TIMESTAMP,
 
-    notes TEXT,
+    -- Approval
+    approved_by BIGINT,
+    approved_at TIMESTAMP,
+
+    -- Cancellation
+    cancelled_by BIGINT,
+    cancelled_at TIMESTAMP,
+    cancellation_reason VARCHAR(500),
 
     -- Audit
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -17,14 +17,16 @@ public class CustomerBalanceReportDto {
     private LocalDate reportDate;
     private Long tenantId;
 
-    // Summary
-    private BigDecimal totalReceivable;
-    private BigDecimal totalReceived;
-    private BigDecimal netBalance;
-    private int customerCount;
-
     // Customer balances
     private List<CustomerBalanceDto> customerBalances;
+
+    // Summary
+    private BigDecimal totalReceivables;
+    private BigDecimal totalCredits;
+    private BigDecimal totalNetBalance;
+    private int customerCount;
+    private int customersOverCreditLimit;
+    private int customersOnCreditHold;
 
     @Data
     @Builder
@@ -34,18 +36,15 @@ public class CustomerBalanceReportDto {
         private Long customerId;
         private String customerCode;
         private String customerName;
-        private String contactPerson;
-        private String email;
-        private String phone;
+        private BigDecimal outstandingInvoices;
+        private BigDecimal availableCredits;
+        private BigDecimal netBalance;
         private BigDecimal creditLimit;
-        private BigDecimal totalInvoiced;
-        private BigDecimal totalPaid;
-        private BigDecimal currentBalance;
-        private BigDecimal availableCredit;
-        private int openInvoiceCount;
+        private BigDecimal availableCreditLimit;
+        private boolean overCreditLimit;
+        private boolean onCreditHold;
         private LocalDate lastInvoiceDate;
         private LocalDate lastPaymentDate;
-        private boolean creditHold;
-        private boolean overCreditLimit;
+        private Integer paymentTerms;
     }
 }

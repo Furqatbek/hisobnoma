@@ -14,6 +14,8 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class CreateARInvoiceLineRequest {
 
+    private Long itemId;
+
     private Long productId;
 
     @Size(max = 50, message = "Product SKU cannot exceed 50 characters")
@@ -55,6 +57,9 @@ public class CreateARInvoiceLineRequest {
     @DecimalMin(value = "0.0", message = "Tax rate must be non-negative")
     @DecimalMax(value = "100.0", message = "Tax rate cannot exceed 100")
     private BigDecimal taxRate;
+
+    @DecimalMin(value = "0.0", message = "Tax amount must be non-negative")
+    private BigDecimal taxAmount;
 
     private Long posLineId;
 

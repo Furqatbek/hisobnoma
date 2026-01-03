@@ -29,6 +29,12 @@ public class ARInvoiceLine extends BaseEntity {
     @Column(name = "line_number", nullable = false)
     private Integer lineNumber;
 
+    /**
+     * Item ID (inventory item reference).
+     */
+    @Column(name = "item_id")
+    private Long itemId;
+
     @Column(name = "product_id")
     private Long productId;
 
@@ -85,6 +91,12 @@ public class ARInvoiceLine extends BaseEntity {
     @Column(name = "tax_amount", precision = 18, scale = 4)
     @Builder.Default
     private BigDecimal taxAmount = BigDecimal.ZERO;
+
+    /**
+     * Stored profit margin percentage.
+     */
+    @Column(name = "profit_margin", precision = 18, scale = 2)
+    private BigDecimal profitMargin;
 
     /**
      * Link to POS transaction line if from POS.
