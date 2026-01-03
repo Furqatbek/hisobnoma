@@ -20,9 +20,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Month;
 import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
@@ -231,7 +230,7 @@ public class FiscalPeriodService {
         }
 
         period.setStatus(PeriodStatus.CLOSED);
-        period.setClosedAt(LocalDateTime.now());
+        period.setClosedAt(Instant.now());
         period.setClosedBy(userId);
 
         period = fiscalPeriodRepository.save(period);
@@ -260,7 +259,7 @@ public class FiscalPeriodService {
         }
 
         period.setStatus(PeriodStatus.OPEN);
-        period.setReopenedAt(LocalDateTime.now());
+        period.setReopenedAt(Instant.now());
         period.setReopenedBy(userId);
         period.setReopenReason(reason);
 
@@ -287,7 +286,7 @@ public class FiscalPeriodService {
 
         fiscalYear.setStatus(PeriodStatus.CLOSED);
         fiscalYear.setClosed(true);
-        fiscalYear.setClosedAt(LocalDateTime.now());
+        fiscalYear.setClosedAt(Instant.now());
         fiscalYear.setClosedBy(userId);
 
         // Lock all periods

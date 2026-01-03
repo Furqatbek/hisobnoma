@@ -6,8 +6,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -99,13 +99,13 @@ public class JournalEntry extends TenantAwareEntity {
     private Long reversingEntryId;
 
     @Column(name = "posted_at")
-    private LocalDateTime postedAt;
+    private Instant postedAt;
 
     @Column(name = "posted_by")
     private Long postedBy;
 
     @Column(name = "reversed_at")
-    private LocalDateTime reversedAt;
+    private Instant reversedAt;
 
     @Column(name = "reversed_by")
     private Long reversedBy;

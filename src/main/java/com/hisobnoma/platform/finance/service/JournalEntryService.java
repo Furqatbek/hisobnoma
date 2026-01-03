@@ -19,8 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -169,7 +169,7 @@ public class JournalEntryService {
 
         // Post the entry
         entry.setStatus(JournalStatus.POSTED);
-        entry.setPostedAt(LocalDateTime.now());
+        entry.setPostedAt(Instant.now());
         entry.setPostedBy(userId);
 
         // Update account balances
@@ -261,7 +261,7 @@ public class JournalEntryService {
 
         // Update the original entry
         originalEntry.setStatus(JournalStatus.REVERSED);
-        originalEntry.setReversedAt(LocalDateTime.now());
+        originalEntry.setReversedAt(Instant.now());
         originalEntry.setReversedBy(userId);
         originalEntry.setReversingEntryId(reversingEntry.getId());
         journalEntryRepository.save(originalEntry);
@@ -344,7 +344,7 @@ public class JournalEntryService {
         // Save and post
         entry = journalEntryRepository.save(entry);
         entry.setStatus(JournalStatus.POSTED);
-        entry.setPostedAt(LocalDateTime.now());
+        entry.setPostedAt(Instant.now());
 
         // Update account balances
         for (JournalLine line : entry.getLines()) {

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 /**
@@ -50,13 +51,13 @@ public class FiscalPeriod extends TenantAwareEntity {
     private boolean adjustmentPeriod = false;
 
     @Column(name = "closed_at")
-    private java.time.LocalDateTime closedAt;
+    private Instant closedAt;
 
     @Column(name = "closed_by")
     private Long closedBy;
 
     @Column(name = "reopened_at")
-    private java.time.LocalDateTime reopenedAt;
+    private Instant reopenedAt;
 
     @Column(name = "reopened_by")
     private Long reopenedBy;
