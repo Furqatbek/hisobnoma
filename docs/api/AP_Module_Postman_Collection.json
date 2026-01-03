@@ -1,0 +1,633 @@
+{
+  "info": {
+    "_postman_id": "ap-module-collection",
+    "name": "Hisobnoma AP Module",
+    "description": "Accounts Payable Module API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "AP Invoices",
+      "item": [
+        {
+          "name": "Get All Invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices?page=0&size=20&sort=createdAt,desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices"],
+              "query": [
+                {"key": "page", "value": "0"},
+                {"key": "size", "value": "20"},
+                {"key": "sort", "value": "createdAt,desc"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Invoices by Vendor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/vendor/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "vendor", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Invoices by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/status/APPROVED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "status", "APPROVED"]
+            }
+          }
+        },
+        {
+          "name": "Get Invoice by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Unpaid Invoices by Vendor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/vendor/1/unpaid",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "vendor", "1", "unpaid"]
+            }
+          }
+        },
+        {
+          "name": "Get Overdue Invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/overdue",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "overdue"]
+            }
+          }
+        },
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorInvoiceNumber\": \"INV-2024-001\",\n  \"vendorId\": 1,\n  \"invoiceDate\": \"2024-01-15\",\n  \"dueDate\": \"2024-02-14\",\n  \"receivedDate\": \"2024-01-15\",\n  \"discountAmount\": 0.00,\n  \"taxAmount\": 150.00,\n  \"shippingAmount\": 50.00,\n  \"currency\": \"UZS\",\n  \"paymentTerms\": \"Net 30\",\n  \"paymentTermsDays\": 30,\n  \"description\": \"Office supplies purchase\",\n  \"notes\": \"Standard monthly order\",\n  \"lines\": [\n    {\n      \"productId\": 1,\n      \"description\": \"Printer Paper A4\",\n      \"quantity\": 10,\n      \"unitOfMeasure\": \"BOX\",\n      \"unitPrice\": 25.00,\n      \"discountPercent\": 5.00,\n      \"taxCode\": \"VAT\",\n      \"taxRate\": 12.00,\n      \"notes\": \"White 80gsm\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices"]
+            }
+          }
+        },
+        {
+          "name": "Create Invoice from Receiving",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/from-receiving/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "from-receiving", "1"]
+            }
+          }
+        },
+        {
+          "name": "Update Invoice",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorInvoiceNumber\": \"INV-2024-001-REV\",\n  \"vendorId\": 1,\n  \"invoiceDate\": \"2024-01-15\",\n  \"dueDate\": \"2024-02-14\",\n  \"description\": \"Updated invoice\",\n  \"lines\": [\n    {\n      \"description\": \"Updated line item\",\n      \"quantity\": 15,\n      \"unitPrice\": 25.00\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "1"]
+            }
+          }
+        },
+        {
+          "name": "Submit for Approval",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/1/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "1", "submit"]
+            }
+          }
+        },
+        {
+          "name": "Approve Invoice",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/1/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "1", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Invoice amount does not match PO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/1/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "1", "reject"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Duplicate invoice\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/1/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "1", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "Hold Invoice",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/1/hold",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "1", "hold"]
+            }
+          }
+        },
+        {
+          "name": "Release Hold",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/1/release-hold",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "1", "release-hold"]
+            }
+          }
+        },
+        {
+          "name": "Get Total Payable",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/summary/total-payable",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "summary", "total-payable"]
+            }
+          }
+        },
+        {
+          "name": "Get Vendor Balance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/summary/vendor/1/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "summary", "vendor", "1", "balance"]
+            }
+          }
+        },
+        {
+          "name": "Get Overdue Balance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/invoices/summary/overdue-balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "invoices", "summary", "overdue-balance"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AP Payments",
+      "item": [
+        {
+          "name": "Get All Payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments"],
+              "query": [
+                {"key": "page", "value": "0"},
+                {"key": "size", "value": "20"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Payments by Vendor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/vendor/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "vendor", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Payments by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/status/COMPLETED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "status", "COMPLETED"]
+            }
+          }
+        },
+        {
+          "name": "Get Payment by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Payments by Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/date-range?startDate=2024-01-01&endDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "date-range"],
+              "query": [
+                {"key": "startDate", "value": "2024-01-01"},
+                {"key": "endDate", "value": "2024-01-31"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Unreconciled Payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/unreconciled",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "unreconciled"]
+            }
+          }
+        },
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": 1,\n  \"paymentDate\": \"2024-01-20\",\n  \"paymentMethod\": \"BANK_TRANSFER\",\n  \"paymentAmount\": 1000.00,\n  \"currency\": \"UZS\",\n  \"referenceNumber\": \"TRF-2024-001\",\n  \"memo\": \"Monthly vendor payment\",\n  \"allocations\": [\n    {\n      \"apInvoiceId\": 1,\n      \"allocatedAmount\": 500.00,\n      \"discountTaken\": 25.00,\n      \"writeOffAmount\": 0.00,\n      \"notes\": \"Full payment with early payment discount\"\n    },\n    {\n      \"apInvoiceId\": 2,\n      \"allocatedAmount\": 500.00,\n      \"discountTaken\": 0.00,\n      \"notes\": \"Full payment\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments"]
+            }
+          }
+        },
+        {
+          "name": "Submit for Approval",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/1/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "1", "submit"]
+            }
+          }
+        },
+        {
+          "name": "Approve Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/1/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "1", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Process Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/1/process",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "1", "process"]
+            }
+          }
+        },
+        {
+          "name": "Void Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Payment was made in error\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/1/void",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "1", "void"]
+            }
+          }
+        },
+        {
+          "name": "Reconcile Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/1/reconcile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "1", "reconcile"]
+            }
+          }
+        },
+        {
+          "name": "Get Total by Vendor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/summary/vendor/1/total",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "summary", "vendor", "1", "total"]
+            }
+          }
+        },
+        {
+          "name": "Get Total by Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/payments/summary/date-range/total?startDate=2024-01-01&endDate=2024-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "payments", "summary", "date-range", "total"],
+              "query": [
+                {"key": "startDate", "value": "2024-01-01"},
+                {"key": "endDate", "value": "2024-12-31"}
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AP Reports",
+      "item": [
+        {
+          "name": "Get Aging Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/reports/aging",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "reports", "aging"]
+            }
+          }
+        },
+        {
+          "name": "Get Vendor Balance Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/reports/vendor-balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "reports", "vendor-balance"]
+            }
+          }
+        },
+        {
+          "name": "Get Vendor Statement",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ap/reports/vendor/1/statement",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ap", "reports", "vendor", "1", "statement"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vendor Contacts",
+      "item": [
+        {
+          "name": "Get Vendor Contacts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/vendors/1/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventory", "vendors", "1", "contacts"]
+            }
+          }
+        },
+        {
+          "name": "Get Primary Contact",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/vendors/1/contacts/primary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventory", "vendors", "1", "contacts", "primary"]
+            }
+          }
+        },
+        {
+          "name": "Get Billing Contact",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/vendors/1/contacts/billing",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventory", "vendors", "1", "contacts", "billing"]
+            }
+          }
+        },
+        {
+          "name": "Get Ordering Contact",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/vendors/1/contacts/ordering",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventory", "vendors", "1", "contacts", "ordering"]
+            }
+          }
+        },
+        {
+          "name": "Create Contact",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"title\": \"Sales Manager\",\n  \"department\": \"Sales\",\n  \"email\": \"john.doe@vendor.com\",\n  \"phone\": \"+998901234567\",\n  \"mobilePhone\": \"+998901234568\",\n  \"fax\": \"+998901234569\",\n  \"primary\": true,\n  \"billingContact\": false,\n  \"orderingContact\": true,\n  \"notes\": \"Preferred contact for orders\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/vendors/1/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventory", "vendors", "1", "contacts"]
+            }
+          }
+        },
+        {
+          "name": "Update Contact",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": 1,\n  \"name\": \"John Doe Updated\",\n  \"title\": \"Sales Director\",\n  \"email\": \"john.doe@vendor.com\",\n  \"phone\": \"+998901234567\",\n  \"primary\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/vendors/contacts/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventory", "vendors", "contacts", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Contact",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/vendors/contacts/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventory", "vendors", "contacts", "1"]
+            }
+          }
+        },
+        {
+          "name": "Set Primary Contact",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/vendors/contacts/1/set-primary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventory", "vendors", "contacts", "1", "set-primary"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
