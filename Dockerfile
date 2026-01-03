@@ -1,17 +1,23 @@
+# syntax=docker/dockerfile:1
+
 # Build stage
 FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /app
 
-# Copy pom.xml and download dependencies (cached layer)
+# Copy pom.xml first for dependency caching
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+
+# Download dependencies with cache mount (much faster on subsequent builds)
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn dependency:go-offline -B
 
 # Copy source code
 COPY src src
 
-# Build the application
-RUN mvn package -DskipTests -B
+# Build the application with cache mount
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn package -DskipTests -B
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
