@@ -60,15 +60,15 @@
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
 │  │                        REST API Layer                                │    │
 │  │    /api/v1/auth  /api/v1/inventory  /api/v1/finance  /api/v1/pos    │    │
-│  │    /api/v1/admin  /api/v1/mobile  /api/v1/reports                   │    │
+│  │    /api/v1/admin  /api/v1/mobile  /api/v1/web  /api/v1/reports      │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                    │                                         │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
 │  │                      Service Layer (Business Logic)                  │    │
-│  ├──────────┬──────────┬──────────┬──────────┬──────────┬─────────────┤    │
-│  │   Auth   │ Inventory│ Finance  │   POS    │  Admin   │   Mobile    │    │
-│  │  Module  │  Module  │  Module  │  Module  │  Module  │   Module    │    │
-│  └──────────┴──────────┴──────────┴──────────┴──────────┴─────────────┘    │
+│  ├────────┬──────────┬─────────┬───────┬───────┬────────┬─────────────┤    │
+│  │  Auth  │ Inventory│ Finance │  POS  │ Admin │ Mobile │     Web     │    │
+│  │ Module │  Module  │ Module  │Module │Module │ Module │   Module    │    │
+│  └────────┴──────────┴─────────┴───────┴───────┴────────┴─────────────┘    │
 │                                    │                                         │
 │                    Direct Method Calls (No Message Queue)                    │
 │                                    │                                         │
@@ -129,6 +129,11 @@ com.hisobnoma.platform/
 ├── mobile/                          # Mobile API module
 │   ├── controller/
 │   ├── service/
+│   └── dto/
+├── web/                             # Web/E-commerce module
+│   ├── controller/
+│   ├── service/
+│   ├── entity/
 │   └── dto/
 └── reporting/                       # Reporting module
     ├── controller/
@@ -1001,16 +1006,148 @@ com.hisobnoma.platform/
 
 ---
 
-## BLOCK 14: Reporting Module
+## BLOCK 14: Web E-commerce Module
 **Complexity: High**
 
-### Checkpoint 14.1: Report Framework
+### Checkpoint 14.1: Web Customer Authentication
+- [ ] POST /api/v1/web/auth/register - Customer registration
+- [ ] POST /api/v1/web/auth/login - Customer login
+- [ ] POST /api/v1/web/auth/forgot-password - Password reset request
+- [ ] POST /api/v1/web/auth/reset-password - Reset password
+- [ ] GET /api/v1/web/auth/verify-email/{token} - Email verification
+- [ ] POST /api/v1/web/auth/social/google - Google OAuth login
+- [ ] POST /api/v1/web/auth/social/facebook - Facebook OAuth login
+- [ ] GET /api/v1/web/auth/me - Get customer profile
+- [ ] PUT /api/v1/web/auth/me - Update customer profile
+
+### Checkpoint 14.2: Product Catalog APIs (Public)
+- [ ] GET /api/v1/web/products - List products (paginated, filterable)
+- [ ] GET /api/v1/web/products/{id} - Product details
+- [ ] GET /api/v1/web/products/{id}/reviews - Product reviews
+- [ ] GET /api/v1/web/products/search - Full-text product search
+- [ ] GET /api/v1/web/products/featured - Featured products
+- [ ] GET /api/v1/web/products/bestsellers - Best selling products
+- [ ] GET /api/v1/web/products/new-arrivals - New arrivals
+- [ ] GET /api/v1/web/categories - Category tree
+- [ ] GET /api/v1/web/categories/{id}/products - Products by category
+- [ ] GET /api/v1/web/brands - All brands
+- [ ] GET /api/v1/web/brands/{id}/products - Products by brand
+
+### Checkpoint 14.3: Shopping Cart Domain
+- [ ] Create WebCart entity
+  - id, customerId (nullable for guest), sessionId
+  - createdAt, updatedAt, expiresAt
+- [ ] Create WebCartItem entity
+  - id, cartId, productId, variantId
+  - quantity, unitPrice, totalPrice
+- [ ] Write migrations
+
+### Checkpoint 14.4: Shopping Cart APIs
+- [ ] POST /api/v1/web/cart - Create cart (guest or authenticated)
+- [ ] GET /api/v1/web/cart - Get current cart
+- [ ] POST /api/v1/web/cart/items - Add item to cart
+- [ ] PUT /api/v1/web/cart/items/{itemId} - Update item quantity
+- [ ] DELETE /api/v1/web/cart/items/{itemId} - Remove item from cart
+- [ ] DELETE /api/v1/web/cart - Clear cart
+- [ ] POST /api/v1/web/cart/merge - Merge guest cart with user cart on login
+- [ ] POST /api/v1/web/cart/apply-coupon - Apply coupon code
+- [ ] DELETE /api/v1/web/cart/coupon - Remove coupon
+
+### Checkpoint 14.5: Web Order Domain
+- [ ] Create WebOrder entity
+  - id, orderNumber, customerId
+  - status (PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED)
+  - subtotal, discountAmount, taxAmount, shippingAmount, totalAmount
+  - shippingAddress, billingAddress
+  - paymentMethod, paymentStatus
+  - notes, createdAt
+- [ ] Create WebOrderItem entity
+- [ ] Create WebOrderStatusHistory entity
+- [ ] Write migrations
+
+### Checkpoint 14.6: Checkout APIs
+- [ ] POST /api/v1/web/checkout/validate - Validate cart before checkout
+- [ ] GET /api/v1/web/checkout/shipping-methods - Available shipping methods
+- [ ] POST /api/v1/web/checkout/calculate - Calculate totals with shipping
+- [ ] POST /api/v1/web/orders - Place order
+- [ ] GET /api/v1/web/orders - Customer order history
+- [ ] GET /api/v1/web/orders/{id} - Order details
+- [ ] GET /api/v1/web/orders/{id}/track - Order tracking
+- [ ] POST /api/v1/web/orders/{id}/cancel - Cancel order (if allowed)
+
+### Checkpoint 14.7: Payment Integration
+- [ ] POST /api/v1/web/payments/initiate - Initiate payment
+- [ ] POST /api/v1/web/payments/callback - Payment gateway callback
+- [ ] GET /api/v1/web/payments/{orderId}/status - Payment status
+- [ ] Support multiple payment gateways:
+  - [ ] Credit/Debit Card (Stripe)
+  - [ ] PayPal
+  - [ ] Cash on Delivery (COD)
+
+### Checkpoint 14.8: Customer Address Management
+- [ ] GET /api/v1/web/addresses - List saved addresses
+- [ ] POST /api/v1/web/addresses - Add new address
+- [ ] PUT /api/v1/web/addresses/{id} - Update address
+- [ ] DELETE /api/v1/web/addresses/{id} - Delete address
+- [ ] PUT /api/v1/web/addresses/{id}/default - Set as default
+
+### Checkpoint 14.9: Wishlist
+- [ ] GET /api/v1/web/wishlist - Get wishlist
+- [ ] POST /api/v1/web/wishlist/{productId} - Add to wishlist
+- [ ] DELETE /api/v1/web/wishlist/{productId} - Remove from wishlist
+- [ ] POST /api/v1/web/wishlist/{productId}/move-to-cart - Move to cart
+
+### Checkpoint 14.10: Product Reviews
+- [ ] POST /api/v1/web/products/{id}/reviews - Submit review
+- [ ] PUT /api/v1/web/reviews/{id} - Update own review
+- [ ] DELETE /api/v1/web/reviews/{id} - Delete own review
+- [ ] Review moderation (admin side)
+
+### Checkpoint 14.11: Web Module Integration
+- [ ] On order placement:
+  - [ ] Call StockService.reserveStock() - reserve inventory
+  - [ ] Call StockService.deductStock() - on order confirmation
+  - [ ] Call ARService.createInvoice() - create invoice
+  - [ ] Call GLIntegrationService.postSales() - post to GL
+- [ ] Real-time stock availability check
+- [ ] Use @Transactional for atomicity
+
+### Checkpoint 14.12: Web-Specific Features
+- [ ] GET /api/v1/web/store-info - Store information (name, logo, contact)
+- [ ] GET /api/v1/web/pages/{slug} - CMS pages (about, terms, privacy)
+- [ ] POST /api/v1/web/contact - Contact form submission
+- [ ] POST /api/v1/web/newsletter/subscribe - Newsletter subscription
+- [ ] GET /api/v1/web/banners - Homepage banners/promotions
+
+### Checkpoint 14.13: Web Module Tests
+- [ ] Test cart operations
+- [ ] Test checkout flow
+- [ ] Test payment integration
+- [ ] Test order management
+- [ ] Test stock reservation
+- [ ] Load testing for concurrent orders
+
+**Deliverables:**
+- Complete e-commerce API layer
+- Shopping cart with guest support
+- Checkout and order management
+- Payment gateway integration
+- Customer account management
+- Wishlist and reviews
+- Integration with Inventory and Finance
+
+---
+
+## BLOCK 15: Reporting Module
+**Complexity: High**
+
+### Checkpoint 15.1: Report Framework
 - [ ] Create Report entity (report definitions)
 - [ ] Create ReportSchedule entity
 - [ ] Report parameter handling
 - [ ] Export to PDF, Excel, CSV
 
-### Checkpoint 14.2: Inventory Reports
+### Checkpoint 15.2: Inventory Reports
 - [ ] Stock on Hand report
 - [ ] Stock Movement report
 - [ ] Inventory Valuation report
@@ -1018,7 +1155,7 @@ com.hisobnoma.platform/
 - [ ] ABC Analysis report
 - [ ] Expiry report
 
-### Checkpoint 14.3: Financial Reports
+### Checkpoint 15.3: Financial Reports
 - [ ] Trial Balance
 - [ ] Balance Sheet
 - [ ] Income Statement (P&L)
@@ -1027,7 +1164,7 @@ com.hisobnoma.platform/
 - [ ] AR Aging report
 - [ ] General Ledger Detail
 
-### Checkpoint 14.4: Sales Reports
+### Checkpoint 15.4: Sales Reports
 - [ ] Daily Sales Summary
 - [ ] Sales by Product/Category
 - [ ] Sales by Location
@@ -1036,13 +1173,13 @@ com.hisobnoma.platform/
 - [ ] Returns Analysis
 - [ ] Hourly Sales Analysis
 
-### Checkpoint 14.5: Report APIs
+### Checkpoint 15.5: Report APIs
 - [ ] GET /api/v1/reports/list - Available reports
 - [ ] POST /api/v1/reports/{code}/generate - Generate report
 - [ ] GET /api/v1/reports/{code}/export - Export report
 - [ ] Report scheduling APIs
 
-### Checkpoint 14.6: Reporting Tests
+### Checkpoint 15.6: Reporting Tests
 - [ ] Test report generation
 - [ ] Test export formats
 - [ ] Test data accuracy
@@ -1054,16 +1191,16 @@ com.hisobnoma.platform/
 
 ---
 
-## BLOCK 15: Notifications & Alerts
+## BLOCK 16: Notifications & Alerts
 **Complexity: Medium**
 
-### Checkpoint 15.1: Notification Infrastructure
+### Checkpoint 16.1: Notification Infrastructure
 - [ ] Create NotificationLog entity
 - [ ] Create NotificationPreference entity
 - [ ] Email service (Spring Mail)
 - [ ] SMS service integration
 
-### Checkpoint 15.2: Email Notifications
+### Checkpoint 16.2: Email Notifications
 - [ ] Thymeleaf email templates
 - [ ] Order confirmation emails
 - [ ] Invoice emails
@@ -1071,20 +1208,20 @@ com.hisobnoma.platform/
 - [ ] Low stock alerts
 - [ ] Payment reminders
 
-### Checkpoint 15.3: In-App Notifications
+### Checkpoint 16.3: In-App Notifications
 - [ ] Notification storage
 - [ ] Read/unread status
 - [ ] GET /api/v1/notifications - User notifications
 - [ ] PUT /api/v1/notifications/{id}/read - Mark as read
 - [ ] WebSocket for real-time notifications
 
-### Checkpoint 15.4: Scheduled Alerts
+### Checkpoint 16.4: Scheduled Alerts
 - [ ] Daily summary email
 - [ ] Low stock alerts
 - [ ] Expiry alerts
 - [ ] AR overdue alerts
 
-### Checkpoint 15.5: Notification Tests
+### Checkpoint 16.5: Notification Tests
 - [ ] Test email rendering
 - [ ] Test notification delivery
 - [ ] Test preferences
@@ -1096,28 +1233,28 @@ com.hisobnoma.platform/
 
 ---
 
-## BLOCK 16: External Integrations
+## BLOCK 17: External Integrations
 **Complexity: Medium**
 
-### Checkpoint 16.1: Webhook System
+### Checkpoint 17.1: Webhook System
 - [ ] Create Webhook entity
 - [ ] Webhook registration API
 - [ ] Event publishing
 - [ ] Retry mechanism
 - [ ] Signature verification
 
-### Checkpoint 16.2: API Documentation
+### Checkpoint 17.2: API Documentation
 - [ ] Springdoc OpenAPI configuration
 - [ ] Document all endpoints
 - [ ] Create Postman collection
 - [ ] API versioning
 
-### Checkpoint 16.3: Payment Gateway Integration
+### Checkpoint 17.3: Payment Gateway Integration
 - [ ] Abstract payment gateway interface
 - [ ] Stripe integration (sample)
 - [ ] Payment callback handling
 
-### Checkpoint 16.4: Integration Tests
+### Checkpoint 17.4: Integration Tests
 - [ ] Test webhook delivery
 - [ ] Test payment flow
 
@@ -1128,22 +1265,22 @@ com.hisobnoma.platform/
 
 ---
 
-## BLOCK 17: Performance & Security
+## BLOCK 18: Performance & Security
 **Complexity: High**
 
-### Checkpoint 17.1: Caching Strategy
+### Checkpoint 18.1: Caching Strategy
 - [ ] Redis caching for products
 - [ ] Redis caching for prices
 - [ ] Cache invalidation
 - [ ] Cache metrics
 
-### Checkpoint 17.2: Database Optimization
+### Checkpoint 18.2: Database Optimization
 - [ ] Add proper indexes
 - [ ] Query optimization
 - [ ] Connection pooling (HikariCP)
 - [ ] Slow query logging
 
-### Checkpoint 17.3: Security Hardening
+### Checkpoint 18.3: Security Hardening
 - [ ] Input validation
 - [ ] SQL injection prevention (JPA handles)
 - [ ] XSS prevention
@@ -1152,12 +1289,12 @@ com.hisobnoma.platform/
 - [ ] Security headers
 - [ ] Sensitive data encryption
 
-### Checkpoint 17.4: Performance Testing
+### Checkpoint 18.4: Performance Testing
 - [ ] Gatling/JMeter tests
 - [ ] Load testing
 - [ ] Bottleneck identification
 
-### Checkpoint 17.5: Security Testing
+### Checkpoint 18.5: Security Testing
 - [ ] OWASP dependency check
 - [ ] Static code analysis
 
@@ -1168,27 +1305,27 @@ com.hisobnoma.platform/
 
 ---
 
-## BLOCK 18: Deployment & DevOps
+## BLOCK 19: Deployment & DevOps
 **Complexity: Medium**
 
-### Checkpoint 18.1: Docker Deployment
+### Checkpoint 19.1: Docker Deployment
 - [ ] Production Dockerfile
 - [ ] docker-compose for production
 - [ ] Environment configuration
 - [ ] Health checks
 
-### Checkpoint 18.2: Monitoring Setup
+### Checkpoint 19.2: Monitoring Setup
 - [ ] Prometheus metrics endpoint
 - [ ] Grafana dashboards
 - [ ] Alert rules
 - [ ] Log aggregation
 
-### Checkpoint 18.3: Backup & Recovery
+### Checkpoint 19.3: Backup & Recovery
 - [ ] Database backup scripts
 - [ ] Backup scheduling
 - [ ] Recovery procedures
 
-### Checkpoint 18.4: CI/CD Finalization
+### Checkpoint 19.4: CI/CD Finalization
 - [ ] Production deployment workflow
 - [ ] Rollback procedures
 - [ ] Blue-green deployment (optional)
@@ -1200,21 +1337,21 @@ com.hisobnoma.platform/
 
 ---
 
-## BLOCK 19: Documentation & Testing
+## BLOCK 20: Documentation & Testing
 **Complexity: Low**
 
-### Checkpoint 19.1: API Documentation
+### Checkpoint 20.1: API Documentation
 - [ ] Complete OpenAPI specifications
 - [ ] Postman collections
 - [ ] API usage guides
 
-### Checkpoint 19.2: Developer Documentation
+### Checkpoint 20.2: Developer Documentation
 - [ ] Architecture overview
 - [ ] Database schema documentation
 - [ ] Local development guide
 - [ ] Module integration guide
 
-### Checkpoint 19.3: Final Testing
+### Checkpoint 20.3: Final Testing
 - [ ] End-to-end tests
 - [ ] Integration test suite
 - [ ] UAT support
@@ -1241,13 +1378,14 @@ com.hisobnoma.platform/
 | 10 | POS - Core Transactions | Block 4, 6 | Very High |
 | 11 | POS - Pricing & Promotions | Block 10 | High |
 | 12 | Admin Dashboard | Block 2, 6 | High |
-| 13 | Mobile App Integration | All modules | High |
-| 14 | Reporting | All modules | High |
-| 15 | Notifications & Alerts | Block 2 | Medium |
-| 16 | External Integrations | All modules | Medium |
-| 17 | Performance & Security | All modules | High |
-| 18 | Deployment & DevOps | All modules | Medium |
-| 19 | Documentation & Testing | All modules | Low |
+| 13 | Mobile App Integration | Block 4, 6, 10 | High |
+| 14 | **Web E-commerce** | Block 4, 6, 8, 11 | High |
+| 15 | Reporting | All modules | High |
+| 16 | Notifications & Alerts | Block 2 | Medium |
+| 17 | External Integrations | All modules | Medium |
+| 18 | Performance & Security | All modules | High |
+| 19 | Deployment & DevOps | All modules | Medium |
+| 20 | Documentation & Testing | All modules | Low |
 
 ---
 
@@ -1307,6 +1445,29 @@ public StockMovement adjustStock(StockAdjustmentRequest request) {
 }
 ```
 
+**4. Web Order → Inventory → Finance (AR)**
+```java
+@Transactional
+public WebOrder placeOrder(WebOrderRequest request) {
+    WebOrder order = webOrderRepository.save(createOrder(request));
+
+    // Reserve stock (direct call)
+    stockService.reserveStock(order.getItems());
+
+    // On payment confirmation, deduct stock
+    if (order.isPaid()) {
+        stockService.deductStock(order.getItems());
+        arService.createInvoiceFromWebOrder(order);
+        glService.postSalesTransaction(order);
+    }
+
+    // Send confirmation email
+    notificationService.sendOrderConfirmation(order);
+
+    return order;
+}
+```
+
 ---
 
 ## Quick Start Commands
@@ -1335,6 +1496,7 @@ docker build -t hisobnoma:latest .
 
 ---
 
-*Document Version: 2.0*
+*Document Version: 3.0*
 *Updated: 2026-01-03*
 *Architecture: Monolithic*
+*Total Blocks: 20*
