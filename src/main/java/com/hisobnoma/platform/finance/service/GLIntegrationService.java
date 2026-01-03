@@ -477,4 +477,262 @@ public class GLIntegrationService {
         journalEntryService.reverseEntry(payment.getGlJournalEntryId());
         log.info("Reversed GL posting for AP Payment {}", payment.getPaymentNumber());
     }
+
+    // ============ AR Invoice Integration ============
+
+    /**
+     * Posts an AR Invoice to the general ledger.
+     * Creates a journal entry that debits AR and credits revenue.
+     *
+     * @param invoice The AR invoice to post
+     * @return The ID of the created journal entry
+     */
+    @Transactional
+    public Long postARInvoice(ARInvoice invoice) {
+        Long tenantId = invoice.getTenantId();
+
+        List<CreateJournalLineRequest> lines = new ArrayList<>();
+
+        // Debit Accounts Receivable
+        Long arAccountId = resolveAccountId(ACCOUNTS_RECEIVABLE, tenantId);
+
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(arAccountId)
+                .debitAmount(invoice.getTotalAmount())
+                .creditAmount(BigDecimal.ZERO)
+                .description("Receivable from " + invoice.getCustomer().getName())
+                .build());
+
+        // Credit Revenue accounts from invoice lines
+        for (ARInvoiceLine line : invoice.getLines()) {
+            Long revenueAccountId = resolveAccountId(SALES_REVENUE_ACCOUNT, tenantId);
+
+            lines.add(CreateJournalLineRequest.builder()
+                    .accountId(revenueAccountId)
+                    .debitAmount(BigDecimal.ZERO)
+                    .creditAmount(line.getLineTotal())
+                    .description("Sales: " + line.getDescription())
+                    .build());
+
+            // If cost is tracked, record COGS
+            if (line.getUnitCost() != null && line.getUnitCost().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal totalCost = line.getUnitCost().multiply(line.getQuantity());
+                Long cogsAccountId = resolveAccountId(COGS_ACCOUNT, tenantId);
+                Long inventoryAccountId = resolveAccountId(INVENTORY_ACCOUNT, tenantId);
+
+                lines.add(CreateJournalLineRequest.builder()
+                        .accountId(cogsAccountId)
+                        .debitAmount(totalCost)
+                        .creditAmount(BigDecimal.ZERO)
+                        .description("COGS: " + line.getDescription())
+                        .build());
+
+                lines.add(CreateJournalLineRequest.builder()
+                        .accountId(inventoryAccountId)
+                        .debitAmount(BigDecimal.ZERO)
+                        .creditAmount(totalCost)
+                        .description("Inventory sold: " + line.getDescription())
+                        .build());
+            }
+        }
+
+        CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
+                .entryDate(invoice.getInvoiceDate())
+                .description("AR Invoice " + invoice.getInvoiceNumber() + " - " + invoice.getCustomer().getName())
+                .source(JournalSource.ACCOUNTS_RECEIVABLE)
+                .referenceType("AR_INVOICE")
+                .referenceId(invoice.getId())
+                .referenceNumber(invoice.getInvoiceNumber())
+                .lines(lines)
+                .build();
+
+        log.info("Posting AR Invoice {} to GL: {}", invoice.getInvoiceNumber(), invoice.getTotalAmount());
+        JournalEntry entry = journalEntryService.createAndPostEntry(request, tenantId);
+        return entry.getId();
+    }
+
+    /**
+     * Reverses an AR Invoice posting in the general ledger.
+     *
+     * @param invoice The AR invoice to reverse
+     * @param reason The reason for reversal
+     */
+    @Transactional
+    public void reverseARInvoice(ARInvoice invoice, String reason) {
+        if (invoice.getGlJournalEntryId() == null) {
+            log.warn("Invoice {} has not been posted to GL", invoice.getInvoiceNumber());
+            return;
+        }
+
+        journalEntryService.reverseEntry(invoice.getGlJournalEntryId());
+        log.info("Reversed GL posting for AR Invoice {}: {}", invoice.getInvoiceNumber(), reason);
+    }
+
+    // ============ AR Payment Integration ============
+
+    /**
+     * Posts an AR Payment to the general ledger.
+     * Creates a journal entry that debits cash and credits AR.
+     *
+     * @param payment The AR payment to post
+     * @return The ID of the created journal entry
+     */
+    @Transactional
+    public Long postARPayment(ARPayment payment) {
+        Long tenantId = payment.getTenantId();
+
+        List<CreateJournalLineRequest> lines = new ArrayList<>();
+
+        // Debit Cash/Bank
+        Long cashAccountId = resolveAccountId(CASH_ACCOUNT, tenantId);
+
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(cashAccountId)
+                .debitAmount(payment.getPaymentAmount())
+                .creditAmount(BigDecimal.ZERO)
+                .description("Payment from " + payment.getCustomer().getName() + " - " + payment.getPaymentMethod())
+                .build());
+
+        // Handle discounts given
+        BigDecimal totalDiscount = BigDecimal.ZERO;
+        BigDecimal totalWriteOff = BigDecimal.ZERO;
+
+        if (payment.getAllocations() != null) {
+            for (ARPaymentAllocation allocation : payment.getAllocations()) {
+                if (allocation.getDiscountTaken() != null) {
+                    totalDiscount = totalDiscount.add(allocation.getDiscountTaken());
+                }
+                if (allocation.getWriteOffAmount() != null) {
+                    totalWriteOff = totalWriteOff.add(allocation.getWriteOffAmount());
+                }
+            }
+        }
+
+        if (totalDiscount.compareTo(BigDecimal.ZERO) > 0) {
+            Long discountAccountId = resolveAccountId("4200", tenantId); // Sales Discounts
+            lines.add(CreateJournalLineRequest.builder()
+                    .accountId(discountAccountId)
+                    .debitAmount(totalDiscount)
+                    .creditAmount(BigDecimal.ZERO)
+                    .description("Sales discount given")
+                    .build());
+        }
+
+        if (totalWriteOff.compareTo(BigDecimal.ZERO) > 0) {
+            Long writeOffAccountId = resolveAccountId("6200", tenantId); // Bad Debt Expense
+            lines.add(CreateJournalLineRequest.builder()
+                    .accountId(writeOffAccountId)
+                    .debitAmount(totalWriteOff)
+                    .creditAmount(BigDecimal.ZERO)
+                    .description("Write-off amount")
+                    .build());
+        }
+
+        // Credit Accounts Receivable
+        Long arAccountId = resolveAccountId(ACCOUNTS_RECEIVABLE, tenantId);
+        BigDecimal arAmount = payment.getPaymentAmount().add(totalDiscount).add(totalWriteOff);
+
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(arAccountId)
+                .debitAmount(BigDecimal.ZERO)
+                .creditAmount(arAmount)
+                .description("AR collection from " + payment.getCustomer().getName())
+                .build());
+
+        CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
+                .entryDate(payment.getPaymentDate())
+                .description("AR Payment " + payment.getPaymentNumber() + " - " + payment.getCustomer().getName())
+                .source(JournalSource.PAYMENT)
+                .referenceType("AR_PAYMENT")
+                .referenceId(payment.getId())
+                .referenceNumber(payment.getPaymentNumber())
+                .lines(lines)
+                .build();
+
+        log.info("Posting AR Payment {} to GL: {}", payment.getPaymentNumber(), payment.getPaymentAmount());
+        JournalEntry entry = journalEntryService.createAndPostEntry(request, tenantId);
+        return entry.getId();
+    }
+
+    /**
+     * Reverses an AR Payment posting in the general ledger.
+     *
+     * @param payment The AR payment to reverse
+     * @param reason The reason for reversal
+     */
+    @Transactional
+    public void reverseARPayment(ARPayment payment, String reason) {
+        if (payment.getGlJournalEntryId() == null) {
+            log.warn("Payment {} has not been posted to GL", payment.getPaymentNumber());
+            return;
+        }
+
+        journalEntryService.reverseEntry(payment.getGlJournalEntryId());
+        log.info("Reversed GL posting for AR Payment {}: {}", payment.getPaymentNumber(), reason);
+    }
+
+    // ============ Credit Note Integration ============
+
+    /**
+     * Posts a Credit Note to the general ledger.
+     * Creates a journal entry that debits revenue/returns and credits AR.
+     *
+     * @param creditNote The credit note to post
+     * @return The ID of the created journal entry
+     */
+    @Transactional
+    public Long postCreditNote(CreditNote creditNote) {
+        Long tenantId = creditNote.getTenantId();
+
+        List<CreateJournalLineRequest> lines = new ArrayList<>();
+
+        // Debit Sales Returns & Allowances
+        Long returnsAccountId = resolveAccountId("4300", tenantId); // Sales Returns & Allowances
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(returnsAccountId)
+                .debitAmount(creditNote.getCreditAmount())
+                .creditAmount(BigDecimal.ZERO)
+                .description("Credit note: " + creditNote.getReason())
+                .build());
+
+        // Credit Accounts Receivable
+        Long arAccountId = resolveAccountId(ACCOUNTS_RECEIVABLE, tenantId);
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(arAccountId)
+                .debitAmount(BigDecimal.ZERO)
+                .creditAmount(creditNote.getCreditAmount())
+                .description("Credit to " + creditNote.getCustomer().getName())
+                .build());
+
+        CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
+                .entryDate(creditNote.getCreditNoteDate())
+                .description("Credit Note " + creditNote.getCreditNoteNumber() + " - " + creditNote.getCustomer().getName())
+                .source(JournalSource.ACCOUNTS_RECEIVABLE)
+                .referenceType("CREDIT_NOTE")
+                .referenceId(creditNote.getId())
+                .referenceNumber(creditNote.getCreditNoteNumber())
+                .lines(lines)
+                .build();
+
+        log.info("Posting Credit Note {} to GL: {}", creditNote.getCreditNoteNumber(), creditNote.getCreditAmount());
+        JournalEntry entry = journalEntryService.createAndPostEntry(request, tenantId);
+        return entry.getId();
+    }
+
+    /**
+     * Reverses a Credit Note posting in the general ledger.
+     *
+     * @param creditNote The credit note to reverse
+     * @param reason The reason for reversal
+     */
+    @Transactional
+    public void reverseCreditNote(CreditNote creditNote, String reason) {
+        if (creditNote.getGlJournalEntryId() == null) {
+            log.warn("Credit Note {} has not been posted to GL", creditNote.getCreditNoteNumber());
+            return;
+        }
+
+        journalEntryService.reverseEntry(creditNote.getGlJournalEntryId());
+        log.info("Reversed GL posting for Credit Note {}: {}", creditNote.getCreditNoteNumber(), reason);
+    }
 }
