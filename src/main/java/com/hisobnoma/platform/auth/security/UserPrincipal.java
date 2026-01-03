@@ -1,0 +1,76 @@
+package com.hisobnoma.platform.auth.security;
+
+import com.hisobnoma.platform.auth.entity.User;
+import lombok.Getter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.Collection;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Getter
+public class UserPrincipal implements UserDetails {
+
+    private final Long id;
+    private final String username;
+    private final String password;
+    private final Long tenantId;
+    private final boolean enabled;
+    private final boolean accountNonLocked;
+    private final Collection<? extends GrantedAuthority> authorities;
+
+    public UserPrincipal(Long id, String username, String password, Long tenantId,
+                         boolean enabled, boolean accountNonLocked,
+                         Collection<? extends GrantedAuthority> authorities) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.tenantId = tenantId;
+        this.enabled = enabled;
+        this.accountNonLocked = accountNonLocked;
+        this.authorities = authorities;
+    }
+
+    public static UserPrincipal create(User user) {
+        Set<GrantedAuthority> authorities = user.getRoles().stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .map(permission -> new SimpleGrantedAuthority(permission.getCode()))
+                .collect(Collectors.toSet());
+
+        // Add role authorities
+        user.getRoles().forEach(role ->
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getCode())));
+
+        return new UserPrincipal(
+                user.getId(),
+                user.getUsername(),
+                user.getPasswordHash(),
+                user.getTenantId(),
+                user.isEnabled(),
+                user.isAccountNonLocked(),
+                authorities
+        );
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    public boolean hasPermission(String permissionCode) {
+        return authorities.stream()
+                .anyMatch(auth -> auth.getAuthority().equals(permissionCode));
+    }
+
+    public boolean hasRole(String roleCode) {
+        return authorities.stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_" + roleCode));
+    }
+}
