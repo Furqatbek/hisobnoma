@@ -8,8 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -38,15 +38,15 @@ public class JournalEntryDto {
     private LocalDate reversalDate;
     private Long reversedEntryId;
     private Long reversingEntryId;
-    private LocalDateTime postedAt;
+    private Instant postedAt;
     private Long postedBy;
-    private LocalDateTime reversedAt;
+    private Instant reversedAt;
     private Long reversedBy;
     private String notes;
     private String internalNotes;
     private String attachments;
     private boolean balanced;
     private List<JournalLineDto> lines;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 }

@@ -10,14 +10,17 @@ import java.util.List;
 @Mapper(componentModel = "spring", uses = {JournalLineMapper.class})
 public interface JournalEntryMapper {
 
+    @Named("toDto")
     @BeanMapping(builder = @Builder(disableBuilder = true))
     @Mapping(source = "fiscalPeriod.id", target = "fiscalPeriodId")
     @Mapping(source = "fiscalPeriod.name", target = "fiscalPeriodName")
     @Mapping(expression = "java(journalEntry.isBalanced())", target = "balanced")
     JournalEntryDto toDto(JournalEntry journalEntry);
 
+    @IterableMapping(qualifiedByName = "toDtoWithoutLines")
     List<JournalEntryDto> toDtoList(List<JournalEntry> journalEntries);
 
+    @Named("toDtoWithoutLines")
     @BeanMapping(builder = @Builder(disableBuilder = true))
     @Mapping(target = "lines", ignore = true)
     @Mapping(source = "fiscalPeriod.id", target = "fiscalPeriodId")

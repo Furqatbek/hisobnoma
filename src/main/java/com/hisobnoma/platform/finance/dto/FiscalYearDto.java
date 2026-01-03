@@ -6,8 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -23,13 +23,13 @@ public class FiscalYearDto {
     private PeriodStatus status;
     private boolean current;
     private boolean closed;
-    private LocalDateTime closedAt;
+    private Instant closedAt;
     private Long closedBy;
     private Long retainedEarningsAccountId;
     private String retainedEarningsAccountName;
     private Long yearEndClosingEntryId;
     private String notes;
     private List<FiscalPeriodDto> periods;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 }

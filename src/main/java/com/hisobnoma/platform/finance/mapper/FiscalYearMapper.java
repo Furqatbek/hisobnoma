@@ -10,11 +10,14 @@ import java.util.List;
 @Mapper(componentModel = "spring", uses = {FiscalPeriodMapper.class})
 public interface FiscalYearMapper {
 
+    @Named("toDto")
     @BeanMapping(builder = @Builder(disableBuilder = true))
     FiscalYearDto toDto(FiscalYear fiscalYear);
 
+    @IterableMapping(qualifiedByName = "toDtoWithoutPeriods")
     List<FiscalYearDto> toDtoList(List<FiscalYear> fiscalYears);
 
+    @Named("toDtoWithoutPeriods")
     @BeanMapping(builder = @Builder(disableBuilder = true))
     @Mapping(target = "periods", ignore = true)
     FiscalYearDto toDtoWithoutPeriods(FiscalYear fiscalYear);
