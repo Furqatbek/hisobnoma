@@ -444,28 +444,78 @@ CREATE INDEX idx_ar_payment_alloc_credit_note ON ar_payment_allocations(credit_n
 -- ============================================
 -- ADD PERMISSIONS FOR AR MODULE
 -- ============================================
-INSERT INTO permissions (name, description, resource, action, created_at)
-VALUES
-    ('FINANCE_AR_READ', 'View AR invoices, payments, customers', 'FINANCE_AR', 'READ', CURRENT_TIMESTAMP),
-    ('FINANCE_AR_WRITE', 'Create and edit AR invoices, payments, customers', 'FINANCE_AR', 'WRITE', CURRENT_TIMESTAMP),
-    ('FINANCE_AR_APPROVE', 'Post AR invoices and complete payments', 'FINANCE_AR', 'APPROVE', CURRENT_TIMESTAMP)
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name, code, description, module, action, created_at, updated_at) VALUES
+-- Customer permissions
+('View Customers', 'FINANCE_AR_CUSTOMER_VIEW', 'Can view customer master records', 'FINANCE', 'READ', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Manage Customers', 'FINANCE_AR_CUSTOMER_MANAGE', 'Can create, update, delete customers', 'FINANCE', 'MANAGE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+-- AR Invoice permissions
+('View AR Invoices', 'FINANCE_AR_READ', 'Can view accounts receivable invoices', 'FINANCE', 'READ', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Create AR Invoices', 'FINANCE_AR_WRITE', 'Can create and update accounts receivable invoices', 'FINANCE', 'CREATE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Approve AR Invoices', 'FINANCE_AR_APPROVE', 'Can post and cancel accounts receivable invoices', 'FINANCE', 'APPROVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+-- AR Payment permissions
+('View AR Payments', 'FINANCE_AR_PAY_VIEW', 'Can view accounts receivable payments', 'FINANCE', 'READ', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Create AR Payments', 'FINANCE_AR_PAY', 'Can create and process accounts receivable payments', 'FINANCE', 'CREATE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Complete AR Payments', 'FINANCE_AR_PAY_COMPLETE', 'Can complete accounts receivable payments', 'FINANCE', 'APPROVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+-- Credit Note permissions
+('View Credit Notes', 'FINANCE_AR_CREDIT_VIEW', 'Can view credit notes', 'FINANCE', 'READ', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Create Credit Notes', 'FINANCE_AR_CREDIT_CREATE', 'Can create credit notes', 'FINANCE', 'CREATE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Approve Credit Notes', 'FINANCE_AR_CREDIT_APPROVE', 'Can approve and apply credit notes', 'FINANCE', 'APPROVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+-- AR Reports
+('View Customer Statements', 'FINANCE_AR_STATEMENT', 'Can view customer statements and balance', 'FINANCE', 'READ', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (code) DO NOTHING;
 
--- Add AR permissions to finance roles
+-- Assign AR permissions to roles
+-- SUPER_ADMIN gets all permissions
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'ADMIN' AND p.name IN ('FINANCE_AR_READ', 'FINANCE_AR_WRITE', 'FINANCE_AR_APPROVE')
-ON CONFLICT (role_id, permission_id) DO NOTHING;
+WHERE r.code = 'SUPER_ADMIN'
+AND p.code IN ('FINANCE_AR_CUSTOMER_VIEW', 'FINANCE_AR_CUSTOMER_MANAGE',
+               'FINANCE_AR_READ', 'FINANCE_AR_WRITE', 'FINANCE_AR_APPROVE',
+               'FINANCE_AR_PAY_VIEW', 'FINANCE_AR_PAY', 'FINANCE_AR_PAY_COMPLETE',
+               'FINANCE_AR_CREDIT_VIEW', 'FINANCE_AR_CREDIT_CREATE', 'FINANCE_AR_CREDIT_APPROVE',
+               'FINANCE_AR_STATEMENT')
+AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
+-- ADMIN gets all permissions
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'FINANCE_MANAGER' AND p.name IN ('FINANCE_AR_READ', 'FINANCE_AR_WRITE', 'FINANCE_AR_APPROVE')
-ON CONFLICT (role_id, permission_id) DO NOTHING;
+WHERE r.code = 'ADMIN'
+AND p.code IN ('FINANCE_AR_CUSTOMER_VIEW', 'FINANCE_AR_CUSTOMER_MANAGE',
+               'FINANCE_AR_READ', 'FINANCE_AR_WRITE', 'FINANCE_AR_APPROVE',
+               'FINANCE_AR_PAY_VIEW', 'FINANCE_AR_PAY', 'FINANCE_AR_PAY_COMPLETE',
+               'FINANCE_AR_CREDIT_VIEW', 'FINANCE_AR_CREDIT_CREATE', 'FINANCE_AR_CREDIT_APPROVE',
+               'FINANCE_AR_STATEMENT')
+AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
+-- FINANCE_MANAGER gets all AR permissions
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'ACCOUNTANT' AND p.name IN ('FINANCE_AR_READ', 'FINANCE_AR_WRITE')
-ON CONFLICT (role_id, permission_id) DO NOTHING;
+WHERE r.code = 'FINANCE_MANAGER'
+AND p.code IN ('FINANCE_AR_CUSTOMER_VIEW', 'FINANCE_AR_CUSTOMER_MANAGE',
+               'FINANCE_AR_READ', 'FINANCE_AR_WRITE', 'FINANCE_AR_APPROVE',
+               'FINANCE_AR_PAY_VIEW', 'FINANCE_AR_PAY', 'FINANCE_AR_PAY_COMPLETE',
+               'FINANCE_AR_CREDIT_VIEW', 'FINANCE_AR_CREDIT_CREATE', 'FINANCE_AR_CREDIT_APPROVE',
+               'FINANCE_AR_STATEMENT')
+AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
+
+-- ACCOUNTANT gets view, create (no approve)
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.code = 'ACCOUNTANT'
+AND p.code IN ('FINANCE_AR_CUSTOMER_VIEW',
+               'FINANCE_AR_READ', 'FINANCE_AR_WRITE',
+               'FINANCE_AR_PAY_VIEW', 'FINANCE_AR_PAY',
+               'FINANCE_AR_CREDIT_VIEW', 'FINANCE_AR_CREDIT_CREATE',
+               'FINANCE_AR_STATEMENT')
+AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
+
+-- VIEWER gets read-only access
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.code = 'VIEWER'
+AND p.code IN ('FINANCE_AR_CUSTOMER_VIEW', 'FINANCE_AR_READ', 'FINANCE_AR_PAY_VIEW',
+               'FINANCE_AR_CREDIT_VIEW', 'FINANCE_AR_STATEMENT')
+AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
 
 -- ============================================
 -- TABLE COMMENTS
