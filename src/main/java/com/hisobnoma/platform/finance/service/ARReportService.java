@@ -194,7 +194,7 @@ public class ARReportService {
                     .onCreditHold(customer.isCreditHold())
                     .lastInvoiceDate(lastInvoiceDate)
                     .lastPaymentDate(lastPaymentDate)
-                    .paymentTerms(customer.getPaymentTerms())
+                    .paymentTerms(customer.getPaymentTermsDays())
                     .build();
 
             customerBalances.add(balance);
@@ -272,7 +272,7 @@ public class ARReportService {
                 .availableCreditLimit(availableCreditLimit)
                 .overCreditLimit(overCreditLimit)
                 .onCreditHold(customer.isCreditHold())
-                .paymentTerms(customer.getPaymentTerms())
+                .paymentTerms(customer.getPaymentTermsDays())
                 .build();
     }
 
