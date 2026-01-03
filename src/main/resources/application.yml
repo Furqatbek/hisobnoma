@@ -45,19 +45,6 @@ spring:
       time-to-live: 3600000
       cache-null-values: false
 
-  # Mail Configuration (placeholder)
-  mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-
 # Server Configuration
 server:
   port: ${SERVER_PORT:8080}
