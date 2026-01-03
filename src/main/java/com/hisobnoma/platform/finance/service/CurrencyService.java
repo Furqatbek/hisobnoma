@@ -121,9 +121,10 @@ public class CurrencyService {
 
         // If this is set as base currency, unset any existing base currency
         if (request.isBaseCurrency() && !currency.isBaseCurrency()) {
+            final Long currencyId = currency.getId();
             currencyRepository.findBaseCurrencyByTenantId(tenantId)
                     .ifPresent(baseCurrency -> {
-                        if (!baseCurrency.getId().equals(currency.getId())) {
+                        if (!baseCurrency.getId().equals(currencyId)) {
                             baseCurrency.setBaseCurrency(false);
                             currencyRepository.save(baseCurrency);
                         }

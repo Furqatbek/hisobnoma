@@ -245,7 +245,7 @@ public class JournalEntryService {
 
         // Post the reversing entry
         reversingEntry.setStatus(JournalStatus.POSTED);
-        reversingEntry.setPostedAt(LocalDateTime.now());
+        reversingEntry.setPostedAt(Instant.now());
         reversingEntry.setPostedBy(userId);
 
         // Update account balances
