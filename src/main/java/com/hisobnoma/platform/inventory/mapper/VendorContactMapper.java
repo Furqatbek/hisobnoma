@@ -24,7 +24,6 @@ public interface VendorContactMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "vendor", ignore = true)
-    @Mapping(target = "vendorId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     void updateEntity(CreateVendorContactRequest request, @MappingTarget VendorContact vendorContact);

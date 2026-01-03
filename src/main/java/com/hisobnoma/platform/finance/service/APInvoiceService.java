@@ -211,18 +211,18 @@ public class APInvoiceService {
                     .productName(receivingLine.getProduct().getName())
                     .description(receivingLine.getProduct().getName())
                     .quantity(receivingLine.getReceivedQuantity())
-                    .unitOfMeasure(receivingLine.getUnitOfMeasure())
+                    .unitOfMeasure(receivingLine.getUom() != null ? receivingLine.getUom().getCode() : null)
                     .unitPrice(receivingLine.getUnitCost())
                     .lineTotal(receivingLine.getLineTotal())
                     .taxAmount(receivingLine.getTaxAmount())
                     .receivingLineId(receivingLine.getId())
-                    .orderedQuantity(receivingLine.getOrderedQuantity())
+                    .orderedQuantity(receivingLine.getExpectedQuantity())
                     .receivedQuantity(receivingLine.getReceivedQuantity())
                     .build();
 
             if (receiving.getPurchaseOrder() != null) {
-                line.setPurchaseOrderLineId(receivingLine.getPurchaseOrderLine() != null ?
-                        receivingLine.getPurchaseOrderLine().getId() : null);
+                line.setPurchaseOrderLineId(receivingLine.getPoLine() != null ?
+                        receivingLine.getPoLine().getId() : null);
             }
 
             invoice.addLine(line);

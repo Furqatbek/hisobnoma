@@ -20,6 +20,9 @@ public interface VendorRepository extends JpaRepository<Vendor, Long> {
     @Query("SELECT v FROM Vendor v WHERE v.tenantId = :tenantId OR v.tenantId IS NULL")
     Page<Vendor> findAllByTenantId(@Param("tenantId") Long tenantId, Pageable pageable);
 
+    @Query("SELECT v FROM Vendor v WHERE v.tenantId = :tenantId OR v.tenantId IS NULL")
+    List<Vendor> findAllByTenantId(@Param("tenantId") Long tenantId);
+
     @Query("SELECT v FROM Vendor v WHERE (v.tenantId = :tenantId OR v.tenantId IS NULL) AND v.active = true")
     List<Vendor> findAllActiveByTenantId(@Param("tenantId") Long tenantId);
 
