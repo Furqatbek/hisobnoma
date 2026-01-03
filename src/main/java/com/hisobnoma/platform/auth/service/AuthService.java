@@ -1,8 +1,10 @@
 package com.hisobnoma.platform.auth.service;
 
 import com.hisobnoma.platform.auth.dto.*;
+import com.hisobnoma.platform.auth.entity.PasswordResetToken;
 import com.hisobnoma.platform.auth.entity.RefreshToken;
 import com.hisobnoma.platform.auth.entity.User;
+import com.hisobnoma.platform.auth.repository.PasswordResetTokenRepository;
 import com.hisobnoma.platform.auth.repository.RefreshTokenRepository;
 import com.hisobnoma.platform.auth.repository.UserRepository;
 import com.hisobnoma.platform.auth.security.JwtTokenProvider;
@@ -38,6 +40,7 @@ public class AuthService {
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecurityContextHelper securityContextHelper;
 
@@ -46,6 +49,9 @@ public class AuthService {
 
     @Value("${app.security.lock-duration-minutes:30}")
     private int lockDurationMinutes;
+
+    @Value("${app.security.password-reset-expiration-minutes:60}")
+    private int passwordResetExpirationMinutes;
 
     @Transactional
     public AuthResponse login(LoginRequest request, String ipAddress, String deviceInfo) {
@@ -144,6 +150,66 @@ public class AuthService {
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
 
         return buildUserInfo(user, currentUser);
+    }
+
+    @Transactional
+    public String forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByUsername(request.getIdentifier())
+                .or(() -> userRepository.findByPhone(request.getIdentifier()))
+                .orElse(null);
+
+        // Always return success to prevent user enumeration
+        if (user == null) {
+            log.warn("Password reset requested for non-existent user: {}", request.getIdentifier());
+            return "If the account exists, a reset link will be sent";
+        }
+
+        // Invalidate any existing reset tokens
+        passwordResetTokenRepository.invalidateAllByUser(user);
+
+        // Create new reset token
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .token(token)
+                .user(user)
+                .expiresAt(Instant.now().plusSeconds(passwordResetExpirationMinutes * 60L))
+                .build();
+
+        passwordResetTokenRepository.save(resetToken);
+
+        log.info("Password reset token generated for user: {}", user.getUsername());
+
+        // In production, send SMS/notification here
+        // For now, return the token (only for development)
+        return token;
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new ValidationException("Passwords do not match");
+        }
+
+        PasswordResetToken resetToken = passwordResetTokenRepository
+                .findValidToken(request.getToken(), Instant.now())
+                .orElseThrow(() -> new BusinessException("Invalid or expired reset token", "INVALID_TOKEN"));
+
+        User user = resetToken.getUser();
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.resetFailedLoginAttempts();
+        user.setLocked(false);
+        user.setLockedUntil(null);
+        userRepository.save(user);
+
+        // Mark token as used
+        resetToken.markAsUsed();
+        passwordResetTokenRepository.save(resetToken);
+
+        // Revoke all refresh tokens
+        refreshTokenRepository.revokeAllByUser(user);
+
+        log.info("Password reset completed for user: {}", user.getUsername());
     }
 
     private void handleFailedLogin(User user) {

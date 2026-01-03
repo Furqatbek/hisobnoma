@@ -15,6 +15,6 @@ import lombok.Setter;
 @MappedSuperclass
 public abstract class TenantAwareEntity extends AuditableEntity {
 
-    @Column(name = "tenant_id", nullable = false)
+    @Column(name = "tenant_id")
     private Long tenantId;
 }
