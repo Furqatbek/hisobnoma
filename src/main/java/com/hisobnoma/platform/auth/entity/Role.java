@@ -10,9 +10,9 @@ import java.util.Set;
 @Entity
 @Table(name = "roles", indexes = {
     @Index(name = "idx_roles_code", columnList = "code"),
-    @Index(name = "idx_roles_tenant", columnList = "tenantId")
+    @Index(name = "idx_roles_tenant", columnList = "tenant_id")
 }, uniqueConstraints = {
-    @UniqueConstraint(name = "uk_roles_code_tenant", columnNames = {"code", "tenantId"})
+    @UniqueConstraint(name = "uk_roles_code_tenant", columnNames = {"code", "tenant_id"})
 })
 @Getter
 @Setter
