@@ -17,7 +17,8 @@ CREATE TABLE categories (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT,
-    updated_by BIGINT
+    updated_by BIGINT,
+    version BIGINT DEFAULT 0
 );
 
 CREATE INDEX idx_categories_tenant ON categories(tenant_id);
@@ -39,7 +40,8 @@ CREATE TABLE brands (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT,
-    updated_by BIGINT
+    updated_by BIGINT,
+    version BIGINT DEFAULT 0
 );
 
 CREATE INDEX idx_brands_tenant ON brands(tenant_id);
@@ -61,7 +63,8 @@ CREATE TABLE units_of_measure (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT,
-    updated_by BIGINT
+    updated_by BIGINT,
+    version BIGINT DEFAULT 0
 );
 
 CREATE INDEX idx_uom_tenant ON units_of_measure(tenant_id);
@@ -112,7 +115,8 @@ CREATE TABLE products (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT,
-    updated_by BIGINT
+    updated_by BIGINT,
+    version BIGINT DEFAULT 0
 );
 
 CREATE INDEX idx_products_tenant ON products(tenant_id);
@@ -147,7 +151,8 @@ CREATE TABLE product_variants (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT,
-    updated_by BIGINT
+    updated_by BIGINT,
+    version BIGINT DEFAULT 0
 );
 
 CREATE INDEX idx_variants_product ON product_variants(product_id);
@@ -170,7 +175,8 @@ CREATE TABLE product_images (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT,
-    updated_by BIGINT
+    updated_by BIGINT,
+    version BIGINT DEFAULT 0
 );
 
 CREATE INDEX idx_product_images_product ON product_images(product_id);
@@ -192,7 +198,8 @@ CREATE TABLE product_attributes (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT,
-    updated_by BIGINT
+    updated_by BIGINT,
+    version BIGINT DEFAULT 0
 );
 
 CREATE INDEX idx_product_attrs_product ON product_attributes(product_id);
