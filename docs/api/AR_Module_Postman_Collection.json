@@ -1,0 +1,725 @@
+{
+  "info": {
+    "_postman_id": "ar-module-collection",
+    "name": "Hisobnoma - AR Module",
+    "description": "Accounts Receivable module API collection for the Hisobnoma platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1/finance"
+    }
+  ],
+  "item": [
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "List Customers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/customers?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Active Customers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/customers/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "active"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/customers/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/customers/code/CUST-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "code", "CUST-001"]
+            }
+          }
+        },
+        {
+          "name": "Search Customers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/customers/search?query=acme",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "search"],
+              "query": [
+                { "key": "query", "value": "acme" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CUST-002\",\n  \"name\": \"New Customer Inc\",\n  \"email\": \"info@newcustomer.com\",\n  \"phone\": \"+998901234567\",\n  \"address\": \"123 Business Street\",\n  \"city\": \"Tashkent\",\n  \"country\": \"Uzbekistan\",\n  \"paymentTerms\": \"Net 30\",\n  \"paymentTermsDays\": 30,\n  \"creditLimit\": 5000000.00,\n  \"taxId\": \"123456789\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers"]
+            }
+          }
+        },
+        {
+          "name": "Update Customer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CUST-002\",\n  \"name\": \"Updated Customer Inc\",\n  \"email\": \"updated@customer.com\",\n  \"creditLimit\": 10000000.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "1"]
+            }
+          }
+        },
+        {
+          "name": "Set Credit Hold",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/customers/1/credit-hold?hold=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "1", "credit-hold"],
+              "query": [
+                { "key": "hold", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Credit Limit",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/customers/1/credit-limit?creditLimit=15000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "1", "credit-limit"],
+              "query": [
+                { "key": "creditLimit", "value": "15000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Can Invoice",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/customers/1/can-invoice?amount=1000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "1", "can-invoice"],
+              "query": [
+                { "key": "amount", "value": "1000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Customers on Credit Hold",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/customers/credit-hold",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "credit-hold"]
+            }
+          }
+        },
+        {
+          "name": "Get Customers Over Credit Limit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/customers/over-credit-limit",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "over-credit-limit"]
+            }
+          }
+        },
+        {
+          "name": "Delete Customer",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/customers/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AR Invoices",
+      "item": [
+        {
+          "name": "List Invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Invoices by Customer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/customer/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "customer", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Invoices by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/status/PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "status", "PENDING"]
+            }
+          }
+        },
+        {
+          "name": "Get Invoice by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Invoice by Number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/number/INV-000001",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "number", "INV-000001"]
+            }
+          }
+        },
+        {
+          "name": "Get Unpaid Invoices by Customer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/customer/1/unpaid",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "customer", "1", "unpaid"]
+            }
+          }
+        },
+        {
+          "name": "Get Overdue Invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/overdue",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "overdue"]
+            }
+          }
+        },
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"invoiceDate\": \"2026-01-03\",\n  \"dueDate\": \"2026-02-02\",\n  \"discountPercent\": 5.00,\n  \"shippingAmount\": 50000.00,\n  \"taxAmount\": 120000.00,\n  \"totalAmount\": 1120000.00,\n  \"currency\": \"UZS\",\n  \"paymentTerms\": 30,\n  \"billingAddress\": \"123 Customer St, Tashkent\",\n  \"description\": \"Monthly service invoice\",\n  \"lines\": [\n    {\n      \"itemId\": 100,\n      \"description\": \"Product A - Premium Widget\",\n      \"quantity\": 10,\n      \"unitPrice\": 100000.00,\n      \"unitCost\": 75000.00,\n      \"discountPercent\": 0,\n      \"taxAmount\": 120000.00\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices"]
+            }
+          }
+        },
+        {
+          "name": "Update Invoice",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"invoiceDate\": \"2026-01-03\",\n  \"dueDate\": \"2026-02-02\",\n  \"description\": \"Updated invoice description\",\n  \"lines\": [\n    {\n      \"description\": \"Updated Product\",\n      \"quantity\": 5,\n      \"unitPrice\": 150000.00\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "1"]
+            }
+          }
+        },
+        {
+          "name": "Post Invoice",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/1/post",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "1", "post"]
+            }
+          }
+        },
+        {
+          "name": "Send Invoice",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/1/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "1", "send"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Invoice",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/1/cancel?reason=Customer%20requested%20cancellation",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "1", "cancel"],
+              "query": [
+                { "key": "reason", "value": "Customer requested cancellation" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Customer Outstanding Total",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/customer/1/outstanding",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "customer", "1", "outstanding"]
+            }
+          }
+        },
+        {
+          "name": "Check Overdue Invoices",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-invoices/check-overdue",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-invoices", "check-overdue"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AR Payments",
+      "item": [
+        {
+          "name": "List Payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-payments?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-payments"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Payments by Customer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-payments/customer/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-payments", "customer", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Payments by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-payments/status/PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-payments", "status", "PENDING"]
+            }
+          }
+        },
+        {
+          "name": "Get Payment by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-payments/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-payments", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Payment by Number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-payments/number/PAY-000001",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-payments", "number", "PAY-000001"]
+            }
+          }
+        },
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"paymentDate\": \"2026-01-03\",\n  \"paymentAmount\": 500000.00,\n  \"paymentMethod\": \"CASH\",\n  \"currency\": \"UZS\",\n  \"referenceNumber\": \"REF-12345\",\n  \"notes\": \"Partial payment for invoice INV-000001\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ar-payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-payments"]
+            }
+          }
+        },
+        {
+          "name": "Allocate Payment to Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceId\": 1,\n  \"allocatedAmount\": 500000.00,\n  \"discountTaken\": 0.00,\n  \"writeOffAmount\": 0.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ar-payments/1/allocate",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-payments", "1", "allocate"]
+            }
+          }
+        },
+        {
+          "name": "Complete Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-payments/1/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-payments", "1", "complete"]
+            }
+          }
+        },
+        {
+          "name": "Mark as Deposited",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-payments/1/deposit?depositReference=DEP-2026-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-payments", "1", "deposit"],
+              "query": [
+                { "key": "depositReference", "value": "DEP-2026-001" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-payments/1/cancel?reason=Payment%20error",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-payments", "1", "cancel"],
+              "query": [
+                { "key": "reason", "value": "Payment error" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Credit Notes",
+      "item": [
+        {
+          "name": "List Credit Notes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/credit-notes?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["credit-notes"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Credit Notes by Customer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/credit-notes/customer/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["credit-notes", "customer", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Available Credit Notes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/credit-notes/customer/1/available",
+              "host": ["{{baseUrl}}"],
+              "path": ["credit-notes", "customer", "1", "available"]
+            }
+          }
+        },
+        {
+          "name": "Get Credit Note by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/credit-notes/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["credit-notes", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Credit Note by Number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/credit-notes/number/CN-000001",
+              "host": ["{{baseUrl}}"],
+              "path": ["credit-notes", "number", "CN-000001"]
+            }
+          }
+        },
+        {
+          "name": "Create Credit Note",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"originalInvoiceId\": 1,\n  \"creditNoteDate\": \"2026-01-03\",\n  \"creditAmount\": 100000.00,\n  \"reasonCode\": \"RETURN\",\n  \"reason\": \"Product return - defective item\",\n  \"description\": \"Credit for returned merchandise\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/credit-notes",
+              "host": ["{{baseUrl}}"],
+              "path": ["credit-notes"]
+            }
+          }
+        },
+        {
+          "name": "Approve Credit Note",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/credit-notes/1/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["credit-notes", "1", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Apply Credit to Invoice",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/credit-notes/1/apply?invoiceId=2&amount=50000",
+              "host": ["{{baseUrl}}"],
+              "path": ["credit-notes", "1", "apply"],
+              "query": [
+                { "key": "invoiceId", "value": "2" },
+                { "key": "amount", "value": "50000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Credit Note",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/credit-notes/1/cancel?reason=Issued%20in%20error",
+              "host": ["{{baseUrl}}"],
+              "path": ["credit-notes", "1", "cancel"],
+              "query": [
+                { "key": "reason", "value": "Issued in error" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AR Reports",
+      "item": [
+        {
+          "name": "AR Aging Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-reports/aging",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-reports", "aging"]
+            }
+          }
+        },
+        {
+          "name": "Customer Balance Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-reports/customer-balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-reports", "customer-balance"]
+            }
+          }
+        },
+        {
+          "name": "Single Customer Balance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ar-reports/customer/1/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["ar-reports", "customer", "1", "balance"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
