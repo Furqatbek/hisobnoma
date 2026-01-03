@@ -15,6 +15,7 @@ public interface ProductAttributeMapper {
 
     List<ProductAttributeDto> toDtoList(List<ProductAttribute> attributes);
 
+    @BeanMapping(builder = @Builder(disableBuilder = true))
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "tenantId", ignore = true)

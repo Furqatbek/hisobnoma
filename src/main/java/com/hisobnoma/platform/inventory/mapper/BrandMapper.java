@@ -14,6 +14,7 @@ public interface BrandMapper {
 
     List<BrandDto> toDtoList(List<Brand> brands);
 
+    @BeanMapping(builder = @Builder(disableBuilder = true))
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "tenantId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)

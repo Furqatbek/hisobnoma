@@ -9,6 +9,7 @@ import java.util.List;
 @Mapper(componentModel = "spring", uses = {ProductVariantMapper.class, ProductImageMapper.class, ProductAttributeMapper.class})
 public interface ProductMapper {
 
+    @Named("toDto")
     @Mapping(target = "categoryId", source = "category.id")
     @Mapping(target = "categoryName", source = "category.name")
     @Mapping(target = "brandId", source = "brand.id")
@@ -20,6 +21,7 @@ public interface ProductMapper {
     @Mapping(target = "markup", expression = "java(product.getMarkup())")
     ProductDto toDto(Product product);
 
+    @Named("toDtoSimple")
     @Mapping(target = "categoryId", source = "category.id")
     @Mapping(target = "categoryName", source = "category.name")
     @Mapping(target = "brandId", source = "brand.id")
@@ -34,8 +36,10 @@ public interface ProductMapper {
     @Mapping(target = "attributes", ignore = true)
     ProductDto toDtoSimple(Product product);
 
+    @IterableMapping(qualifiedByName = "toDtoSimple")
     List<ProductDto> toDtoList(List<Product> products);
 
+    @BeanMapping(builder = @Builder(disableBuilder = true))
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "category", ignore = true)
     @Mapping(target = "brand", ignore = true)

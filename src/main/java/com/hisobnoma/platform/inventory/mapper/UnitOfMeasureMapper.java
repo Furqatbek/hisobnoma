@@ -17,6 +17,7 @@ public interface UnitOfMeasureMapper {
 
     List<UnitOfMeasureDto> toDtoList(List<UnitOfMeasure> uoms);
 
+    @BeanMapping(builder = @Builder(disableBuilder = true))
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "baseUom", ignore = true)
     @Mapping(target = "tenantId", ignore = true)

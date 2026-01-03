@@ -18,6 +18,7 @@ public interface ProductVariantMapper {
 
     List<ProductVariantDto> toDtoList(List<ProductVariant> variants);
 
+    @BeanMapping(builder = @Builder(disableBuilder = true))
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "tenantId", ignore = true)
