@@ -129,9 +129,9 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.code = 'VIEWER' AND p.action IN ('READ', 'VIEW');
 
--- Create default super admin user (password: admin123 - BCrypt hashed)
+-- Create default super admin user (password: admin123)
 INSERT INTO users (username, phone, password_hash, first_name, last_name, enabled, phone_verified, tenant_id)
-VALUES ('admin', '+998900000000', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'System', 'Admin', TRUE, TRUE, NULL);
+VALUES ('admin', '+998900000000', '{noop}admin123', 'System', 'Admin', TRUE, TRUE, NULL);
 
 -- Assign SUPER_ADMIN role to default admin user
 INSERT INTO user_roles (user_id, role_id)
