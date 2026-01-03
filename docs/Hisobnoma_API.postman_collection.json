@@ -1,0 +1,647 @@
+{
+  "info": {
+    "name": "Hisobnoma Platform API",
+    "description": "Inventory Management Platform API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data) {",
+                  "        pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "        pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                  "        console.log('Tokens saved successfully');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login with username and password. Automatically saves tokens to collection variables."
+          },
+          "response": [
+            {
+              "name": "Successful Login",
+              "originalRequest": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin123!\"\n}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"refreshToken\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n    \"tokenType\": \"Bearer\",\n    \"expiresIn\": 3600000,\n    \"user\": {\n      \"id\": 1,\n      \"username\": \"admin\",\n      \"fullName\": \"Admin User\",\n      \"roles\": [\"SUPER_ADMIN\"],\n      \"permissions\": [\"ADMIN_USER_MANAGE\", \"ADMIN_ROLE_MANAGE\"]\n    }\n  },\n  \"timestamp\": \"2026-01-03T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data) {",
+                  "        pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "        pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Refresh access token using refresh token."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Logout and invalidate all tokens."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Get current authenticated user's profile."
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Admin123!\",\n  \"newPassword\": \"NewPassword456!\",\n  \"confirmPassword\": \"NewPassword456!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "change-password"]
+            },
+            "description": "Change password for the authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "forgot-password"]
+            },
+            "description": "Request a password reset token."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset-token-from-forgot-password\",\n  \"newPassword\": \"NewPassword789!\",\n  \"confirmPassword\": \"NewPassword789!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "reset-password"]
+            },
+            "description": "Reset password using the token from forgot-password."
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for login, logout, and password management."
+    },
+    {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "createdAt,desc",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List users with pagination and optional search."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "1"]
+            },
+            "description": "Get a specific user by their ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"john_doe\",\n  \"phone\": \"+998901234567\",\n  \"password\": \"SecurePass123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"roleCodes\": [\"MANAGER\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "description": "Create a new user with specified roles."
+          },
+          "response": [
+            {
+              "name": "User Created",
+              "originalRequest": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"john_doe\",\n  \"phone\": \"+998901234567\",\n  \"password\": \"SecurePass123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"roleCodes\": [\"MANAGER\"]\n}"
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"User created successfully\",\n  \"data\": {\n    \"id\": 2,\n    \"username\": \"john_doe\",\n    \"phone\": \"+998901234567\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"fullName\": \"John Doe\",\n    \"enabled\": true,\n    \"locked\": false,\n    \"tenantId\": 1,\n    \"roles\": [\"MANAGER\"]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+998901234568\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Smith\",\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/2",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "2"]
+            },
+            "description": "Update user details."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/2",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "2"]
+            },
+            "description": "Delete a user by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Roles to User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\"MANAGER\", \"CASHIER\"]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/2/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "2", "roles"]
+            },
+            "description": "Assign roles to a user. Replaces existing roles."
+          },
+          "response": []
+        },
+        {
+          "name": "Lock User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locked\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/2/lock",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "2", "lock"]
+            },
+            "description": "Lock a user account."
+          },
+          "response": []
+        },
+        {
+          "name": "Unlock User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locked\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/2/lock",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "2", "lock"]
+            },
+            "description": "Unlock a user account."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Reset User Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"NewUserPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/2/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "2", "reset-password"]
+            },
+            "description": "Admin action to reset a user's password."
+          },
+          "response": []
+        }
+      ],
+      "description": "User management endpoints. Requires ADMIN_USER_MANAGE permission."
+    },
+    {
+      "name": "Role Management",
+      "item": [
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "name,asc",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all roles with pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "List System Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/system",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "system"]
+            },
+            "description": "List only system (built-in) roles."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Role by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "1"]
+            },
+            "description": "Get a specific role by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Warehouse Staff\",\n  \"code\": \"WAREHOUSE_STAFF\",\n  \"description\": \"Warehouse inventory management\",\n  \"permissionCodes\": [\"INVENTORY_READ\", \"INVENTORY_UPDATE\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles"]
+            },
+            "description": "Create a new custom role."
+          },
+          "response": [
+            {
+              "name": "Role Created",
+              "originalRequest": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Warehouse Staff\",\n  \"code\": \"WAREHOUSE_STAFF\",\n  \"description\": \"Warehouse inventory management\",\n  \"permissionCodes\": [\"INVENTORY_READ\", \"INVENTORY_UPDATE\"]\n}"
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Role created successfully\",\n  \"data\": {\n    \"id\": 5,\n    \"name\": \"Warehouse Staff\",\n    \"code\": \"WAREHOUSE_STAFF\",\n    \"description\": \"Warehouse inventory management\",\n    \"systemRole\": false,\n    \"tenantId\": 1,\n    \"permissions\": [\"INVENTORY_READ\", \"INVENTORY_UPDATE\"]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Warehouse Manager\",\n  \"code\": \"WAREHOUSE_STAFF\",\n  \"description\": \"Warehouse operations management\",\n  \"permissionCodes\": [\"INVENTORY_READ\", \"INVENTORY_UPDATE\", \"INVENTORY_CREATE\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles/5",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "5"]
+            },
+            "description": "Update a custom role (system roles cannot be modified)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/5",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "5"]
+            },
+            "description": "Delete a custom role (system roles cannot be deleted)."
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Permissions to Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\"INVENTORY_READ\", \"INVENTORY_CREATE\", \"INVENTORY_UPDATE\", \"INVENTORY_DELETE\"]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles/5/permissions",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "5", "permissions"]
+            },
+            "description": "Assign permissions to a role. Requires ADMIN_PERMISSION_MANAGE."
+          },
+          "response": []
+        },
+        {
+          "name": "List All Permissions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/permissions",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "permissions"]
+            },
+            "description": "List all available permissions in the system."
+          },
+          "response": [
+            {
+              "name": "Permissions List",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    \"ADMIN_PERMISSION_MANAGE\",\n    \"ADMIN_ROLE_MANAGE\",\n    \"ADMIN_USER_MANAGE\",\n    \"FINANCE_APPROVE\",\n    \"FINANCE_CREATE\",\n    \"FINANCE_DELETE\",\n    \"FINANCE_EXPORT\",\n    \"FINANCE_READ\",\n    \"FINANCE_UPDATE\",\n    \"INVENTORY_CREATE\",\n    \"INVENTORY_DELETE\",\n    \"INVENTORY_EXPORT\",\n    \"INVENTORY_READ\",\n    \"INVENTORY_UPDATE\",\n    \"POS_CREATE\",\n    \"POS_DELETE\",\n    \"POS_READ\",\n    \"POS_UPDATE\",\n    \"POS_VIEW\",\n    \"REPORTS_EXPORT\",\n    \"REPORTS_VIEW\"\n  ]\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Role management endpoints. Requires ADMIN_ROLE_MANAGE permission."
+    }
+  ]
+}
