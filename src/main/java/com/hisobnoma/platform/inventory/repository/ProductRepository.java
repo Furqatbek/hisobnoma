@@ -20,6 +20,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p WHERE (p.tenantId = :tenantId OR p.tenantId IS NULL) AND p.active = true")
     Page<Product> findAllActiveByTenantId(@Param("tenantId") Long tenantId, Pageable pageable);
 
+    @Query("SELECT p FROM Product p WHERE p.id = :id AND (p.tenantId = :tenantId OR p.tenantId IS NULL)")
+    Optional<Product> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
     @Query("SELECT p FROM Product p WHERE p.sku = :sku AND (p.tenantId = :tenantId OR p.tenantId IS NULL)")
     Optional<Product> findBySkuAndTenantId(@Param("sku") String sku, @Param("tenantId") Long tenantId);
 
