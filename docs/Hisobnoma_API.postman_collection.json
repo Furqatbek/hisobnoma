@@ -1677,6 +1677,658 @@
         }
       ],
       "description": "Product management with variants, attributes, SKU generation, and barcode utilities."
+    },
+    {
+      "name": "Inventory - Vendors",
+      "item": [
+        {
+          "name": "List Vendors (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/vendors?page=0&size=20&sort=name,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "vendors"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "name,asc" }
+              ]
+            },
+            "description": "Get vendors with pagination. Requires INVENTORY_VENDOR_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Vendors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/vendors/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "vendors", "active"]
+            },
+            "description": "Get only active vendors. Requires INVENTORY_VENDOR_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Preferred Vendors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/vendors/preferred",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "vendors", "preferred"]
+            },
+            "description": "Get preferred vendors. Requires INVENTORY_VENDOR_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vendor by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/vendors/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "vendors", "1"]
+            },
+            "description": "Get a specific vendor by ID. Requires INVENTORY_VENDOR_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vendor by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/vendors/code/VND001",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "vendors", "code", "VND001"]
+            },
+            "description": "Get vendor by code. Requires INVENTORY_VENDOR_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Vendors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/vendors/search?q=acme&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "vendors", "search"],
+              "query": [
+                { "key": "q", "value": "acme" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Search vendors by name or code. Requires INVENTORY_VENDOR_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Vendor",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"VND001\",\n  \"name\": \"Acme Supplies\",\n  \"contactPerson\": \"John Doe\",\n  \"email\": \"john@acme.com\",\n  \"phone\": \"+1234567890\",\n  \"address\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"country\": \"USA\",\n  \"postalCode\": \"10001\",\n  \"taxId\": \"123-45-6789\",\n  \"paymentTerms\": \"Net 30\",\n  \"paymentTermsDays\": 30,\n  \"creditLimit\": 50000.00,\n  \"defaultCurrency\": \"USD\",\n  \"active\": true,\n  \"preferred\": true,\n  \"leadTimeDays\": 7,\n  \"minOrderAmount\": 100.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/vendors",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "vendors"]
+            },
+            "description": "Create a new vendor. Requires INVENTORY_VENDOR_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Vendor",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"VND001\",\n  \"name\": \"Acme Supplies Updated\",\n  \"contactPerson\": \"John Smith\",\n  \"email\": \"john.smith@acme.com\",\n  \"phone\": \"+1234567890\",\n  \"paymentTerms\": \"Net 45\",\n  \"paymentTermsDays\": 45,\n  \"creditLimit\": 75000.00,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/vendors/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "vendors", "1"]
+            },
+            "description": "Update a vendor. Requires INVENTORY_VENDOR_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Vendor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/vendors/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "vendors", "1"]
+            },
+            "description": "Delete a vendor. Requires INVENTORY_VENDOR_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Vendor",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/vendors/1/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "vendors", "1", "activate"]
+            },
+            "description": "Activate/deactivate a vendor. Requires INVENTORY_VENDOR_MANAGE permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Vendor/Supplier management. Requires INVENTORY_VENDOR_VIEW or INVENTORY_VENDOR_MANAGE permission."
+    },
+    {
+      "name": "Inventory - Purchase Orders",
+      "item": [
+        {
+          "name": "List Purchase Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/purchase-orders?page=0&size=20&sort=orderDate,desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "purchase-orders"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "orderDate,desc" }
+              ]
+            },
+            "description": "Get purchase orders with pagination. Requires INVENTORY_PO_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Purchase Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/purchase-orders/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "purchase-orders", "1"]
+            },
+            "description": "Get a specific PO with line items. Requires INVENTORY_PO_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get POs by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/purchase-orders/status/APPROVED?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "purchase-orders", "status", "APPROVED"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get POs by status. Status: DRAFT, PENDING, APPROVED, PARTIAL, RECEIVED, CANCELLED, CLOSED. Requires INVENTORY_PO_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get POs by Vendor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/purchase-orders/vendor/1?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "purchase-orders", "vendor", "1"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get POs for a specific vendor. Requires INVENTORY_PO_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Purchase Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/purchase-orders/search?q=PO-2026&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "purchase-orders", "search"],
+              "query": [
+                { "key": "q", "value": "PO-2026" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Search POs by number or vendor name. Requires INVENTORY_PO_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Purchase Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": 1,\n  \"locationId\": 1,\n  \"orderDate\": \"2026-01-03\",\n  \"expectedDate\": \"2026-01-10\",\n  \"discountPercent\": 5.00,\n  \"shippingAmount\": 50.00,\n  \"currency\": \"USD\",\n  \"paymentTerms\": \"Net 30\",\n  \"shippingMethod\": \"Ground\",\n  \"shippingAddress\": \"123 Warehouse Ave\",\n  \"notes\": \"Urgent order\",\n  \"vendorReference\": \"VND-REF-001\",\n  \"lines\": [\n    {\n      \"productId\": 1,\n      \"quantity\": 10,\n      \"unitPrice\": 500.00,\n      \"discountPercent\": 5.00,\n      \"taxPercent\": 10.00,\n      \"notes\": \"Latest model\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/purchase-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "purchase-orders"]
+            },
+            "description": "Create a new purchase order. Requires INVENTORY_PO_CREATE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Submit PO for Approval",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/purchase-orders/1/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "purchase-orders", "1", "submit"]
+            },
+            "description": "Submit PO for approval (DRAFT → PENDING). Requires INVENTORY_PO_UPDATE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Purchase Order",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/purchase-orders/1/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "purchase-orders", "1", "approve"]
+            },
+            "description": "Approve a pending PO (PENDING → APPROVED). Requires INVENTORY_PO_APPROVE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Purchase Order",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Vendor unable to fulfill order\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/purchase-orders/1/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "purchase-orders", "1", "cancel"]
+            },
+            "description": "Cancel a purchase order. Requires INVENTORY_PO_CANCEL permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Purchase Order management with workflow: DRAFT → PENDING → APPROVED → PARTIAL/RECEIVED → CLOSED."
+    },
+    {
+      "name": "Inventory - Receiving",
+      "item": [
+        {
+          "name": "List Receiving Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/receiving?page=0&size=20&sort=receivingDate,desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "receiving"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "receivingDate,desc" }
+              ]
+            },
+            "description": "Get receiving orders with pagination. Requires INVENTORY_RECEIVING_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Receiving Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/receiving/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "receiving", "1"]
+            },
+            "description": "Get a specific receiving order. Requires INVENTORY_RECEIVING_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Receiving by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/receiving/status/COMPLETED?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "receiving", "status", "COMPLETED"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get receiving orders by status. Status: DRAFT, PENDING, IN_PROGRESS, COMPLETED, CANCELLED. Requires INVENTORY_RECEIVING_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Receiving for PO",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/receiving/purchase-order/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "receiving", "purchase-order", "1"]
+            },
+            "description": "Get all receiving orders for a specific PO. Requires INVENTORY_RECEIVING_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Receiving Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/receiving/search?q=RCV-2026&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "receiving", "search"],
+              "query": [
+                { "key": "q", "value": "RCV-2026" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Search receiving orders. Requires INVENTORY_RECEIVING_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Receiving Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purchaseOrderId\": 1,\n  \"vendorId\": 1,\n  \"locationId\": 1,\n  \"receivingDate\": \"2026-01-03\",\n  \"vendorDeliveryNote\": \"DN-001\",\n  \"vendorInvoiceNumber\": \"INV-001\",\n  \"vendorInvoiceDate\": \"2026-01-03\",\n  \"discountAmount\": 100.00,\n  \"shippingAmount\": 50.00,\n  \"currency\": \"USD\",\n  \"notes\": \"Received in good condition\",\n  \"lines\": [\n    {\n      \"poLineId\": 1,\n      \"productId\": 1,\n      \"expectedQuantity\": 10,\n      \"receivedQuantity\": 10,\n      \"acceptedQuantity\": 9,\n      \"rejectedQuantity\": 1,\n      \"rejectionReason\": \"Damaged packaging\",\n      \"unitCost\": 500.00,\n      \"batchNumber\": \"BATCH-001\",\n      \"expiryDate\": \"2027-01-03\",\n      \"targetLocationId\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/receiving",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "receiving"]
+            },
+            "description": "Create a receiving order. Requires INVENTORY_RECEIVING_CREATE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Receiving",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/receiving/1/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "receiving", "1", "confirm"]
+            },
+            "description": "Confirm receiving and update stock. Automatically creates stock movements. Requires INVENTORY_RECEIVING_CONFIRM permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Receiving",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Incorrect shipment received\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/receiving/1/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "receiving", "1", "cancel"]
+            },
+            "description": "Cancel a receiving order. Requires INVENTORY_RECEIVING_CONFIRM permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Receiving workflow with automatic stock updates on confirmation."
+    },
+    {
+      "name": "Inventory - Counts",
+      "item": [
+        {
+          "name": "List Inventory Counts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/counts?page=0&size=20&sort=countDate,desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "counts"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "countDate,desc" }
+              ]
+            },
+            "description": "Get inventory counts with pagination. Requires INVENTORY_COUNT_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Inventory Count by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/counts/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "counts", "1"]
+            },
+            "description": "Get a specific inventory count with lines. Requires INVENTORY_COUNT_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Counts by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/counts/status/IN_PROGRESS?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "counts", "status", "IN_PROGRESS"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get counts by status. Status: DRAFT, IN_PROGRESS, COMPLETED, APPROVED, CANCELLED. Requires INVENTORY_COUNT_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Inventory Counts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/counts/search?q=CNT-2026&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "counts", "search"],
+              "query": [
+                { "key": "q", "value": "CNT-2026" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Search inventory counts. Requires INVENTORY_COUNT_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Inventory Count",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locationId\": 1,\n  \"countType\": \"CYCLE\",\n  \"countDate\": \"2026-01-03\",\n  \"description\": \"Weekly cycle count - Electronics\",\n  \"notes\": \"Focus on high-value items\",\n  \"freezeStock\": false,\n  \"categoryId\": 1,\n  \"productIds\": [1, 2, 3, 4, 5]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/counts",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "counts"]
+            },
+            "description": "Create an inventory count. Count types: FULL, PARTIAL, CYCLE, SPOT, ANNUAL. Requires INVENTORY_COUNT_CREATE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Start Count",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/counts/1/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "counts", "1", "start"]
+            },
+            "description": "Start an inventory count (DRAFT → IN_PROGRESS). Requires INVENTORY_COUNT_PERFORM permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Record Count",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"countedQuantity\": 98,\n  \"batchNumber\": \"BATCH-001\",\n  \"serialNumber\": \"SN-12345\",\n  \"notes\": \"Found 2 units less than expected\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/counts/1/lines/1/count",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "counts", "1", "lines", "1", "count"]
+            },
+            "description": "Record count for a specific line item. Requires INVENTORY_COUNT_PERFORM permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark for Recount",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Variance too high, needs verification\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/counts/1/lines/1/recount",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "counts", "1", "lines", "1", "recount"]
+            },
+            "description": "Mark a line for recount. Requires INVENTORY_COUNT_PERFORM permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Count",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/counts/1/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "counts", "1", "complete"]
+            },
+            "description": "Complete the count (IN_PROGRESS → COMPLETED). Requires INVENTORY_COUNT_PERFORM permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Count",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/counts/1/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "counts", "1", "approve"]
+            },
+            "description": "Approve count and post adjustments (COMPLETED → APPROVED). Automatically creates stock adjustment movements. Requires INVENTORY_COUNT_APPROVE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Count",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Count interrupted, will reschedule\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/counts/1/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "counts", "1", "cancel"]
+            },
+            "description": "Cancel an inventory count. Requires INVENTORY_COUNT_APPROVE permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Inventory counting with workflow: DRAFT → IN_PROGRESS → COMPLETED → APPROVED. Automatic stock adjustments on approval."
     }
   ]
 }

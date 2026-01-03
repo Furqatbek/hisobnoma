@@ -1345,3 +1345,596 @@ Validate a barcode.
 Interactive API documentation is available at:
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8080/api-docs`
+
+---
+
+## Inventory Module - Operations (Block 5)
+
+Block 5 provides inventory operations including vendor management, purchase orders, receiving, and inventory counting.
+
+---
+
+## Vendor APIs
+
+All vendor endpoints require `INVENTORY_VENDOR_VIEW` or `INVENTORY_VENDOR_MANAGE` permission.
+
+### GET /inventory/vendors
+List vendors with pagination.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| page | int | 0 | Page number |
+| size | int | 20 | Page size |
+| sort | string | name,asc | Sort field and direction |
+
+---
+
+### GET /inventory/vendors/active
+List only active vendors.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "code": "VND001",
+      "name": "Acme Supplies",
+      "contactPerson": "John Doe",
+      "email": "john@acme.com",
+      "phone": "+1234567890",
+      "address": "123 Main St",
+      "city": "New York",
+      "active": true,
+      "preferred": true,
+      "paymentTerms": "Net 30",
+      "paymentTermsDays": 30,
+      "creditLimit": 50000.00,
+      "currentBalance": 12500.00,
+      "leadTimeDays": 7
+    }
+  ]
+}
+```
+
+---
+
+### GET /inventory/vendors/preferred
+List preferred vendors only.
+
+---
+
+### GET /inventory/vendors/{id}
+Get vendor by ID.
+
+---
+
+### GET /inventory/vendors/code/{code}
+Get vendor by code.
+
+---
+
+### GET /inventory/vendors/search
+Search vendors by name or code.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| q | string | Yes | Search query |
+| page | int | No | Page number |
+| size | int | No | Page size |
+
+---
+
+### POST /inventory/vendors
+Create a new vendor.
+
+**Request:**
+```json
+{
+  "code": "VND001",
+  "name": "Acme Supplies",
+  "contactPerson": "John Doe",
+  "email": "john@acme.com",
+  "phone": "+1234567890",
+  "altPhone": "+0987654321",
+  "address": "123 Main St",
+  "city": "New York",
+  "state": "NY",
+  "country": "USA",
+  "postalCode": "10001",
+  "taxId": "123-45-6789",
+  "paymentTerms": "Net 30",
+  "paymentTermsDays": 30,
+  "creditLimit": 50000.00,
+  "defaultCurrency": "USD",
+  "bankName": "First National Bank",
+  "bankAccount": "1234567890",
+  "bankRouting": "021000021",
+  "website": "https://acme.com",
+  "notes": "Primary supplier for electronics",
+  "active": true,
+  "preferred": true,
+  "leadTimeDays": 7,
+  "minOrderAmount": 100.00
+}
+```
+
+---
+
+### PUT /inventory/vendors/{id}
+Update a vendor.
+
+---
+
+### DELETE /inventory/vendors/{id}
+Delete a vendor.
+
+---
+
+### PUT /inventory/vendors/{id}/activate
+Activate or deactivate a vendor.
+
+---
+
+## Purchase Order APIs
+
+All PO endpoints require specific permissions: `INVENTORY_PO_VIEW`, `INVENTORY_PO_CREATE`, `INVENTORY_PO_UPDATE`, `INVENTORY_PO_APPROVE`, or `INVENTORY_PO_CANCEL`.
+
+### PO Status Flow
+```
+DRAFT → PENDING → APPROVED → PARTIAL/RECEIVED → CLOSED
+                      ↓
+                  CANCELLED
+```
+
+### GET /inventory/purchase-orders
+List purchase orders with pagination.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| page | int | 0 | Page number |
+| size | int | 20 | Page size |
+| sort | string | orderDate,desc | Sort field and direction |
+
+---
+
+### GET /inventory/purchase-orders/{id}
+Get purchase order by ID with full details including line items.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "poNumber": "PO-202601-0001",
+    "vendorId": 1,
+    "vendorName": "Acme Supplies",
+    "locationId": 1,
+    "locationName": "Main Warehouse",
+    "status": "APPROVED",
+    "orderDate": "2026-01-03",
+    "expectedDate": "2026-01-10",
+    "subtotal": 5000.00,
+    "discountAmount": 250.00,
+    "taxAmount": 475.00,
+    "shippingAmount": 50.00,
+    "totalAmount": 5275.00,
+    "currency": "USD",
+    "paymentTerms": "Net 30",
+    "notes": "Urgent order",
+    "approvedBy": "admin",
+    "approvedAt": "2026-01-03T14:30:00Z",
+    "lines": [
+      {
+        "id": 1,
+        "lineNumber": 1,
+        "productId": 1,
+        "productName": "iPhone 15 Pro",
+        "productSku": "IPHONE15PRO",
+        "quantity": 10,
+        "receivedQuantity": 0,
+        "unitPrice": 500.00,
+        "discountPercent": 5.00,
+        "taxPercent": 10.00,
+        "lineTotal": 5275.00
+      }
+    ]
+  }
+}
+```
+
+---
+
+### GET /inventory/purchase-orders/status/{status}
+Get POs by status.
+
+**Status Values:** `DRAFT`, `PENDING`, `APPROVED`, `PARTIAL`, `RECEIVED`, `CANCELLED`, `CLOSED`
+
+---
+
+### GET /inventory/purchase-orders/vendor/{vendorId}
+Get POs for a specific vendor.
+
+---
+
+### GET /inventory/purchase-orders/search
+Search POs by PO number or vendor name.
+
+---
+
+### POST /inventory/purchase-orders
+Create a new purchase order.
+
+**Request:**
+```json
+{
+  "vendorId": 1,
+  "locationId": 1,
+  "orderDate": "2026-01-03",
+  "expectedDate": "2026-01-10",
+  "discountPercent": 5.00,
+  "shippingAmount": 50.00,
+  "currency": "USD",
+  "paymentTerms": "Net 30",
+  "shippingMethod": "Ground",
+  "shippingAddress": "123 Warehouse Ave",
+  "notes": "Urgent order",
+  "internalNotes": "Approved by manager",
+  "vendorReference": "VND-REF-001",
+  "lines": [
+    {
+      "productId": 1,
+      "quantity": 10,
+      "unitPrice": 500.00,
+      "discountPercent": 5.00,
+      "taxPercent": 10.00,
+      "notes": "Latest model",
+      "expectedDate": "2026-01-10"
+    }
+  ]
+}
+```
+
+---
+
+### PUT /inventory/purchase-orders/{id}/submit
+Submit PO for approval. Changes status from DRAFT to PENDING.
+
+---
+
+### PUT /inventory/purchase-orders/{id}/approve
+Approve a pending PO. Changes status from PENDING to APPROVED.
+
+---
+
+### PUT /inventory/purchase-orders/{id}/cancel
+Cancel a PO.
+
+**Request:**
+```json
+{
+  "reason": "Vendor unable to fulfill order"
+}
+```
+
+---
+
+## Receiving APIs
+
+All receiving endpoints require `INVENTORY_RECEIVING_VIEW`, `INVENTORY_RECEIVING_CREATE`, or `INVENTORY_RECEIVING_CONFIRM` permission.
+
+### Receiving Status Flow
+```
+DRAFT → PENDING → IN_PROGRESS → COMPLETED
+                      ↓
+                  CANCELLED
+```
+
+### GET /inventory/receiving
+List receiving orders with pagination.
+
+---
+
+### GET /inventory/receiving/{id}
+Get receiving order by ID with full details.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "receivingNumber": "RCV-202601-0001",
+    "purchaseOrderId": 1,
+    "poNumber": "PO-202601-0001",
+    "vendorId": 1,
+    "vendorName": "Acme Supplies",
+    "locationId": 1,
+    "locationName": "Main Warehouse",
+    "status": "COMPLETED",
+    "receivingDate": "2026-01-03",
+    "vendorDeliveryNote": "DN-001",
+    "vendorInvoiceNumber": "INV-001",
+    "subtotal": 4750.00,
+    "totalAmount": 5000.00,
+    "stockUpdated": true,
+    "lines": [
+      {
+        "id": 1,
+        "lineNumber": 1,
+        "productId": 1,
+        "productName": "iPhone 15 Pro",
+        "expectedQuantity": 10,
+        "receivedQuantity": 10,
+        "acceptedQuantity": 9,
+        "rejectedQuantity": 1,
+        "rejectionReason": "Damaged packaging",
+        "unitCost": 500.00,
+        "batchNumber": "BATCH-001",
+        "expiryDate": "2027-01-03"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### GET /inventory/receiving/status/{status}
+Get receiving orders by status.
+
+**Status Values:** `DRAFT`, `PENDING`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`
+
+---
+
+### GET /inventory/receiving/purchase-order/{poId}
+Get all receiving orders for a specific PO.
+
+---
+
+### GET /inventory/receiving/search
+Search receiving orders.
+
+---
+
+### POST /inventory/receiving
+Create a receiving order.
+
+**Request:**
+```json
+{
+  "purchaseOrderId": 1,
+  "vendorId": 1,
+  "locationId": 1,
+  "receivingDate": "2026-01-03",
+  "vendorDeliveryNote": "DN-001",
+  "vendorInvoiceNumber": "INV-001",
+  "vendorInvoiceDate": "2026-01-03",
+  "discountAmount": 100.00,
+  "shippingAmount": 50.00,
+  "currency": "USD",
+  "notes": "Received in good condition",
+  "lines": [
+    {
+      "poLineId": 1,
+      "productId": 1,
+      "expectedQuantity": 10,
+      "receivedQuantity": 10,
+      "acceptedQuantity": 9,
+      "rejectedQuantity": 1,
+      "rejectionReason": "Damaged packaging",
+      "unitCost": 500.00,
+      "batchNumber": "BATCH-001",
+      "expiryDate": "2027-01-03",
+      "targetLocationId": 1
+    }
+  ]
+}
+```
+
+---
+
+### PUT /inventory/receiving/{id}/confirm
+Confirm receiving and update stock. This automatically creates stock movements for accepted quantities.
+
+---
+
+### PUT /inventory/receiving/{id}/cancel
+Cancel a receiving order.
+
+**Request:**
+```json
+{
+  "reason": "Incorrect shipment received"
+}
+```
+
+---
+
+## Inventory Count APIs
+
+All inventory count endpoints require `INVENTORY_COUNT_VIEW`, `INVENTORY_COUNT_CREATE`, `INVENTORY_COUNT_PERFORM`, or `INVENTORY_COUNT_APPROVE` permission.
+
+### Count Status Flow
+```
+DRAFT → IN_PROGRESS → COMPLETED → APPROVED
+                          ↓
+                      CANCELLED
+```
+
+### Count Types
+- `FULL` - Complete inventory count of all products
+- `PARTIAL` - Count specific products or categories
+- `CYCLE` - Regular cycle counting
+- `SPOT` - Quick spot check
+- `ANNUAL` - Annual inventory audit
+
+### GET /inventory/counts
+List inventory counts with pagination.
+
+---
+
+### GET /inventory/counts/{id}
+Get inventory count by ID with full details.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "countNumber": "CNT-202601-0001",
+    "locationId": 1,
+    "locationName": "Main Warehouse",
+    "status": "COMPLETED",
+    "countType": "CYCLE",
+    "countDate": "2026-01-03",
+    "description": "Weekly cycle count",
+    "totalItems": 50,
+    "countedItems": 50,
+    "varianceItems": 3,
+    "totalVarianceValue": -150.00,
+    "positiveVarianceValue": 50.00,
+    "negativeVarianceValue": 200.00,
+    "freezeStock": false,
+    "startedAt": "2026-01-03T09:00:00Z",
+    "completedAt": "2026-01-03T12:00:00Z",
+    "adjustmentsPosted": false,
+    "lines": [
+      {
+        "id": 1,
+        "lineNumber": 1,
+        "productId": 1,
+        "productName": "iPhone 15 Pro",
+        "productSku": "IPHONE15PRO",
+        "systemQuantity": 100,
+        "countedQuantity": 98,
+        "varianceQuantity": -2,
+        "unitCost": 500.00,
+        "varianceValue": -1000.00,
+        "counted": true,
+        "countedBy": "warehouse_staff",
+        "countedAt": "2026-01-03T10:30:00Z",
+        "recountRequired": false,
+        "adjustmentReason": "Possible theft or miscounting"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### GET /inventory/counts/status/{status}
+Get counts by status.
+
+**Status Values:** `DRAFT`, `IN_PROGRESS`, `COMPLETED`, `APPROVED`, `CANCELLED`
+
+---
+
+### GET /inventory/counts/search
+Search inventory counts.
+
+---
+
+### POST /inventory/counts
+Create an inventory count.
+
+**Request:**
+```json
+{
+  "locationId": 1,
+  "countType": "CYCLE",
+  "countDate": "2026-01-03",
+  "description": "Weekly cycle count - Electronics section",
+  "notes": "Focus on high-value items",
+  "freezeStock": false,
+  "categoryId": 1,
+  "productIds": [1, 2, 3, 4, 5]
+}
+```
+
+**Notes:**
+- If `productIds` is provided, only those products will be counted
+- If `categoryId` is provided, all products in that category will be counted
+- If neither is provided, all products at the location will be counted
+
+---
+
+### PUT /inventory/counts/{id}/start
+Start an inventory count. Changes status from DRAFT to IN_PROGRESS.
+
+---
+
+### PUT /inventory/counts/{countId}/lines/{lineId}/count
+Record count for a specific line item.
+
+**Request:**
+```json
+{
+  "countedQuantity": 98,
+  "batchNumber": "BATCH-001",
+  "serialNumber": "SN-12345",
+  "notes": "Found 2 units less than expected"
+}
+```
+
+---
+
+### PUT /inventory/counts/{countId}/lines/{lineId}/recount
+Mark a line for recount.
+
+**Request:**
+```json
+{
+  "reason": "Variance too high, needs verification"
+}
+```
+
+---
+
+### PUT /inventory/counts/{id}/complete
+Complete the count. Changes status from IN_PROGRESS to COMPLETED.
+
+---
+
+### PUT /inventory/counts/{id}/approve
+Approve the count and post adjustments. Changes status from COMPLETED to APPROVED. Automatically creates stock adjustment movements for all variances.
+
+---
+
+### PUT /inventory/counts/{id}/cancel
+Cancel an inventory count.
+
+**Request:**
+```json
+{
+  "reason": "Count interrupted, will reschedule"
+}
+```
+
+---
+
+## Block 5 Permissions Summary
+
+| Permission | Description |
+|------------|-------------|
+| INVENTORY_VENDOR_VIEW | View vendors |
+| INVENTORY_VENDOR_MANAGE | Create, update, delete vendors |
+| INVENTORY_PO_VIEW | View purchase orders |
+| INVENTORY_PO_CREATE | Create purchase orders |
+| INVENTORY_PO_UPDATE | Update and submit POs |
+| INVENTORY_PO_APPROVE | Approve purchase orders |
+| INVENTORY_PO_CANCEL | Cancel purchase orders |
+| INVENTORY_RECEIVING_VIEW | View receiving orders |
+| INVENTORY_RECEIVING_CREATE | Create receiving orders |
+| INVENTORY_RECEIVING_CONFIRM | Confirm and cancel receiving |
+| INVENTORY_COUNT_VIEW | View inventory counts |
+| INVENTORY_COUNT_CREATE | Create inventory counts |
+| INVENTORY_COUNT_PERFORM | Start, record, complete counts |
+| INVENTORY_COUNT_APPROVE | Approve and cancel counts |
