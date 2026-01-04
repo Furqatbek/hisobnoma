@@ -1,7 +1,7 @@
 package com.hisobnoma.platform.pos.service;
 
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
-import com.hisobnoma.platform.common.exception.ResourceNotFoundException;
+import com.hisobnoma.platform.common.exception.NotFoundException;
 import com.hisobnoma.platform.inventory.entity.Product;
 import com.hisobnoma.platform.inventory.entity.ProductVariant;
 import com.hisobnoma.platform.inventory.repository.ProductRepository;
@@ -64,7 +64,7 @@ public class PriceListService {
     public PriceListDto findPriceListById(Long id) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         PriceList priceList = priceListRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "id", id));
+                .orElseThrow(() -> new NotFoundException("PriceList", "id", id));
         return priceListMapper.toDtoWithItems(priceList);
     }
 
@@ -72,7 +72,7 @@ public class PriceListService {
     public PriceListDto findPriceListByCode(String code) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         PriceList priceList = priceListRepository.findByCodeAndTenantId(code, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "code", code));
+                .orElseThrow(() -> new NotFoundException("PriceList", "code", code));
         return priceListMapper.toDtoWithItems(priceList);
     }
 
@@ -99,7 +99,7 @@ public class PriceListService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         PriceList priceList = priceListRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "id", id));
+                .orElseThrow(() -> new NotFoundException("PriceList", "id", id));
 
         // Check for duplicate code if changed
         if (!priceList.getCode().equals(request.getCode())) {
@@ -120,7 +120,7 @@ public class PriceListService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         PriceList priceList = priceListRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "id", id));
+                .orElseThrow(() -> new NotFoundException("PriceList", "id", id));
 
         // Delete associated items first
         priceListItemRepository.deleteAll(priceList.getItems());
@@ -137,7 +137,7 @@ public class PriceListService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         PriceList priceList = priceListRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "id", id));
+                .orElseThrow(() -> new NotFoundException("PriceList", "id", id));
 
         priceList.setActive(true);
         priceList = priceListRepository.save(priceList);
@@ -151,7 +151,7 @@ public class PriceListService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         PriceList priceList = priceListRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "id", id));
+                .orElseThrow(() -> new NotFoundException("PriceList", "id", id));
 
         priceList.setActive(false);
         priceList = priceListRepository.save(priceList);
@@ -167,7 +167,7 @@ public class PriceListService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         PriceList priceList = priceListRepository.findByIdAndTenantId(priceListId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "id", priceListId));
+                .orElseThrow(() -> new NotFoundException("PriceList", "id", priceListId));
 
         return priceListItemRepository.findByPriceListId(priceListId, pageable)
                 .map(item -> enrichPriceListItemDto(priceListItemMapper.toDto(item)));
@@ -178,13 +178,13 @@ public class PriceListService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         priceListRepository.findByIdAndTenantId(priceListId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "id", priceListId));
+                .orElseThrow(() -> new NotFoundException("PriceList", "id", priceListId));
 
         PriceListItem item = priceListItemRepository.findById(itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceListItem", "id", itemId));
+                .orElseThrow(() -> new NotFoundException("PriceListItem", "id", itemId));
 
         if (!item.getPriceList().getId().equals(priceListId)) {
-            throw new ResourceNotFoundException("PriceListItem", "id", itemId);
+            throw new NotFoundException("PriceListItem", "id", itemId);
         }
 
         return enrichPriceListItemDto(priceListItemMapper.toDto(item));
@@ -195,15 +195,15 @@ public class PriceListService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         PriceList priceList = priceListRepository.findByIdAndTenantId(priceListId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "id", priceListId));
+                .orElseThrow(() -> new NotFoundException("PriceList", "id", priceListId));
 
         Product product = productRepository.findByIdAndTenantId(request.getProductId(), tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", request.getProductId()));
+                .orElseThrow(() -> new NotFoundException("Product", "id", request.getProductId()));
 
         ProductVariant variant = null;
         if (request.getVariantId() != null) {
             variant = variantRepository.findById(request.getVariantId())
-                    .orElseThrow(() -> new ResourceNotFoundException("ProductVariant", "id", request.getVariantId()));
+                    .orElseThrow(() -> new NotFoundException("ProductVariant", "id", request.getVariantId()));
         }
 
         PriceListItem item = priceListItemMapper.toEntity(request);
@@ -223,19 +223,19 @@ public class PriceListService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         priceListRepository.findByIdAndTenantId(priceListId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "id", priceListId));
+                .orElseThrow(() -> new NotFoundException("PriceList", "id", priceListId));
 
         PriceListItem item = priceListItemRepository.findById(itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceListItem", "id", itemId));
+                .orElseThrow(() -> new NotFoundException("PriceListItem", "id", itemId));
 
         if (!item.getPriceList().getId().equals(priceListId)) {
-            throw new ResourceNotFoundException("PriceListItem", "id", itemId);
+            throw new NotFoundException("PriceListItem", "id", itemId);
         }
 
         // Update product if changed
         if (!item.getProduct().getId().equals(request.getProductId())) {
             Product product = productRepository.findByIdAndTenantId(request.getProductId(), tenantId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Product", "id", request.getProductId()));
+                    .orElseThrow(() -> new NotFoundException("Product", "id", request.getProductId()));
             item.setProduct(product);
         }
 
@@ -243,7 +243,7 @@ public class PriceListService {
         if (request.getVariantId() != null) {
             if (item.getVariant() == null || !item.getVariant().getId().equals(request.getVariantId())) {
                 ProductVariant variant = variantRepository.findById(request.getVariantId())
-                        .orElseThrow(() -> new ResourceNotFoundException("ProductVariant", "id", request.getVariantId()));
+                        .orElseThrow(() -> new NotFoundException("ProductVariant", "id", request.getVariantId()));
                 item.setVariant(variant);
             }
         } else {
@@ -262,13 +262,13 @@ public class PriceListService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         priceListRepository.findByIdAndTenantId(priceListId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "id", priceListId));
+                .orElseThrow(() -> new NotFoundException("PriceList", "id", priceListId));
 
         PriceListItem item = priceListItemRepository.findById(itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceListItem", "id", itemId));
+                .orElseThrow(() -> new NotFoundException("PriceListItem", "id", itemId));
 
         if (!item.getPriceList().getId().equals(priceListId)) {
-            throw new ResourceNotFoundException("PriceListItem", "id", itemId);
+            throw new NotFoundException("PriceListItem", "id", itemId);
         }
 
         priceListItemRepository.delete(item);
@@ -282,7 +282,7 @@ public class PriceListService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         PriceList priceList = priceListRepository.findByIdAndTenantId(priceListId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("PriceList", "id", priceListId));
+                .orElseThrow(() -> new NotFoundException("PriceList", "id", priceListId));
 
         CustomerPriceList assignment = CustomerPriceList.builder()
                 .customerId(customerId)

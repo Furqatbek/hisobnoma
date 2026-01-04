@@ -1,7 +1,7 @@
 package com.hisobnoma.platform.pos.service;
 
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
-import com.hisobnoma.platform.common.exception.ResourceNotFoundException;
+import com.hisobnoma.platform.common.exception.NotFoundException;
 import com.hisobnoma.platform.pos.dto.CouponDto;
 import com.hisobnoma.platform.pos.dto.CreateCouponRequest;
 import com.hisobnoma.platform.pos.entity.Coupon;
@@ -54,7 +54,7 @@ public class CouponService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         promotionRepository.findByIdAndTenantId(promotionId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Promotion", "id", promotionId));
+                .orElseThrow(() -> new NotFoundException("Promotion", "id", promotionId));
 
         return couponRepository.findByPromotionId(promotionId, pageable)
                 .map(this::enrichCouponDto);
@@ -71,7 +71,7 @@ public class CouponService {
     public CouponDto findCouponById(Long id) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Coupon coupon = couponRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Coupon", "id", id));
+                .orElseThrow(() -> new NotFoundException("Coupon", "id", id));
         return enrichCouponDto(couponMapper.toDto(coupon));
     }
 
@@ -79,7 +79,7 @@ public class CouponService {
     public CouponDto findCouponByCode(String code) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Coupon coupon = couponRepository.findByCodeAndTenantId(code, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Coupon", "code", code));
+                .orElseThrow(() -> new NotFoundException("Coupon", "code", code));
         return enrichCouponDto(couponMapper.toDto(coupon));
     }
 
@@ -88,7 +88,7 @@ public class CouponService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         Promotion promotion = promotionRepository.findByIdAndTenantId(request.getPromotionId(), tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Promotion", "id", request.getPromotionId()));
+                .orElseThrow(() -> new NotFoundException("Promotion", "id", request.getPromotionId()));
 
         String code = request.getCode();
         if (code == null || code.isEmpty()) {
@@ -118,7 +118,7 @@ public class CouponService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         Promotion promotion = promotionRepository.findByIdAndTenantId(promotionId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Promotion", "id", promotionId));
+                .orElseThrow(() -> new NotFoundException("Promotion", "id", promotionId));
 
         List<CouponDto> generatedCoupons = new ArrayList<>();
 
@@ -155,7 +155,7 @@ public class CouponService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         Coupon coupon = couponRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Coupon", "id", id));
+                .orElseThrow(() -> new NotFoundException("Coupon", "id", id));
 
         // Check for duplicate code if changed
         if (request.getCode() != null && !request.getCode().equals(coupon.getCode())) {
@@ -167,7 +167,7 @@ public class CouponService {
         // Update promotion if changed
         if (request.getPromotionId() != null && !request.getPromotionId().equals(coupon.getPromotion().getId())) {
             Promotion promotion = promotionRepository.findByIdAndTenantId(request.getPromotionId(), tenantId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Promotion", "id", request.getPromotionId()));
+                    .orElseThrow(() -> new NotFoundException("Promotion", "id", request.getPromotionId()));
             coupon.setPromotion(promotion);
         }
 
@@ -183,7 +183,7 @@ public class CouponService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         Coupon coupon = couponRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Coupon", "id", id));
+                .orElseThrow(() -> new NotFoundException("Coupon", "id", id));
 
         coupon.setStatus(CouponStatus.ACTIVE);
         coupon = couponRepository.save(coupon);
@@ -197,7 +197,7 @@ public class CouponService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         Coupon coupon = couponRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Coupon", "id", id));
+                .orElseThrow(() -> new NotFoundException("Coupon", "id", id));
 
         coupon.setStatus(CouponStatus.INACTIVE);
         coupon = couponRepository.save(coupon);
@@ -211,7 +211,7 @@ public class CouponService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         Coupon coupon = couponRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Coupon", "id", id));
+                .orElseThrow(() -> new NotFoundException("Coupon", "id", id));
 
         coupon.setStatus(CouponStatus.CANCELLED);
         coupon = couponRepository.save(coupon);
@@ -225,7 +225,7 @@ public class CouponService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         Coupon coupon = couponRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Coupon", "id", id));
+                .orElseThrow(() -> new NotFoundException("Coupon", "id", id));
 
         // Check if coupon has been used
         if (coupon.getCurrentUses() > 0) {
@@ -241,7 +241,7 @@ public class CouponService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         Coupon coupon = couponRepository.findByIdAndTenantId(couponId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Coupon", "id", couponId));
+                .orElseThrow(() -> new NotFoundException("Coupon", "id", couponId));
 
         return couponRedemptionRepository.findByCouponId(couponId);
     }
