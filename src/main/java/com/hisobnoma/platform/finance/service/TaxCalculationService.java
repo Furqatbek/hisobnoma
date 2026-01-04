@@ -200,6 +200,20 @@ public class TaxCalculationService {
     }
 
     /**
+     * Gets the applicable TaxRate object for a tax code on a given date.
+     */
+    @Transactional(readOnly = true)
+    public TaxRate getApplicableRate(String taxCode, LocalDate date) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        if (date == null) {
+            date = LocalDate.now();
+        }
+
+        return taxRateRepository.findEffectiveRateByTaxCodeAndDate(taxCode, date, tenantId)
+                .orElse(null);
+    }
+
+    /**
      * Extracts tax from a tax-inclusive amount.
      */
     @Transactional(readOnly = true)

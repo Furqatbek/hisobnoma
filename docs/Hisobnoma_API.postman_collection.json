@@ -3183,6 +3183,824 @@
         }
       ],
       "description": "Tax code management with rates, calculation, and VAT/GST reporting."
+    },
+    {
+      "name": "POS - Terminals",
+      "item": [
+        {
+          "name": "List Terminals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/terminals?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "terminals"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "List all POS terminals with pagination. Requires POS_TERMINAL_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Terminals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/terminals?search=main",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "terminals"],
+              "query": [
+                { "key": "search", "value": "main" }
+              ]
+            },
+            "description": "Search terminals by code or name."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Terminal by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/terminals/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "terminals", "1"]
+            },
+            "description": "Get terminal by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Terminal by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/terminals/code/POS-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "terminals", "code", "POS-001"]
+            },
+            "description": "Get terminal by terminal code."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Terminals by Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/terminals/location/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "terminals", "location", "1"]
+            },
+            "description": "Get all terminals for a specific location."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Terminals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/terminals/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "terminals", "active"]
+            },
+            "description": "Get all active terminals."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Terminal",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"terminalCode\": \"POS-002\",\n  \"name\": \"Checkout 2\",\n  \"description\": \"Secondary checkout register\",\n  \"locationId\": 1,\n  \"ipAddress\": \"192.168.1.101\",\n  \"macAddress\": \"00:1A:2B:3C:4D:5F\",\n  \"deviceType\": \"TABLET\",\n  \"printerName\": \"EPSON TM-m30\",\n  \"cashDrawerEnabled\": true,\n  \"allowOffline\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/terminals",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "terminals"]
+            },
+            "description": "Create a new POS terminal. Requires POS_TERMINAL_CREATE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Terminal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"terminalCode\": \"POS-001\",\n  \"name\": \"Main Register Updated\",\n  \"description\": \"Main floor register - updated\",\n  \"locationId\": 1,\n  \"ipAddress\": \"192.168.1.100\",\n  \"cashDrawerEnabled\": true,\n  \"allowOffline\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/terminals/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "terminals", "1"]
+            },
+            "description": "Update a POS terminal. Requires POS_TERMINAL_UPDATE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Terminal",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/terminals/1/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "terminals", "1", "activate"]
+            },
+            "description": "Activate a POS terminal."
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Terminal",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/terminals/1/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "terminals", "1", "deactivate"]
+            },
+            "description": "Deactivate a POS terminal."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Terminal",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/terminals/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "terminals", "1"]
+            },
+            "description": "Delete a POS terminal. Requires POS_TERMINAL_DELETE permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "POS terminal/register management."
+    },
+    {
+      "name": "POS - Shifts",
+      "item": [
+        {
+          "name": "List Shifts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "List all shifts with pagination. Requires POS_SHIFT_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Shift by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts", "1"]
+            },
+            "description": "Get shift by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Shifts by Terminal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts/terminal/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts", "terminal", "1"]
+            },
+            "description": "Get all shifts for a specific terminal."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Shifts by Cashier",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts/cashier/10",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts", "cashier", "10"]
+            },
+            "description": "Get all shifts for a specific cashier."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current Shift",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts/current",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts", "current"]
+            },
+            "description": "Get current user's open shift."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current Shift for Terminal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts/current/terminal/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts", "current", "terminal", "1"]
+            },
+            "description": "Get current open shift for a specific terminal."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Open Shifts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts/open",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts", "open"]
+            },
+            "description": "Get all currently open shifts."
+          },
+          "response": []
+        },
+        {
+          "name": "Open Shift",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"terminalId\": 1,\n  \"openingCash\": 500000.0000,\n  \"notes\": \"Morning shift opening\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts/open",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts", "open"]
+            },
+            "description": "Open a new shift on a terminal. Requires POS_SHIFT_OPEN permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Close Shift",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"closingCash\": 2600000.0000,\n  \"closingNotes\": \"All transactions reconciled\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts/1/close",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts", "1", "close"]
+            },
+            "description": "Close a shift. Requires POS_SHIFT_CLOSE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Cash In",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operationType\": \"CASH_IN\",\n  \"amount\": 100000.0000,\n  \"reason\": \"Petty cash replenishment\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts/1/cash-operation",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts", "1", "cash-operation"]
+            },
+            "description": "Add cash to the drawer. Requires POS_SHIFT_CASH_OPERATION permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Cash Out",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operationType\": \"CASH_OUT\",\n  \"amount\": 50000.0000,\n  \"reason\": \"Bank deposit pickup\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts/1/cash-operation",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts", "1", "cash-operation"]
+            },
+            "description": "Remove cash from the drawer. Requires POS_SHIFT_CASH_OPERATION permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Reconcile Shift",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/shifts/1/reconcile",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "shifts", "1", "reconcile"]
+            },
+            "description": "Mark a closed shift as reconciled. Requires POS_SHIFT_CLOSE permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Cashier shift management including opening, closing, and cash operations."
+    },
+    {
+      "name": "POS - Transactions",
+      "item": [
+        {
+          "name": "List Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "List all transactions with pagination. Requires POS_SALE_READ permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions?search=TX20260104",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions"],
+              "query": [
+                { "key": "search", "value": "TX20260104" }
+              ]
+            },
+            "description": "Search transactions by transaction number."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transaction by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1"]
+            },
+            "description": "Get transaction by ID with full details including lines and payments."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transaction by Number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/number/TX20260104-00001",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "number", "TX20260104-00001"]
+            },
+            "description": "Get transaction by transaction number."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transactions by Shift",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/shift/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "shift", "1"]
+            },
+            "description": "Get all transactions for a specific shift."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Held Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/held?shiftId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "held"],
+              "query": [
+                { "key": "shiftId", "value": "1" }
+              ]
+            },
+            "description": "Get held transactions for a shift."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Sale Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"terminalId\": 1,\n  \"transactionType\": \"SALE\",\n  \"customerId\": null,\n  \"customerName\": \"Walk-in Customer\",\n  \"customerPhone\": null,\n  \"notes\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions"]
+            },
+            "description": "Create a new sale transaction. Requires POS_SALE_CREATE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Return Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"terminalId\": 1,\n  \"transactionType\": \"RETURN\",\n  \"originalTransactionId\": 1,\n  \"customerName\": \"John Smith\",\n  \"notes\": \"Customer return - defective item\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions"]
+            },
+            "description": "Create a return transaction linked to an original sale."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Line Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": 100,\n  \"variantId\": null,\n  \"quantity\": 2.0000,\n  \"unitPrice\": null,\n  \"discountAmount\": null,\n  \"discountPercent\": null,\n  \"discountReason\": null,\n  \"serialNumber\": null,\n  \"batchNumber\": null,\n  \"locationId\": null,\n  \"notes\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/lines",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "lines"]
+            },
+            "description": "Add a line item to a transaction. Unit price is optional - defaults to product selling price."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Line Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 3.0000,\n  \"unitPrice\": 145000.0000,\n  \"discountPercent\": 5.00,\n  \"discountReason\": \"Customer loyalty\",\n  \"notes\": \"Updated quantity\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/lines/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "lines", "1"]
+            },
+            "description": "Update a line item on a transaction."
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Line Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/lines/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "lines", "1"]
+            },
+            "description": "Remove a line item from a transaction."
+          },
+          "response": []
+        },
+        {
+          "name": "Apply Percentage Discount",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"percent\": 10.00,\n  \"reason\": \"Promotional discount\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/discount",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "discount"]
+            },
+            "description": "Apply a percentage discount to the transaction. Requires POS_DISCOUNT_APPLY permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Apply Fixed Discount",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50000.0000,\n  \"reason\": \"Manager override\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/discount",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "discount"]
+            },
+            "description": "Apply a fixed amount discount to the transaction."
+          },
+          "response": []
+        },
+        {
+          "name": "Hold Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Customer went to get more items\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/hold",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "hold"]
+            },
+            "description": "Put a transaction on hold. Requires POS_SALE_HOLD permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Recall Transaction",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/recall",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "recall"]
+            },
+            "description": "Recall a held transaction. Requires POS_SALE_HOLD permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Void Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Customer cancelled order\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/void",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "void"]
+            },
+            "description": "Void a transaction. For completed transactions, reverses stock and GL entries. Requires POS_SALE_VOID permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Transaction",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "complete"]
+            },
+            "description": "Complete a transaction. Deducts stock, posts to GL, updates shift totals. Transaction must be fully paid."
+          },
+          "response": []
+        }
+      ],
+      "description": "POS transaction management including sales, returns, line items, and discounts."
+    },
+    {
+      "name": "POS - Payments",
+      "item": [
+        {
+          "name": "Get Payments for Transaction",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "payments"]
+            },
+            "description": "Get all payments for a transaction."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Cash Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentType\": \"CASH\",\n  \"amount\": 300000.0000,\n  \"tenderedAmount\": 350000.0000,\n  \"notes\": \"Cash payment\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "payments"]
+            },
+            "description": "Add a cash payment. Change is calculated automatically. Requires POS_PAYMENT_PROCESS permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Card Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentType\": \"CARD\",\n  \"amount\": 236000.0000,\n  \"cardType\": \"VISA\",\n  \"cardLastFour\": \"4242\",\n  \"authCode\": \"123456\",\n  \"gatewayReference\": \"PAY-12345\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "payments"]
+            },
+            "description": "Add a card payment with card details."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Mobile Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentType\": \"MOBILE_PAYMENT\",\n  \"amount\": 100000.0000,\n  \"mobileReference\": \"PAYME-789456\",\n  \"notes\": \"Payme payment\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "payments"]
+            },
+            "description": "Add a mobile payment (Payme, Click, etc.)."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Gift Card Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentType\": \"GIFT_CARD\",\n  \"amount\": 100000.0000,\n  \"giftCardNumber\": \"GC-12345678\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "payments"]
+            },
+            "description": "Add a gift card payment."
+          },
+          "response": []
+        },
+        {
+          "name": "Void Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/payments/1/void?reason=Customer changed payment method",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "payments", "1", "void"],
+              "query": [
+                { "key": "reason", "value": "Customer changed payment method" }
+              ]
+            },
+            "description": "Void a payment on a pending transaction. Requires POS_PAYMENT_VOID permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Refund Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/payments/1/refund?amount=100000.0000&reason=Partial return of items",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "payments", "1", "refund"],
+              "query": [
+                { "key": "amount", "value": "100000.0000" },
+                { "key": "reason", "value": "Partial return of items" }
+              ]
+            },
+            "description": "Refund a payment on a completed transaction. Requires POS_SALE_REFUND permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "POS payment processing including cash, card, mobile, and gift card payments."
     }
   ]
 }

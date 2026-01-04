@@ -162,7 +162,7 @@ public class POSTransactionService {
 
         // Determine unit price
         BigDecimal unitPrice = request.getUnitPrice() != null ? request.getUnitPrice() :
-                (variant != null && variant.getPrice() != null ? variant.getPrice() : product.getSellingPrice());
+                (variant != null && variant.getSellingPrice() != null ? variant.getSellingPrice() : product.getSellingPrice());
 
         // Get next line number
         Integer maxLineNumber = lineRepository.findMaxLineNumberByTransactionId(transactionId);

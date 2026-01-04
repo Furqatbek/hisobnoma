@@ -24,6 +24,7 @@ public class POSTransactionLineDto {
     private BigDecimal quantity;
     private BigDecimal unitPrice;
     private BigDecimal originalPrice;
+    private BigDecimal costPrice;
     private BigDecimal discountAmount;
     private BigDecimal discountPercent;
     private String discountReason;
