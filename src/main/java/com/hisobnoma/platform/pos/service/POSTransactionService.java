@@ -132,8 +132,9 @@ public class POSTransactionService {
 
         // For returns, get original transaction number
         if (request.getOriginalTransactionId() != null) {
+            final POSTransaction txn = transaction;
             transactionRepository.findByIdAndTenantId(request.getOriginalTransactionId(), tenantId)
-                    .ifPresent(orig -> transaction.setOriginalTransactionNumber(orig.getTransactionNumber()));
+                    .ifPresent(orig -> txn.setOriginalTransactionNumber(orig.getTransactionNumber()));
         }
 
         transaction = transactionRepository.save(transaction);
