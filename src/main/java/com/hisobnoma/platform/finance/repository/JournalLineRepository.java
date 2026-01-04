@@ -52,4 +52,11 @@ public interface JournalLineRepository extends JpaRepository<JournalLine, Long> 
 
     @Query("SELECT jl FROM JournalLine jl WHERE jl.tenantId = :tenantId AND jl.projectCode = :projectCode AND jl.journalEntry.status = 'POSTED'")
     List<JournalLine> findByProjectCodeAndTenantId(@Param("tenantId") Long tenantId, @Param("projectCode") String projectCode);
+
+    @Query("SELECT jl FROM JournalLine jl WHERE jl.taxCode = :taxCode AND jl.account.id = :accountId " +
+           "AND jl.journalEntry.entryDate BETWEEN :startDate AND :endDate " +
+           "AND jl.journalEntry.status = 'POSTED' AND jl.tenantId = :tenantId")
+    List<JournalLine> findByTaxCodeAndAccountIdAndDateRange(@Param("taxCode") String taxCode, @Param("accountId") Long accountId,
+                                                             @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate,
+                                                             @Param("tenantId") Long tenantId);
 }
