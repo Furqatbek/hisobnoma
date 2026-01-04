@@ -653,4 +653,25 @@ public class StockService {
         BigDecimal available = stockRepository.getAvailableQuantityByProduct(productId, tenantId);
         return available != null ? available : BigDecimal.ZERO;
     }
+
+    /**
+     * Convenience method to deduct stock using string reference type (for POS module)
+     */
+    @Transactional
+    public void deductStock(Long productId, Long locationId, BigDecimal quantity,
+                            String referenceType, Long referenceId, String description) {
+        MovementReferenceType refType = MovementReferenceType.valueOf(referenceType);
+        String refNumber = referenceType + "-" + referenceId;
+        deductStockForSale(productId, locationId, quantity, refType, referenceId, refNumber);
+    }
+
+    /**
+     * Convenience method to add stock using string reference type (for POS void/returns)
+     */
+    @Transactional
+    public void addStock(Long productId, Long locationId, BigDecimal quantity,
+                         String referenceType, Long referenceId, String description) {
+        MovementReferenceType refType = MovementReferenceType.valueOf(referenceType);
+        returnStock(productId, locationId, quantity, null, refType, referenceId, referenceType + "-" + referenceId);
+    }
 }

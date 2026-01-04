@@ -735,4 +735,72 @@ public class GLIntegrationService {
         journalEntryService.reverseEntry(creditNote.getGlJournalEntryId());
         log.info("Reversed GL posting for Credit Note {}: {}", creditNote.getCreditNoteNumber(), reason);
     }
+
+    // ============ POS Transaction Integration ============
+
+    /**
+     * Posts a POS Transaction to the general ledger.
+     * This is a convenience method that extracts data from a POSTransaction object.
+     *
+     * @param transaction The POS transaction to post
+     * @return The ID of the created journal entry
+     */
+    @Transactional
+    public Long postPOSTransaction(Object transaction) {
+        // Use reflection or duck typing to get transaction properties
+        // This allows us to avoid circular dependency with POS module
+        try {
+            java.lang.reflect.Method getId = transaction.getClass().getMethod("getId");
+            java.lang.reflect.Method getTransactionNumber = transaction.getClass().getMethod("getTransactionNumber");
+            java.lang.reflect.Method getTotalAmount = transaction.getClass().getMethod("getTotalAmount");
+            java.lang.reflect.Method getLines = transaction.getClass().getMethod("getLines");
+
+            Long id = (Long) getId.invoke(transaction);
+            String transactionNumber = (String) getTransactionNumber.invoke(transaction);
+            BigDecimal salesAmount = (BigDecimal) getTotalAmount.invoke(transaction);
+
+            // Calculate COGS from line items
+            BigDecimal costAmount = BigDecimal.ZERO;
+            @SuppressWarnings("unchecked")
+            java.util.List<Object> lines = (java.util.List<Object>) getLines.invoke(transaction);
+            for (Object line : lines) {
+                java.lang.reflect.Method getCostPrice = line.getClass().getMethod("getCostPrice");
+                java.lang.reflect.Method getQuantity = line.getClass().getMethod("getQuantity");
+                BigDecimal costPrice = (BigDecimal) getCostPrice.invoke(line);
+                BigDecimal quantity = (BigDecimal) getQuantity.invoke(line);
+                if (costPrice != null && quantity != null) {
+                    costAmount = costAmount.add(costPrice.multiply(quantity));
+                }
+            }
+
+            JournalEntry entry = postSalesTransaction(
+                    id,
+                    transactionNumber,
+                    salesAmount,
+                    costAmount,
+                    "POS",
+                    "POS Sale: " + transactionNumber,
+                    LocalDate.now()
+            );
+            return entry.getId();
+        } catch (Exception e) {
+            log.error("Failed to post POS transaction to GL: {}", e.getMessage());
+            throw new BusinessException("Failed to post POS transaction to GL: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Reverses a sales transaction in the general ledger.
+     *
+     * @param journalEntryId The ID of the journal entry to reverse
+     */
+    @Transactional
+    public void reverseSalesTransaction(Long journalEntryId) {
+        if (journalEntryId == null) {
+            log.warn("No journal entry ID provided for reversal");
+            return;
+        }
+        journalEntryService.reverseEntry(journalEntryId);
+        log.info("Reversed GL posting for sales transaction with journal entry ID {}", journalEntryId);
+    }
 }

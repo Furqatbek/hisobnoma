@@ -20,6 +20,16 @@ public enum MovementReferenceType {
     POS_TRANSACTION,
 
     /**
+     * From a POS sale
+     */
+    POS_SALE,
+
+    /**
+     * From a voided POS transaction
+     */
+    POS_VOID,
+
+    /**
      * From a web order
      */
     WEB_ORDER,
