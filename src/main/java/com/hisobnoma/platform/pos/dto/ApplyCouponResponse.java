@@ -17,7 +17,10 @@ public class ApplyCouponResponse {
     private String message;
     private BigDecimal discountAmount;
     private BigDecimal newTotal;
+    private Long promotionId;
     private String promotionCode;
     private String promotionName;
     private String promotionDescription;
+    private String discountDescription;
+    private String errorMessage;
 }
