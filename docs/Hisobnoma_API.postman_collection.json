@@ -2329,6 +2329,860 @@
         }
       ],
       "description": "Inventory counting with workflow: DRAFT → IN_PROGRESS → COMPLETED → APPROVED. Automatic stock adjustments on approval."
+    },
+    {
+      "name": "Finance - Bank Accounts",
+      "item": [
+        {
+          "name": "List Bank Accounts (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts?page=0&size=20&sort=sortOrder,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "sortOrder,asc" }
+              ]
+            },
+            "description": "Get bank accounts with pagination. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Bank Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "all"]
+            },
+            "description": "Get all bank accounts without pagination. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Bank Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "active"]
+            },
+            "description": "Get only active bank accounts. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Bank Accounts by Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/by-type/CHECKING",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "by-type", "CHECKING"]
+            },
+            "description": "Get bank accounts by type. Types: CHECKING, SAVINGS, CASH, CREDIT_CARD, PETTY_CASH, FOREIGN_CURRENCY. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payment Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/payment-accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "payment-accounts"]
+            },
+            "description": "Get accounts enabled for payments. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Receipt Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/receipt-accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "receipt-accounts"]
+            },
+            "description": "Get accounts enabled for receipts. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Default Bank Account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/default",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "default"]
+            },
+            "description": "Get the default bank account. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Bank Account by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "1"]
+            },
+            "description": "Get a specific bank account. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Bank Account by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/code/BANK-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "code", "BANK-001"]
+            },
+            "description": "Get bank account by code. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Bank Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/search?query=main",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "search"],
+              "query": [
+                { "key": "query", "value": "main" }
+              ]
+            },
+            "description": "Search bank accounts by name or code. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Bank Account",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountCode\": \"BANK-001\",\n  \"accountName\": \"Main Operating Account\",\n  \"description\": \"Primary business checking account\",\n  \"accountType\": \"CHECKING\",\n  \"bankName\": \"National Bank of Uzbekistan\",\n  \"bankBranch\": \"Main Branch\",\n  \"bankCode\": \"NBU001\",\n  \"accountNumber\": \"1234567890\",\n  \"iban\": \"UZ12345678901234567890\",\n  \"swiftCode\": \"NBUZUZ22\",\n  \"currency\": \"UZS\",\n  \"openingBalance\": 10000000.00,\n  \"openingBalanceDate\": \"2026-01-01\",\n  \"glAccountId\": 100,\n  \"contactName\": \"Account Manager\",\n  \"contactPhone\": \"+998901234567\",\n  \"contactEmail\": \"manager@bank.uz\",\n  \"defaultAccount\": true,\n  \"allowPayments\": true,\n  \"allowReceipts\": true,\n  \"sortOrder\": 1,\n  \"notes\": \"Primary account for all transactions\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts"]
+            },
+            "description": "Create a new bank account. Requires FINANCE_BANK_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Bank Account",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountName\": \"Main Operating Account - Updated\",\n  \"description\": \"Primary business checking account - Updated\",\n  \"contactName\": \"New Manager\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "1"]
+            },
+            "description": "Update a bank account. Requires FINANCE_BANK_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Bank Account",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/1/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "1", "activate"]
+            },
+            "description": "Activate a bank account. Requires FINANCE_BANK_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Bank Account",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/1/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "1", "deactivate"]
+            },
+            "description": "Deactivate a bank account. Requires FINANCE_BANK_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Set Default Bank Account",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-accounts/1/set-default",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-accounts", "1", "set-default"]
+            },
+            "description": "Set a bank account as default. Requires FINANCE_BANK_MANAGE permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Bank account management with GL linking support."
+    },
+    {
+      "name": "Finance - Bank Transactions",
+      "item": [
+        {
+          "name": "List Bank Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-transactions?page=0&size=20&sort=transactionDate,desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-transactions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "transactionDate,desc" }
+              ]
+            },
+            "description": "Get bank transactions with pagination. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transactions by Bank Account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-transactions/by-account/1?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-transactions", "by-account", "1"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get transactions for a specific bank account. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transactions by Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-transactions/by-account/1/date-range?startDate=2026-01-01&endDate=2026-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-transactions", "by-account", "1", "date-range"],
+              "query": [
+                { "key": "startDate", "value": "2026-01-01" },
+                { "key": "endDate", "value": "2026-01-31" }
+              ]
+            },
+            "description": "Get transactions by date range. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Bank Transaction by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-transactions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-transactions", "1"]
+            },
+            "description": "Get a specific bank transaction. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Bank Transaction",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankAccountId\": 1,\n  \"transactionDate\": \"2026-01-03\",\n  \"valueDate\": \"2026-01-03\",\n  \"transactionType\": \"DEPOSIT\",\n  \"description\": \"Customer payment received\",\n  \"amount\": 5000000.00,\n  \"isDebit\": false,\n  \"currency\": \"UZS\",\n  \"exchangeRate\": 1.0,\n  \"referenceNumber\": \"PAY-12345\",\n  \"payeePayer\": \"Acme Corporation\",\n  \"referenceType\": \"AR_PAYMENT\",\n  \"referenceId\": 100,\n  \"notes\": \"Invoice INV-001 payment\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-transactions"]
+            },
+            "description": "Create a bank transaction. Transaction types: DEPOSIT, WITHDRAWAL, TRANSFER_IN, TRANSFER_OUT, CHECK, FEE, INTEREST, ADJUSTMENT. Requires FINANCE_BANK_TRANSACT permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Bank Transfer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-transactions/transfer?fromAccountId=1&toAccountId=2&amount=1000000&transactionDate=2026-01-03&description=Transfer%20to%20payroll",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-transactions", "transfer"],
+              "query": [
+                { "key": "fromAccountId", "value": "1" },
+                { "key": "toAccountId", "value": "2" },
+                { "key": "amount", "value": "1000000" },
+                { "key": "transactionDate", "value": "2026-01-03" },
+                { "key": "description", "value": "Transfer to payroll" }
+              ]
+            },
+            "description": "Create an inter-account transfer. Creates paired transactions. Requires FINANCE_BANK_TRANSFER permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Clear Transaction",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-transactions/1/clear",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-transactions", "1", "clear"]
+            },
+            "description": "Clear a bank transaction (PENDING → CLEARED). Requires FINANCE_BANK_RECONCILE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Void Transaction",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-transactions/1/void?reason=Duplicate%20entry",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-transactions", "1", "void"],
+              "query": [
+                { "key": "reason", "value": "Duplicate entry" }
+              ]
+            },
+            "description": "Void a bank transaction. Requires FINANCE_BANK_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cash Flow Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-transactions/cash-flow/1?startDate=2026-01-01&endDate=2026-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-transactions", "cash-flow", "1"],
+              "query": [
+                { "key": "startDate", "value": "2026-01-01" },
+                { "key": "endDate", "value": "2026-01-31" }
+              ]
+            },
+            "description": "Get cash flow report for a bank account. Requires FINANCE_BANK_VIEW permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Bank transaction management with transfers and cash flow reporting."
+    },
+    {
+      "name": "Finance - Bank Reconciliation",
+      "item": [
+        {
+          "name": "List Bank Reconciliations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-reconciliations?page=0&size=20&sort=statementDate,desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-reconciliations"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "statementDate,desc" }
+              ]
+            },
+            "description": "Get bank reconciliations with pagination. Requires FINANCE_BANK_RECONCILE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Reconciliations by Bank Account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-reconciliations/by-account/1?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-reconciliations", "by-account", "1"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get reconciliations for a specific bank account. Requires FINANCE_BANK_RECONCILE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Bank Reconciliation by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-reconciliations/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-reconciliations", "1"]
+            },
+            "description": "Get a specific reconciliation. Requires FINANCE_BANK_RECONCILE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unreconciled Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-reconciliations/unreconciled/1?endDate=2026-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-reconciliations", "unreconciled", "1"],
+              "query": [
+                { "key": "endDate", "value": "2026-01-31" }
+              ]
+            },
+            "description": "Get unreconciled transactions for a bank account. Requires FINANCE_BANK_RECONCILE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Bank Reconciliation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankAccountId\": 1,\n  \"statementDate\": \"2026-01-31\",\n  \"statementStartDate\": \"2026-01-01\",\n  \"statementEndDate\": \"2026-01-31\",\n  \"openingBalance\": 40000000.00,\n  \"statementEndingBalance\": 50000000.00,\n  \"notes\": \"January 2026 reconciliation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-reconciliations",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-reconciliations"]
+            },
+            "description": "Create a bank reconciliation. Requires FINANCE_BANK_RECONCILE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Start Reconciliation",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-reconciliations/1/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-reconciliations", "1", "start"]
+            },
+            "description": "Start a reconciliation (DRAFT → IN_PROGRESS). Requires FINANCE_BANK_RECONCILE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Reconcile Transactions",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reconciliationId\": 1,\n  \"transactionIds\": [1, 2, 3, 4, 5],\n  \"clear\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-reconciliations/reconcile-transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-reconciliations", "reconcile-transactions"]
+            },
+            "description": "Mark transactions as reconciled. Set clear=false to unreconcile. Requires FINANCE_BANK_RECONCILE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Reconciliation",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-reconciliations/1/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-reconciliations", "1", "complete"]
+            },
+            "description": "Complete a reconciliation (IN_PROGRESS → COMPLETED). Difference must be zero. Requires FINANCE_BANK_RECONCILE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Reconciliation",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/bank-reconciliations/1/cancel?reason=Statement%20error",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "bank-reconciliations", "1", "cancel"],
+              "query": [
+                { "key": "reason", "value": "Statement error" }
+              ]
+            },
+            "description": "Cancel a reconciliation. Requires FINANCE_BANK_RECONCILE permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Bank reconciliation workflow: DRAFT → IN_PROGRESS → COMPLETED/CANCELLED."
+    },
+    {
+      "name": "Finance - Tax Codes",
+      "item": [
+        {
+          "name": "List Tax Codes (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes?page=0&size=20&sort=sortOrder,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "sortOrder,asc" }
+              ]
+            },
+            "description": "Get tax codes with pagination. Requires FINANCE_TAX_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Tax Codes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "all"]
+            },
+            "description": "Get all tax codes. Requires FINANCE_TAX_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Tax Codes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "active"]
+            },
+            "description": "Get only active tax codes. Requires FINANCE_TAX_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tax Codes by Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/by-type/VAT",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "by-type", "VAT"]
+            },
+            "description": "Get tax codes by type. Types: VAT, GST, SALES_TAX, INCOME_TAX, WITHHOLDING, EXCISE, IMPORT_DUTY, OTHER. Requires FINANCE_TAX_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Sales Tax Codes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/sales",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "sales"]
+            },
+            "description": "Get tax codes applicable to sales. Requires FINANCE_TAX_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Purchase Tax Codes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/purchases",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "purchases"]
+            },
+            "description": "Get tax codes applicable to purchases. Requires FINANCE_TAX_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tax Code by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "1"]
+            },
+            "description": "Get a specific tax code. Requires FINANCE_TAX_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tax Code by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/code/VAT12",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "code", "VAT12"]
+            },
+            "description": "Get tax code by code. Requires FINANCE_TAX_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Tax Codes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/search?query=vat",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "search"],
+              "query": [
+                { "key": "query", "value": "vat" }
+              ]
+            },
+            "description": "Search tax codes by name or code. Requires FINANCE_TAX_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Tax Code",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"VAT15\",\n  \"name\": \"VAT 15%\",\n  \"description\": \"Standard VAT at 15%\",\n  \"taxType\": \"VAT\",\n  \"inclusive\": false,\n  \"compound\": false,\n  \"appliesToSales\": true,\n  \"appliesToPurchases\": true,\n  \"salesAccountId\": 300,\n  \"purchaseAccountId\": 301,\n  \"taxAuthority\": \"State Tax Committee\",\n  \"taxRegistrationNumber\": \"VAT123456789\",\n  \"reportCode\": \"BOX1\",\n  \"sortOrder\": 10,\n  \"notes\": \"Standard domestic rate\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes"]
+            },
+            "description": "Create a new tax code. Requires FINANCE_TAX_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Tax Code",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"VAT 15% - Updated\",\n  \"description\": \"Standard VAT at 15% - Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "1"]
+            },
+            "description": "Update a tax code. Requires FINANCE_TAX_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Tax Code",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/1/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "1", "activate"]
+            },
+            "description": "Activate a tax code. Requires FINANCE_TAX_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Tax Code",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/1/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "1", "deactivate"]
+            },
+            "description": "Deactivate a tax code. Requires FINANCE_TAX_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tax Rates for Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/1/rates",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "1", "rates"]
+            },
+            "description": "Get all tax rates for a tax code. Requires FINANCE_TAX_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Tax Rate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taxCodeId\": 1,\n  \"name\": \"Reduced Rate 2026\",\n  \"rate\": 10.0000,\n  \"effectiveFrom\": \"2026-07-01\",\n  \"effectiveTo\": null,\n  \"minAmount\": null,\n  \"maxAmount\": null,\n  \"notes\": \"New reduced rate effective July 2026\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/rates",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "rates"]
+            },
+            "description": "Add a new tax rate to a tax code. Requires FINANCE_TAX_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Tax Rate",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Standard Rate - Updated\",\n  \"rate\": 12.5000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/rates/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "rates", "1"]
+            },
+            "description": "Update a tax rate. Requires FINANCE_TAX_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Tax Rate",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/rates/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "rates", "1"]
+            },
+            "description": "Delete a tax rate. Requires FINANCE_TAX_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Calculate Tax",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taxCode\": \"VAT12\",\n  \"amount\": 1000000.00,\n  \"transactionDate\": \"2026-01-03\",\n  \"inclusive\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/calculate",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "calculate"]
+            },
+            "description": "Calculate tax for an amount. Set inclusive=true if amount includes tax. Requires FINANCE_TAX_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "VAT Summary Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/tax-codes/reports/vat-summary?periodStart=2026-01-01&periodEnd=2026-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "tax-codes", "reports", "vat-summary"],
+              "query": [
+                { "key": "periodStart", "value": "2026-01-01" },
+                { "key": "periodEnd", "value": "2026-01-31" }
+              ]
+            },
+            "description": "Get VAT summary report for a period. Requires FINANCE_TAX_REPORTS permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Tax code management with rates, calculation, and VAT/GST reporting."
     }
   ]
 }
