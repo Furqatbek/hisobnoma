@@ -10,6 +10,7 @@ import java.util.List;
 @Mapper(componentModel = "spring", uses = {TaxRateMapper.class})
 public interface TaxCodeMapper {
 
+    @Named("toDto")
     @BeanMapping(builder = @Builder(disableBuilder = true))
     @Mapping(source = "salesAccount.id", target = "salesAccountId")
     @Mapping(source = "salesAccount.code", target = "salesAccountCode")
@@ -19,6 +20,7 @@ public interface TaxCodeMapper {
     @Mapping(source = "purchaseAccount.name", target = "purchaseAccountName")
     TaxCodeDto toDto(TaxCode taxCode);
 
+    @Named("toDtoWithoutRates")
     @BeanMapping(builder = @Builder(disableBuilder = true))
     @Mapping(source = "salesAccount.id", target = "salesAccountId")
     @Mapping(source = "salesAccount.code", target = "salesAccountCode")
@@ -29,6 +31,7 @@ public interface TaxCodeMapper {
     @Mapping(target = "rates", ignore = true)
     TaxCodeDto toDtoWithoutRates(TaxCode taxCode);
 
+    @IterableMapping(qualifiedByName = "toDto")
     List<TaxCodeDto> toDtoList(List<TaxCode> taxCodes);
 
     @BeanMapping(builder = @Builder(disableBuilder = true))
