@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.pos.entity;
 
 import com.hisobnoma.platform.common.entity.BaseEntity;
+import com.hisobnoma.platform.pos.enums.PromotionConditionType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;

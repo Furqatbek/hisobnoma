@@ -31,6 +31,8 @@ public class CreateCouponRequest {
     private Integer maxUses;
     private Integer maxUsesPerCustomer;
     private Long customerId;
+    private Long restrictedToCustomerId;
+    private java.math.BigDecimal minimumOrderAmount;
     private String customerEmail;
     private String notes;
 }

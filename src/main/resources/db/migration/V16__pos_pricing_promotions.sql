@@ -13,13 +13,15 @@ CREATE TABLE IF NOT EXISTS price_lists (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     type VARCHAR(50) NOT NULL DEFAULT 'STANDARD',
-    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+    currency VARCHAR(3) NOT NULL DEFAULT 'UZS',
     priority INTEGER NOT NULL DEFAULT 0,
     default_markup_percent DECIMAL(10, 4),
     start_date DATE,
     end_date DATE,
     location_id BIGINT,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT,
@@ -30,7 +32,7 @@ CREATE TABLE IF NOT EXISTS price_lists (
 
 CREATE INDEX IF NOT EXISTS idx_price_lists_tenant ON price_lists(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_price_lists_type ON price_lists(type);
-CREATE INDEX IF NOT EXISTS idx_price_lists_active ON price_lists(active);
+CREATE INDEX IF NOT EXISTS idx_price_lists_active ON price_lists(is_active);
 CREATE INDEX IF NOT EXISTS idx_price_lists_dates ON price_lists(start_date, end_date);
 CREATE INDEX IF NOT EXISTS idx_price_lists_location ON price_lists(location_id);
 
@@ -41,12 +43,15 @@ CREATE TABLE IF NOT EXISTS price_list_items (
     product_id BIGINT NOT NULL REFERENCES products(id),
     variant_id BIGINT REFERENCES product_variants(id),
     price DECIMAL(19, 4),
+    min_price DECIMAL(19, 4),
+    max_price DECIMAL(19, 4),
     markup_percent DECIMAL(10, 4),
-    min_quantity DECIMAL(19, 4),
+    min_quantity DECIMAL(19, 4) DEFAULT 1,
     max_quantity DECIMAL(19, 4),
     start_date DATE,
     end_date DATE,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     version BIGINT NOT NULL DEFAULT 0
@@ -65,7 +70,7 @@ CREATE TABLE IF NOT EXISTS customer_price_lists (
     priority INTEGER NOT NULL DEFAULT 0,
     start_date DATE,
     end_date DATE,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     version BIGINT NOT NULL DEFAULT 0,
@@ -89,20 +94,21 @@ CREATE TABLE IF NOT EXISTS promotions (
     description TEXT,
     type VARCHAR(50) NOT NULL,
     scope VARCHAR(50) NOT NULL DEFAULT 'ORDER',
+    priority INTEGER NOT NULL DEFAULT 0,
     discount_value DECIMAL(19, 4),
     max_discount_amount DECIMAL(19, 4),
 
     -- BOGO fields
     buy_quantity INTEGER,
     get_quantity INTEGER,
-    get_product_id BIGINT,
+    get_discount_percent DECIMAL(5, 2),
 
     -- Time restrictions
     start_date DATE,
     end_date DATE,
     start_time TIME,
     end_time TIME,
-    valid_days_of_week VARCHAR(50),
+    days_of_week VARCHAR(50),
 
     -- Location restrictions
     location_id BIGINT,
@@ -111,17 +117,14 @@ CREATE TABLE IF NOT EXISTS promotions (
     max_uses INTEGER,
     max_uses_per_customer INTEGER,
     current_uses INTEGER NOT NULL DEFAULT 0,
+    min_order_amount DECIMAL(19, 4),
 
     -- Stacking rules
-    stackable BOOLEAN NOT NULL DEFAULT FALSE,
-    priority INTEGER NOT NULL DEFAULT 0,
-    exclusive_group VARCHAR(100),
+    is_stackable BOOLEAN NOT NULL DEFAULT FALSE,
+    requires_coupon BOOLEAN NOT NULL DEFAULT FALSE,
 
-    -- Customer restrictions
-    customer_group VARCHAR(100),
-    minimum_customer_orders INTEGER,
-
-    active BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT,
@@ -132,7 +135,7 @@ CREATE TABLE IF NOT EXISTS promotions (
 
 CREATE INDEX IF NOT EXISTS idx_promotions_tenant ON promotions(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_promotions_type ON promotions(type);
-CREATE INDEX IF NOT EXISTS idx_promotions_active ON promotions(active);
+CREATE INDEX IF NOT EXISTS idx_promotions_active ON promotions(is_active);
 CREATE INDEX IF NOT EXISTS idx_promotions_dates ON promotions(start_date, end_date);
 CREATE INDEX IF NOT EXISTS idx_promotions_location ON promotions(location_id);
 
@@ -141,11 +144,16 @@ CREATE TABLE IF NOT EXISTS promotion_conditions (
     id BIGSERIAL PRIMARY KEY,
     promotion_id BIGINT NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
     condition_type VARCHAR(50) NOT NULL,
-    operator VARCHAR(20),
-    value VARCHAR(500),
+    operator VARCHAR(20) DEFAULT 'GTE',
+    condition_value VARCHAR(500),
+    condition_value2 VARCHAR(500),
+    threshold_amount DECIMAL(19, 4),
     product_ids TEXT,
     category_ids TEXT,
     brand_ids TEXT,
+    customer_groups VARCHAR(500),
+    is_required BOOLEAN NOT NULL DEFAULT TRUE,
+    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     version BIGINT NOT NULL DEFAULT 0
@@ -159,13 +167,18 @@ CREATE TABLE IF NOT EXISTS promotion_actions (
     id BIGSERIAL PRIMARY KEY,
     promotion_id BIGINT NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
     action_type VARCHAR(50) NOT NULL,
-    discount_type VARCHAR(50),
-    discount_value DECIMAL(19, 4),
-    max_discount_amount DECIMAL(19, 4),
+    discount_percent DECIMAL(5, 2),
+    discount_amount DECIMAL(19, 4),
+    set_price DECIMAL(19, 4),
+    max_discount DECIMAL(19, 4),
+    free_product_id BIGINT,
+    free_quantity INTEGER DEFAULT 1,
     target_product_ids TEXT,
     target_category_ids TEXT,
-    free_product_id BIGINT,
-    free_quantity INTEGER,
+    apply_to VARCHAR(20),
+    apply_count INTEGER,
+    sort_order INTEGER DEFAULT 0,
+    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     version BIGINT NOT NULL DEFAULT 0
@@ -189,10 +202,10 @@ CREATE TABLE IF NOT EXISTS coupons (
     start_date DATE,
     end_date DATE,
     max_uses INTEGER,
-    max_uses_per_customer INTEGER,
+    max_uses_per_customer INTEGER DEFAULT 1,
     current_uses INTEGER NOT NULL DEFAULT 0,
-    minimum_order_amount DECIMAL(19, 4),
-    restricted_to_customer_id BIGINT,
+    customer_id BIGINT,
+    customer_email VARCHAR(255),
     first_used_at TIMESTAMP WITH TIME ZONE,
     last_used_at TIMESTAMP WITH TIME ZONE,
     notes TEXT,
@@ -208,16 +221,25 @@ CREATE INDEX IF NOT EXISTS idx_coupons_tenant ON coupons(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_coupons_promotion ON coupons(promotion_id);
 CREATE INDEX IF NOT EXISTS idx_coupons_status ON coupons(status);
 CREATE INDEX IF NOT EXISTS idx_coupons_dates ON coupons(start_date, end_date);
-CREATE INDEX IF NOT EXISTS idx_coupons_customer ON coupons(restricted_to_customer_id);
+CREATE INDEX IF NOT EXISTS idx_coupons_customer ON coupons(customer_id);
 
 -- Coupon Redemptions table
 CREATE TABLE IF NOT EXISTS coupon_redemptions (
     id BIGSERIAL PRIMARY KEY,
     coupon_id BIGINT NOT NULL REFERENCES coupons(id),
     customer_id BIGINT,
-    order_id BIGINT,
-    discount_applied DECIMAL(19, 4) NOT NULL,
+    customer_email VARCHAR(255),
+    transaction_id BIGINT,
+    order_total DECIMAL(19, 4),
+    discount_amount DECIMAL(19, 4) NOT NULL,
     redeemed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    redeemed_by BIGINT,
+    ip_address VARCHAR(50),
+    is_reversed BOOLEAN NOT NULL DEFAULT FALSE,
+    reversed_at TIMESTAMP WITH TIME ZONE,
+    reversed_by BIGINT,
+    reversal_reason TEXT,
+    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     version BIGINT NOT NULL DEFAULT 0
@@ -225,7 +247,7 @@ CREATE TABLE IF NOT EXISTS coupon_redemptions (
 
 CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_coupon ON coupon_redemptions(coupon_id);
 CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_customer ON coupon_redemptions(customer_id);
-CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_order ON coupon_redemptions(order_id);
+CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_transaction ON coupon_redemptions(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_date ON coupon_redemptions(redeemed_at);
 
 -- =====================================================

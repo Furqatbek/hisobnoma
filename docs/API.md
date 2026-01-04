@@ -1938,3 +1938,612 @@ Cancel an inventory count.
 | INVENTORY_COUNT_CREATE | Create inventory counts |
 | INVENTORY_COUNT_PERFORM | Start, record, complete counts |
 | INVENTORY_COUNT_APPROVE | Approve and cancel counts |
+
+---
+
+## POS Pricing & Promotions APIs
+
+### Price Lists
+
+#### GET /pos/price-lists
+Get all price lists with pagination.
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 0)
+- `size` (optional): Page size (default: 20)
+- `sort` (optional): Sort field (default: priority,desc)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": 1,
+        "code": "STANDARD",
+        "name": "Standard Pricing",
+        "description": "Default price list for all customers",
+        "type": "STANDARD",
+        "currency": "UZS",
+        "priority": 0,
+        "defaultMarkupPercent": null,
+        "startDate": null,
+        "endDate": null,
+        "locationId": null,
+        "active": true,
+        "itemCount": 150,
+        "customerCount": 0
+      }
+    ],
+    "totalElements": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
+#### GET /pos/price-lists/active
+Get currently active/effective price lists.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "code": "STANDARD",
+      "name": "Standard Pricing",
+      "type": "STANDARD",
+      "active": true
+    }
+  ]
+}
+```
+
+---
+
+#### GET /pos/price-lists/{id}
+Get a specific price list by ID with all items.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "code": "VIP",
+    "name": "VIP Customer Pricing",
+    "type": "VIP",
+    "priority": 10,
+    "items": [
+      {
+        "id": 1,
+        "productId": 100,
+        "productCode": "SKU-001",
+        "productName": "Product A",
+        "price": 50000.00,
+        "markupPercent": null,
+        "minQuantity": 1,
+        "maxQuantity": null,
+        "active": true
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### POST /pos/price-lists
+Create a new price list.
+
+**Request:**
+```json
+{
+  "code": "WHOLESALE",
+  "name": "Wholesale Pricing",
+  "description": "Pricing for wholesale customers",
+  "type": "WHOLESALE",
+  "currency": "UZS",
+  "priority": 5,
+  "defaultMarkupPercent": -15.00,
+  "startDate": "2026-01-01",
+  "endDate": "2026-12-31",
+  "locationId": null
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Price list created",
+  "data": {
+    "id": 2,
+    "code": "WHOLESALE",
+    "name": "Wholesale Pricing",
+    "active": true
+  }
+}
+```
+
+---
+
+#### PUT /pos/price-lists/{id}
+Update an existing price list.
+
+---
+
+#### DELETE /pos/price-lists/{id}
+Delete a price list.
+
+---
+
+#### POST /pos/price-lists/{id}/activate
+Activate a price list.
+
+---
+
+#### POST /pos/price-lists/{id}/deactivate
+Deactivate a price list.
+
+---
+
+#### POST /pos/price-lists/{priceListId}/items
+Add an item to a price list.
+
+**Request:**
+```json
+{
+  "productId": 100,
+  "variantId": null,
+  "price": 45000.00,
+  "markupPercent": null,
+  "minQuantity": 1,
+  "maxQuantity": 100,
+  "startDate": null,
+  "endDate": null
+}
+```
+
+---
+
+#### PUT /pos/price-lists/{priceListId}/items/{itemId}
+Update a price list item.
+
+---
+
+#### DELETE /pos/price-lists/{priceListId}/items/{itemId}
+Remove an item from a price list.
+
+---
+
+#### POST /pos/price-lists/{priceListId}/assign-customer/{customerId}
+Assign a price list to a customer.
+
+**Query Parameters:**
+- `priority` (optional): Assignment priority (default: 0)
+
+---
+
+#### DELETE /pos/price-lists/{priceListId}/unassign-customer/{customerId}
+Remove a price list assignment from a customer.
+
+---
+
+### Promotions
+
+#### GET /pos/promotions
+Get all promotions with pagination.
+
+**Query Parameters:**
+- `page`, `size`, `sort`
+
+---
+
+#### GET /pos/promotions/active
+Get currently active promotions.
+
+**Query Parameters:**
+- `locationId` (optional): Filter by location
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "code": "SUMMER20",
+      "name": "Summer Sale 20% Off",
+      "type": "PERCENTAGE_OFF",
+      "scope": "ORDER",
+      "discountValue": 20.00,
+      "active": true,
+      "startDate": "2026-06-01",
+      "endDate": "2026-08-31"
+    }
+  ]
+}
+```
+
+---
+
+#### POST /pos/promotions
+Create a new promotion.
+
+**Request:**
+```json
+{
+  "code": "BOGO",
+  "name": "Buy One Get One Free",
+  "description": "Buy one item, get one free",
+  "type": "BUY_X_GET_Y",
+  "scope": "LINE_ITEM",
+  "buyQuantity": 1,
+  "getQuantity": 1,
+  "getDiscountPercent": 100.00,
+  "startDate": "2026-01-01",
+  "endDate": "2026-01-31",
+  "priority": 5,
+  "stackable": false,
+  "requiresCoupon": true,
+  "conditions": [
+    {
+      "conditionType": "SPECIFIC_PRODUCTS",
+      "productIds": "100,101,102"
+    }
+  ],
+  "actions": [
+    {
+      "actionType": "PERCENTAGE_OFF",
+      "discountPercent": 100.00,
+      "applyTo": "CHEAPEST",
+      "applyCount": 1
+    }
+  ]
+}
+```
+
+---
+
+#### PUT /pos/promotions/{id}
+Update an existing promotion.
+
+---
+
+#### DELETE /pos/promotions/{id}
+Delete a promotion.
+
+---
+
+#### POST /pos/promotions/{id}/activate
+Activate a promotion.
+
+---
+
+#### POST /pos/promotions/{id}/deactivate
+Deactivate a promotion.
+
+---
+
+#### POST /pos/promotions/{promotionId}/conditions
+Add a condition to a promotion.
+
+**Request:**
+```json
+{
+  "conditionType": "MINIMUM_PURCHASE",
+  "thresholdAmount": 100000.00,
+  "required": true
+}
+```
+
+---
+
+#### DELETE /pos/promotions/{promotionId}/conditions/{conditionId}
+Remove a condition from a promotion.
+
+---
+
+### Coupons
+
+#### GET /pos/coupons
+Get all coupons with pagination.
+
+---
+
+#### GET /pos/coupons/promotion/{promotionId}
+Get coupons for a specific promotion.
+
+---
+
+#### GET /pos/coupons/status/{status}
+Get coupons by status (ACTIVE, INACTIVE, EXPIRED, DEPLETED, CANCELLED).
+
+---
+
+#### GET /pos/coupons/{id}
+Get a specific coupon by ID.
+
+---
+
+#### GET /pos/coupons/code/{code}
+Get a coupon by its code.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "code": "SAVE20NOW",
+    "promotionId": 1,
+    "promotionCode": "SUMMER20",
+    "promotionName": "Summer Sale 20% Off",
+    "status": "ACTIVE",
+    "maxUses": 100,
+    "currentUses": 25,
+    "remainingUses": 75,
+    "maxUsesPerCustomer": 1,
+    "startDate": "2026-01-01",
+    "endDate": "2026-12-31"
+  }
+}
+```
+
+---
+
+#### POST /pos/coupons
+Create a new coupon.
+
+**Request:**
+```json
+{
+  "code": "SAVE20NOW",
+  "promotionId": 1,
+  "description": "Save 20% on your order",
+  "startDate": "2026-01-01",
+  "endDate": "2026-12-31",
+  "maxUses": 100,
+  "maxUsesPerCustomer": 1,
+  "customerId": null
+}
+```
+
+---
+
+#### POST /pos/coupons/generate/{promotionId}
+Generate multiple coupons for a promotion.
+
+**Query Parameters:**
+- `count`: Number of coupons to generate
+
+**Request:**
+```json
+{
+  "maxUses": 1,
+  "maxUsesPerCustomer": 1,
+  "startDate": "2026-01-01",
+  "endDate": "2026-12-31"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {"id": 1, "code": "ABC123XYZ4"},
+    {"id": 2, "code": "DEF456UVW7"},
+    {"id": 3, "code": "GHI789RST0"}
+  ]
+}
+```
+
+---
+
+#### POST /pos/coupons/{id}/activate
+Activate a coupon.
+
+---
+
+#### POST /pos/coupons/{id}/deactivate
+Deactivate a coupon.
+
+---
+
+#### POST /pos/coupons/{id}/cancel
+Cancel a coupon.
+
+---
+
+#### GET /pos/coupons/{id}/redemptions
+Get redemption history for a coupon.
+
+---
+
+### Pricing Engine
+
+#### POST /pos/pricing/calculate
+Calculate prices for a set of items.
+
+**Request:**
+```json
+{
+  "customerId": 123,
+  "locationId": 1,
+  "items": [
+    {
+      "productId": 100,
+      "variantId": null,
+      "quantity": 2
+    },
+    {
+      "productId": 101,
+      "variantId": 5,
+      "quantity": 1
+    }
+  ],
+  "couponCode": "SAVE20NOW"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "productId": 100,
+        "productCode": "SKU-001",
+        "productName": "Product A",
+        "quantity": 2,
+        "basePrice": 50000.00,
+        "unitPrice": 42500.00,
+        "lineDiscount": 15000.00,
+        "lineTotal": 85000.00,
+        "priceListCode": "VIP",
+        "appliedPromotionCodes": []
+      }
+    ],
+    "subtotal": 135000.00,
+    "totalDiscount": 27000.00,
+    "taxAmount": 16200.00,
+    "grandTotal": 124200.00,
+    "appliedPromotions": [
+      {
+        "promotionId": 1,
+        "promotionCode": "SUMMER20",
+        "promotionName": "Summer Sale 20% Off",
+        "discountAmount": 27000.00
+      }
+    ],
+    "couponApplication": {
+      "couponCode": "SAVE20NOW",
+      "valid": true,
+      "discountAmount": 27000.00,
+      "promotionName": "Summer Sale 20% Off"
+    }
+  }
+}
+```
+
+---
+
+#### GET /pos/pricing/product/{productId}
+Get the best price for a single product.
+
+**Query Parameters:**
+- `variantId` (optional): Variant ID
+- `quantity` (optional, default: 1): Quantity
+- `customerId` (optional): Customer ID for customer-specific pricing
+- `locationId` (optional): Location ID for location-specific pricing
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": 42500.00
+}
+```
+
+---
+
+#### POST /pos/pricing/apply-coupon
+Validate and apply a coupon code.
+
+**Request:**
+```json
+{
+  "couponCode": "SAVE20NOW",
+  "orderTotal": 135000.00,
+  "customerId": 123
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "couponCode": "SAVE20NOW",
+    "valid": true,
+    "discountAmount": 27000.00,
+    "discountDescription": "20% off",
+    "promotionId": 1,
+    "promotionName": "Summer Sale 20% Off"
+  }
+}
+```
+
+---
+
+#### POST /pos/pricing/validate-coupon
+Validate a coupon code without applying it.
+
+**Query Parameters:**
+- `couponCode`: The coupon code to validate
+- `customerId` (optional): Customer ID
+
+---
+
+#### POST /pos/pricing/record-coupon-redemption
+Record a coupon redemption after a successful transaction.
+
+**Query Parameters:**
+- `couponCode`: Coupon code that was used
+- `customerId`: Customer ID
+- `orderId`: Order/Transaction ID
+- `discountApplied`: Discount amount that was applied
+
+---
+
+## Enums
+
+### Price List Types
+- `STANDARD` - Default pricing for all customers
+- `WHOLESALE` - Wholesale/bulk pricing
+- `VIP` - VIP/loyalty customer pricing
+- `SEASONAL` - Seasonal/promotional pricing
+- `EMPLOYEE` - Employee discount pricing
+- `CUSTOM` - Custom price list for specific customers
+
+### Promotion Types
+- `PERCENTAGE_OFF` - X% off
+- `FIXED_AMOUNT_OFF` - $X off
+- `BUY_X_GET_Y` - Buy X get Y free/discounted
+- `BUNDLE` - Bundle pricing
+- `FREE_ITEM` - Free item with purchase
+- `TIERED_DISCOUNT` - Discount increases with quantity
+- `SPEND_X_GET_Y` - Spend $X get $Y off
+
+### Promotion Condition Types
+- `MINIMUM_PURCHASE` - Minimum purchase amount required
+- `MINIMUM_QUANTITY` - Minimum quantity of items
+- `SPECIFIC_PRODUCTS` - Specific products must be in cart
+- `CATEGORY` - Products from specific category
+- `BRAND` - Products from specific brand
+- `CUSTOMER_GROUP` - Customer must belong to group
+- `FIRST_PURCHASE` - First purchase by customer
+- `TIME_BASED` - Active during specific hours
+- `DAY_OF_WEEK` - Active on specific days
+- `PAYMENT_METHOD` - Specific payment method used
+
+### Promotion Scope
+- `ORDER` - Applies to entire order
+- `LINE_ITEM` - Applies to specific line items
+- `SHIPPING` - Applies to shipping cost
+- `CATEGORY` - Applies to items in category
+- `PRODUCT` - Applies to specific products
+
+### Coupon Status
+- `ACTIVE` - Coupon is active and can be used
+- `INACTIVE` - Coupon is inactive (not yet started or paused)
+- `EXPIRED` - Coupon has expired
+- `DEPLETED` - All uses have been exhausted
+- `CANCELLED` - Coupon has been cancelled

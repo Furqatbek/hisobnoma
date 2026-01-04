@@ -1,7 +1,6 @@
 package com.hisobnoma.platform.pos.entity;
 
 import com.hisobnoma.platform.common.entity.BaseEntity;
-import com.hisobnoma.platform.finance.entity.Customer;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -25,9 +24,8 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class CustomerPriceList extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;
+    @Column(name = "customer_id", nullable = false)
+    private Long customerId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "price_list_id", nullable = false)
@@ -49,9 +47,6 @@ public class CustomerPriceList extends BaseEntity {
     @Column(name = "is_active")
     @Builder.Default
     private boolean active = true;
-
-    @Column(length = 500)
-    private String notes;
 
     public boolean isEffective(LocalDate date) {
         if (!active) return false;

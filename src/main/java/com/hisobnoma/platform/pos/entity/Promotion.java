@@ -1,12 +1,13 @@
 package com.hisobnoma.platform.pos.entity;
 
 import com.hisobnoma.platform.common.entity.TenantAwareEntity;
+import com.hisobnoma.platform.pos.enums.PromotionScope;
+import com.hisobnoma.platform.pos.enums.PromotionType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;

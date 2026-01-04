@@ -136,8 +136,8 @@ public class CouponService {
                     .maxUsesPerCustomer(request.getMaxUsesPerCustomer())
                     .startDate(request.getStartDate())
                     .endDate(request.getEndDate())
-                    .minimumOrderAmount(request.getMinimumOrderAmount())
-                    .restrictedToCustomerId(request.getRestrictedToCustomerId())
+                    .customerId(request.getCustomerId())
+                    .customerEmail(request.getCustomerEmail())
                     .status(CouponStatus.ACTIVE)
                     .currentUses(0)
                     .build();

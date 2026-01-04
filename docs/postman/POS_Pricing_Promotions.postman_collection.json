@@ -1,0 +1,770 @@
+{
+  "info": {
+    "_postman_id": "pos-pricing-promotions-v1",
+    "name": "POS Pricing & Promotions",
+    "description": "API collection for POS Pricing, Promotions, and Coupons management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Price Lists",
+      "item": [
+        {
+          "name": "Get All Price Lists",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists"],
+              "query": [
+                {"key": "page", "value": "0"},
+                {"key": "size", "value": "20"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Active Price Lists",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "active"]
+            }
+          }
+        },
+        {
+          "name": "Get Price List by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Price List by Code",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/code/STANDARD",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "code", "STANDARD"]
+            }
+          }
+        },
+        {
+          "name": "Create Price List",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WHOLESALE\",\n  \"name\": \"Wholesale Pricing\",\n  \"description\": \"Pricing for wholesale customers\",\n  \"type\": \"WHOLESALE\",\n  \"currency\": \"UZS\",\n  \"priority\": 5,\n  \"defaultMarkupPercent\": -15.00,\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists"]
+            }
+          }
+        },
+        {
+          "name": "Update Price List",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WHOLESALE\",\n  \"name\": \"Wholesale Pricing Updated\",\n  \"description\": \"Updated wholesale pricing\",\n  \"type\": \"WHOLESALE\",\n  \"currency\": \"UZS\",\n  \"priority\": 6,\n  \"defaultMarkupPercent\": -20.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1"]
+            }
+          }
+        },
+        {
+          "name": "Activate Price List",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1", "activate"]
+            }
+          }
+        },
+        {
+          "name": "Deactivate Price List",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1", "deactivate"]
+            }
+          }
+        },
+        {
+          "name": "Delete Price List",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Price List Items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1/items?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1", "items"],
+              "query": [
+                {"key": "page", "value": "0"},
+                {"key": "size", "value": "20"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Price List Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": 1,\n  \"variantId\": null,\n  \"price\": 45000.00,\n  \"markupPercent\": null,\n  \"minQuantity\": 1,\n  \"maxQuantity\": 100\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1", "items"]
+            }
+          }
+        },
+        {
+          "name": "Update Price List Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": 1,\n  \"price\": 40000.00,\n  \"minQuantity\": 1,\n  \"maxQuantity\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1/items/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1", "items", "1"]
+            }
+          }
+        },
+        {
+          "name": "Remove Price List Item",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1/items/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1", "items", "1"]
+            }
+          }
+        },
+        {
+          "name": "Assign Price List to Customer",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1/assign-customer/1?priority=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1", "assign-customer", "1"],
+              "query": [
+                {"key": "priority", "value": "10"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove Price List from Customer",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1/unassign-customer/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1", "unassign-customer", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer Price Lists",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/customer/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "customer", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Promotions",
+      "item": [
+        {
+          "name": "Get All Promotions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions"],
+              "query": [
+                {"key": "page", "value": "0"},
+                {"key": "size", "value": "20"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Promotions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/search?query=summer",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "search"],
+              "query": [
+                {"key": "query", "value": "summer"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Active Promotions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "active"]
+            }
+          }
+        },
+        {
+          "name": "Get Promotion by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Promotion by Code",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/code/SUMMER20",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "code", "SUMMER20"]
+            }
+          }
+        },
+        {
+          "name": "Create Percentage Off Promotion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SUMMER20\",\n  \"name\": \"Summer Sale 20% Off\",\n  \"description\": \"Get 20% off on all items\",\n  \"type\": \"PERCENTAGE_OFF\",\n  \"scope\": \"ORDER\",\n  \"discountValue\": 20.00,\n  \"maxDiscountAmount\": 100000.00,\n  \"startDate\": \"2026-06-01\",\n  \"endDate\": \"2026-08-31\",\n  \"priority\": 5,\n  \"stackable\": false,\n  \"requiresCoupon\": true,\n  \"conditions\": [\n    {\n      \"conditionType\": \"MINIMUM_PURCHASE\",\n      \"thresholdAmount\": 50000.00,\n      \"required\": true\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions"]
+            }
+          }
+        },
+        {
+          "name": "Create BOGO Promotion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"BOGO\",\n  \"name\": \"Buy One Get One Free\",\n  \"description\": \"Buy one, get one free on selected items\",\n  \"type\": \"BUY_X_GET_Y\",\n  \"scope\": \"LINE_ITEM\",\n  \"buyQuantity\": 1,\n  \"getQuantity\": 1,\n  \"getDiscountPercent\": 100.00,\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-01-31\",\n  \"priority\": 10,\n  \"stackable\": false,\n  \"conditions\": [\n    {\n      \"conditionType\": \"SPECIFIC_PRODUCTS\",\n      \"productIds\": \"1,2,3\",\n      \"required\": true\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions"]
+            }
+          }
+        },
+        {
+          "name": "Update Promotion",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SUMMER25\",\n  \"name\": \"Summer Sale 25% Off\",\n  \"type\": \"PERCENTAGE_OFF\",\n  \"scope\": \"ORDER\",\n  \"discountValue\": 25.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "1"]
+            }
+          }
+        },
+        {
+          "name": "Activate Promotion",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/1/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "1", "activate"]
+            }
+          }
+        },
+        {
+          "name": "Deactivate Promotion",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/1/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "1", "deactivate"]
+            }
+          }
+        },
+        {
+          "name": "Delete Promotion",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "1"]
+            }
+          }
+        },
+        {
+          "name": "Add Condition to Promotion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conditionType\": \"MINIMUM_QUANTITY\",\n  \"thresholdAmount\": 3,\n  \"required\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/1/conditions",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "1", "conditions"]
+            }
+          }
+        },
+        {
+          "name": "Remove Condition from Promotion",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/1/conditions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "1", "conditions", "1"]
+            }
+          }
+        },
+        {
+          "name": "Add Action to Promotion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actionType\": \"PERCENTAGE_OFF\",\n  \"discountPercent\": 15.00,\n  \"applyTo\": \"ALL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/1/actions",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "1", "actions"]
+            }
+          }
+        },
+        {
+          "name": "Remove Action from Promotion",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/pos/promotions/1/actions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "promotions", "1", "actions", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coupons",
+      "item": [
+        {
+          "name": "Get All Coupons",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons"],
+              "query": [
+                {"key": "page", "value": "0"},
+                {"key": "size", "value": "20"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Coupons by Promotion",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/promotion/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "promotion", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Coupons by Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/status/ACTIVE",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "status", "ACTIVE"]
+            }
+          }
+        },
+        {
+          "name": "Get Coupon by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Coupon by Code",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/code/SAVE20NOW",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "code", "SAVE20NOW"]
+            }
+          }
+        },
+        {
+          "name": "Create Coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SAVE20NOW\",\n  \"promotionId\": 1,\n  \"description\": \"Save 20% on your order\",\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-12-31\",\n  \"maxUses\": 100,\n  \"maxUsesPerCustomer\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons"]
+            }
+          }
+        },
+        {
+          "name": "Generate Bulk Coupons",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maxUses\": 1,\n  \"maxUsesPerCustomer\": 1,\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/generate/1?count=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "generate", "1"],
+              "query": [
+                {"key": "count", "value": "10"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Coupon",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SAVE20NOW\",\n  \"promotionId\": 1,\n  \"maxUses\": 200,\n  \"endDate\": \"2026-06-30\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "1"]
+            }
+          }
+        },
+        {
+          "name": "Activate Coupon",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/1/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "1", "activate"]
+            }
+          }
+        },
+        {
+          "name": "Deactivate Coupon",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/1/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "1", "deactivate"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Coupon",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/1/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "1", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "Delete Coupon",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Coupon Redemptions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/1/redemptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "1", "redemptions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pricing Engine",
+      "item": [
+        {
+          "name": "Calculate Prices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"locationId\": 1,\n  \"items\": [\n    {\n      \"productId\": 1,\n      \"variantId\": null,\n      \"quantity\": 2\n    },\n    {\n      \"productId\": 2,\n      \"variantId\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"couponCode\": \"SAVE20NOW\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/pricing/calculate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "pricing", "calculate"]
+            }
+          }
+        },
+        {
+          "name": "Get Product Price",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/pricing/product/1?quantity=5&customerId=1&locationId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "pricing", "product", "1"],
+              "query": [
+                {"key": "quantity", "value": "5"},
+                {"key": "customerId", "value": "1"},
+                {"key": "locationId", "value": "1"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Apply Coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponCode\": \"SAVE20NOW\",\n  \"orderTotal\": 135000.00,\n  \"customerId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/pricing/apply-coupon",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "pricing", "apply-coupon"]
+            }
+          }
+        },
+        {
+          "name": "Validate Coupon",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/pricing/validate-coupon?couponCode=SAVE20NOW&customerId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "pricing", "validate-coupon"],
+              "query": [
+                {"key": "couponCode", "value": "SAVE20NOW"},
+                {"key": "customerId", "value": "1"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Record Coupon Redemption",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/pricing/record-coupon-redemption?couponCode=SAVE20NOW&customerId=1&orderId=100&discountApplied=27000.00",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "pricing", "record-coupon-redemption"],
+              "query": [
+                {"key": "couponCode", "value": "SAVE20NOW"},
+                {"key": "customerId", "value": "1"},
+                {"key": "orderId", "value": "100"},
+                {"key": "discountApplied", "value": "27000.00"}
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
