@@ -20,19 +20,19 @@ public interface PriceListItemRepository extends JpaRepository<PriceListItem, Lo
 
     Page<PriceListItem> findByPriceListId(Long priceListId, Pageable pageable);
 
-    Optional<PriceListItem> findByPriceListIdAndProductIdAndVariantIdIsNull(Long priceListId, Long productId);
+    Optional<PriceListItem> findByPriceListIdAndProductIdAndVariantIsNull(Long priceListId, Long productId);
 
-    Optional<PriceListItem> findByPriceListIdAndProductIdAndVariantId(Long priceListId, Long productId, Long variantId);
+    Optional<PriceListItem> findByPriceListIdAndProductIdAndVariant_Id(Long priceListId, Long productId, Long variantId);
 
     @Query("SELECT pli FROM PriceListItem pli WHERE pli.priceList.id = :priceListId " +
            "AND pli.product.id = :productId " +
-           "AND (pli.variantId IS NULL OR pli.variantId = :variantId) " +
+           "AND (pli.variant IS NULL OR pli.variant.id = :variantId) " +
            "AND pli.active = true " +
            "AND (pli.startDate IS NULL OR pli.startDate <= :date) " +
            "AND (pli.endDate IS NULL OR pli.endDate >= :date) " +
            "AND (pli.minQuantity IS NULL OR pli.minQuantity <= :quantity) " +
            "AND (pli.maxQuantity IS NULL OR pli.maxQuantity >= :quantity) " +
-           "ORDER BY pli.variantId DESC NULLS LAST, pli.minQuantity DESC NULLS LAST")
+           "ORDER BY pli.variant.id DESC NULLS LAST, pli.minQuantity DESC NULLS LAST")
     List<PriceListItem> findEffectiveItems(
             @Param("priceListId") Long priceListId,
             @Param("productId") Long productId,
@@ -44,13 +44,13 @@ public interface PriceListItemRepository extends JpaRepository<PriceListItem, Lo
            "JOIN pli.priceList pl " +
            "WHERE pl.tenantId = :tenantId " +
            "AND pli.product.id = :productId " +
-           "AND (pli.variantId IS NULL OR pli.variantId = :variantId) " +
+           "AND (pli.variant IS NULL OR pli.variant.id = :variantId) " +
            "AND pl.active = true AND pli.active = true " +
            "AND (pl.startDate IS NULL OR pl.startDate <= :date) " +
            "AND (pl.endDate IS NULL OR pl.endDate >= :date) " +
            "AND (pli.startDate IS NULL OR pli.startDate <= :date) " +
            "AND (pli.endDate IS NULL OR pli.endDate >= :date) " +
-           "ORDER BY pl.priority DESC, pli.variantId DESC NULLS LAST")
+           "ORDER BY pl.priority DESC, pli.variant.id DESC NULLS LAST")
     List<PriceListItem> findAllEffectiveItemsForProduct(
             @Param("tenantId") Long tenantId,
             @Param("productId") Long productId,
