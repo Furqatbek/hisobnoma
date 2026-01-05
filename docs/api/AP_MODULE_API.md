@@ -737,3 +737,26 @@ AP transactions automatically post to the General Ledger:
 - Credit: Purchase Discounts (if discount taken)
 
 **Cancellation/Void**: Creates reversing journal entries
+
+---
+
+## Inventory Integration (Auto-Invoice from Receiving)
+
+When a **Receiving Order** is confirmed, an **AP Invoice** is automatically created:
+
+- The AP Invoice is linked to the receiving order via `receivingId`
+- Invoice lines are created from receiving order lines
+- The receiving order's `apInvoiceCreated` flag is set to `true`
+- The receiving order's `apInvoiceId` is populated with the created invoice ID
+- The vendor's balance is updated accordingly
+- The invoice is created in PENDING_APPROVAL status
+
+This ensures seamless integration between goods receipt and accounts payable.
+
+**Workflow:**
+1. **Purchase Order** → Order placed with vendor
+2. **Receiving Order** → Goods received and confirmed
+3. **AP Invoice** → Auto-created from receiving confirmation
+4. **Payment** → Process payment when due
+
+**Note**: If the auto-creation fails, the receiving confirmation still succeeds but the AP invoice must be created manually using the `createFromReceiving` endpoint.

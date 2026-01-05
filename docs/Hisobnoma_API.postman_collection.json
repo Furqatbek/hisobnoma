@@ -3965,6 +3965,29 @@
           "response": []
         },
         {
+          "name": "Add Credit Payment (Creates AR Invoice)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentType\": \"CREDIT\",\n  \"amount\": 200000.0000,\n  \"notes\": \"30-day credit terms\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/transactions/1/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "transactions", "1", "payments"]
+            },
+            "description": "Add a credit payment. When the transaction is completed, an AR Invoice will be automatically created for the customer. Requires customer to be associated with the transaction."
+          },
+          "response": []
+        },
+        {
           "name": "Void Payment",
           "request": {
             "method": "POST",

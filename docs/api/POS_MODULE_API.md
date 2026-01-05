@@ -933,6 +933,42 @@ Processes a refund for an approved payment on a completed transaction.
 - Shift totals are updated when transactions complete
 - Cash payments affect the shift's expected cash balance
 
+### Accounts Receivable Integration (Credit Sales)
+- When a transaction is completed with a **CREDIT** payment type, an **AR Invoice** is automatically created
+- The AR Invoice includes the credit portion of the transaction
+- The transaction's `arInvoiceId` field is populated with the created invoice ID
+- Customer must be associated with the transaction for credit sales
+- Customer credit limit is validated before creating the AR Invoice
+- The AR Invoice is posted to GL and updates the customer's balance
+- For split payments (partial credit), the AR Invoice only covers the credit amount
+
+**Credit Sale Example:**
+```json
+// Add a CREDIT payment
+POST /transactions/1/payments
+{
+  "paymentType": "CREDIT",
+  "amount": 200000.0000,
+  "notes": "30-day credit terms"
+}
+
+// Complete transaction - AR Invoice auto-created
+POST /transactions/1/complete
+
+// Response includes AR Invoice reference
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "transactionNumber": "TX20260104-00001",
+    "status": "COMPLETED",
+    "arInvoiceId": 15,  // Auto-created AR Invoice
+    "glPosted": true,
+    "stockDeducted": true
+  }
+}
+```
+
 ---
 
 ## Default Role Permissions
