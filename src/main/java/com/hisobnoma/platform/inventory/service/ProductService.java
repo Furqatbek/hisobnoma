@@ -12,12 +12,18 @@ import com.hisobnoma.platform.inventory.mapper.ProductAttributeMapper;
 import com.hisobnoma.platform.inventory.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -305,5 +311,319 @@ public class ProductService {
     public long getActiveProductCount() {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         return productRepository.countActiveByTenantId(tenantId);
+    }
+
+    // ==================== Variant Management ====================
+
+    @Transactional(readOnly = true)
+    public List<ProductVariantDto> getVariants(Long productId) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        productRepository.findByIdAndTenantId(productId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Product", productId));
+
+        return variantMapper.toDtoList(variantRepository.findByProductIdOrderBySortOrder(productId));
+    }
+
+    @Transactional
+    public ProductVariantDto addVariant(Long productId, CreateVariantRequest request) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+
+        Product product = productRepository.findByIdAndTenantId(productId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Product", productId));
+
+        // Generate SKU if not provided
+        String sku = request.getSku();
+        if (sku == null || sku.isEmpty()) {
+            sku = skuGeneratorService.generateVariantSku(
+                    product.getSku(),
+                    request.getOption1Value(),
+                    request.getOption2Value(),
+                    request.getOption3Value()
+            );
+        } else {
+            // Validate SKU uniqueness
+            if (variantRepository.existsBySkuAndTenantId(sku, tenantId)) {
+                throw new DuplicateResourceException("ProductVariant", "SKU", sku);
+            }
+        }
+
+        // Validate barcode uniqueness if provided
+        if (request.getBarcode() != null && !request.getBarcode().isEmpty()) {
+            if (variantRepository.existsByBarcodeAndTenantId(request.getBarcode(), tenantId)) {
+                throw new DuplicateResourceException("ProductVariant", "barcode", request.getBarcode());
+            }
+        }
+
+        // Build variant name if not provided
+        String name = request.getName();
+        if (name == null || name.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            if (request.getOption1Value() != null) sb.append(request.getOption1Value());
+            if (request.getOption2Value() != null) sb.append(" / ").append(request.getOption2Value());
+            if (request.getOption3Value() != null) sb.append(" / ").append(request.getOption3Value());
+            name = sb.toString();
+        }
+
+        // Get next sort order
+        long variantCount = variantRepository.countByProductId(productId);
+
+        ProductVariant variant = ProductVariant.builder()
+                .product(product)
+                .tenantId(tenantId)
+                .sku(sku)
+                .barcode(request.getBarcode())
+                .name(name)
+                .option1Name(request.getOption1Name())
+                .option1Value(request.getOption1Value())
+                .option2Name(request.getOption2Name())
+                .option2Value(request.getOption2Value())
+                .option3Name(request.getOption3Name())
+                .option3Value(request.getOption3Value())
+                .costPrice(request.getCostPrice())
+                .sellingPrice(request.getSellingPrice())
+                .priceDifference(request.getPriceDifference())
+                .weight(request.getWeight())
+                .imageUrl(request.getImageUrl())
+                .sortOrder(request.getSortOrder() != null ? request.getSortOrder() : (int) variantCount)
+                .active(request.isActive())
+                .build();
+
+        variant = variantRepository.save(variant);
+
+        // Update product to have variants
+        if (!product.isHasVariants()) {
+            product.setHasVariants(true);
+            productRepository.save(product);
+        }
+
+        log.info("Added variant {} to product {}", variant.getSku(), productId);
+        return variantMapper.toDto(variant);
+    }
+
+    @Transactional
+    public ProductVariantDto updateVariant(Long productId, Long variantId, UpdateVariantRequest request) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+
+        productRepository.findByIdAndTenantId(productId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Product", productId));
+
+        ProductVariant variant = variantRepository.findById(variantId)
+                .orElseThrow(() -> new NotFoundException("ProductVariant", variantId));
+
+        if (!variant.getProduct().getId().equals(productId)) {
+            throw new NotFoundException("ProductVariant", variantId);
+        }
+
+        // Validate barcode uniqueness if changing
+        if (request.getBarcode() != null && !request.getBarcode().equals(variant.getBarcode())) {
+            if (variantRepository.existsByBarcodeAndTenantId(request.getBarcode(), tenantId)) {
+                throw new DuplicateResourceException("ProductVariant", "barcode", request.getBarcode());
+            }
+            variant.setBarcode(request.getBarcode());
+        }
+
+        if (request.getName() != null) variant.setName(request.getName());
+        if (request.getOption1Name() != null) variant.setOption1Name(request.getOption1Name());
+        if (request.getOption1Value() != null) variant.setOption1Value(request.getOption1Value());
+        if (request.getOption2Name() != null) variant.setOption2Name(request.getOption2Name());
+        if (request.getOption2Value() != null) variant.setOption2Value(request.getOption2Value());
+        if (request.getOption3Name() != null) variant.setOption3Name(request.getOption3Name());
+        if (request.getOption3Value() != null) variant.setOption3Value(request.getOption3Value());
+        if (request.getCostPrice() != null) variant.setCostPrice(request.getCostPrice());
+        if (request.getSellingPrice() != null) variant.setSellingPrice(request.getSellingPrice());
+        if (request.getPriceDifference() != null) variant.setPriceDifference(request.getPriceDifference());
+        if (request.getWeight() != null) variant.setWeight(request.getWeight());
+        if (request.getImageUrl() != null) variant.setImageUrl(request.getImageUrl());
+        if (request.getSortOrder() != null) variant.setSortOrder(request.getSortOrder());
+        if (request.getActive() != null) variant.setActive(request.getActive());
+
+        variant = variantRepository.save(variant);
+        log.info("Updated variant {} for product {}", variantId, productId);
+        return variantMapper.toDto(variant);
+    }
+
+    @Transactional
+    public void deleteVariant(Long productId, Long variantId) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+
+        Product product = productRepository.findByIdAndTenantId(productId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Product", productId));
+
+        ProductVariant variant = variantRepository.findById(variantId)
+                .orElseThrow(() -> new NotFoundException("ProductVariant", variantId));
+
+        if (!variant.getProduct().getId().equals(productId)) {
+            throw new NotFoundException("ProductVariant", variantId);
+        }
+
+        variantRepository.delete(variant);
+
+        // Check if product still has variants
+        long remainingVariants = variantRepository.countByProductId(productId);
+        if (remainingVariants == 0) {
+            product.setHasVariants(false);
+            productRepository.save(product);
+        }
+
+        log.info("Deleted variant {} from product {}", variantId, productId);
+    }
+
+    // ==================== Export Methods ====================
+
+    private static final String[] EXPORT_HEADERS = {
+            "SKU", "Barcode", "Name", "Description", "Short Description",
+            "Category", "Brand", "UOM Code", "Cost Price", "Selling Price",
+            "Min Selling Price", "Wholesale Price", "Track Inventory", "Allow Negative Stock",
+            "Min Stock Level", "Reorder Point", "Reorder Quantity", "Max Stock Level",
+            "Active", "Service", "Sellable", "Purchasable", "Track Batch", "Track Serial",
+            "Weight", "Weight Unit", "Manufacturer", "Manufacturer Part Number", "Tax Code", "Tags"
+    };
+
+    @Transactional(readOnly = true)
+    public byte[] exportToCsv(Long categoryId, Long brandId, Boolean active) {
+        List<Product> products = getProductsForExport(categoryId, brandId, active);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.join(",", EXPORT_HEADERS)).append("\n");
+
+        for (Product p : products) {
+            sb.append(escapeCsv(p.getSku())).append(",");
+            sb.append(escapeCsv(p.getBarcode())).append(",");
+            sb.append(escapeCsv(p.getName())).append(",");
+            sb.append(escapeCsv(p.getDescription())).append(",");
+            sb.append(escapeCsv(p.getShortDescription())).append(",");
+            sb.append(escapeCsv(p.getCategory() != null ? p.getCategory().getName() : "")).append(",");
+            sb.append(escapeCsv(p.getBrand() != null ? p.getBrand().getName() : "")).append(",");
+            sb.append(escapeCsv(p.getBaseUom() != null ? p.getBaseUom().getCode() : "")).append(",");
+            sb.append(p.getCostPrice() != null ? p.getCostPrice().toString() : "").append(",");
+            sb.append(p.getSellingPrice() != null ? p.getSellingPrice().toString() : "").append(",");
+            sb.append(p.getMinSellingPrice() != null ? p.getMinSellingPrice().toString() : "").append(",");
+            sb.append(p.getWholesalePrice() != null ? p.getWholesalePrice().toString() : "").append(",");
+            sb.append(p.isTrackInventory()).append(",");
+            sb.append(p.isAllowNegativeStock()).append(",");
+            sb.append(p.getMinStockLevel() != null ? p.getMinStockLevel().toString() : "").append(",");
+            sb.append(p.getReorderPoint() != null ? p.getReorderPoint().toString() : "").append(",");
+            sb.append(p.getReorderQuantity() != null ? p.getReorderQuantity().toString() : "").append(",");
+            sb.append(p.getMaxStockLevel() != null ? p.getMaxStockLevel().toString() : "").append(",");
+            sb.append(p.isActive()).append(",");
+            sb.append(p.isService()).append(",");
+            sb.append(p.isSellable()).append(",");
+            sb.append(p.isPurchasable()).append(",");
+            sb.append(p.isTrackBatch()).append(",");
+            sb.append(p.isTrackSerial()).append(",");
+            sb.append(p.getWeight() != null ? p.getWeight().toString() : "").append(",");
+            sb.append(escapeCsv(p.getWeightUnit())).append(",");
+            sb.append(escapeCsv(p.getManufacturer())).append(",");
+            sb.append(escapeCsv(p.getManufacturerPartNumber())).append(",");
+            sb.append(escapeCsv(p.getTaxCode())).append(",");
+            sb.append(escapeCsv(p.getTags())).append("\n");
+        }
+
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportToExcel(Long categoryId, Long brandId, Boolean active) throws IOException {
+        List<Product> products = getProductsForExport(categoryId, brandId, active);
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Products");
+
+            // Create header style
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            // Create header row
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < EXPORT_HEADERS.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(EXPORT_HEADERS[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            // Create data rows
+            int rowNum = 1;
+            for (Product p : products) {
+                Row row = sheet.createRow(rowNum++);
+                int col = 0;
+                row.createCell(col++).setCellValue(p.getSku() != null ? p.getSku() : "");
+                row.createCell(col++).setCellValue(p.getBarcode() != null ? p.getBarcode() : "");
+                row.createCell(col++).setCellValue(p.getName() != null ? p.getName() : "");
+                row.createCell(col++).setCellValue(p.getDescription() != null ? p.getDescription() : "");
+                row.createCell(col++).setCellValue(p.getShortDescription() != null ? p.getShortDescription() : "");
+                row.createCell(col++).setCellValue(p.getCategory() != null ? p.getCategory().getName() : "");
+                row.createCell(col++).setCellValue(p.getBrand() != null ? p.getBrand().getName() : "");
+                row.createCell(col++).setCellValue(p.getBaseUom() != null ? p.getBaseUom().getCode() : "");
+                row.createCell(col++).setCellValue(p.getCostPrice() != null ? p.getCostPrice().doubleValue() : 0);
+                row.createCell(col++).setCellValue(p.getSellingPrice() != null ? p.getSellingPrice().doubleValue() : 0);
+                row.createCell(col++).setCellValue(p.getMinSellingPrice() != null ? p.getMinSellingPrice().doubleValue() : 0);
+                row.createCell(col++).setCellValue(p.getWholesalePrice() != null ? p.getWholesalePrice().doubleValue() : 0);
+                row.createCell(col++).setCellValue(p.isTrackInventory());
+                row.createCell(col++).setCellValue(p.isAllowNegativeStock());
+                row.createCell(col++).setCellValue(p.getMinStockLevel() != null ? p.getMinStockLevel().doubleValue() : 0);
+                row.createCell(col++).setCellValue(p.getReorderPoint() != null ? p.getReorderPoint().doubleValue() : 0);
+                row.createCell(col++).setCellValue(p.getReorderQuantity() != null ? p.getReorderQuantity().doubleValue() : 0);
+                row.createCell(col++).setCellValue(p.getMaxStockLevel() != null ? p.getMaxStockLevel().doubleValue() : 0);
+                row.createCell(col++).setCellValue(p.isActive());
+                row.createCell(col++).setCellValue(p.isService());
+                row.createCell(col++).setCellValue(p.isSellable());
+                row.createCell(col++).setCellValue(p.isPurchasable());
+                row.createCell(col++).setCellValue(p.isTrackBatch());
+                row.createCell(col++).setCellValue(p.isTrackSerial());
+                row.createCell(col++).setCellValue(p.getWeight() != null ? p.getWeight().doubleValue() : 0);
+                row.createCell(col++).setCellValue(p.getWeightUnit() != null ? p.getWeightUnit() : "");
+                row.createCell(col++).setCellValue(p.getManufacturer() != null ? p.getManufacturer() : "");
+                row.createCell(col++).setCellValue(p.getManufacturerPartNumber() != null ? p.getManufacturerPartNumber() : "");
+                row.createCell(col++).setCellValue(p.getTaxCode() != null ? p.getTaxCode() : "");
+                row.createCell(col).setCellValue(p.getTags() != null ? p.getTags() : "");
+            }
+
+            // Auto-size columns
+            for (int i = 0; i < EXPORT_HEADERS.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            workbook.write(baos);
+            return baos.toByteArray();
+        }
+    }
+
+    private List<Product> getProductsForExport(Long categoryId, Long brandId, Boolean active) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+
+        List<Product> products;
+        if (active != null && active) {
+            products = productRepository.findAllSellableByTenantId(tenantId);
+        } else {
+            products = productRepository.findAllByTenantId(tenantId, Pageable.unpaged()).getContent();
+        }
+
+        // Apply filters
+        if (categoryId != null) {
+            products = products.stream()
+                    .filter(p -> p.getCategory() != null && p.getCategory().getId().equals(categoryId))
+                    .collect(Collectors.toList());
+        }
+
+        if (brandId != null) {
+            products = products.stream()
+                    .filter(p -> p.getBrand() != null && p.getBrand().getId().equals(brandId))
+                    .collect(Collectors.toList());
+        }
+
+        return products;
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 }

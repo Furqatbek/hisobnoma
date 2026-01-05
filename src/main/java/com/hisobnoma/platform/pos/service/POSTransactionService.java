@@ -515,4 +515,183 @@ public class POSTransactionService {
 
         return number;
     }
+
+    // ==================== Return Operations ====================
+
+    /**
+     * Create a return transaction.
+     */
+    @Transactional
+    public POSTransactionDto createReturn(CreateReturnRequest request) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        Long userId = securityContextHelper.getCurrentUserId();
+
+        // Get current shift
+        Shift shift = shiftRepository.findCurrentShiftByTerminalId(request.getItems().get(0).getProductId())
+                .orElseGet(() -> shiftRepository.findAll().stream()
+                        .filter(s -> s.getTenantId().equals(tenantId) && s.getStatus() == ShiftStatus.OPEN)
+                        .findFirst()
+                        .orElseThrow(() -> new BusinessException("No open shift found")));
+
+        // Validate original transaction if provided
+        POSTransaction originalTransaction = null;
+        if (request.getOriginalTransactionId() != null) {
+            originalTransaction = getTransactionById(request.getOriginalTransactionId());
+            if (originalTransaction.getStatus() != TransactionStatus.COMPLETED) {
+                throw new BusinessException("Can only return completed transactions");
+            }
+        } else if (request.getOriginalTransactionNumber() != null) {
+            originalTransaction = transactionRepository
+                    .findByTransactionNumberAndTenantId(request.getOriginalTransactionNumber(), tenantId)
+                    .orElseThrow(() -> new NotFoundException("Original transaction not found: " + request.getOriginalTransactionNumber()));
+            if (originalTransaction.getStatus() != TransactionStatus.COMPLETED) {
+                throw new BusinessException("Can only return completed transactions");
+            }
+        }
+
+        // Create return transaction
+        POSTransaction returnTransaction = POSTransaction.builder()
+                .tenantId(tenantId)
+                .transactionNumber(generateReturnNumber(tenantId))
+                .transactionType(TransactionType.RETURN)
+                .status(TransactionStatus.PENDING)
+                .shift(shift)
+                .terminal(shift.getTerminal())
+                .cashierId(userId)
+                .cashierName(securityContextHelper.getCurrentUsername())
+                .originalTransactionId(originalTransaction != null ? originalTransaction.getId() : null)
+                .returnReason(request.getReturnReason())
+                .notes(request.getNotes())
+                .subtotal(BigDecimal.ZERO)
+                .taxAmount(BigDecimal.ZERO)
+                .discountAmount(BigDecimal.ZERO)
+                .totalAmount(BigDecimal.ZERO)
+                .build();
+
+        // Set customer if provided
+        if (request.getCustomerId() != null) {
+            Customer customer = customerRepository.findByIdAndTenantId(request.getCustomerId(), tenantId)
+                    .orElseThrow(() -> new NotFoundException("Customer", request.getCustomerId()));
+            returnTransaction.setCustomer(customer);
+            returnTransaction.setCustomerName(customer.getName());
+            returnTransaction.setCustomerPhone(customer.getPhone());
+        } else if (originalTransaction != null && originalTransaction.getCustomer() != null) {
+            returnTransaction.setCustomer(originalTransaction.getCustomer());
+            returnTransaction.setCustomerName(originalTransaction.getCustomerName());
+            returnTransaction.setCustomerPhone(originalTransaction.getCustomerPhone());
+        }
+
+        returnTransaction = transactionRepository.save(returnTransaction);
+
+        // Add return lines
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal taxAmount = BigDecimal.ZERO;
+
+        for (CreateReturnRequest.ReturnLineItem item : request.getItems()) {
+            Product product = productRepository.findByIdAndTenantId(item.getProductId(), tenantId)
+                    .orElseThrow(() -> new NotFoundException("Product", item.getProductId()));
+
+            ProductVariant variant = null;
+            if (item.getVariantId() != null) {
+                variant = variantRepository.findById(item.getVariantId())
+                        .orElseThrow(() -> new NotFoundException("Variant", item.getVariantId()));
+            }
+
+            // Determine unit price
+            BigDecimal unitPrice = item.getUnitPrice();
+            if (unitPrice == null) {
+                // Use original transaction price if available, otherwise product price
+                unitPrice = variant != null ? variant.getEffectiveSellingPrice() : product.getSellingPrice();
+            }
+
+            BigDecimal lineTotal = unitPrice.multiply(item.getQuantity());
+
+            // Calculate tax for return line
+            TaxRate taxRate = taxCalculationService.getDefaultTaxRate(tenantId);
+            BigDecimal lineTax = BigDecimal.ZERO;
+            if (taxRate != null && taxRate.getRate() != null) {
+                lineTax = lineTotal.multiply(taxRate.getRate()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+            }
+
+            POSTransactionLine line = POSTransactionLine.builder()
+                    .tenantId(tenantId)
+                    .transaction(returnTransaction)
+                    .product(product)
+                    .variant(variant)
+                    .productName(product.getName())
+                    .variantName(variant != null ? variant.getName() : null)
+                    .sku(variant != null ? variant.getSku() : product.getSku())
+                    .quantity(item.getQuantity())
+                    .unitPrice(unitPrice)
+                    .costPrice(variant != null ? variant.getEffectiveCostPrice() : product.getCostPrice())
+                    .lineTotal(lineTotal.negate()) // Negative for returns
+                    .taxAmount(lineTax.negate())
+                    .discountAmount(BigDecimal.ZERO)
+                    .discountPercent(BigDecimal.ZERO)
+                    .isReturn(true)
+                    .returnReason(item.getReason())
+                    .build();
+
+            lineRepository.save(line);
+
+            subtotal = subtotal.add(lineTotal);
+            taxAmount = taxAmount.add(lineTax);
+        }
+
+        // Update return transaction totals (negative values for returns)
+        returnTransaction.setSubtotal(subtotal.negate());
+        returnTransaction.setTaxAmount(taxAmount.negate());
+        returnTransaction.setTotalAmount(subtotal.add(taxAmount).negate());
+        returnTransaction = transactionRepository.save(returnTransaction);
+
+        // Restore stock for returned items
+        restoreStockForReturn(returnTransaction);
+
+        // Complete the return immediately
+        returnTransaction.setStatus(TransactionStatus.COMPLETED);
+        returnTransaction.setCompletedAt(Instant.now());
+        returnTransaction = transactionRepository.save(returnTransaction);
+
+        // Post to GL
+        try {
+            glIntegrationService.postPOSTransaction(returnTransaction);
+            returnTransaction.setGlPosted(true);
+            transactionRepository.save(returnTransaction);
+        } catch (Exception e) {
+            log.warn("Failed to post return transaction to GL: {}", e.getMessage());
+        }
+
+        log.info("Created return transaction: {}", returnTransaction.getTransactionNumber());
+        return transactionMapper.toDto(returnTransaction);
+    }
+
+    private void restoreStockForReturn(POSTransaction transaction) {
+        for (POSTransactionLine line : transaction.getLines()) {
+            Long locationId = line.getLocationId() != null ? line.getLocationId() :
+                    transaction.getTerminal().getLocation().getId();
+            try {
+                stockService.addStock(
+                        line.getProduct().getId(),
+                        locationId,
+                        line.getQuantity(),
+                        "POS_RETURN",
+                        transaction.getId(),
+                        "POS Return: " + transaction.getTransactionNumber()
+                );
+            } catch (Exception e) {
+                log.warn("Failed to restore stock for returned product {}: {}",
+                        line.getProduct().getSku(), e.getMessage());
+            }
+        }
+    }
+
+    private String generateReturnNumber(Long tenantId) {
+        String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        int count = 1;
+        String number;
+        do {
+            number = String.format("RET%s-%05d", datePart, count++);
+        } while (transactionRepository.existsByTransactionNumberAndTenantId(number, tenantId));
+        return number;
+    }
 }

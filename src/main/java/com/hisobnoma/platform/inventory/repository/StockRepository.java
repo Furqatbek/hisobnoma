@@ -71,4 +71,12 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
            "LOWER(s.product.sku) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "s.product.barcode = :query)")
     Page<Stock> searchStock(@Param("tenantId") Long tenantId, @Param("query") String query, Pageable pageable);
+
+    // Inventory Planning queries
+    List<Stock> findByProductId(Long productId);
+
+    List<Stock> findByProductIdAndLocationId(Long productId, Long locationId);
+
+    @Query("SELECT s FROM Stock s WHERE s.tenantId = :tenantId")
+    List<Stock> findByTenantId(@Param("tenantId") Long tenantId);
 }

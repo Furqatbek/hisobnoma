@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -66,4 +67,23 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
            "sm.reversed = false AND sm.reversalMovementId IS NULL AND " +
            "sm.movementDate >= :since ORDER BY sm.movementDate DESC")
     List<StockMovement> findRecentUnreversed(@Param("tenantId") Long tenantId, @Param("since") LocalDateTime since);
+
+    // Inventory Planning queries
+    @Query("SELECT SUM(sm.quantity * sm.unitCost) FROM StockMovement sm WHERE sm.product.id = :productId " +
+           "AND sm.tenantId = :tenantId AND sm.createdAt >= :startDate AND sm.createdAt <= :endDate " +
+           "AND sm.movementType IN ('STOCK_OUT', 'CONSUMPTION')")
+    BigDecimal sumMovementValueByProductAndDateRange(@Param("productId") Long productId,
+                                                      @Param("tenantId") Long tenantId,
+                                                      @Param("startDate") Instant startDate,
+                                                      @Param("endDate") Instant endDate);
+
+    @Query("SELECT MAX(sm.createdAt) FROM StockMovement sm WHERE sm.product.id = :productId " +
+           "AND sm.tenantId = :tenantId AND sm.movementType IN ('STOCK_OUT', 'CONSUMPTION')")
+    Instant findLastMovementDateByProduct(@Param("productId") Long productId, @Param("tenantId") Long tenantId);
+
+    @Query("SELECT CASE WHEN COUNT(sm) > 0 THEN true ELSE false END FROM StockMovement sm " +
+           "WHERE sm.product.id = :productId AND sm.tenantId = :tenantId AND sm.createdAt > :cutoffDate")
+    boolean existsByProductIdAndTenantIdAndCreatedAtAfter(@Param("productId") Long productId,
+                                                           @Param("tenantId") Long tenantId,
+                                                           @Param("cutoffDate") Instant cutoffDate);
 }

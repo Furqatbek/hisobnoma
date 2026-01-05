@@ -11,14 +11,21 @@ import com.hisobnoma.platform.finance.entity.AccountType;
 import com.hisobnoma.platform.finance.mapper.AccountMapper;
 import com.hisobnoma.platform.finance.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountService {
@@ -260,5 +267,248 @@ public class AccountService {
         account.setCurrentBalance(account.getBalance());
 
         accountRepository.save(account);
+    }
+
+    // ==================== Import Methods ====================
+
+    /**
+     * Import chart of accounts from CSV file.
+     * CSV format: code,name,accountType,description,parentCode
+     */
+    @Transactional
+    public ImportResult importFromCsv(MultipartFile file) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        ImportResult result = new ImportResult();
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+
+            String line;
+            int lineNum = 0;
+            boolean headerProcessed = false;
+
+            while ((line = reader.readLine()) != null) {
+                lineNum++;
+                if (!headerProcessed) {
+                    headerProcessed = true;
+                    continue;
+                }
+
+                try {
+                    String[] values = parseCsvLine(line);
+                    if (values.length < 3) {
+                        result.addError(lineNum, "Invalid row format - minimum 3 columns required");
+                        continue;
+                    }
+
+                    String code = values[0].trim();
+                    String name = values[1].trim();
+                    String typeStr = values[2].trim();
+                    String description = values.length > 3 ? values[3].trim() : null;
+                    String parentCode = values.length > 4 ? values[4].trim() : null;
+
+                    if (code.isEmpty() || name.isEmpty() || typeStr.isEmpty()) {
+                        result.addError(lineNum, "Code, name, and type are required");
+                        continue;
+                    }
+
+                    AccountType accountType;
+                    try {
+                        accountType = AccountType.valueOf(typeStr.toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        result.addError(lineNum, "Invalid account type: " + typeStr);
+                        continue;
+                    }
+
+                    // Skip if account already exists
+                    if (accountRepository.existsByCodeAndTenantId(code, tenantId)) {
+                        result.addSkipped(lineNum, "Account with code '" + code + "' already exists");
+                        continue;
+                    }
+
+                    Account account = Account.builder()
+                            .tenantId(tenantId)
+                            .code(code)
+                            .name(name)
+                            .accountType(accountType)
+                            .description(description != null && !description.isEmpty() ? description : null)
+                            .normalBalance(Account.determineNormalBalance(accountType))
+                            .active(true)
+                            .isPostable(true)
+                            .ytdDebit(BigDecimal.ZERO)
+                            .ytdCredit(BigDecimal.ZERO)
+                            .openingBalance(BigDecimal.ZERO)
+                            .currentBalance(BigDecimal.ZERO)
+                            .build();
+
+                    // Handle parent account
+                    if (parentCode != null && !parentCode.isEmpty()) {
+                        accountRepository.findByCodeAndTenantId(parentCode, tenantId)
+                                .ifPresent(parent -> parent.addChildAccount(account));
+                    } else {
+                        account.setAccountLevel(1);
+                        account.setFullPath(code);
+                    }
+
+                    accountRepository.save(account);
+                    result.incrementSuccess();
+
+                } catch (Exception e) {
+                    result.addError(lineNum, e.getMessage());
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to import chart of accounts: {}", e.getMessage());
+            throw new BusinessException("Failed to import: " + e.getMessage());
+        }
+
+        log.info("Import completed: {} success, {} errors, {} skipped",
+                result.successCount, result.errors.size(), result.skipped.size());
+
+        return result;
+    }
+
+    /**
+     * Generate a default chart of accounts for Uzbekistan SME.
+     */
+    @Transactional
+    public List<AccountDto> generateDefaultChartOfAccounts() {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+
+        // Check if accounts already exist
+        if (accountRepository.countByTenantId(tenantId) > 0) {
+            throw new BusinessException("Cannot generate default accounts - accounts already exist");
+        }
+
+        List<Account> accounts = new ArrayList<>();
+
+        // Assets (1xxx)
+        accounts.add(createAccount(tenantId, "1000", "Assets", AccountType.ASSET, null, false));
+        accounts.add(createAccount(tenantId, "1100", "Current Assets", AccountType.ASSET, "1000", false));
+        accounts.add(createAccount(tenantId, "1110", "Cash", AccountType.ASSET, "1100", true));
+        accounts.add(createAccount(tenantId, "1120", "Bank Accounts", AccountType.ASSET, "1100", true));
+        accounts.add(createAccount(tenantId, "1130", "Accounts Receivable", AccountType.ASSET, "1100", true));
+        accounts.add(createAccount(tenantId, "1140", "Inventory", AccountType.ASSET, "1100", true));
+        accounts.add(createAccount(tenantId, "1150", "Prepaid Expenses", AccountType.ASSET, "1100", true));
+        accounts.add(createAccount(tenantId, "1200", "Fixed Assets", AccountType.ASSET, "1000", false));
+        accounts.add(createAccount(tenantId, "1210", "Equipment", AccountType.ASSET, "1200", true));
+        accounts.add(createAccount(tenantId, "1220", "Vehicles", AccountType.ASSET, "1200", true));
+        accounts.add(createAccount(tenantId, "1230", "Furniture", AccountType.ASSET, "1200", true));
+        accounts.add(createAccount(tenantId, "1290", "Accumulated Depreciation", AccountType.ASSET, "1200", true));
+
+        // Liabilities (2xxx)
+        accounts.add(createAccount(tenantId, "2000", "Liabilities", AccountType.LIABILITY, null, false));
+        accounts.add(createAccount(tenantId, "2100", "Current Liabilities", AccountType.LIABILITY, "2000", false));
+        accounts.add(createAccount(tenantId, "2110", "Accounts Payable", AccountType.LIABILITY, "2100", true));
+        accounts.add(createAccount(tenantId, "2120", "Accrued Expenses", AccountType.LIABILITY, "2100", true));
+        accounts.add(createAccount(tenantId, "2130", "VAT Payable", AccountType.LIABILITY, "2100", true));
+        accounts.add(createAccount(tenantId, "2140", "Salaries Payable", AccountType.LIABILITY, "2100", true));
+        accounts.add(createAccount(tenantId, "2200", "Long-term Liabilities", AccountType.LIABILITY, "2000", false));
+        accounts.add(createAccount(tenantId, "2210", "Bank Loans", AccountType.LIABILITY, "2200", true));
+
+        // Equity (3xxx)
+        accounts.add(createAccount(tenantId, "3000", "Equity", AccountType.EQUITY, null, false));
+        accounts.add(createAccount(tenantId, "3100", "Share Capital", AccountType.EQUITY, "3000", true));
+        accounts.add(createAccount(tenantId, "3200", "Retained Earnings", AccountType.EQUITY, "3000", true));
+        accounts.add(createAccount(tenantId, "3300", "Current Year Earnings", AccountType.EQUITY, "3000", true));
+
+        // Revenue (4xxx)
+        accounts.add(createAccount(tenantId, "4000", "Revenue", AccountType.REVENUE, null, false));
+        accounts.add(createAccount(tenantId, "4100", "Sales Revenue", AccountType.REVENUE, "4000", true));
+        accounts.add(createAccount(tenantId, "4200", "Service Revenue", AccountType.REVENUE, "4000", true));
+        accounts.add(createAccount(tenantId, "4300", "Other Revenue", AccountType.REVENUE, "4000", true));
+        accounts.add(createAccount(tenantId, "4900", "Sales Returns", AccountType.REVENUE, "4000", true));
+
+        // Expenses (5xxx)
+        accounts.add(createAccount(tenantId, "5000", "Expenses", AccountType.EXPENSE, null, false));
+        accounts.add(createAccount(tenantId, "5100", "Cost of Goods Sold", AccountType.EXPENSE, "5000", true));
+        accounts.add(createAccount(tenantId, "5200", "Operating Expenses", AccountType.EXPENSE, "5000", false));
+        accounts.add(createAccount(tenantId, "5210", "Salaries Expense", AccountType.EXPENSE, "5200", true));
+        accounts.add(createAccount(tenantId, "5220", "Rent Expense", AccountType.EXPENSE, "5200", true));
+        accounts.add(createAccount(tenantId, "5230", "Utilities Expense", AccountType.EXPENSE, "5200", true));
+        accounts.add(createAccount(tenantId, "5240", "Office Supplies", AccountType.EXPENSE, "5200", true));
+        accounts.add(createAccount(tenantId, "5250", "Depreciation Expense", AccountType.EXPENSE, "5200", true));
+        accounts.add(createAccount(tenantId, "5260", "Insurance Expense", AccountType.EXPENSE, "5200", true));
+        accounts.add(createAccount(tenantId, "5270", "Marketing Expense", AccountType.EXPENSE, "5200", true));
+        accounts.add(createAccount(tenantId, "5280", "Travel Expense", AccountType.EXPENSE, "5200", true));
+        accounts.add(createAccount(tenantId, "5290", "Miscellaneous Expense", AccountType.EXPENSE, "5200", true));
+
+        // Save all accounts
+        for (Account account : accounts) {
+            accountRepository.save(account);
+        }
+
+        log.info("Generated {} default accounts for tenant {}", accounts.size(), tenantId);
+
+        return accountMapper.toDtoList(accounts);
+    }
+
+    private Account createAccount(Long tenantId, String code, String name, AccountType type,
+                                   String parentCode, boolean isPostable) {
+        Account account = Account.builder()
+                .tenantId(tenantId)
+                .code(code)
+                .name(name)
+                .accountType(type)
+                .normalBalance(Account.determineNormalBalance(type))
+                .active(true)
+                .isPostable(isPostable)
+                .ytdDebit(BigDecimal.ZERO)
+                .ytdCredit(BigDecimal.ZERO)
+                .openingBalance(BigDecimal.ZERO)
+                .currentBalance(BigDecimal.ZERO)
+                .build();
+
+        if (parentCode != null) {
+            accountRepository.findByCodeAndTenantId(parentCode, tenantId)
+                    .ifPresent(parent -> parent.addChildAccount(account));
+        } else {
+            account.setAccountLevel(1);
+            account.setFullPath(code);
+        }
+
+        return account;
+    }
+
+    private String[] parseCsvLine(String line) {
+        List<String> values = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (char c : line.toCharArray()) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                values.add(sb.toString().trim());
+                sb = new StringBuilder();
+            } else {
+                sb.append(c);
+            }
+        }
+        values.add(sb.toString().trim());
+
+        return values.toArray(new String[0]);
+    }
+
+    /**
+     * Result of import operation.
+     */
+    public static class ImportResult {
+        public int successCount = 0;
+        public List<String> errors = new ArrayList<>();
+        public List<String> skipped = new ArrayList<>();
+
+        public void incrementSuccess() {
+            successCount++;
+        }
+
+        public void addError(int line, String message) {
+            errors.add("Line " + line + ": " + message);
+        }
+
+        public void addSkipped(int line, String message) {
+            skipped.add("Line " + line + ": " + message);
+        }
     }
 }

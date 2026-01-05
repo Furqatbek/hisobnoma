@@ -19,7 +19,11 @@ public class AbcAnalysisDto {
     private String categoryName;
     private String classification; // A, B, C
     private BigDecimal annualValue;
+    private BigDecimal movementValue;
+    private BigDecimal totalValue;
+    private BigDecimal percentOfTotal;
     private BigDecimal percentageOfTotal;
+    private BigDecimal cumulativePercent;
     private BigDecimal cumulativePercentage;
     private BigDecimal currentStock;
     private BigDecimal stockValue;

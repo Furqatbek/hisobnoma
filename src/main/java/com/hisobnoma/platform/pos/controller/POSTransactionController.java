@@ -188,4 +188,35 @@ public class POSTransactionController {
         POSPaymentDto payment = paymentService.refundPayment(id, paymentId, amount, reason);
         return ResponseEntity.ok(ApiResponse.success(payment, "Payment refunded"));
     }
+
+    // ==================== Return Operations ====================
+
+    /**
+     * Create a return transaction.
+     * Can be linked to an original transaction or be a standalone return.
+     */
+    @PostMapping("/returns")
+    @RequiresPermission("POS_RETURN_CREATE")
+    public ResponseEntity<ApiResponse<POSTransactionDto>> createReturn(
+            @Valid @RequestBody CreateReturnRequest request) {
+        POSTransactionDto returnTransaction = transactionService.createReturn(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(returnTransaction, "Return transaction created"));
+    }
+
+    /**
+     * Create a return from an existing transaction.
+     * Convenience endpoint that validates the original transaction first.
+     */
+    @PostMapping("/{id}/return")
+    @RequiresPermission("POS_RETURN_CREATE")
+    public ResponseEntity<ApiResponse<POSTransactionDto>> createReturnFromTransaction(
+            @PathVariable Long id,
+            @Valid @RequestBody CreateReturnRequest request) {
+        // Set the original transaction ID from the path
+        request.setOriginalTransactionId(id);
+        POSTransactionDto returnTransaction = transactionService.createReturn(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(returnTransaction, "Return transaction created from original"));
+    }
 }

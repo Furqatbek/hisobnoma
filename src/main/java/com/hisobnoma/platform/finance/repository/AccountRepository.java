@@ -56,4 +56,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     @Query("SELECT a FROM Account a WHERE a.tenantId = :tenantId AND a.systemAccount = true ORDER BY a.code")
     List<Account> findSystemAccountsByTenantId(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT COUNT(a) FROM Account a WHERE a.tenantId = :tenantId")
+    long countByTenantId(@Param("tenantId") Long tenantId);
 }

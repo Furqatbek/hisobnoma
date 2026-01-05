@@ -11,9 +11,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -125,5 +127,21 @@ public class AccountController {
     @PreAuthorize("hasAuthority('FINANCE_GL_MANAGE')")
     public ResponseEntity<AccountDto> deactivateAccount(@PathVariable Long id) {
         return ResponseEntity.ok(accountService.deactivateAccount(id));
+    }
+
+    // ==================== Import Endpoints ====================
+
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('FINANCE_GL_MANAGE')")
+    public ResponseEntity<AccountService.ImportResult> importAccounts(
+            @RequestPart("file") MultipartFile file) {
+        return ResponseEntity.ok(accountService.importFromCsv(file));
+    }
+
+    @PostMapping("/generate-default")
+    @PreAuthorize("hasAuthority('FINANCE_GL_MANAGE')")
+    public ResponseEntity<List<AccountDto>> generateDefaultAccounts() {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(accountService.generateDefaultChartOfAccounts());
     }
 }
