@@ -4,11 +4,13 @@ import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.common.dto.PageResponse;
 import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.exception.NotFoundException;
+import com.hisobnoma.platform.finance.service.APInvoiceService;
 import com.hisobnoma.platform.inventory.dto.*;
 import com.hisobnoma.platform.inventory.entity.*;
 import com.hisobnoma.platform.inventory.mapper.ReceivingOrderMapper;
 import com.hisobnoma.platform.inventory.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ReceivingService {
 
     private final ReceivingOrderRepository receivingOrderRepository;
@@ -34,6 +37,7 @@ public class ReceivingService {
     private final UnitOfMeasureRepository unitOfMeasureRepository;
     private final ReceivingOrderMapper receivingOrderMapper;
     private final StockService stockService;
+    private final APInvoiceService apInvoiceService;
     private final SecurityContextHelper securityContextHelper;
 
     @Transactional(readOnly = true)
@@ -227,6 +231,19 @@ public class ReceivingService {
         }
 
         ro = receivingOrderRepository.save(ro);
+
+        // Auto-create AP Invoice from receiving order
+        if (!ro.isApInvoiceCreated()) {
+            try {
+                apInvoiceService.createFromReceiving(ro.getId());
+                log.info("Auto-created AP Invoice for Receiving Order: {}", ro.getReceivingNumber());
+            } catch (Exception e) {
+                log.warn("Failed to auto-create AP Invoice for Receiving Order {}: {}",
+                        ro.getReceivingNumber(), e.getMessage());
+                // Don't fail the receiving confirmation - AP Invoice can be created manually
+            }
+        }
+
         return receivingOrderMapper.toDto(ro);
     }
 

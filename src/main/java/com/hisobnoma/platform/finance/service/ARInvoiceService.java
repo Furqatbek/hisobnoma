@@ -14,6 +14,11 @@ import com.hisobnoma.platform.finance.mapper.ARInvoiceMapper;
 import com.hisobnoma.platform.finance.repository.ARInvoiceLineRepository;
 import com.hisobnoma.platform.finance.repository.ARInvoiceRepository;
 import com.hisobnoma.platform.finance.repository.CustomerRepository;
+import com.hisobnoma.platform.pos.entity.POSPayment;
+import com.hisobnoma.platform.pos.entity.POSPaymentStatus;
+import com.hisobnoma.platform.pos.entity.POSPaymentType;
+import com.hisobnoma.platform.pos.entity.POSTransaction;
+import com.hisobnoma.platform.pos.entity.POSTransactionLine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -22,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -355,5 +361,115 @@ public class ARInvoiceService {
                 ARInvoiceStatus.PARTIAL, ARInvoiceStatus.OVERDUE
         );
         return arInvoiceRepository.sumBalanceDueByCustomer(tenantId, customerId, unpaidStatuses);
+    }
+
+    /**
+     * Create AR Invoice from a POS transaction with credit payment.
+     * This is called automatically when a POS transaction is completed with CREDIT payment type.
+     *
+     * @param transaction The POS transaction with credit payment
+     * @return The created AR Invoice DTO
+     */
+    @Transactional
+    public ARInvoiceDto createFromPOSTransaction(POSTransaction transaction) {
+        if (transaction.getCustomer() == null) {
+            throw new BusinessException("Credit sales require a customer to be associated with the transaction");
+        }
+
+        if (transaction.getArInvoiceId() != null) {
+            throw new BusinessException("AR Invoice already created for this transaction");
+        }
+
+        // Calculate total credit amount from payments
+        BigDecimal creditAmount = transaction.getPayments().stream()
+                .filter(p -> p.getPaymentType() == POSPaymentType.CREDIT)
+                .filter(p -> p.getStatus() == POSPaymentStatus.APPROVED)
+                .map(POSPayment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (creditAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("No credit payment found in transaction");
+        }
+
+        Customer customer = transaction.getCustomer();
+        Long tenantId = transaction.getTenantId();
+
+        // Check credit limit
+        if (!customerService.canBeInvoiced(customer.getId(), creditAmount)) {
+            throw new BusinessException("Customer has exceeded credit limit or is on credit hold");
+        }
+
+        // Generate invoice number
+        String invoiceNumber = generateInvoiceNumber(tenantId);
+
+        // Calculate due date from customer payment terms
+        Integer paymentTermsDays = customer.getPaymentTermsDays() != null ? customer.getPaymentTermsDays() : 30;
+        LocalDate dueDate = LocalDate.now().plusDays(paymentTermsDays);
+
+        ARInvoice invoice = ARInvoice.builder()
+                .tenantId(tenantId)
+                .invoiceNumber(invoiceNumber)
+                .customer(customer)
+                .invoiceDate(LocalDate.now())
+                .dueDate(dueDate)
+                .status(ARInvoiceStatus.PENDING)
+                .subtotal(transaction.getSubtotal())
+                .discountAmount(transaction.getDiscountAmount())
+                .taxAmount(transaction.getTaxAmount())
+                .totalAmount(creditAmount) // Only the credit portion
+                .paidAmount(BigDecimal.ZERO)
+                .balanceDue(creditAmount)
+                .currency(transaction.getCurrency())
+                .posTransactionId(transaction.getId())
+                .posTransactionNumber(transaction.getTransactionNumber())
+                .notes("Auto-created from POS Transaction: " + transaction.getTransactionNumber())
+                .build();
+
+        invoice = arInvoiceRepository.save(invoice);
+
+        // Create lines from transaction lines
+        List<ARInvoiceLine> lines = new ArrayList<>();
+        BigDecimal transactionTotal = transaction.getTotalAmount();
+        BigDecimal creditRatio = creditAmount.divide(transactionTotal, 6, RoundingMode.HALF_UP);
+
+        for (POSTransactionLine txLine : transaction.getLines()) {
+            // Calculate proportional amount for this line based on credit ratio
+            BigDecimal lineAmount = txLine.getLineTotal().multiply(creditRatio).setScale(4, RoundingMode.HALF_UP);
+
+            ARInvoiceLine line = new ARInvoiceLine();
+            line.setArInvoice(invoice);
+            line.setItemId(txLine.getProduct() != null ? txLine.getProduct().getId() : null);
+            line.setDescription(txLine.getProductName() + (txLine.getVariantName() != null ? " - " + txLine.getVariantName() : ""));
+            line.setQuantity(txLine.getQuantity());
+            line.setUnitPrice(txLine.getUnitPrice());
+            line.setUnitCost(txLine.getCostPrice());
+            line.setDiscountPercent(txLine.getDiscountPercent() != null ? txLine.getDiscountPercent() : BigDecimal.ZERO);
+            line.setTaxAmount(txLine.getTaxAmount() != null ?
+                    txLine.getTaxAmount().multiply(creditRatio).setScale(4, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+            line.setLineTotal(lineAmount);
+
+            // Calculate profit margin
+            if (txLine.getCostPrice() != null && txLine.getCostPrice().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal profit = txLine.getUnitPrice().subtract(txLine.getCostPrice());
+                line.setProfitMargin(profit.divide(txLine.getUnitPrice(), 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)));
+            }
+
+            lines.add(line);
+        }
+
+        invoice.setLines(lines);
+        invoice = arInvoiceRepository.save(invoice);
+
+        // Post to GL
+        glIntegrationService.postARInvoice(invoice);
+
+        // Update customer balance
+        customerService.updateCustomerBalance(customer.getId(), creditAmount);
+
+        log.info("Created AR Invoice {} from POS Transaction {} for customer {}",
+                invoice.getInvoiceNumber(), transaction.getTransactionNumber(), customer.getCode());
+
+        return arInvoiceMapper.toDto(invoice);
     }
 }

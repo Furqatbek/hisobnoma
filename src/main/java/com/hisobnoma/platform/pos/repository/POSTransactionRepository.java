@@ -81,4 +81,10 @@ public interface POSTransactionRepository extends JpaRepository<POSTransaction, 
     @Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END FROM POSTransaction t " +
            "WHERE t.tenantId = :tenantId AND t.transactionNumber = :number")
     boolean existsByTransactionNumberAndTenantId(@Param("number") String number, @Param("tenantId") Long tenantId);
+
+    @Query("SELECT COUNT(t) FROM POSTransaction t WHERE t.customer.id = :customerId AND t.tenantId = :tenantId AND t.status = :status")
+    long countByCustomerIdAndTenantIdAndStatus(
+            @Param("customerId") Long customerId,
+            @Param("tenantId") Long tenantId,
+            @Param("status") TransactionStatus status);
 }

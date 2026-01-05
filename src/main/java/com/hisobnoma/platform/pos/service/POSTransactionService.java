@@ -3,9 +3,11 @@ package com.hisobnoma.platform.pos.service;
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.exception.NotFoundException;
+import com.hisobnoma.platform.finance.dto.ARInvoiceDto;
 import com.hisobnoma.platform.finance.entity.Customer;
 import com.hisobnoma.platform.finance.entity.TaxRate;
 import com.hisobnoma.platform.finance.repository.CustomerRepository;
+import com.hisobnoma.platform.finance.service.ARInvoiceService;
 import com.hisobnoma.platform.finance.service.GLIntegrationService;
 import com.hisobnoma.platform.finance.service.TaxCalculationService;
 import com.hisobnoma.platform.inventory.entity.Product;
@@ -49,6 +51,7 @@ public class POSTransactionService {
     private final StockService stockService;
     private final TaxCalculationService taxCalculationService;
     private final GLIntegrationService glIntegrationService;
+    private final ARInvoiceService arInvoiceService;
 
     @Transactional(readOnly = true)
     public Page<POSTransactionDto> findAll(Pageable pageable) {
@@ -412,9 +415,32 @@ public class POSTransactionService {
         shiftRepository.save(shift);
 
         transaction = transactionRepository.save(transaction);
+
+        // Auto-create AR Invoice if transaction has credit payment
+        if (hasCreditPayment(transaction) && transaction.getArInvoiceId() == null) {
+            try {
+                ARInvoiceDto arInvoice = arInvoiceService.createFromPOSTransaction(transaction);
+                transaction.setArInvoiceId(arInvoice.getId());
+                transaction = transactionRepository.save(transaction);
+                log.info("Auto-created AR Invoice {} for credit sale transaction {}",
+                        arInvoice.getInvoiceNumber(), transaction.getTransactionNumber());
+            } catch (Exception e) {
+                log.warn("Failed to auto-create AR Invoice for credit sale transaction {}: {}",
+                        transaction.getTransactionNumber(), e.getMessage());
+                // Don't fail the transaction - AR Invoice can be created manually
+            }
+        }
+
         log.info("Completed transaction {}", transaction.getTransactionNumber());
 
         return transactionMapper.toDto(transaction);
+    }
+
+    private boolean hasCreditPayment(POSTransaction transaction) {
+        return transaction.getPayments().stream()
+                .anyMatch(p -> p.getPaymentType() == POSPaymentType.CREDIT &&
+                               p.getStatus() == POSPaymentStatus.APPROVED &&
+                               p.getAmount().compareTo(BigDecimal.ZERO) > 0);
     }
 
     private void deductStock(POSTransaction transaction) {
