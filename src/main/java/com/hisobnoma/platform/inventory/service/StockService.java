@@ -8,6 +8,8 @@ import com.hisobnoma.platform.inventory.entity.*;
 import com.hisobnoma.platform.inventory.mapper.StockMapper;
 import com.hisobnoma.platform.inventory.mapper.StockMovementMapper;
 import com.hisobnoma.platform.inventory.repository.*;
+import com.hisobnoma.platform.inventory.event.InventoryEventPublisher;
+import com.hisobnoma.platform.inventory.event.StockAdjustedEvent;
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +39,7 @@ public class StockService {
     private final StockMapper stockMapper;
     private final StockMovementMapper stockMovementMapper;
     private final SecurityContextHelper securityContextHelper;
+    private final InventoryEventPublisher inventoryEventPublisher;
 
     // ==================== Stock Query Methods ====================
 
@@ -215,6 +218,15 @@ public class StockService {
 
             log.info("Received {} units of product {} at location {}",
                     item.getQuantity(), product.getSku(), location.getCode());
+
+            // Publish stock received event
+            inventoryEventPublisher.publishStockReceived(
+                    tenantId, product, location,
+                    item.getQuantity(), item.getUnitCost(),
+                    quantityBefore, stock.getQuantityOnHand(),
+                    request.getReferenceType() != null ? request.getReferenceType().name() : null,
+                    request.getReferenceId(), request.getReferenceNumber(),
+                    item.getBatchNumber());
         }
 
         return movements.stream().map(stockMovementMapper::toDto).collect(Collectors.toList());
@@ -285,6 +297,18 @@ public class StockService {
 
             log.info("Issued {} units of product {} from location {}",
                     item.getQuantity(), product.getSku(), location.getCode());
+
+            // Publish stock issued event
+            inventoryEventPublisher.publishStockIssued(
+                    tenantId, product, location,
+                    item.getQuantity(), stock.getAverageCost(),
+                    quantityBefore, stock.getQuantityOnHand(),
+                    request.getReferenceType() != null ? request.getReferenceType().name() : null,
+                    request.getReferenceId(), request.getReferenceNumber(),
+                    request.getReason(), item.getBatchNumber());
+
+            // Check and publish low stock alert if needed
+            inventoryEventPublisher.publishLowStockAlertIfNeeded(tenantId, stock);
         }
 
         return movements.stream().map(stockMovementMapper::toDto).collect(Collectors.toList());
@@ -365,6 +389,17 @@ public class StockService {
 
             log.info("Transferred {} units of product {} from {} to {}",
                     item.getQuantity(), product.getSku(), fromLocation.getCode(), toLocation.getCode());
+
+            // Publish stock transferred event
+            inventoryEventPublisher.publishStockTransferred(
+                    tenantId, product, fromLocation, toLocation,
+                    item.getQuantity(), sourceStock.getAverageCost(),
+                    sourceQtyBefore, sourceStock.getQuantityOnHand(),
+                    destQtyBefore, destStock.getQuantityOnHand(),
+                    request.getReferenceNumber(), request.getReason(), item.getBatchNumber());
+
+            // Check and publish low stock alert for source location if needed
+            inventoryEventPublisher.publishLowStockAlertIfNeeded(tenantId, sourceStock);
         }
 
         return movements.stream().map(stockMovementMapper::toDto).collect(Collectors.toList());
@@ -423,6 +458,30 @@ public class StockService {
 
             log.info("Adjusted product {} by {} units at location {} (reason: {})",
                     product.getSku(), adjustmentQuantity, location.getCode(), request.getReason());
+
+            // Determine adjustment type based on reference type
+            StockAdjustedEvent.AdjustmentType adjustmentType = StockAdjustedEvent.AdjustmentType.MANUAL;
+            if (request.getReferenceType() != null) {
+                switch (request.getReferenceType()) {
+                    case INVENTORY_COUNT -> adjustmentType = StockAdjustedEvent.AdjustmentType.INVENTORY_COUNT;
+                    case MANUAL_ADJUSTMENT -> adjustmentType = StockAdjustedEvent.AdjustmentType.CORRECTION;
+                    default -> adjustmentType = StockAdjustedEvent.AdjustmentType.MANUAL;
+                }
+            }
+
+            // Publish stock adjusted event
+            inventoryEventPublisher.publishStockAdjusted(
+                    tenantId, product, location,
+                    adjustmentQuantity, quantityBefore, stock.getQuantityOnHand(),
+                    request.getReferenceType() != null ? request.getReferenceType().name() : null,
+                    request.getReferenceId(), request.getReferenceNumber(),
+                    item.getReason() != null ? item.getReason() : request.getReason(),
+                    adjustmentType);
+
+            // Check and publish low stock alert if negative adjustment
+            if (adjustmentQuantity.compareTo(java.math.BigDecimal.ZERO) < 0) {
+                inventoryEventPublisher.publishLowStockAlertIfNeeded(tenantId, stock);
+            }
         }
 
         return movements.stream().map(stockMovementMapper::toDto).collect(Collectors.toList());
