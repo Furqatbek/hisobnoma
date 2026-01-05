@@ -48,6 +48,11 @@ CREATE INDEX idx_recurring_lines_template ON recurring_journal_lines(template_id
 -- Add return-related fields to POS transactions
 ALTER TABLE pos_transactions ADD COLUMN IF NOT EXISTS original_transaction_id BIGINT REFERENCES pos_transactions(id);
 ALTER TABLE pos_transactions ADD COLUMN IF NOT EXISTS return_reason VARCHAR(500);
+ALTER TABLE pos_transactions ADD COLUMN IF NOT EXISTS cashier_id BIGINT;
+ALTER TABLE pos_transactions ADD COLUMN IF NOT EXISTS cashier_name VARCHAR(200);
+
+-- Add return reason to transaction lines
+ALTER TABLE pos_transaction_lines ADD COLUMN IF NOT EXISTS return_reason VARCHAR(500);
 
 -- Add index for finding returns by original transaction
 CREATE INDEX IF NOT EXISTS idx_pos_transactions_original ON pos_transactions(original_transaction_id);
@@ -64,7 +69,7 @@ ON CONFLICT (code) DO NOTHING;
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, permissions p
-WHERE r.name = 'STORE_MANAGER'
+WHERE r.code = 'STORE_MANAGER'
 AND p.code IN ('FINANCE_RECURRING_VIEW', 'FINANCE_RECURRING_MANAGE', 'POS_RETURN_CREATE', 'POS_RETURN_APPROVE')
 ON CONFLICT DO NOTHING;
 
@@ -72,6 +77,14 @@ ON CONFLICT DO NOTHING;
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, permissions p
-WHERE r.name = 'CASHIER'
+WHERE r.code = 'CASHIER'
 AND p.code = 'POS_RETURN_CREATE'
+ON CONFLICT DO NOTHING;
+
+-- Add recurring journal permissions to FINANCE_MANAGER role
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r, permissions p
+WHERE r.code = 'FINANCE_MANAGER'
+AND p.code IN ('FINANCE_RECURRING_VIEW', 'FINANCE_RECURRING_MANAGE')
 ON CONFLICT DO NOTHING;

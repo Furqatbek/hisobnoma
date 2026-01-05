@@ -53,6 +53,12 @@ public class POSTransaction extends TenantAwareEntity {
     @Column(name = "customer_phone", length = 50)
     private String customerPhone;
 
+    @Column(name = "cashier_id")
+    private Long cashierId;
+
+    @Column(name = "cashier_name", length = 200)
+    private String cashierName;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false, length = 20)
     @Builder.Default
@@ -137,6 +143,9 @@ public class POSTransaction extends TenantAwareEntity {
 
     @Column(name = "original_transaction_number", length = 50)
     private String originalTransactionNumber;
+
+    @Column(name = "return_reason", length = 500)
+    private String returnReason;
 
     /**
      * Link to AR invoice if credit sale

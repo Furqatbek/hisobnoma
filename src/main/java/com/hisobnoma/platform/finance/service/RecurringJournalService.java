@@ -4,6 +4,8 @@ import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.common.dto.PageResponse;
 import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.exception.NotFoundException;
+import com.hisobnoma.platform.finance.dto.CreateJournalEntryRequest;
+import com.hisobnoma.platform.finance.dto.CreateJournalLineRequest;
 import com.hisobnoma.platform.finance.dto.RecurringJournalTemplateDto;
 import com.hisobnoma.platform.finance.entity.*;
 import com.hisobnoma.platform.finance.repository.AccountRepository;
@@ -12,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -218,10 +219,10 @@ public class RecurringJournalService {
 
     private Long createJournalFromTemplate(RecurringJournalTemplate template) {
         // Create journal entry from template
-        List<JournalEntryService.JournalLineRequest> lines = new ArrayList<>();
+        List<CreateJournalLineRequest> lines = new ArrayList<>();
 
         for (RecurringJournalLine line : template.getLines()) {
-            lines.add(JournalEntryService.JournalLineRequest.builder()
+            lines.add(CreateJournalLineRequest.builder()
                     .accountId(line.getAccount().getId())
                     .description(line.getDescription())
                     .debitAmount(line.getDebitAmount())
@@ -229,14 +230,14 @@ public class RecurringJournalService {
                     .build());
         }
 
-        JournalEntryService.CreateJournalRequest request = JournalEntryService.CreateJournalRequest.builder()
+        CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
                 .entryDate(LocalDate.now())
                 .description("Auto-generated from template: " + template.getName())
-                .reference("REC-" + template.getId())
+                .referenceNumber("REC-" + template.getId())
                 .lines(lines)
                 .build();
 
-        Long journalId = journalEntryService.createJournalEntry(request);
+        Long journalId = journalEntryService.createJournalEntry(request).getId();
 
         // Auto-post if configured
         if (template.isAutoPost()) {

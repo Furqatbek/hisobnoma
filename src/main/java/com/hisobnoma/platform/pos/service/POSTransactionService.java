@@ -526,12 +526,11 @@ public class POSTransactionService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Long userId = securityContextHelper.getCurrentUserId();
 
-        // Get current shift
-        Shift shift = shiftRepository.findCurrentShiftByTerminalId(request.getItems().get(0).getProductId())
-                .orElseGet(() -> shiftRepository.findAll().stream()
-                        .filter(s -> s.getTenantId().equals(tenantId) && s.getStatus() == ShiftStatus.OPEN)
+        // Get current open shift for cashier or any open shift for tenant
+        Shift shift = shiftRepository.findByCashierIdAndStatusAndTenantId(userId, ShiftStatus.OPEN, tenantId)
+                .orElseGet(() -> shiftRepository.findOpenShiftsByTenantId(tenantId).stream()
                         .findFirst()
-                        .orElseThrow(() -> new BusinessException("No open shift found")));
+                        .orElseThrow(() -> new BusinessException("No open shift found. Please open a shift first.")));
 
         // Validate original transaction if provided
         POSTransaction originalTransaction = null;
@@ -614,13 +613,12 @@ public class POSTransactionService {
             }
 
             POSTransactionLine line = POSTransactionLine.builder()
-                    .tenantId(tenantId)
                     .transaction(returnTransaction)
                     .product(product)
                     .variant(variant)
                     .productName(product.getName())
                     .variantName(variant != null ? variant.getName() : null)
-                    .sku(variant != null ? variant.getSku() : product.getSku())
+                    .productCode(variant != null ? variant.getSku() : product.getSku())
                     .quantity(item.getQuantity())
                     .unitPrice(unitPrice)
                     .costPrice(variant != null ? variant.getEffectiveCostPrice() : product.getCostPrice())

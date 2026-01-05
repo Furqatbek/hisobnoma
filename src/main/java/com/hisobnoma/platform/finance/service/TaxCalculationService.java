@@ -240,4 +240,22 @@ public class TaxCalculationService {
                 .build();
         return calculateTax(request);
     }
+
+    /**
+     * Gets the default tax rate for the tenant (first active tax rate).
+     * Used for POS operations when no specific tax code is provided.
+     */
+    @Transactional(readOnly = true)
+    public TaxRate getDefaultTaxRate(Long tenantId) {
+        return taxRateRepository.findAll().stream()
+                .filter(rate -> rate.getTenantId().equals(tenantId))
+                .filter(TaxRate::isActive)
+                .filter(rate -> {
+                    LocalDate today = LocalDate.now();
+                    return (rate.getEffectiveFrom() == null || !rate.getEffectiveFrom().isAfter(today)) &&
+                           (rate.getEffectiveTo() == null || !rate.getEffectiveTo().isBefore(today));
+                })
+                .findFirst()
+                .orElse(null);
+    }
 }

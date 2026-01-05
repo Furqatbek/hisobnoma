@@ -4024,6 +4024,666 @@
         }
       ],
       "description": "POS payment processing including cash, card, mobile, and gift card payments."
+    },
+    {
+      "name": "Inventory Planning",
+      "item": [
+        {
+          "name": "Get Reorder Suggestions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/planning/reorder-suggestions?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "planning", "reorder-suggestions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get paginated list of products that need reordering based on reorder point. Requires INVENTORY_STOCK_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Reorder Suggestions by Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/planning/reorder-suggestions/location/1?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "planning", "reorder-suggestions", "location", "1"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get reorder suggestions for a specific warehouse location."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Low Stock Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/planning/low-stock?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "planning", "low-stock"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get products with stock below safety stock level."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Overstock Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/planning/overstock?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "planning", "overstock"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get products with excess inventory above maximum stock level."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Stock Turnover Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/planning/turnover?startDate=2026-01-01&endDate=2026-01-31&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "planning", "turnover"],
+              "query": [
+                { "key": "startDate", "value": "2026-01-01" },
+                { "key": "endDate", "value": "2026-01-31" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get inventory turnover metrics for the specified date range."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Demand Forecast",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/planning/forecast/1?periods=3",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "planning", "forecast", "1"],
+              "query": [
+                { "key": "periods", "value": "3" }
+              ]
+            },
+            "description": "Get demand forecast for a specific product. Default is 3 periods."
+          },
+          "response": []
+        },
+        {
+          "name": "Calculate Reorder Quantity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/planning/reorder-quantity/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "planning", "reorder-quantity", "1"]
+            },
+            "description": "Calculate optimal reorder quantity for a product using EOQ model."
+          },
+          "response": []
+        }
+      ],
+      "description": "Inventory planning and forecasting APIs including reorder suggestions, stock analysis, and demand forecasting."
+    },
+    {
+      "name": "Recurring Journals",
+      "item": [
+        {
+          "name": "List Templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/recurring-journals?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "recurring-journals"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "List all recurring journal templates. Requires FINANCE_RECURRING_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Template",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/recurring-journals/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "recurring-journals", "1"]
+            },
+            "description": "Get recurring journal template by ID with all lines."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Monthly Rent Expense\",\n  \"description\": \"Monthly rent payment\",\n  \"frequency\": \"MONTHLY\",\n  \"frequencyDay\": 1,\n  \"startDate\": \"2026-02-01\",\n  \"endDate\": null,\n  \"active\": true,\n  \"autoPost\": false,\n  \"lines\": [\n    {\n      \"accountId\": 1,\n      \"description\": \"Rent Expense\",\n      \"debitAmount\": 5000000,\n      \"creditAmount\": 0,\n      \"sortOrder\": 1\n    },\n    {\n      \"accountId\": 2,\n      \"description\": \"Cash Payment\",\n      \"debitAmount\": 0,\n      \"creditAmount\": 5000000,\n      \"sortOrder\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/recurring-journals",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "recurring-journals"]
+            },
+            "description": "Create a new recurring journal template. Requires FINANCE_RECURRING_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Template",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Monthly Rent Expense (Updated)\",\n  \"description\": \"Monthly rent payment - updated amount\",\n  \"frequency\": \"MONTHLY\",\n  \"frequencyDay\": 1,\n  \"startDate\": \"2026-02-01\",\n  \"active\": true,\n  \"autoPost\": true,\n  \"lines\": [\n    {\n      \"accountId\": 1,\n      \"description\": \"Rent Expense\",\n      \"debitAmount\": 5500000,\n      \"creditAmount\": 0,\n      \"sortOrder\": 1\n    },\n    {\n      \"accountId\": 2,\n      \"description\": \"Cash Payment\",\n      \"debitAmount\": 0,\n      \"creditAmount\": 5500000,\n      \"sortOrder\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/recurring-journals/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "recurring-journals", "1"]
+            },
+            "description": "Update an existing recurring journal template."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Template",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/recurring-journals/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "recurring-journals", "1"]
+            },
+            "description": "Delete a recurring journal template."
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Template",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/recurring-journals/1/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "recurring-journals", "1", "activate"]
+            },
+            "description": "Activate a recurring journal template."
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Template",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/recurring-journals/1/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "recurring-journals", "1", "deactivate"]
+            },
+            "description": "Deactivate a recurring journal template."
+          },
+          "response": []
+        },
+        {
+          "name": "Execute Template (Manual)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/recurring-journals/1/execute",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "recurring-journals", "1", "execute"]
+            },
+            "description": "Manually execute a recurring journal template to create a journal entry immediately."
+          },
+          "response": []
+        }
+      ],
+      "description": "Recurring journal template management for automated periodic journal entries."
+    },
+    {
+      "name": "POS Returns",
+      "item": [
+        {
+          "name": "Create Return",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"originalTransactionNumber\": \"TXN-2026-001-0001\",\n  \"returnReason\": \"Customer request - wrong size\",\n  \"items\": [\n    {\n      \"originalLineId\": 1,\n      \"quantity\": 1,\n      \"reason\": \"Wrong size ordered\"\n    },\n    {\n      \"originalLineId\": 2,\n      \"quantity\": 2,\n      \"reason\": \"Defective item\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/returns",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "returns"]
+            },
+            "description": "Create a return transaction for items from a previous sale. Requires POS_SALE_REFUND permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Return by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/returns/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "returns", "1"]
+            },
+            "description": "Get return transaction details by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "List Returns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/returns?page=0&size=20&startDate=2026-01-01&endDate=2026-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "returns"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "startDate", "value": "2026-01-01" },
+                { "key": "endDate", "value": "2026-01-31" }
+              ]
+            },
+            "description": "List return transactions with optional date filtering."
+          },
+          "response": []
+        },
+        {
+          "name": "Process Return Refund",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentType\": \"CASH\",\n  \"amount\": 150000.0000,\n  \"notes\": \"Refund for returned items\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/returns/1/refund",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "returns", "1", "refund"]
+            },
+            "description": "Process refund payment for a return transaction."
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Return",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pos/returns/1/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "returns", "1", "complete"]
+            },
+            "description": "Complete and finalize a return transaction."
+          },
+          "response": []
+        }
+      ],
+      "description": "POS return transaction processing for handling product returns and refunds."
+    },
+    {
+      "name": "Product Import/Export",
+      "item": [
+        {
+          "name": "Download Import Template",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/import/template",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "import", "template"]
+            },
+            "description": "Download Excel template for product import. Requires INVENTORY_PRODUCT_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Import Products",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "Excel file with product data"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "import"]
+            },
+            "description": "Import products from Excel file. Returns import result with success/error counts."
+          },
+          "response": []
+        },
+        {
+          "name": "Export Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/export?format=xlsx&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "export"],
+              "query": [
+                { "key": "format", "value": "xlsx" },
+                { "key": "categoryId", "value": "1" }
+              ]
+            },
+            "description": "Export products to Excel. Optional filtering by category."
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Import File",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "Excel file to validate"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/import/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "import", "validate"]
+            },
+            "description": "Validate import file without actually importing. Returns validation errors if any."
+          },
+          "response": []
+        }
+      ],
+      "description": "Product bulk import and export functionality using Excel files."
+    },
+    {
+      "name": "Product Variants",
+      "item": [
+        {
+          "name": "List Variants for Product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/1/variants?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "1", "variants"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "List all variants for a product. Requires INVENTORY_PRODUCT_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Variant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/variants/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "variants", "1"]
+            },
+            "description": "Get variant details by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Variant",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"PROD-001-RED-L\",\n  \"name\": \"Red - Large\",\n  \"barcode\": \"7890123456789\",\n  \"attributes\": {\n    \"color\": \"Red\",\n    \"size\": \"Large\"\n  },\n  \"costPrice\": 50000,\n  \"sellingPrice\": 75000,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/1/variants",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "1", "variants"]
+            },
+            "description": "Create a new variant for a product. Requires INVENTORY_PRODUCT_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Variant",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"PROD-001-RED-L\",\n  \"name\": \"Red - Large (Updated)\",\n  \"barcode\": \"7890123456789\",\n  \"attributes\": {\n    \"color\": \"Red\",\n    \"size\": \"Large\"\n  },\n  \"costPrice\": 55000,\n  \"sellingPrice\": 80000,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/variants/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "variants", "1"]
+            },
+            "description": "Update an existing product variant."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Variant",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/variants/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "variants", "1"]
+            },
+            "description": "Delete a product variant."
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Create Variants",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"sku\": \"PROD-001-RED-S\",\n    \"name\": \"Red - Small\",\n    \"attributes\": { \"color\": \"Red\", \"size\": \"Small\" },\n    \"costPrice\": 50000,\n    \"sellingPrice\": 75000\n  },\n  {\n    \"sku\": \"PROD-001-RED-M\",\n    \"name\": \"Red - Medium\",\n    \"attributes\": { \"color\": \"Red\", \"size\": \"Medium\" },\n    \"costPrice\": 50000,\n    \"sellingPrice\": 75000\n  },\n  {\n    \"sku\": \"PROD-001-RED-L\",\n    \"name\": \"Red - Large\",\n    \"attributes\": { \"color\": \"Red\", \"size\": \"Large\" },\n    \"costPrice\": 50000,\n    \"sellingPrice\": 75000\n  }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/1/variants/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "1", "variants", "bulk"]
+            },
+            "description": "Create multiple variants at once for a product."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Variants from Attributes",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attributes\": {\n    \"color\": [\"Red\", \"Blue\", \"Green\"],\n    \"size\": [\"S\", \"M\", \"L\", \"XL\"]\n  },\n  \"skuPrefix\": \"PROD-001\",\n  \"costPrice\": 50000,\n  \"sellingPrice\": 75000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/1/variants/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", "1", "variants", "generate"]
+            },
+            "description": "Auto-generate all variant combinations from attribute options."
+          },
+          "response": []
+        }
+      ],
+      "description": "Product variant management for products with multiple SKUs (size, color, etc.)."
+    },
+    {
+      "name": "Chart of Accounts Import",
+      "item": [
+        {
+          "name": "Download CoA Import Template",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/accounts/import/template",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "accounts", "import", "template"]
+            },
+            "description": "Download Excel template for chart of accounts import. Requires FINANCE_COA_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Import Chart of Accounts",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "Excel file with chart of accounts"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/accounts/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "accounts", "import"]
+            },
+            "description": "Import chart of accounts from Excel file."
+          },
+          "response": []
+        },
+        {
+          "name": "Validate CoA Import File",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "Excel file to validate"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/accounts/import/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "accounts", "import", "validate"]
+            },
+            "description": "Validate chart of accounts import file without importing."
+          },
+          "response": []
+        },
+        {
+          "name": "Export Chart of Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/accounts/export?format=xlsx",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "accounts", "export"],
+              "query": [
+                { "key": "format", "value": "xlsx" }
+              ]
+            },
+            "description": "Export chart of accounts to Excel format."
+          },
+          "response": []
+        }
+      ],
+      "description": "Chart of accounts bulk import and export functionality."
     }
   ]
 }

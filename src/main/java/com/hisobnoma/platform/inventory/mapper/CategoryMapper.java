@@ -5,6 +5,7 @@ import com.hisobnoma.platform.inventory.dto.CreateCategoryRequest;
 import com.hisobnoma.platform.inventory.entity.Category;
 import org.mapstruct.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Mapper(componentModel = "spring")
@@ -42,7 +43,7 @@ public interface CategoryMapper {
     @Named("mapChildrenRecursive")
     default List<CategoryDto> mapChildren(List<Category> children) {
         if (children == null || children.isEmpty()) {
-            return null;
+            return new ArrayList<>();
         }
         return children.stream()
                 .map(this::toDtoWithChildren)

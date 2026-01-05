@@ -25,7 +25,7 @@ public class InventoryPlanningController {
      * Get reorder suggestions for products below reorder point.
      */
     @GetMapping("/reorder-suggestions")
-    @PreAuthorize("hasAuthority('INVENTORY_STOCK_READ')")
+    @PreAuthorize("hasAuthority('INVENTORY_STOCK_VIEW')")
     public ResponseEntity<List<ReorderSuggestionDto>> getReorderSuggestions(
             @RequestParam(required = false) Long locationId) {
         return ResponseEntity.ok(inventoryPlanningService.getReorderSuggestions(locationId));
@@ -35,7 +35,7 @@ public class InventoryPlanningController {
      * Perform ABC analysis on products based on value/movement.
      */
     @GetMapping("/abc-analysis")
-    @PreAuthorize("hasAuthority('INVENTORY_STOCK_READ')")
+    @PreAuthorize("hasAuthority('INVENTORY_STOCK_VIEW')")
     public ResponseEntity<List<AbcAnalysisDto>> getAbcAnalysis(
             @RequestParam(defaultValue = "365") int days) {
         return ResponseEntity.ok(inventoryPlanningService.performAbcAnalysis(days));
@@ -45,7 +45,7 @@ public class InventoryPlanningController {
      * Get slow-moving products (not sold in X days).
      */
     @GetMapping("/slow-moving")
-    @PreAuthorize("hasAuthority('INVENTORY_STOCK_READ')")
+    @PreAuthorize("hasAuthority('INVENTORY_STOCK_VIEW')")
     public ResponseEntity<List<LowStockDto>> getSlowMovingProducts(
             @RequestParam(defaultValue = "90") int days,
             @RequestParam(required = false) Long locationId) {
@@ -56,7 +56,7 @@ public class InventoryPlanningController {
      * Get dead stock (zero movement products).
      */
     @GetMapping("/dead-stock")
-    @PreAuthorize("hasAuthority('INVENTORY_STOCK_READ')")
+    @PreAuthorize("hasAuthority('INVENTORY_STOCK_VIEW')")
     public ResponseEntity<List<LowStockDto>> getDeadStock(
             @RequestParam(defaultValue = "180") int days,
             @RequestParam(required = false) Long locationId) {

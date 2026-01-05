@@ -2547,3 +2547,343 @@ Record a coupon redemption after a successful transaction.
 - `EXPIRED` - Coupon has expired
 - `DEPLETED` - All uses have been exhausted
 - `CANCELLED` - Coupon has been cancelled
+
+---
+
+## Phase 2 APIs - Additional Endpoints
+
+### Inventory Planning APIs
+
+#### GET /inventory/planning/reorder-suggestions
+Get products that need reordering based on stock levels and reorder points.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| locationId | long | No | Filter by location |
+
+**Permission:** `INVENTORY_STOCK_VIEW`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "productId": 1,
+      "productName": "iPhone 15 Pro",
+      "productSku": "IPHONE15PRO",
+      "locationId": 1,
+      "locationName": "Main Warehouse",
+      "currentStock": 5,
+      "reorderPoint": 10,
+      "suggestedQuantity": 20,
+      "estimatedCost": 10000.00
+    }
+  ]
+}
+```
+
+---
+
+#### GET /inventory/planning/abc-analysis
+Perform ABC analysis on products based on movement value.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| days | int | 365 | Number of days to analyze |
+
+**Permission:** `INVENTORY_STOCK_VIEW`
+
+---
+
+#### GET /inventory/planning/slow-moving
+Get slow-moving products that haven't sold in X days.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| days | int | 90 | Days without movement |
+| locationId | long | null | Filter by location |
+
+**Permission:** `INVENTORY_STOCK_VIEW`
+
+---
+
+#### GET /inventory/planning/dead-stock
+Get dead stock products with zero movement.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| days | int | 180 | Days without any movement |
+| locationId | long | null | Filter by location |
+
+**Permission:** `INVENTORY_STOCK_VIEW`
+
+---
+
+### Recurring Journal APIs
+
+#### GET /finance/recurring-journals
+Get all recurring journal templates with pagination.
+
+**Permission:** `FINANCE_RECURRING_VIEW`
+
+---
+
+#### GET /finance/recurring-journals/{id}
+Get a recurring journal template by ID.
+
+**Permission:** `FINANCE_RECURRING_VIEW`
+
+---
+
+#### POST /finance/recurring-journals
+Create a recurring journal template.
+
+**Request:**
+```json
+{
+  "name": "Monthly Rent",
+  "description": "Monthly office rent expense",
+  "frequency": "MONTHLY",
+  "frequencyDay": 1,
+  "startDate": "2026-01-01",
+  "endDate": null,
+  "active": true,
+  "autoPost": false,
+  "lines": [
+    {
+      "accountId": 101,
+      "description": "Rent expense",
+      "debitAmount": 5000000.00,
+      "creditAmount": 0,
+      "sortOrder": 1
+    },
+    {
+      "accountId": 201,
+      "description": "Cash payment",
+      "debitAmount": 0,
+      "creditAmount": 5000000.00,
+      "sortOrder": 2
+    }
+  ]
+}
+```
+
+**Permission:** `FINANCE_RECURRING_MANAGE`
+
+---
+
+#### PUT /finance/recurring-journals/{id}
+Update a recurring journal template.
+
+**Permission:** `FINANCE_RECURRING_MANAGE`
+
+---
+
+#### DELETE /finance/recurring-journals/{id}
+Delete a recurring journal template.
+
+**Permission:** `FINANCE_RECURRING_MANAGE`
+
+---
+
+#### PUT /finance/recurring-journals/{id}/activate
+Activate a recurring journal template.
+
+**Permission:** `FINANCE_RECURRING_MANAGE`
+
+---
+
+#### PUT /finance/recurring-journals/{id}/deactivate
+Deactivate a recurring journal template.
+
+**Permission:** `FINANCE_RECURRING_MANAGE`
+
+---
+
+#### POST /finance/recurring-journals/{id}/execute
+Manually execute a recurring journal template to create a journal entry.
+
+**Permission:** `FINANCE_RECURRING_MANAGE`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "journalEntryId": 123
+  }
+}
+```
+
+---
+
+### POS Return APIs
+
+#### POST /pos/transactions/returns
+Create a standalone return transaction.
+
+**Request:**
+```json
+{
+  "shiftId": 1,
+  "originalTransactionId": null,
+  "originalTransactionNumber": null,
+  "customerId": 123,
+  "returnReason": "Customer changed mind",
+  "refundMethod": "ORIGINAL_PAYMENT_METHOD",
+  "notes": "Full refund requested",
+  "items": [
+    {
+      "productId": 100,
+      "variantId": null,
+      "quantity": 1,
+      "unitPrice": 50000.00,
+      "reason": "Unused product"
+    }
+  ]
+}
+```
+
+**Permission:** `POS_RETURN_CREATE`
+
+---
+
+#### POST /pos/transactions/{id}/return
+Create a return from an existing transaction.
+
+**Permission:** `POS_RETURN_CREATE`
+
+---
+
+### Product Import/Export APIs
+
+#### POST /inventory/products/import/csv
+Import products from CSV file.
+
+**Content-Type:** `multipart/form-data`
+
+**Form Data:**
+| Field | Type | Description |
+|-------|------|-------------|
+| file | file | CSV file |
+
+**Permission:** `INVENTORY_PRODUCT_CREATE`
+
+---
+
+#### POST /inventory/products/import/excel
+Import products from Excel file.
+
+**Content-Type:** `multipart/form-data`
+
+**Permission:** `INVENTORY_PRODUCT_CREATE`
+
+---
+
+#### GET /inventory/products/export/csv
+Export products to CSV.
+
+**Permission:** `INVENTORY_PRODUCT_READ`
+
+---
+
+#### GET /inventory/products/export/excel
+Export products to Excel.
+
+**Permission:** `INVENTORY_PRODUCT_READ`
+
+---
+
+#### GET /inventory/products/import/template/csv
+Download CSV import template.
+
+---
+
+#### GET /inventory/products/import/template/excel
+Download Excel import template.
+
+---
+
+### Product Variant APIs
+
+#### GET /inventory/products/{productId}/variants
+Get all variants for a product.
+
+**Permission:** `INVENTORY_PRODUCT_READ`
+
+---
+
+#### POST /inventory/products/{productId}/variants
+Add a variant to a product.
+
+**Request:**
+```json
+{
+  "sku": null,
+  "barcode": null,
+  "name": "256GB Space Black",
+  "option1Name": "Storage",
+  "option1Value": "256GB",
+  "option2Name": "Color",
+  "option2Value": "Space Black",
+  "costPrice": 999.00,
+  "sellingPrice": 1299.00,
+  "active": true
+}
+```
+
+**Permission:** `INVENTORY_PRODUCT_CREATE`
+
+---
+
+#### PUT /inventory/products/{productId}/variants/{variantId}
+Update a product variant.
+
+**Permission:** `INVENTORY_PRODUCT_UPDATE`
+
+---
+
+#### DELETE /inventory/products/{productId}/variants/{variantId}
+Delete a product variant.
+
+**Permission:** `INVENTORY_PRODUCT_DELETE`
+
+---
+
+### Chart of Accounts Import API
+
+#### POST /finance/accounts/import
+Import chart of accounts from CSV.
+
+**Content-Type:** `multipart/form-data`
+
+**Permission:** `FINANCE_GL_MANAGE`
+
+---
+
+#### POST /finance/accounts/generate-default
+Generate a default chart of accounts.
+
+**Permission:** `FINANCE_GL_MANAGE`
+
+---
+
+### Recurring Journal Frequency Enum
+- `DAILY` - Run every day
+- `WEEKLY` - Run every week
+- `BIWEEKLY` - Run every two weeks
+- `MONTHLY` - Run every month
+- `QUARTERLY` - Run every quarter
+- `SEMIANNUALLY` - Run twice a year
+- `ANNUALLY` - Run once a year
+
+### POS Return Refund Methods
+- `CASH` - Cash refund
+- `CARD` - Card refund
+- `STORE_CREDIT` - Store credit
+- `ORIGINAL_PAYMENT_METHOD` - Refund to original payment method

@@ -26,20 +26,20 @@ public class RecurringJournalController {
     private final RecurringJournalService recurringJournalService;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('FINANCE_GL_VIEW')")
+    @PreAuthorize("hasAuthority('FINANCE_RECURRING_VIEW')")
     public ResponseEntity<PageResponse<RecurringJournalTemplateDto>> getTemplates(
             @PageableDefault(sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(recurringJournalService.getTemplates(pageable));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('FINANCE_GL_VIEW')")
+    @PreAuthorize("hasAuthority('FINANCE_RECURRING_VIEW')")
     public ResponseEntity<RecurringJournalTemplateDto> getTemplate(@PathVariable Long id) {
         return ResponseEntity.ok(recurringJournalService.getTemplate(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('FINANCE_GL_POST')")
+    @PreAuthorize("hasAuthority('FINANCE_RECURRING_MANAGE')")
     public ResponseEntity<RecurringJournalTemplateDto> createTemplate(
             @Valid @RequestBody RecurringJournalTemplateDto request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -47,7 +47,7 @@ public class RecurringJournalController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('FINANCE_GL_POST')")
+    @PreAuthorize("hasAuthority('FINANCE_RECURRING_MANAGE')")
     public ResponseEntity<RecurringJournalTemplateDto> updateTemplate(
             @PathVariable Long id,
             @Valid @RequestBody RecurringJournalTemplateDto request) {
@@ -55,26 +55,26 @@ public class RecurringJournalController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('FINANCE_GL_POST')")
+    @PreAuthorize("hasAuthority('FINANCE_RECURRING_MANAGE')")
     public ResponseEntity<Void> deleteTemplate(@PathVariable Long id) {
         recurringJournalService.deleteTemplate(id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/activate")
-    @PreAuthorize("hasAuthority('FINANCE_GL_POST')")
+    @PreAuthorize("hasAuthority('FINANCE_RECURRING_MANAGE')")
     public ResponseEntity<RecurringJournalTemplateDto> activateTemplate(@PathVariable Long id) {
         return ResponseEntity.ok(recurringJournalService.activateTemplate(id));
     }
 
     @PutMapping("/{id}/deactivate")
-    @PreAuthorize("hasAuthority('FINANCE_GL_POST')")
+    @PreAuthorize("hasAuthority('FINANCE_RECURRING_MANAGE')")
     public ResponseEntity<RecurringJournalTemplateDto> deactivateTemplate(@PathVariable Long id) {
         return ResponseEntity.ok(recurringJournalService.deactivateTemplate(id));
     }
 
     @PostMapping("/{id}/execute")
-    @PreAuthorize("hasAuthority('FINANCE_GL_POST')")
+    @PreAuthorize("hasAuthority('FINANCE_RECURRING_MANAGE')")
     public ResponseEntity<Map<String, Long>> executeTemplate(@PathVariable Long id) {
         Long journalId = recurringJournalService.executeTemplate(id);
         return ResponseEntity.ok(Map.of("journalEntryId", journalId));

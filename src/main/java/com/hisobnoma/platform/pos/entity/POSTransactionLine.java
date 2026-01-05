@@ -95,6 +95,9 @@ public class POSTransactionLine extends BaseEntity {
     @Column(name = "original_line_id")
     private Long originalLineId;
 
+    @Column(name = "return_reason", length = 500)
+    private String returnReason;
+
     @Column(name = "serial_number", length = 100)
     private String serialNumber;
 
