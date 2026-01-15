@@ -13,8 +13,8 @@ export const useAuthStore = defineStore('auth', () => {
   const userRoles = computed(() => user.value?.roles || [])
 
   function hasPermission(permission) {
-    // SUPER_ADMIN has all permissions
-    if (userRoles.value.includes('SUPER_ADMIN')) {
+    // SUPER_ADMIN and ADMIN have all permissions
+    if (userRoles.value.includes('SUPER_ADMIN') || userRoles.value.includes('ADMIN')) {
       return true
     }
     return userPermissions.value.includes(permission)
