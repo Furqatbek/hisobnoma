@@ -35,12 +35,21 @@ const payment = reactive({
   received: 0
 })
 
+// Tax settings - can be manually controlled
+const taxRate = ref(0) // 0% tax by default
+const showNewCustomerModal = ref(false)
+const newCustomer = reactive({
+  name: '',
+  phone: '',
+  email: ''
+})
+
 // Computed
 const subtotal = computed(() => {
   return cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 })
 
-const tax = computed(() => subtotal.value * 0.12) // 12% tax
+const tax = computed(() => subtotal.value * (taxRate.value / 100))
 const total = computed(() => subtotal.value + tax.value)
 const change = computed(() => Math.max(0, payment.received - total.value))
 
@@ -178,9 +187,35 @@ function clearCart() {
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(value || 0)
+}
+
+async function createQuickCustomer() {
+  if (!newCustomer.name?.trim()) {
+    alert('Customer name is required')
+    return
+  }
+
+  try {
+    const response = await customersApi.create({
+      name: newCustomer.name,
+      phone: newCustomer.phone || null,
+      email: newCustomer.email || null,
+      code: 'CUST-' + Date.now()
+    })
+    const customer = response.data.data || response.data
+    cart.customerId = customer.id
+    cart.customerName = customer.name
+    showNewCustomerModal.value = false
+    newCustomer.name = ''
+    newCustomer.phone = ''
+    newCustomer.email = ''
+  } catch (error) {
+    console.error('Failed to create customer:', error)
+    alert('Failed to create customer: ' + (error.response?.data?.message || error.message))
+  }
 }
 
 // Handle barcode scanner input
@@ -299,14 +334,23 @@ onMounted(() => {
               <XMarkIcon class="h-4 w-4" />
             </button>
           </div>
-          <button
-            v-else
-            @click="showCustomerModal = true"
-            class="flex items-center text-primary-600 hover:text-primary-700 text-sm"
-          >
-            <PlusIcon class="h-4 w-4 mr-1" />
-            Add Customer
-          </button>
+          <div v-else class="flex items-center gap-2">
+            <button
+              @click="showCustomerModal = true"
+              class="flex items-center text-primary-600 hover:text-primary-700 text-sm"
+            >
+              <MagnifyingGlassIcon class="h-4 w-4 mr-1" />
+              Find Customer
+            </button>
+            <span class="text-gray-300">|</span>
+            <button
+              @click="showNewCustomerModal = true"
+              class="flex items-center text-green-600 hover:text-green-700 text-sm"
+            >
+              <PlusIcon class="h-4 w-4 mr-1" />
+              Quick Add
+            </button>
+          </div>
         </div>
 
         <!-- Cart Items -->
@@ -358,8 +402,19 @@ onMounted(() => {
             <span class="text-gray-500">Subtotal</span>
             <span>{{ formatCurrency(subtotal) }}</span>
           </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-500">Tax (12%)</span>
+          <div class="flex justify-between items-center text-sm">
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500">Tax</span>
+              <input
+                v-model.number="taxRate"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                class="w-16 px-2 py-1 text-xs border rounded"
+              />
+              <span class="text-gray-400 text-xs">%</span>
+            </div>
             <span>{{ formatCurrency(tax) }}</span>
           </div>
           <div class="flex justify-between text-lg font-bold pt-2 border-t">
@@ -484,6 +539,41 @@ onMounted(() => {
           <button @click="showCustomerModal = false" class="btn-secondary w-full mt-4">
             Cancel
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Add Customer Modal -->
+    <div v-if="showNewCustomerModal" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showNewCustomerModal = false"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Quick Add Customer</h3>
+
+          <div class="space-y-4">
+            <div>
+              <label class="label">Name *</label>
+              <input v-model="newCustomer.name" type="text" class="input" placeholder="Customer name" />
+            </div>
+            <div>
+              <label class="label">Phone</label>
+              <input v-model="newCustomer.phone" type="text" class="input" placeholder="Phone number" />
+            </div>
+            <div>
+              <label class="label">Email</label>
+              <input v-model="newCustomer.email" type="email" class="input" placeholder="Email address" />
+            </div>
+          </div>
+
+          <div class="flex space-x-3 mt-6">
+            <button @click="showNewCustomerModal = false" class="btn-secondary flex-1">
+              Cancel
+            </button>
+            <button @click="createQuickCustomer" class="btn-primary flex-1">
+              <PlusIcon class="h-5 w-5 mr-2" />
+              Create & Select
+            </button>
+          </div>
         </div>
       </div>
     </div>

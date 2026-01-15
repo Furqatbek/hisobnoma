@@ -43,6 +43,27 @@ public class UserPrincipal implements UserDetails {
         user.getRoles().forEach(role ->
                 authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getCode())));
 
+        // SUPER_ADMIN gets all permissions
+        boolean isSuperAdmin = user.getRoles().stream()
+                .anyMatch(role -> "SUPER_ADMIN".equals(role.getCode()));
+        if (isSuperAdmin) {
+            // Grant all report permissions
+            authorities.add(new SimpleGrantedAuthority("REPORT_VIEW"));
+            authorities.add(new SimpleGrantedAuthority("REPORT_INVENTORY_VIEW"));
+            authorities.add(new SimpleGrantedAuthority("REPORT_SALES_VIEW"));
+            authorities.add(new SimpleGrantedAuthority("REPORT_FINANCIAL_VIEW"));
+            authorities.add(new SimpleGrantedAuthority("REPORT_SCHEDULE_VIEW"));
+            authorities.add(new SimpleGrantedAuthority("REPORT_SCHEDULE_MANAGE"));
+            // Grant all admin permissions
+            authorities.add(new SimpleGrantedAuthority("USER_VIEW"));
+            authorities.add(new SimpleGrantedAuthority("USER_CREATE"));
+            authorities.add(new SimpleGrantedAuthority("USER_UPDATE"));
+            authorities.add(new SimpleGrantedAuthority("USER_DELETE"));
+            authorities.add(new SimpleGrantedAuthority("AUDIT_LOG_VIEW"));
+            authorities.add(new SimpleGrantedAuthority("SETTINGS_VIEW"));
+            authorities.add(new SimpleGrantedAuthority("SETTINGS_MANAGE"));
+        }
+
         return new UserPrincipal(
                 user.getId(),
                 user.getUsername(),

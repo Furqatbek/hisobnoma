@@ -11,11 +11,20 @@ const editingWarehouse = ref(null)
 const form = reactive({
   name: '',
   code: '',
+  locationType: 'WAREHOUSE',
   address: '',
   phone: '',
   isDefault: false,
   active: true
 })
+
+const locationTypes = [
+  { value: 'WAREHOUSE', label: 'Warehouse' },
+  { value: 'STORE', label: 'Store' },
+  { value: 'VIRTUAL', label: 'Virtual' },
+  { value: 'ZONE', label: 'Zone' },
+  { value: 'BIN', label: 'Bin' }
+]
 
 const errors = reactive({})
 
@@ -41,6 +50,7 @@ function openModal(warehouse = null) {
   } else {
     form.name = ''
     form.code = ''
+    form.locationType = 'WAREHOUSE'
     form.address = ''
     form.phone = ''
     form.isDefault = false
@@ -157,6 +167,14 @@ async function deleteWarehouse(warehouse) {
             <div>
               <label class="label">Code *</label>
               <input v-model="form.code" type="text" :class="[errors.code ? 'input-error' : 'input']" />
+            </div>
+            <div>
+              <label class="label">Type *</label>
+              <select v-model="form.locationType" class="input">
+                <option v-for="type in locationTypes" :key="type.value" :value="type.value">
+                  {{ type.label }}
+                </option>
+              </select>
             </div>
             <div>
               <label class="label">Address</label>

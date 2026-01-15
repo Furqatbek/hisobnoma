@@ -120,6 +120,21 @@ export const brandsApi = {
   delete: (id) => api.delete(`/inventory/brands/${id}`)
 }
 
+// Unit of Measure API - Backend: /api/v1/inventory/uom
+export const uomApi = {
+  getAll: () => api.get('/inventory/uom'),
+  getPaginated: (params) => api.get('/inventory/uom/paginated', { params }),
+  getActive: () => api.get('/inventory/uom/active'),
+  getBase: () => api.get('/inventory/uom/base'),
+  getById: (id) => api.get(`/inventory/uom/${id}`),
+  getByCode: (code) => api.get(`/inventory/uom/code/${code}`),
+  search: (query) => api.get('/inventory/uom/search', { params: { q: query } }),
+  create: (data) => api.post('/inventory/uom', data),
+  update: (id, data) => api.put(`/inventory/uom/${id}`, data),
+  delete: (id) => api.delete(`/inventory/uom/${id}`),
+  convert: (quantity, fromUomId, toUomId) => api.get('/inventory/uom/convert', { params: { quantity, fromUomId, toUomId } })
+}
+
 // Stock API - Backend: /api/v1/inventory/stock
 export const stockApi = {
   getAll: (params) => api.get('/inventory/stock', { params }),

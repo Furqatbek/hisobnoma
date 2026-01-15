@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { productsApi, categoriesApi, brandsApi } from '@/services/api'
+import { productsApi, categoriesApi, brandsApi, uomApi } from '@/services/api'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
@@ -13,6 +13,7 @@ const saving = ref(false)
 
 const categories = ref([])
 const brands = ref([])
+const uoms = ref([])
 
 const form = reactive({
   sku: '',
@@ -21,6 +22,7 @@ const form = reactive({
   description: '',
   categoryId: null,
   brandId: null,
+  baseUomId: null,
   costPrice: 0,
   sellingPrice: 0,
   minSellingPrice: null,
@@ -40,14 +42,16 @@ const errors = reactive({})
 onMounted(async () => {
   loading.value = true
   try {
-    const [categoriesRes, brandsRes] = await Promise.all([
+    const [categoriesRes, brandsRes, uomsRes] = await Promise.all([
       categoriesApi.getAll(),
-      brandsApi.getAll()
+      brandsApi.getAll(),
+      uomApi.getAll()
     ])
 
     // Backend returns a list directly (not paginated)
     categories.value = categoriesRes.data.data || categoriesRes.data || []
     brands.value = brandsRes.data.data || brandsRes.data || []
+    uoms.value = uomsRes.data.data || uomsRes.data || []
 
     if (isEdit.value) {
       const productRes = await productsApi.getById(route.params.id)
@@ -55,6 +59,7 @@ onMounted(async () => {
       Object.assign(form, productData)
       form.categoryId = productData.category?.id || productData.categoryId
       form.brandId = productData.brand?.id || productData.brandId
+      form.baseUomId = productData.baseUom?.id || productData.baseUomId
     }
   } catch (error) {
     console.error('Failed to load data:', error)
@@ -68,6 +73,7 @@ function validate() {
 
   if (!form.sku?.trim()) errors.sku = 'SKU is required'
   if (!form.name?.trim()) errors.name = 'Name is required'
+  if (!form.baseUomId) errors.baseUomId = 'Unit of Measure is required'
   if (form.sellingPrice <= 0) errors.sellingPrice = 'Selling price must be greater than 0'
 
   return Object.keys(errors).length === 0
@@ -168,6 +174,17 @@ async function handleSubmit() {
                 {{ brand.name }}
               </option>
             </select>
+          </div>
+
+          <div>
+            <label class="label">Unit of Measure *</label>
+            <select v-model="form.baseUomId" :class="[errors.baseUomId ? 'input-error' : 'input']">
+              <option :value="null">Select UOM</option>
+              <option v-for="uom in uoms" :key="uom.id" :value="uom.id">
+                {{ uom.name }} ({{ uom.code }})
+              </option>
+            </select>
+            <p v-if="errors.baseUomId" class="mt-1 text-sm text-red-600">{{ errors.baseUomId }}</p>
           </div>
         </div>
       </div>
