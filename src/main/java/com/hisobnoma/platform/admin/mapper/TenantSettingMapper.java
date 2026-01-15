@@ -5,6 +5,7 @@ import com.hisobnoma.platform.admin.entity.TenantSetting;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.Named;
 
 import java.util.List;
 
@@ -12,7 +13,7 @@ import java.util.List;
 public interface TenantSettingMapper {
 
     @Mapping(target = "settingValue", expression = "java(entity.isSensitive() ? \"********\" : entity.getSettingValue())")
-    @Mapping(target = "systemSettingId", source = "systemSetting.id")
+    @Mapping(target = "systemSettingId", source = "entity", qualifiedByName = "mapSystemSettingId")
     TenantSettingDTO toDto(TenantSetting entity);
 
     List<TenantSettingDTO> toDtoList(List<TenantSetting> entities);
@@ -35,5 +36,11 @@ public interface TenantSettingMapper {
     @Mapping(target = "tenantId", ignore = true)
     @Mapping(target = "settingKey", ignore = true)
     @Mapping(target = "systemSetting", ignore = true)
+    @Mapping(target = "settingValue", ignore = true) // Prevent masked values from being saved
     void updateEntity(TenantSettingDTO dto, @MappingTarget TenantSetting entity);
+
+    @Named("mapSystemSettingId")
+    default Long mapSystemSettingId(TenantSetting entity) {
+        return entity != null && entity.getSystemSetting() != null ? entity.getSystemSetting().getId() : null;
+    }
 }

@@ -2887,3 +2887,434 @@ Generate a default chart of accounts.
 - `CARD` - Card refund
 - `STORE_CREDIT` - Store credit
 - `ORIGINAL_PAYMENT_METHOD` - Refund to original payment method
+
+---
+
+## Admin Dashboard APIs (Block 12)
+
+Admin dashboard provides system configuration, audit logging, and business overview functionality.
+
+---
+
+### Dashboard Statistics
+
+#### GET /admin/dashboard/stats
+Get comprehensive dashboard statistics and metrics.
+
+**Permission:** `ADMIN_DASHBOARD_VIEW`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalUsers": 50,
+    "activeUsers": 45,
+    "newUsersToday": 2,
+    "newUsersThisWeek": 8,
+    "newUsersThisMonth": 15,
+    "totalAuditLogsToday": 250,
+    "failedLoginsToday": 3,
+    "moduleActivities": [
+      {"module": "INVENTORY", "activityCount": 120},
+      {"module": "POS", "activityCount": 85},
+      {"module": "FINANCE", "activityCount": 45}
+    ],
+    "topActiveUsers": [
+      {"userId": 1, "username": "admin", "activityCount": 150},
+      {"userId": 2, "username": "cashier1", "activityCount": 89}
+    ],
+    "recentActivities": [
+      {
+        "description": "Created new product",
+        "action": "CREATE",
+        "entityType": "Product",
+        "username": "admin",
+        "timestamp": "2026-01-15T10:30:00Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### System Settings APIs
+
+System settings are global configurations that apply across all tenants.
+
+#### GET /admin/settings/system
+Get all active system settings.
+
+**Permission:** `ADMIN_SETTINGS_VIEW`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "settingKey": "session.timeout.minutes",
+      "settingValue": "30",
+      "defaultValue": "30",
+      "description": "Session timeout in minutes",
+      "category": "SECURITY",
+      "valueType": "INTEGER",
+      "sensitive": false,
+      "readonly": false,
+      "active": true
+    }
+  ]
+}
+```
+
+---
+
+#### GET /admin/settings/system/categories
+Get distinct setting categories.
+
+**Permission:** `ADMIN_SETTINGS_VIEW`
+
+---
+
+#### GET /admin/settings/system/category/{category}
+Get settings by category.
+
+**Permission:** `ADMIN_SETTINGS_VIEW`
+
+---
+
+#### GET /admin/settings/system/{key}
+Get a specific system setting by key.
+
+**Permission:** `ADMIN_SETTINGS_VIEW`
+
+---
+
+#### POST /admin/settings/system
+Create a new system setting.
+
+**Request:**
+```json
+{
+  "settingKey": "custom.feature.enabled",
+  "settingValue": "true",
+  "defaultValue": "false",
+  "description": "Enable custom feature",
+  "category": "FEATURES",
+  "valueType": "BOOLEAN",
+  "sensitive": false,
+  "readonly": false
+}
+```
+
+**Permission:** `ADMIN_SETTINGS_MANAGE`
+
+---
+
+#### PUT /admin/settings/system/{key}
+Update a system setting.
+
+**Permission:** `ADMIN_SETTINGS_MANAGE`
+
+---
+
+#### PUT /admin/settings/system/{key}/value
+Update only the value of a system setting.
+
+**Request:**
+```json
+{
+  "value": "60"
+}
+```
+
+**Permission:** `ADMIN_SETTINGS_MANAGE`
+
+---
+
+#### PUT /admin/settings/system/batch
+Batch update multiple settings.
+
+**Request:**
+```json
+{
+  "session.timeout.minutes": "60",
+  "login.max.attempts": "3"
+}
+```
+
+**Permission:** `ADMIN_SETTINGS_MANAGE`
+
+---
+
+#### DELETE /admin/settings/system/{key}
+Deactivate a system setting.
+
+**Permission:** `ADMIN_SETTINGS_MANAGE`
+
+---
+
+### Tenant Settings APIs
+
+Tenant settings override system defaults for specific tenants.
+
+#### GET /admin/settings/tenant
+Get all tenant settings for the current tenant.
+
+**Permission:** `TENANT_SETTINGS_VIEW`
+
+---
+
+#### GET /admin/settings/tenant/categories
+Get distinct categories for tenant settings.
+
+**Permission:** `TENANT_SETTINGS_VIEW`
+
+---
+
+#### GET /admin/settings/tenant/category/{category}
+Get tenant settings by category.
+
+**Permission:** `TENANT_SETTINGS_VIEW`
+
+---
+
+#### POST /admin/settings/tenant
+Create a tenant-specific setting.
+
+**Request:**
+```json
+{
+  "settingKey": "pos.receipt.footer",
+  "settingValue": "Thank you for shopping at Our Store!",
+  "description": "Custom receipt footer",
+  "category": "POS",
+  "valueType": "STRING"
+}
+```
+
+**Permission:** `TENANT_SETTINGS_MANAGE`
+
+---
+
+#### PUT /admin/settings/tenant/{key}
+Update a tenant setting.
+
+**Permission:** `TENANT_SETTINGS_MANAGE`
+
+---
+
+#### PUT /admin/settings/tenant/{key}/value
+Update only the value of a tenant setting.
+
+**Permission:** `TENANT_SETTINGS_MANAGE`
+
+---
+
+#### PUT /admin/settings/tenant/batch
+Batch update multiple tenant settings.
+
+**Permission:** `TENANT_SETTINGS_MANAGE`
+
+---
+
+#### GET /admin/settings/tenant/map
+Get all tenant settings as a key-value map.
+
+**Permission:** `TENANT_SETTINGS_VIEW`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "pos.receipt.footer": "Thank you for shopping!",
+    "inventory.low.stock.threshold": "15"
+  }
+}
+```
+
+---
+
+### Audit Log APIs
+
+Audit logs track all system activities for compliance and debugging.
+
+#### GET /admin/audit-logs
+Get paginated audit logs.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| page | int | 0 | Page number |
+| size | int | 20 | Page size |
+| sort | string | actionTimestamp,desc | Sort field and direction |
+
+**Permission:** `ADMIN_AUDIT_VIEW`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": 1,
+        "tenantId": 1,
+        "userId": 1,
+        "username": "admin",
+        "userFullName": "Admin User",
+        "action": "CREATE",
+        "entityType": "Product",
+        "entityId": 100,
+        "entityName": "iPhone 15 Pro",
+        "module": "INVENTORY",
+        "description": "Created new product",
+        "ipAddress": "192.168.1.100",
+        "actionTimestamp": "2026-01-15T10:30:00Z",
+        "success": true
+      }
+    ],
+    "totalElements": 1000,
+    "totalPages": 50
+  }
+}
+```
+
+---
+
+#### GET /admin/audit-logs/user/{userId}
+Get audit logs for a specific user.
+
+**Permission:** `ADMIN_AUDIT_VIEW`
+
+---
+
+#### GET /admin/audit-logs/entity/{entityType}/{entityId}
+Get audit logs for a specific entity.
+
+**Permission:** `ADMIN_AUDIT_VIEW`
+
+---
+
+#### GET /admin/audit-logs/action/{action}
+Get audit logs by action type.
+
+**Action Types:** `CREATE`, `READ`, `UPDATE`, `DELETE`, `LOGIN`, `LOGOUT`, `LOGIN_FAILED`, `PASSWORD_CHANGE`, `PERMISSION_CHANGE`, `EXPORT`, `IMPORT`, `APPROVE`, `REJECT`, `SUBMIT`, `CANCEL`, `ACTIVATE`, `DEACTIVATE`, `TRANSFER`, `ADJUSTMENT`, `CUSTOM`
+
+**Permission:** `ADMIN_AUDIT_VIEW`
+
+---
+
+#### GET /admin/audit-logs/module/{module}
+Get audit logs for a specific module.
+
+**Permission:** `ADMIN_AUDIT_VIEW`
+
+---
+
+#### GET /admin/audit-logs/date-range
+Get audit logs within a date range.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| startDate | datetime | Yes | Start date (ISO format) |
+| endDate | datetime | Yes | End date (ISO format) |
+
+**Permission:** `ADMIN_AUDIT_VIEW`
+
+---
+
+#### GET /admin/audit-logs/failed
+Get audit logs for failed actions.
+
+**Permission:** `ADMIN_AUDIT_VIEW`
+
+---
+
+#### GET /admin/audit-logs/stats/actions
+Get action count statistics.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| days | int | 7 | Number of days to look back |
+
+**Permission:** `ADMIN_AUDIT_VIEW`
+
+---
+
+#### GET /admin/audit-logs/stats/modules
+Get activity count by module.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| days | int | 7 | Number of days to look back |
+
+**Permission:** `ADMIN_AUDIT_VIEW`
+
+---
+
+#### GET /admin/audit-logs/stats/users
+Get most active users by audit log count.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| days | int | 7 | Number of days to look back |
+
+**Permission:** `ADMIN_AUDIT_VIEW`
+
+---
+
+#### GET /admin/audit-logs/stats/failed-logins
+Get count of failed login attempts.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| hours | int | 24 | Number of hours to look back |
+
+**Permission:** `ADMIN_AUDIT_VIEW`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "count": 5
+  }
+}
+```
+
+---
+
+### Admin Permissions Summary
+
+| Permission | Description |
+|------------|-------------|
+| ADMIN_DASHBOARD_VIEW | View admin dashboard and statistics |
+| ADMIN_SETTINGS_VIEW | View system settings |
+| ADMIN_SETTINGS_MANAGE | Create, update, delete system settings |
+| TENANT_SETTINGS_VIEW | View tenant settings |
+| TENANT_SETTINGS_MANAGE | Create, update, delete tenant settings |
+| ADMIN_AUDIT_VIEW | View audit logs |
+| ADMIN_AUDIT_EXPORT | Export audit logs |
+| ADMIN_HEALTH_VIEW | View system health and monitoring |
+
+---
+
+### Setting Value Types
+
+- `STRING` - Text value
+- `INTEGER` - Whole number
+- `DECIMAL` - Decimal number
+- `BOOLEAN` - True/false value
+- `JSON` - JSON object or array
+- `ENUM` - Predefined options
+- `DATE` - Date value
+- `DATETIME` - Date and time value

@@ -4684,6 +4684,526 @@
         }
       ],
       "description": "Chart of accounts bulk import and export functionality."
+    },
+    {
+      "name": "Admin - Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "dashboard", "stats"]
+            },
+            "description": "Get comprehensive dashboard statistics including user counts, system health, activity metrics, and storage usage. Requires ADMIN_DASHBOARD_VIEW permission."
+          },
+          "response": []
+        }
+      ],
+      "description": "Admin dashboard for system-wide statistics and monitoring."
+    },
+    {
+      "name": "Admin - System Settings",
+      "item": [
+        {
+          "name": "Get All System Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/system",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "system"]
+            },
+            "description": "Get all active system settings. Requires ADMIN_SETTINGS_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Setting Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/system/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "system", "categories"]
+            },
+            "description": "Get all distinct setting categories."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Settings by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/system/category/security",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "system", "category", "security"]
+            },
+            "description": "Get all settings for a specific category."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Setting by Key",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/system/session.timeout.minutes",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "system", "session.timeout.minutes"]
+            },
+            "description": "Get a specific setting by its key."
+          },
+          "response": []
+        },
+        {
+          "name": "Create System Setting",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"settingKey\": \"custom.setting.name\",\n  \"settingValue\": \"value\",\n  \"valueType\": \"STRING\",\n  \"category\": \"custom\",\n  \"description\": \"Custom setting description\",\n  \"sensitive\": false,\n  \"allowTenantOverride\": true,\n  \"validationRegex\": null,\n  \"validationMessage\": null,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/system",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "system"]
+            },
+            "description": "Create a new system setting. Requires ADMIN_SETTINGS_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Update System Setting",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"settingValue\": \"updated_value\",\n  \"description\": \"Updated description\",\n  \"allowTenantOverride\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/system/custom.setting.name",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "system", "custom.setting.name"]
+            },
+            "description": "Update an existing system setting."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Setting Value Only",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"new_value\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/system/custom.setting.name/value",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "system", "custom.setting.name", "value"]
+            },
+            "description": "Update only the value of a setting."
+          },
+          "response": []
+        },
+        {
+          "name": "Batch Update Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session.timeout.minutes\": \"60\",\n  \"password.min.length\": \"10\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/system/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "system", "batch"]
+            },
+            "description": "Update multiple settings at once."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete System Setting",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/system/custom.setting.name",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "system", "custom.setting.name"]
+            },
+            "description": "Deactivate a system setting."
+          },
+          "response": []
+        }
+      ],
+      "description": "System-wide configuration settings management."
+    },
+    {
+      "name": "Admin - Tenant Settings",
+      "item": [
+        {
+          "name": "Get All Tenant Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/tenant",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "tenant"]
+            },
+            "description": "Get all active tenant settings. Requires TENANT_SETTINGS_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tenant Setting Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/tenant/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "tenant", "categories"]
+            },
+            "description": "Get all distinct setting categories for the tenant."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tenant Settings by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/tenant/category/branding",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "tenant", "category", "branding"]
+            },
+            "description": "Get all tenant settings for a specific category."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Tenant Setting",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"settingKey\": \"branding.company.name\",\n  \"settingValue\": \"My Company\",\n  \"systemSettingId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/tenant",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "tenant"]
+            },
+            "description": "Create a new tenant-specific setting. Requires TENANT_SETTINGS_MANAGE permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Tenant Setting",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"settingValue\": \"Updated Company Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/tenant/branding.company.name",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "tenant", "branding.company.name"]
+            },
+            "description": "Update an existing tenant setting."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Tenant Setting Value",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"New Company Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/tenant/branding.company.name/value",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "tenant", "branding.company.name", "value"]
+            },
+            "description": "Update only the value of a tenant setting."
+          },
+          "response": []
+        },
+        {
+          "name": "Batch Update Tenant Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branding.company.name\": \"New Name\",\n  \"branding.theme.color\": \"#336699\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/tenant/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "tenant", "batch"]
+            },
+            "description": "Update multiple tenant settings at once."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Settings as Map",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/tenant/map",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "tenant", "map"]
+            },
+            "description": "Get all tenant settings as a key-value map."
+          },
+          "response": []
+        }
+      ],
+      "description": "Tenant-specific configuration settings management."
+    },
+    {
+      "name": "Admin - Audit Logs",
+      "item": [
+        {
+          "name": "Get Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get paginated list of audit logs. Requires ADMIN_AUDIT_VIEW permission."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit Logs by User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs/user/1?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs", "user", "1"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get audit logs for a specific user."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit Logs by Entity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs/entity/Product/100?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs", "entity", "Product", "100"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get audit logs for a specific entity type and ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit Logs by Action",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs/action/CREATE?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs", "action", "CREATE"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get audit logs for a specific action type (CREATE, UPDATE, DELETE, VIEW, LOGIN, LOGOUT, etc.)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit Logs by Module",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs/module/inventory?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs", "module", "inventory"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get audit logs for a specific module."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit Logs by Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs/date-range?startDate=2026-01-01T00:00:00Z&endDate=2026-01-31T23:59:59Z&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs", "date-range"],
+              "query": [
+                { "key": "startDate", "value": "2026-01-01T00:00:00Z" },
+                { "key": "endDate", "value": "2026-01-31T23:59:59Z" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get audit logs within a date range."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Failed Actions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs/failed?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs", "failed"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get audit logs for failed actions."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Action Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs/stats/actions?days=7",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs", "stats", "actions"],
+              "query": [
+                { "key": "days", "value": "7" }
+              ]
+            },
+            "description": "Get action count statistics for the specified number of days."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Module Activity Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs/stats/modules?days=7",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs", "stats", "modules"],
+              "query": [
+                { "key": "days", "value": "7" }
+              ]
+            },
+            "description": "Get activity count by module."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Most Active Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs/stats/users?days=7",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs", "stats", "users"],
+              "query": [
+                { "key": "days", "value": "7" }
+              ]
+            },
+            "description": "Get most active users by audit log count."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Failed Login Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs/stats/failed-logins?hours=24",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs", "stats", "failed-logins"],
+              "query": [
+                { "key": "hours", "value": "24" }
+              ]
+            },
+            "description": "Get count of failed login attempts in the specified number of hours."
+          },
+          "response": []
+        }
+      ],
+      "description": "Audit trail and activity logging APIs for compliance and security monitoring."
     }
   ]
 }

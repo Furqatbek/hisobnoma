@@ -31,5 +31,6 @@ public interface SystemSettingMapper {
     @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "version", ignore = true)
     @Mapping(target = "settingKey", ignore = true)
+    @Mapping(target = "settingValue", ignore = true) // Prevent masked values from being saved
     void updateEntity(SystemSettingDTO dto, @MappingTarget SystemSetting entity);
 }
