@@ -41,18 +41,20 @@ onMounted(async () => {
   loading.value = true
   try {
     const [categoriesRes, brandsRes] = await Promise.all([
-      categoriesApi.getAll({ size: 100 }),
-      brandsApi.getAll({ size: 100 })
+      categoriesApi.getAll(),
+      brandsApi.getAll()
     ])
 
-    categories.value = categoriesRes.data.content || []
-    brands.value = brandsRes.data.content || []
+    // Backend returns a list directly (not paginated)
+    categories.value = categoriesRes.data.data || categoriesRes.data || []
+    brands.value = brandsRes.data.data || brandsRes.data || []
 
     if (isEdit.value) {
       const productRes = await productsApi.getById(route.params.id)
-      Object.assign(form, productRes.data)
-      form.categoryId = productRes.data.category?.id
-      form.brandId = productRes.data.brand?.id
+      const productData = productRes.data.data || productRes.data
+      Object.assign(form, productData)
+      form.categoryId = productData.category?.id || productData.categoryId
+      form.brandId = productData.brand?.id || productData.brandId
     }
   } catch (error) {
     console.error('Failed to load data:', error)
