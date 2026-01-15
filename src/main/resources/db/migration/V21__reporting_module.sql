@@ -152,16 +152,16 @@ INSERT INTO report_export_formats (report_definition_id, format)
 SELECT id, 'CSV' FROM report_definitions WHERE code = 'AP_AGING';
 
 -- Insert reporting permissions
-INSERT INTO permissions (name, description, module, action) VALUES
-    ('REPORT_VIEW', 'View available reports', 'REPORTS', 'VIEW'),
-    ('REPORT_GENERATE', 'Generate reports', 'REPORTS', 'GENERATE'),
-    ('REPORT_EXPORT', 'Export reports', 'REPORTS', 'EXPORT'),
-    ('REPORT_SCHEDULE_VIEW', 'View report schedules', 'REPORTS', 'VIEW'),
-    ('REPORT_SCHEDULE_MANAGE', 'Manage report schedules', 'REPORTS', 'MANAGE'),
-    ('REPORT_INVENTORY_VIEW', 'View inventory reports', 'REPORTS', 'VIEW'),
-    ('REPORT_SALES_VIEW', 'View sales reports', 'REPORTS', 'VIEW'),
-    ('REPORT_FINANCIAL_VIEW', 'View financial reports', 'REPORTS', 'VIEW')
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name, code, description, module, action) VALUES
+    ('REPORT_VIEW', 'REPORT_VIEW', 'View available reports', 'REPORTS', 'VIEW'),
+    ('REPORT_GENERATE', 'REPORT_GENERATE', 'Generate reports', 'REPORTS', 'GENERATE'),
+    ('REPORT_EXPORT', 'REPORT_EXPORT', 'Export reports', 'REPORTS', 'EXPORT'),
+    ('REPORT_SCHEDULE_VIEW', 'REPORT_SCHEDULE_VIEW', 'View report schedules', 'REPORTS', 'VIEW'),
+    ('REPORT_SCHEDULE_MANAGE', 'REPORT_SCHEDULE_MANAGE', 'Manage report schedules', 'REPORTS', 'MANAGE'),
+    ('REPORT_INVENTORY_VIEW', 'REPORT_INVENTORY_VIEW', 'View inventory reports', 'REPORTS', 'VIEW'),
+    ('REPORT_SALES_VIEW', 'REPORT_SALES_VIEW', 'View sales reports', 'REPORTS', 'VIEW'),
+    ('REPORT_FINANCIAL_VIEW', 'REPORT_FINANCIAL_VIEW', 'View financial reports', 'REPORTS', 'VIEW')
+ON CONFLICT (code) DO NOTHING;
 
 -- Grant report permissions to admin role
 INSERT INTO role_permissions (role_id, permission_id)

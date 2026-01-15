@@ -130,7 +130,6 @@ POST /inventory/stock-on-hand
 **Request Body:**
 ```json
 {
-  "exportFormat": "JSON",
   "locationId": null,
   "categoryId": null
 }
@@ -194,6 +193,8 @@ POST /inventory/stock-on-hand/export
 }
 ```
 
+> **Note:** `exportFormat` is optional. Defaults to `EXCEL` if not provided.
+
 **Response:** Binary file download with appropriate Content-Type header.
 
 **Content-Type Values:**
@@ -215,7 +216,6 @@ POST /inventory/valuation
 **Request Body:**
 ```json
 {
-  "exportFormat": "JSON",
   "categoryId": null
 }
 ```
@@ -294,7 +294,6 @@ POST /sales/summary
 **Request Body:**
 ```json
 {
-  "exportFormat": "JSON",
   "startDate": "2026-01-01",
   "endDate": "2026-01-15",
   "locationId": null
@@ -396,7 +395,6 @@ POST /financial/trial-balance
 **Request Body:**
 ```json
 {
-  "exportFormat": "JSON",
   "endDate": "2026-01-15"
 }
 ```
@@ -470,7 +468,6 @@ POST /financial/ar-aging
 **Request Body:**
 ```json
 {
-  "exportFormat": "JSON",
   "endDate": "2026-01-15"
 }
 ```
@@ -540,7 +537,6 @@ POST /financial/ap-aging
 **Request Body:**
 ```json
 {
-  "exportFormat": "JSON",
   "endDate": "2026-01-15"
 }
 ```

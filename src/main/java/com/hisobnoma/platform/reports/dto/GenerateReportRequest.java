@@ -13,7 +13,7 @@ import java.util.Map;
 @AllArgsConstructor
 public class GenerateReportRequest {
 
-    @NotNull(message = "Export format is required")
+    // Export format - required only for export endpoints
     private ReportDefinition.ExportFormat exportFormat;
 
     private LocalDate startDate;

@@ -178,17 +178,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"locationId\": null,\n  \"categoryId\": null,\n  \"includeZeroStock\": false\n}"
+              "raw": "{\n  \"exportFormat\": \"EXCEL\",\n  \"locationId\": null,\n  \"categoryId\": null\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/reports/inventory/stock-on-hand/export?format=EXCEL",
+              "raw": "{{baseUrl}}/reports/inventory/stock-on-hand/export",
               "host": ["{{baseUrl}}"],
-              "path": ["reports", "inventory", "stock-on-hand", "export"],
-              "query": [
-                { "key": "format", "value": "EXCEL" }
-              ]
+              "path": ["reports", "inventory", "stock-on-hand", "export"]
             },
-            "description": "Export Stock on Hand report to specified format (EXCEL, CSV, JSON). Returns file download."
+            "description": "Export Stock on Hand report to specified format (EXCEL, CSV, JSON). exportFormat is optional, defaults to EXCEL."
           },
           "response": []
         },
@@ -204,17 +201,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"categoryId\": null,\n  \"valuationMethod\": \"AVERAGE_COST\"\n}"
+              "raw": "{\n  \"exportFormat\": \"CSV\",\n  \"categoryId\": null\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/reports/inventory/valuation/export?format=CSV",
+              "raw": "{{baseUrl}}/reports/inventory/valuation/export",
               "host": ["{{baseUrl}}"],
-              "path": ["reports", "inventory", "valuation", "export"],
-              "query": [
-                { "key": "format", "value": "CSV" }
-              ]
+              "path": ["reports", "inventory", "valuation", "export"]
             },
-            "description": "Export Inventory Valuation report to specified format (EXCEL, CSV, JSON)."
+            "description": "Export Inventory Valuation report to specified format (EXCEL, CSV, JSON). exportFormat is optional, defaults to EXCEL."
           },
           "response": []
         }
@@ -265,17 +259,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-01-15\",\n  \"locationId\": null\n}"
+              "raw": "{\n  \"exportFormat\": \"EXCEL\",\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-01-15\",\n  \"locationId\": null\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/reports/sales/summary/export?format=EXCEL",
+              "raw": "{{baseUrl}}/reports/sales/summary/export",
               "host": ["{{baseUrl}}"],
-              "path": ["reports", "sales", "summary", "export"],
-              "query": [
-                { "key": "format", "value": "EXCEL" }
-              ]
+              "path": ["reports", "sales", "summary", "export"]
             },
-            "description": "Export Sales Summary report to specified format."
+            "description": "Export Sales Summary report to specified format. exportFormat is optional, defaults to EXCEL."
           },
           "response": []
         }
@@ -386,17 +377,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"endDate\": \"2026-01-15\"\n}"
+              "raw": "{\n  \"exportFormat\": \"EXCEL\",\n  \"endDate\": \"2026-01-15\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/reports/financial/trial-balance/export?format=EXCEL",
+              "raw": "{{baseUrl}}/reports/financial/trial-balance/export",
               "host": ["{{baseUrl}}"],
-              "path": ["reports", "financial", "trial-balance", "export"],
-              "query": [
-                { "key": "format", "value": "EXCEL" }
-              ]
+              "path": ["reports", "financial", "trial-balance", "export"]
             },
-            "description": "Export Trial Balance report to specified format."
+            "description": "Export Trial Balance report to specified format. exportFormat is optional, defaults to EXCEL."
           },
           "response": []
         },
@@ -412,17 +400,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"endDate\": \"2026-01-15\"\n}"
+              "raw": "{\n  \"exportFormat\": \"EXCEL\",\n  \"endDate\": \"2026-01-15\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/reports/financial/ar-aging/export?format=EXCEL",
+              "raw": "{{baseUrl}}/reports/financial/ar-aging/export",
               "host": ["{{baseUrl}}"],
-              "path": ["reports", "financial", "ar-aging", "export"],
-              "query": [
-                { "key": "format", "value": "EXCEL" }
-              ]
+              "path": ["reports", "financial", "ar-aging", "export"]
             },
-            "description": "Export AR Aging report to specified format."
+            "description": "Export AR Aging report to specified format. exportFormat is optional, defaults to EXCEL."
           },
           "response": []
         },
@@ -438,17 +423,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"endDate\": \"2026-01-15\"\n}"
+              "raw": "{\n  \"exportFormat\": \"CSV\",\n  \"endDate\": \"2026-01-15\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/reports/financial/ap-aging/export?format=CSV",
+              "raw": "{{baseUrl}}/reports/financial/ap-aging/export",
               "host": ["{{baseUrl}}"],
-              "path": ["reports", "financial", "ap-aging", "export"],
-              "query": [
-                { "key": "format", "value": "CSV" }
-              ]
+              "path": ["reports", "financial", "ap-aging", "export"]
             },
-            "description": "Export AP Aging report to specified format."
+            "description": "Export AP Aging report to specified format. exportFormat is optional, defaults to EXCEL."
           },
           "response": []
         }

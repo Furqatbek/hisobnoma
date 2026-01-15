@@ -95,9 +95,10 @@ public class ReportController {
     @Operation(summary = "Export Stock on Hand Report", description = "Generate and export stock on hand report")
     public ResponseEntity<byte[]> exportStockOnHandReport(
             @Valid @RequestBody GenerateReportRequest request) throws IOException {
+        ExportFormat format = getExportFormat(request);
         StockOnHandReportDTO report = inventoryReportService.generateStockOnHandReport(request);
-        byte[] data = exportService.exportReport(report, request.getExportFormat(), "STOCK_ON_HAND");
-        return buildExportResponse(data, request.getExportFormat(), "stock-on-hand");
+        byte[] data = exportService.exportReport(report, format, "STOCK_ON_HAND");
+        return buildExportResponse(data, format, "stock-on-hand");
     }
 
     @PostMapping("/inventory/valuation")
@@ -114,9 +115,10 @@ public class ReportController {
     @Operation(summary = "Export Inventory Valuation Report", description = "Generate and export inventory valuation report")
     public ResponseEntity<byte[]> exportInventoryValuationReport(
             @Valid @RequestBody GenerateReportRequest request) throws IOException {
+        ExportFormat format = getExportFormat(request);
         InventoryValuationReportDTO report = inventoryReportService.generateInventoryValuationReport(request);
-        byte[] data = exportService.exportReport(report, request.getExportFormat(), "INVENTORY_VALUATION");
-        return buildExportResponse(data, request.getExportFormat(), "inventory-valuation");
+        byte[] data = exportService.exportReport(report, format, "INVENTORY_VALUATION");
+        return buildExportResponse(data, format, "inventory-valuation");
     }
 
     // ==================== Sales Reports ====================
@@ -135,9 +137,10 @@ public class ReportController {
     @Operation(summary = "Export Sales Summary Report", description = "Generate and export sales summary report")
     public ResponseEntity<byte[]> exportSalesSummaryReport(
             @Valid @RequestBody GenerateReportRequest request) throws IOException {
+        ExportFormat format = getExportFormat(request);
         SalesSummaryReportDTO report = salesReportService.generateSalesSummaryReport(request);
-        byte[] data = exportService.exportReport(report, request.getExportFormat(), "SALES_SUMMARY");
-        return buildExportResponse(data, request.getExportFormat(), "sales-summary");
+        byte[] data = exportService.exportReport(report, format, "SALES_SUMMARY");
+        return buildExportResponse(data, format, "sales-summary");
     }
 
     // ==================== Financial Reports ====================
@@ -156,9 +159,10 @@ public class ReportController {
     @Operation(summary = "Export Trial Balance Report", description = "Generate and export trial balance report")
     public ResponseEntity<byte[]> exportTrialBalanceReport(
             @Valid @RequestBody GenerateReportRequest request) throws IOException {
+        ExportFormat format = getExportFormat(request);
         TrialBalanceReportDTO report = financialReportService.generateTrialBalanceReport(request);
-        byte[] data = exportService.exportReport(report, request.getExportFormat(), "TRIAL_BALANCE");
-        return buildExportResponse(data, request.getExportFormat(), "trial-balance");
+        byte[] data = exportService.exportReport(report, format, "TRIAL_BALANCE");
+        return buildExportResponse(data, format, "trial-balance");
     }
 
     @PostMapping("/financial/ar-aging")
@@ -175,9 +179,10 @@ public class ReportController {
     @Operation(summary = "Export AR Aging Report", description = "Generate and export AR aging report")
     public ResponseEntity<byte[]> exportARAgingReport(
             @Valid @RequestBody GenerateReportRequest request) throws IOException {
+        ExportFormat format = getExportFormat(request);
         AgingReportDTO report = financialReportService.generateARAgingReport(request);
-        byte[] data = exportService.exportReport(report, request.getExportFormat(), "AR_AGING");
-        return buildExportResponse(data, request.getExportFormat(), "ar-aging");
+        byte[] data = exportService.exportReport(report, format, "AR_AGING");
+        return buildExportResponse(data, format, "ar-aging");
     }
 
     @PostMapping("/financial/ap-aging")
@@ -194,9 +199,10 @@ public class ReportController {
     @Operation(summary = "Export AP Aging Report", description = "Generate and export AP aging report")
     public ResponseEntity<byte[]> exportAPAgingReport(
             @Valid @RequestBody GenerateReportRequest request) throws IOException {
+        ExportFormat format = getExportFormat(request);
         AgingReportDTO report = financialReportService.generateAPAgingReport(request);
-        byte[] data = exportService.exportReport(report, request.getExportFormat(), "AP_AGING");
-        return buildExportResponse(data, request.getExportFormat(), "ap-aging");
+        byte[] data = exportService.exportReport(report, format, "AP_AGING");
+        return buildExportResponse(data, format, "ap-aging");
     }
 
     // ==================== Report Schedules ====================
@@ -286,6 +292,10 @@ public class ReportController {
     }
 
     // ==================== Helper Methods ====================
+
+    private ExportFormat getExportFormat(GenerateReportRequest request) {
+        return request.getExportFormat() != null ? request.getExportFormat() : ExportFormat.EXCEL;
+    }
 
     private ResponseEntity<byte[]> buildExportResponse(byte[] data, ExportFormat format, String reportName) {
         String filename = reportName + "-" + LocalDate.now().format(DateTimeFormatter.ISO_DATE);
