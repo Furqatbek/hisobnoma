@@ -1,0 +1,164 @@
+# Prometheus Alert Rules for Hisobnoma Platform
+
+groups:
+  # ==================== Application Health ====================
+  - name: application_health
+    rules:
+      - alert: ApplicationDown
+        expr: up{job="hisobnoma-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Hisobnoma application is down"
+          description: "The application has been unreachable for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: rate(http_server_requests_seconds_count{status=~"5.."}[5m]) / rate(http_server_requests_seconds_count[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP error rate detected"
+          description: "Error rate is above 5% for the last 5 minutes. Current: {{ $value | humanizePercentage }}"
+
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is above 2 seconds. Current: {{ $value | humanizeDuration }}"
+
+      - alert: HighRequestRate
+        expr: rate(http_server_requests_seconds_count[1m]) > 1000
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "High request rate detected"
+          description: "Request rate is above 1000 req/min. Current: {{ $value | humanize }} req/s"
+
+  # ==================== JVM Metrics ====================
+  - name: jvm_metrics
+    rules:
+      - alert: HighHeapUsage
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High JVM heap usage"
+          description: "JVM heap usage is above 85%. Current: {{ $value | humanizePercentage }}"
+
+      - alert: CriticalHeapUsage
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical JVM heap usage"
+          description: "JVM heap usage is above 95%. Application may run out of memory. Current: {{ $value | humanizePercentage }}"
+
+      - alert: HighGCPause
+        expr: rate(jvm_gc_pause_seconds_sum[5m]) / rate(jvm_gc_pause_seconds_count[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High GC pause time"
+          description: "Average GC pause time is above 500ms. Current: {{ $value | humanizeDuration }}"
+
+      - alert: TooManyOpenFiles
+        expr: process_files_open_files / process_files_max_files > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High open file descriptor usage"
+          description: "Open file descriptors are above 80% of max. Current: {{ $value | humanizePercentage }}"
+
+  # ==================== Database Metrics ====================
+  - name: database_metrics
+    rules:
+      - alert: DatabaseConnectionPoolExhausted
+        expr: hikaricp_connections_active / hikaricp_connections_max > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Active connections are above 90% of pool max. Current: {{ $value | humanizePercentage }}"
+
+      - alert: DatabaseConnectionPoolFull
+        expr: hikaricp_connections_pending > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection pool is full"
+          description: "There are pending connections waiting for the pool. Pending: {{ $value }}"
+
+      - alert: SlowDatabaseQueries
+        expr: rate(jdbc_connections_seconds_sum[5m]) / rate(jdbc_connections_seconds_count[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average database query time is above 1 second."
+
+  # ==================== Cache Metrics ====================
+  - name: cache_metrics
+    rules:
+      - alert: LowCacheHitRate
+        expr: rate(cache_gets_hit_total[5m]) / (rate(cache_gets_hit_total[5m]) + rate(cache_gets_miss_total[5m])) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is below 50%. Current: {{ $value | humanizePercentage }}"
+
+  # ==================== Infrastructure ====================
+  - name: infrastructure
+    rules:
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus target is down"
+          description: "{{ $labels.job }} target {{ $labels.instance }} is down."
+
+      - alert: PrometheusConfigReloadFailed
+        expr: prometheus_config_last_reload_successful == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus configuration reload failed"
+          description: "Prometheus failed to reload its configuration."
+
+  # ==================== Business Metrics ====================
+  - name: business_metrics
+    rules:
+      - alert: HighTransactionFailureRate
+        expr: rate(pos_transactions_failed_total[5m]) / rate(pos_transactions_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High POS transaction failure rate"
+          description: "Transaction failure rate is above 10%. Current: {{ $value | humanizePercentage }}"
+
+      - alert: NoTransactionsProcessed
+        expr: increase(pos_transactions_total[1h]) == 0
+        for: 2h
+        labels:
+          severity: info
+        annotations:
+          summary: "No transactions processed"
+          description: "No POS transactions have been processed in the last 2 hours."

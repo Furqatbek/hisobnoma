@@ -1,0 +1,83 @@
+# syntax=docker/dockerfile:1
+
+# ============================================
+# Production Dockerfile for Hisobnoma Platform
+# Multi-stage build with JVM optimizations
+# ============================================
+
+# Build stage
+FROM maven:3.9-eclipse-temurin-21-alpine AS builder
+
+WORKDIR /app
+
+# Copy pom.xml first for dependency caching
+COPY pom.xml .
+COPY .mvn .mvn
+COPY mvnw .
+
+# Download dependencies (cached layer)
+RUN --mount=type=cache,target=/root/.m2 \
+    ./mvnw dependency:go-offline -B -q
+
+# Copy source code
+COPY src src
+
+# Build the application
+RUN --mount=type=cache,target=/root/.m2 \
+    ./mvnw package -DskipTests -B -q && \
+    # Extract layers for efficient Docker caching
+    java -Djarmode=layertools -jar target/*.jar extract --destination target/extracted
+
+# ===========================================
+# Runtime stage - Production optimized
+# ===========================================
+FROM eclipse-temurin:21-jre-alpine AS runtime
+
+# Install required packages and create user
+RUN apk add --no-cache \
+    curl \
+    tzdata \
+    dumb-init && \
+    addgroup -S hisobnoma && \
+    adduser -S -G hisobnoma hisobnoma && \
+    mkdir -p /app/logs /app/config /app/data && \
+    chown -R hisobnoma:hisobnoma /app
+
+WORKDIR /app
+
+# Copy application layers (optimized for Docker layer caching)
+COPY --from=builder --chown=hisobnoma:hisobnoma /app/target/extracted/dependencies/ ./
+COPY --from=builder --chown=hisobnoma:hisobnoma /app/target/extracted/spring-boot-loader/ ./
+COPY --from=builder --chown=hisobnoma:hisobnoma /app/target/extracted/snapshot-dependencies/ ./
+COPY --from=builder --chown=hisobnoma:hisobnoma /app/target/extracted/application/ ./
+
+# Switch to non-root user
+USER hisobnoma
+
+# Environment variables for JVM tuning
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+    -XX:MaxRAMPercentage=75.0 \
+    -XX:InitialRAMPercentage=50.0 \
+    -XX:+UseG1GC \
+    -XX:+UseStringDeduplication \
+    -XX:+OptimizeStringConcat \
+    -Djava.security.egd=file:/dev/./urandom \
+    -Dfile.encoding=UTF-8 \
+    -Duser.timezone=UTC"
+
+# Application environment
+ENV SPRING_PROFILES_ACTIVE=prod
+ENV SERVER_PORT=8080
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -sf http://localhost:8080/actuator/health || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Run the application with layered jar
+CMD ["sh", "-c", "java $JAVA_OPTS org.springframework.boot.loader.launch.JarLauncher"]
