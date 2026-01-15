@@ -155,6 +155,16 @@ export const stockApi = {
   adjust: (data) => api.post('/inventory/stock/adjust', data)
 }
 
+// POS Terminals API - Backend: /api/v1/pos/terminals
+export const terminalsApi = {
+  getAll: (params) => api.get('/pos/terminals', { params }),
+  getActive: () => api.get('/pos/terminals/active'),
+  getById: (id) => api.get(`/pos/terminals/${id}`),
+  getByCode: (code) => api.get(`/pos/terminals/code/${code}`),
+  getByLocation: (locationId) => api.get(`/pos/terminals/location/${locationId}`),
+  create: (data) => api.post('/pos/terminals', data)
+}
+
 // POS API - Backend: /api/v1/pos/transactions
 export const posApi = {
   createTransaction: (data) => api.post('/pos/transactions', data),

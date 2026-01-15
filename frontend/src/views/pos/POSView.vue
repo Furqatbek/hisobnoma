@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { productsApi, customersApi, posApi } from '@/services/api'
+import { productsApi, customersApi, posApi, terminalsApi } from '@/services/api'
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -19,6 +19,10 @@ const products = ref([])
 const customers = ref([])
 const searchQuery = ref('')
 const loading = ref(false)
+
+// Terminal state
+const terminals = ref([])
+const selectedTerminalId = ref(null)
 
 const cart = reactive({
   items: [],
@@ -233,10 +237,17 @@ async function processPayment() {
     return
   }
 
+  // Validate terminal is selected
+  if (!selectedTerminalId.value) {
+    alert('No POS terminal available. Please contact administrator.')
+    return
+  }
+
   try {
     // Create transaction
     const transactionData = {
-      type: 'SALE',
+      terminalId: selectedTerminalId.value,
+      transactionType: 'SALE',
       customerId: cart.customerId,
       items: cart.items.map(item => ({
         productId: item.productId,
@@ -360,8 +371,22 @@ async function handleKeydown(event) {
   }, 100)
 }
 
+async function fetchTerminals() {
+  try {
+    const response = await terminalsApi.getActive()
+    terminals.value = response.data.data || response.data || []
+    // Auto-select first terminal if available
+    if (terminals.value.length > 0) {
+      selectedTerminalId.value = terminals.value[0].id
+    }
+  } catch (error) {
+    console.error('Failed to fetch terminals:', error)
+  }
+}
+
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
+  fetchTerminals()
 })
 </script>
 
@@ -425,10 +450,27 @@ onMounted(() => {
 
     <!-- Right Panel - Cart -->
     <div class="w-96 flex flex-col">
+      <!-- Terminal Warning -->
+      <div v-if="terminals.length === 0" class="mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-sm text-red-700">No active POS terminal found. Please contact administrator.</p>
+      </div>
+
+      <!-- Terminal Selector (if multiple) -->
+      <div v-if="terminals.length > 1" class="mb-2">
+        <select v-model="selectedTerminalId" class="input text-sm">
+          <option v-for="terminal in terminals" :key="terminal.id" :value="terminal.id">
+            {{ terminal.name || terminal.terminalCode }}
+          </option>
+        </select>
+      </div>
+
       <div class="card flex-1 flex flex-col overflow-hidden">
         <!-- Cart Header -->
         <div class="card-header flex items-center justify-between">
-          <h2 class="text-lg font-medium">Current Sale</h2>
+          <div>
+            <h2 class="text-lg font-medium">Current Sale</h2>
+            <p v-if="terminals.length === 1" class="text-xs text-gray-500">{{ terminals[0]?.name || terminals[0]?.terminalCode }}</p>
+          </div>
           <button
             v-if="cart.items.length > 0"
             @click="clearCart"
