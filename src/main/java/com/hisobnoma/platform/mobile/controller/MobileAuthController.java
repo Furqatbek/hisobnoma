@@ -3,6 +3,7 @@ package com.hisobnoma.platform.mobile.controller;
 import com.hisobnoma.platform.auth.dto.LoginRequest;
 import com.hisobnoma.platform.auth.dto.LoginResponse;
 import com.hisobnoma.platform.auth.dto.RefreshTokenRequest;
+import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.auth.service.AuthService;
 import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.mobile.dto.DeviceTokenDTO;
@@ -30,6 +31,7 @@ public class MobileAuthController {
     private final AuthService authService;
     private final DeviceTokenService deviceTokenService;
     private final MobileAlertService alertService;
+    private final SecurityContextHelper securityContextHelper;
 
     @PostMapping("/login")
     @Operation(summary = "Mobile login", description = "Authenticate user for mobile app")
@@ -50,9 +52,9 @@ public class MobileAuthController {
     public ResponseEntity<ApiResponse<DeviceTokenDTO>> registerDevice(@Valid @RequestBody RegisterDeviceRequest request) {
         DeviceTokenDTO response = deviceTokenService.registerDevice(request);
         // Initialize default alert preferences for the user
-        alertService.initializeDefaultPreferences(
-                response.getId(),
-                com.hisobnoma.platform.auth.security.SecurityContextHelper.class.cast(null) != null ? 1L : 1L);
+        Long userId = securityContextHelper.getRequiredCurrentUser().getId();
+        Long tenantId = securityContextHelper.getRequiredTenantId();
+        alertService.initializeDefaultPreferences(userId, tenantId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

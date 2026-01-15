@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,7 +113,7 @@ public class MobileQuickActionService {
         result.put("countedQuantity", countedQuantity);
         result.put("variance", variance);
         result.put("variancePercent", systemQuantity.compareTo(BigDecimal.ZERO) != 0
-                ? variance.divide(systemQuantity, 4, BigDecimal.ROUND_HALF_UP).multiply(new BigDecimal("100"))
+                ? variance.divide(systemQuantity, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"))
                 : BigDecimal.ZERO);
 
         // Note: This is a quick count - actual adjustment would require approval workflow

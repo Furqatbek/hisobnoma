@@ -39,7 +39,7 @@ public class MobileQuickActionController {
     }
 
     @PostMapping("/inventory/quick-count")
-    @PreAuthorize("hasAnyAuthority('INVENTORY_COUNT_CREATE', 'INVENTORY_STOCK_ADJUST')")
+    @PreAuthorize("hasAnyAuthority('MOBILE_QUICK_COUNT', 'INVENTORY_COUNT_CREATE', 'INVENTORY_STOCK_ADJUST')")
     @Operation(summary = "Quick stock count", description = "Perform a quick stock count for a product")
     public ResponseEntity<ApiResponse<Map<String, Object>>> quickStockCount(
             @Valid @RequestBody QuickStockCountRequest request) {
@@ -48,7 +48,7 @@ public class MobileQuickActionController {
     }
 
     @PostMapping("/pos/quick-sale")
-    @PreAuthorize("hasAuthority('POS_SALE_CREATE')")
+    @PreAuthorize("hasAnyAuthority('MOBILE_QUICK_SALE', 'POS_SALE_CREATE')")
     @Operation(summary = "Quick sale", description = "Create and complete a simple quick sale transaction")
     public ResponseEntity<ApiResponse<POSTransactionDTO>> quickSale(
             @Valid @RequestBody QuickSaleRequest request) {
@@ -57,7 +57,7 @@ public class MobileQuickActionController {
     }
 
     @GetMapping("/customers/search")
-    @PreAuthorize("hasAnyAuthority('CUSTOMER_READ', 'POS_SALE_CREATE')")
+    @PreAuthorize("hasAnyAuthority('FINANCE_AR_CUSTOMER_VIEW', 'POS_SALE_CREATE')")
     @Operation(summary = "Search customers", description = "Search customers by name, code, or phone")
     public ResponseEntity<ApiResponse<PageResponse<Map<String, Object>>>> searchCustomers(
             @Parameter(description = "Search query") @RequestParam String query,

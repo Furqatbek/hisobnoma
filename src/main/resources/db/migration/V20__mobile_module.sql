@@ -19,8 +19,8 @@ CREATE TABLE device_tokens (
     active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by VARCHAR(100),
-    updated_by VARCHAR(100),
+    created_by BIGINT,
+    updated_by BIGINT,
     version BIGINT NOT NULL DEFAULT 0,
 
     CONSTRAINT fk_device_token_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
@@ -55,8 +55,8 @@ CREATE TABLE mobile_alerts (
     push_sent_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by VARCHAR(100),
-    updated_by VARCHAR(100),
+    created_by BIGINT,
+    updated_by BIGINT,
     version BIGINT NOT NULL DEFAULT 0,
 
     CONSTRAINT fk_mobile_alert_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
@@ -87,8 +87,8 @@ CREATE TABLE alert_preferences (
     quiet_hours_end INTEGER,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by VARCHAR(100),
-    updated_by VARCHAR(100),
+    created_by BIGINT,
+    updated_by BIGINT,
     version BIGINT NOT NULL DEFAULT 0,
 
     CONSTRAINT fk_alert_pref_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),

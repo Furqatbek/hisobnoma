@@ -27,7 +27,7 @@ public class MobileSyncController {
     private final MobileSyncService syncService;
 
     @GetMapping("/products")
-    @PreAuthorize("hasAnyAuthority('INVENTORY_PRODUCT_READ', 'POS_SALE_CREATE')")
+    @PreAuthorize("hasAnyAuthority('MOBILE_SYNC_ACCESS', 'INVENTORY_PRODUCT_READ', 'POS_SALE_CREATE')")
     @Operation(summary = "Sync products", description = "Get product catalog for offline sync")
     public ResponseEntity<ApiResponse<MobileSyncDataDTO>> syncProducts(
             @Parameter(description = "Last sync timestamp for incremental sync")
@@ -37,7 +37,7 @@ public class MobileSyncController {
     }
 
     @GetMapping("/customers")
-    @PreAuthorize("hasAnyAuthority('CUSTOMER_READ', 'POS_SALE_CREATE')")
+    @PreAuthorize("hasAnyAuthority('MOBILE_SYNC_ACCESS', 'FINANCE_AR_CUSTOMER_VIEW', 'POS_SALE_CREATE')")
     @Operation(summary = "Sync customers", description = "Get customer list for offline sync")
     public ResponseEntity<ApiResponse<MobileSyncDataDTO>> syncCustomers(
             @Parameter(description = "Last sync timestamp for incremental sync")
@@ -47,7 +47,7 @@ public class MobileSyncController {
     }
 
     @GetMapping("/categories")
-    @PreAuthorize("hasAnyAuthority('INVENTORY_PRODUCT_READ', 'POS_SALE_CREATE')")
+    @PreAuthorize("hasAnyAuthority('MOBILE_SYNC_ACCESS', 'INVENTORY_PRODUCT_READ', 'POS_SALE_CREATE')")
     @Operation(summary = "Sync categories", description = "Get category tree for offline sync")
     public ResponseEntity<ApiResponse<MobileSyncDataDTO>> syncCategories() {
         MobileSyncDataDTO data = syncService.getCategoriesForSync();
@@ -55,6 +55,7 @@ public class MobileSyncController {
     }
 
     @GetMapping("/last-updated")
+    @PreAuthorize("hasAuthority('MOBILE_SYNC_ACCESS')")
     @Operation(summary = "Check last update", description = "Check when data was last updated to decide if sync is needed")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getLastUpdated() {
         Instant lastUpdated = syncService.getLastUpdatedTimestamp();

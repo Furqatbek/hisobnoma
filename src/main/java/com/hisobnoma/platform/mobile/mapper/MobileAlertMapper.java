@@ -10,7 +10,6 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface MobileAlertMapper {
 
-    @Mapping(target = "createdAt", source = "createdAt")
     MobileAlertDTO toDto(MobileAlert entity);
 
     List<MobileAlertDTO> toDtoList(List<MobileAlert> entities);

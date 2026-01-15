@@ -5,7 +5,6 @@ import com.hisobnoma.platform.finance.repository.CustomerRepository;
 import com.hisobnoma.platform.inventory.repository.CategoryRepository;
 import com.hisobnoma.platform.inventory.repository.ProductRepository;
 import com.hisobnoma.platform.mobile.dto.MobileSyncDataDTO;
-import com.hisobnoma.platform.pos.repository.PriceListItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,7 +27,6 @@ public class MobileSyncService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final CustomerRepository customerRepository;
-    private final PriceListItemRepository priceListItemRepository;
 
     private static final String SYNC_VERSION = "1.0";
 

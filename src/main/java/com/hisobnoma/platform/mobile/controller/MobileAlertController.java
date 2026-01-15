@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,6 +33,7 @@ public class MobileAlertController {
     private final MobileAlertService alertService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('MOBILE_ALERTS_VIEW')")
     @Operation(summary = "Get all alerts", description = "Returns paginated list of all alerts for the user")
     public ResponseEntity<ApiResponse<PageResponse<MobileAlertDTO>>> getAlerts(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -40,6 +42,7 @@ public class MobileAlertController {
     }
 
     @GetMapping("/unread")
+    @PreAuthorize("hasAuthority('MOBILE_ALERTS_VIEW')")
     @Operation(summary = "Get unread alerts", description = "Returns paginated list of unread alerts")
     public ResponseEntity<ApiResponse<PageResponse<MobileAlertDTO>>> getUnreadAlerts(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -48,6 +51,7 @@ public class MobileAlertController {
     }
 
     @GetMapping("/type/{alertType}")
+    @PreAuthorize("hasAuthority('MOBILE_ALERTS_VIEW')")
     @Operation(summary = "Get alerts by type", description = "Returns alerts filtered by type")
     public ResponseEntity<ApiResponse<PageResponse<MobileAlertDTO>>> getAlertsByType(
             @Parameter(description = "Alert type") @PathVariable MobileAlert.AlertType alertType,
@@ -57,6 +61,7 @@ public class MobileAlertController {
     }
 
     @GetMapping("/count")
+    @PreAuthorize("hasAuthority('MOBILE_ALERTS_VIEW')")
     @Operation(summary = "Get unread count", description = "Returns count of unread alerts")
     public ResponseEntity<ApiResponse<Map<String, Long>>> getUnreadCount() {
         long count = alertService.getUnreadCount();
@@ -64,6 +69,7 @@ public class MobileAlertController {
     }
 
     @PutMapping("/{id}/read")
+    @PreAuthorize("hasAuthority('MOBILE_ALERTS_VIEW')")
     @Operation(summary = "Mark as read", description = "Mark a specific alert as read")
     public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable Long id) {
         alertService.markAsRead(id);
@@ -71,6 +77,7 @@ public class MobileAlertController {
     }
 
     @PutMapping("/read-all")
+    @PreAuthorize("hasAuthority('MOBILE_ALERTS_VIEW')")
     @Operation(summary = "Mark all as read", description = "Mark all alerts as read for the user")
     public ResponseEntity<ApiResponse<Void>> markAllAsRead() {
         alertService.markAllAsRead();
@@ -78,6 +85,7 @@ public class MobileAlertController {
     }
 
     @GetMapping("/settings")
+    @PreAuthorize("hasAuthority('MOBILE_ALERTS_VIEW')")
     @Operation(summary = "Get alert settings", description = "Returns alert notification preferences")
     public ResponseEntity<ApiResponse<List<AlertPreferenceDTO>>> getAlertSettings() {
         List<AlertPreferenceDTO> preferences = alertService.getAlertPreferences();
@@ -85,6 +93,7 @@ public class MobileAlertController {
     }
 
     @PutMapping("/settings/{alertType}")
+    @PreAuthorize("hasAuthority('MOBILE_ALERTS_MANAGE')")
     @Operation(summary = "Update alert settings", description = "Update alert notification preferences for a type")
     public ResponseEntity<ApiResponse<AlertPreferenceDTO>> updateAlertSettings(
             @Parameter(description = "Alert type") @PathVariable MobileAlert.AlertType alertType,
