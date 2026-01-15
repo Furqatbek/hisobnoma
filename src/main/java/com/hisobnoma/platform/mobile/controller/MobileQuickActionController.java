@@ -5,7 +5,7 @@ import com.hisobnoma.platform.common.dto.PageResponse;
 import com.hisobnoma.platform.mobile.dto.QuickSaleRequest;
 import com.hisobnoma.platform.mobile.dto.QuickStockCountRequest;
 import com.hisobnoma.platform.mobile.service.MobileQuickActionService;
-import com.hisobnoma.platform.pos.dto.POSTransactionDTO;
+import com.hisobnoma.platform.pos.dto.POSTransactionDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -50,9 +50,9 @@ public class MobileQuickActionController {
     @PostMapping("/pos/quick-sale")
     @PreAuthorize("hasAnyAuthority('MOBILE_QUICK_SALE', 'POS_SALE_CREATE')")
     @Operation(summary = "Quick sale", description = "Create and complete a simple quick sale transaction")
-    public ResponseEntity<ApiResponse<POSTransactionDTO>> quickSale(
+    public ResponseEntity<ApiResponse<POSTransactionDto>> quickSale(
             @Valid @RequestBody QuickSaleRequest request) {
-        POSTransactionDTO transaction = quickActionService.performQuickSale(request);
+        POSTransactionDto transaction = quickActionService.performQuickSale(request);
         return ResponseEntity.ok(ApiResponse.success(transaction));
     }
 

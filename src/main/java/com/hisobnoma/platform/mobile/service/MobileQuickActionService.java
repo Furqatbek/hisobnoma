@@ -11,7 +11,7 @@ import com.hisobnoma.platform.inventory.repository.ProductRepository;
 import com.hisobnoma.platform.inventory.repository.StockRepository;
 import com.hisobnoma.platform.mobile.dto.QuickSaleRequest;
 import com.hisobnoma.platform.mobile.dto.QuickStockCountRequest;
-import com.hisobnoma.platform.pos.dto.POSTransactionDTO;
+import com.hisobnoma.platform.pos.dto.POSTransactionDto;
 import com.hisobnoma.platform.pos.entity.POSTransaction;
 import com.hisobnoma.platform.pos.service.POSTransactionService;
 import lombok.RequiredArgsConstructor;
@@ -128,7 +128,7 @@ public class MobileQuickActionService {
      * Perform quick sale (simplified POS transaction).
      */
     @Transactional
-    public POSTransactionDTO performQuickSale(QuickSaleRequest request) {
+    public POSTransactionDto performQuickSale(QuickSaleRequest request) {
         Long tenantId = securityContextHelper.getRequiredTenantId();
 
         // Validate items
@@ -144,7 +144,7 @@ public class MobileQuickActionService {
 
         // Create transaction using existing POS service
         // This delegates to the full POS transaction flow
-        POSTransactionDTO transaction = posTransactionService.createTransaction(
+        POSTransactionDto transaction = posTransactionService.createTransaction(
                 request.getTerminalId(),
                 POSTransaction.TransactionType.SALE,
                 request.getCustomerId(),

@@ -3,6 +3,7 @@ package com.hisobnoma.platform.mobile.entity;
 import com.hisobnoma.platform.common.entity.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Alert preference entity for user notification settings.
@@ -18,7 +19,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class AlertPreference extends TenantAwareEntity {
 
     @Column(name = "user_id", nullable = false)

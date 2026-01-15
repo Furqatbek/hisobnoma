@@ -1,8 +1,9 @@
 package com.hisobnoma.platform.mobile.controller;
 
+import com.hisobnoma.platform.auth.dto.AuthResponse;
 import com.hisobnoma.platform.auth.dto.LoginRequest;
-import com.hisobnoma.platform.auth.dto.LoginResponse;
 import com.hisobnoma.platform.auth.dto.RefreshTokenRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.auth.service.AuthService;
 import com.hisobnoma.platform.common.dto.ApiResponse;
@@ -35,16 +36,28 @@ public class MobileAuthController {
 
     @PostMapping("/login")
     @Operation(summary = "Mobile login", description = "Authenticate user for mobile app")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse response = authService.login(request);
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
+        String ipAddress = getClientIpAddress(httpRequest);
+        String deviceInfo = httpRequest.getHeader("User-Agent");
+        AuthResponse response = authService.login(request, ipAddress, deviceInfo);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/refresh")
     @Operation(summary = "Refresh token", description = "Refresh access token using refresh token")
-    public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
-        LoginResponse response = authService.refreshToken(request);
+    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        AuthResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    private String getClientIpAddress(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 
     @PostMapping("/register-device")

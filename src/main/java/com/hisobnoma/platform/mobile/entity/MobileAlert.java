@@ -3,6 +3,7 @@ package com.hisobnoma.platform.mobile.entity;
 import com.hisobnoma.platform.common.entity.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 
@@ -20,7 +21,7 @@ import java.time.Instant;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class MobileAlert extends TenantAwareEntity {
 
     @Column(name = "user_id")
