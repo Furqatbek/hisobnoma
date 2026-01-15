@@ -58,11 +58,11 @@ ALTER TABLE pos_transaction_lines ADD COLUMN IF NOT EXISTS return_reason VARCHAR
 CREATE INDEX IF NOT EXISTS idx_pos_transactions_original ON pos_transactions(original_transaction_id);
 
 -- Insert new permissions for recurring journals and returns
-INSERT INTO permissions (code, name, description) VALUES
-    ('FINANCE_RECURRING_VIEW', 'View Recurring Journals', 'Can view recurring journal templates'),
-    ('FINANCE_RECURRING_MANAGE', 'Manage Recurring Journals', 'Can create/edit/delete recurring journal templates'),
-    ('POS_RETURN_CREATE', 'Create POS Returns', 'Can create return transactions'),
-    ('POS_RETURN_APPROVE', 'Approve POS Returns', 'Can approve return transactions')
+INSERT INTO permissions (name, code, description, module, action) VALUES
+    ('View Recurring Journals', 'FINANCE_RECURRING_VIEW', 'Can view recurring journal templates', 'FINANCE', 'VIEW'),
+    ('Manage Recurring Journals', 'FINANCE_RECURRING_MANAGE', 'Can create/edit/delete recurring journal templates', 'FINANCE', 'MANAGE'),
+    ('Create POS Returns', 'POS_RETURN_CREATE', 'Can create return transactions', 'POS', 'CREATE'),
+    ('Approve POS Returns', 'POS_RETURN_APPROVE', 'Can approve return transactions', 'POS', 'APPROVE')
 ON CONFLICT (code) DO NOTHING;
 
 -- Add permissions to STORE_MANAGER role
