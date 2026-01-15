@@ -59,7 +59,7 @@ public class StockAdjustedEvent extends InventoryEvent {
     public String getDescription() {
         String direction = adjustmentQuantity.compareTo(BigDecimal.ZERO) >= 0 ? "increased" : "decreased";
         return String.format("Stock %s by %s units for %s (%s) at %s. Stock: %s -> %s. Reason: %s",
-                direction, adjustmentQuantity.abs(), productName, productSku, locationCode,
+                direction, adjustmentQuantity.abs(), getProductName(), getProductSku(), locationCode,
                 quantityBefore, quantityAfter, reason != null ? reason : "N/A");
     }
 

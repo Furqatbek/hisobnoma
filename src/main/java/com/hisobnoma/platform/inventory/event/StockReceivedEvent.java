@@ -51,7 +51,7 @@ public class StockReceivedEvent extends InventoryEvent {
     @Override
     public String getDescription() {
         return String.format("Received %s units of %s (%s) at %s. Stock: %s -> %s",
-                quantity, productName, productSku, locationCode, quantityBefore, quantityAfter);
+                quantity, getProductName(), getProductSku(), locationCode, quantityBefore, quantityAfter);
     }
 
     /**

@@ -334,7 +334,7 @@ public class AccountService {
                             .description(description != null && !description.isEmpty() ? description : null)
                             .normalBalance(Account.determineNormalBalance(accountType))
                             .active(true)
-                            .isPostable(true)
+                            .allowsDirectPosting(true)
                             .ytdDebit(BigDecimal.ZERO)
                             .ytdCredit(BigDecimal.ZERO)
                             .openingBalance(BigDecimal.ZERO)
@@ -445,7 +445,7 @@ public class AccountService {
     }
 
     private Account createAccount(Long tenantId, String code, String name, AccountType type,
-                                   String parentCode, boolean isPostable) {
+                                   String parentCode, boolean allowsPosting) {
         Account account = Account.builder()
                 .tenantId(tenantId)
                 .code(code)
@@ -453,7 +453,7 @@ public class AccountService {
                 .accountType(type)
                 .normalBalance(Account.determineNormalBalance(type))
                 .active(true)
-                .isPostable(isPostable)
+                .allowsDirectPosting(allowsPosting)
                 .ytdDebit(BigDecimal.ZERO)
                 .ytdCredit(BigDecimal.ZERO)
                 .openingBalance(BigDecimal.ZERO)

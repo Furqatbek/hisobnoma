@@ -53,7 +53,7 @@ public class StockIssuedEvent extends InventoryEvent {
     @Override
     public String getDescription() {
         return String.format("Issued %s units of %s (%s) from %s. Stock: %s -> %s. Reason: %s",
-                quantity, productName, productSku, locationCode, quantityBefore, quantityAfter,
+                quantity, getProductName(), getProductSku(), locationCode, quantityBefore, quantityAfter,
                 reason != null ? reason : "N/A");
     }
 

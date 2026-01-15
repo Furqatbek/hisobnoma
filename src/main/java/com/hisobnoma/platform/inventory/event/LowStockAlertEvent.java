@@ -63,7 +63,7 @@ public class LowStockAlertEvent extends InventoryEvent {
     @Override
     public String getDescription() {
         return String.format("[%s] Low stock alert for %s (%s) at %s. Current: %s, Reorder Point: %s",
-                severity, productName, productSku, locationCode, currentQuantity, reorderPoint);
+                severity, getProductName(), getProductSku(), locationCode, currentQuantity, reorderPoint);
     }
 
     /**

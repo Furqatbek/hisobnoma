@@ -59,7 +59,7 @@ public class InventoryPlanningService {
             BigDecimal reorderPoint = product.getReorderPoint();
             if (reorderPoint == null || reorderPoint.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            BigDecimal currentStock = stock.getAvailableQuantity();
+            BigDecimal currentStock = stock.getQuantityAvailable();
             if (currentStock.compareTo(reorderPoint) < 0) {
                 BigDecimal suggestedQuantity = product.getReorderQuantity();
                 if (suggestedQuantity == null || suggestedQuantity.compareTo(BigDecimal.ZERO) <= 0) {

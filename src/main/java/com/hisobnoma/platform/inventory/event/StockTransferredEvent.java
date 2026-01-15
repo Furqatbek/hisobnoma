@@ -59,7 +59,7 @@ public class StockTransferredEvent extends InventoryEvent {
     @Override
     public String getDescription() {
         return String.format("Transferred %s units of %s (%s) from %s to %s",
-                quantity, productName, productSku, fromLocationCode, toLocationCode);
+                quantity, getProductName(), getProductSku(), fromLocationCode, toLocationCode);
     }
 
     /**
