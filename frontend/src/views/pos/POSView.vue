@@ -10,7 +10,8 @@ import {
   CreditCardIcon,
   BanknotesIcon,
   XMarkIcon,
-  CheckIcon
+  CheckIcon,
+  DocumentTextIcon
 } from '@heroicons/vue/24/outline'
 
 // State
@@ -29,7 +30,9 @@ const showPaymentModal = ref(false)
 const showCustomerModal = ref(false)
 const customerSearch = ref('')
 
-const payment = reactive({
+// Split payment support - array of payments
+const payments = ref([])
+const currentPayment = reactive({
   method: 'CASH',
   amount: 0,
   received: 0
@@ -44,6 +47,14 @@ const newCustomer = reactive({
   email: ''
 })
 
+// Payment methods available
+const paymentMethods = [
+  { value: 'CASH', label: 'Cash', icon: BanknotesIcon, color: 'text-green-600' },
+  { value: 'CARD', label: 'Card', icon: CreditCardIcon, color: 'text-blue-600' },
+  { value: 'CREDIT', label: 'Debt', icon: DocumentTextIcon, color: 'text-orange-600' },
+  { value: 'MOBILE_PAYMENT', label: 'Mobile', icon: CreditCardIcon, color: 'text-purple-600' }
+]
+
 // Computed
 const subtotal = computed(() => {
   return cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
@@ -51,7 +62,29 @@ const subtotal = computed(() => {
 
 const tax = computed(() => subtotal.value * (taxRate.value / 100))
 const total = computed(() => subtotal.value + tax.value)
-const change = computed(() => Math.max(0, payment.received - total.value))
+
+// Total paid from split payments
+const totalPaid = computed(() => {
+  return payments.value.reduce((sum, p) => sum + p.amount, 0)
+})
+
+// Remaining amount to pay
+const remainingAmount = computed(() => {
+  return Math.max(0, total.value - totalPaid.value)
+})
+
+// Change calculation for cash payments
+const change = computed(() => {
+  if (currentPayment.method === 'CASH') {
+    return Math.max(0, currentPayment.received - currentPayment.amount)
+  }
+  return 0
+})
+
+// Check if debt sale requires customer
+const isDebtSale = computed(() => {
+  return payments.value.some(p => p.method === 'CREDIT') || currentPayment.method === 'CREDIT'
+})
 
 // Methods
 async function searchProducts() {
@@ -79,7 +112,7 @@ async function searchCustomers() {
 
   try {
     const response = await customersApi.search(customerSearch.value)
-    customers.value = response.data.content || response.data || []
+    customers.value = response.data.content || response.data.data || response.data || []
   } catch (error) {
     console.error('Customer search failed:', error)
   }
@@ -133,13 +166,73 @@ function clearCustomer() {
 
 function openPayment() {
   if (cart.items.length === 0) return
-  payment.amount = total.value
-  payment.received = total.value
-  payment.method = 'CASH'
+  payments.value = []
+  currentPayment.method = 'CASH'
+  currentPayment.amount = total.value
+  currentPayment.received = total.value
   showPaymentModal.value = true
 }
 
+function addPaymentSplit() {
+  if (currentPayment.amount <= 0) return
+
+  // For debt sales, customer is required
+  if (currentPayment.method === 'CREDIT' && !cart.customerId) {
+    alert('Customer is required for debt sales')
+    return
+  }
+
+  const paymentAmount = Math.min(currentPayment.amount, remainingAmount.value)
+
+  payments.value.push({
+    method: currentPayment.method,
+    amount: paymentAmount,
+    received: currentPayment.method === 'CASH' ? currentPayment.received : paymentAmount
+  })
+
+  // Reset for next payment
+  const newRemaining = total.value - payments.value.reduce((sum, p) => sum + p.amount, 0)
+  currentPayment.amount = Math.max(0, newRemaining)
+  currentPayment.received = currentPayment.amount
+}
+
+function removePaymentSplit(index) {
+  payments.value.splice(index, 1)
+  // Recalculate current payment amount
+  const newRemaining = total.value - payments.value.reduce((sum, p) => sum + p.amount, 0)
+  currentPayment.amount = Math.max(0, newRemaining)
+  currentPayment.received = currentPayment.amount
+}
+
+function selectPaymentMethod(method) {
+  currentPayment.method = method
+  if (method !== 'CASH') {
+    currentPayment.received = currentPayment.amount
+  }
+}
+
 async function processPayment() {
+  // Validate debt sales require customer
+  const hasDebt = payments.value.some(p => p.method === 'CREDIT') ||
+                  (remainingAmount.value > 0 && currentPayment.method === 'CREDIT')
+
+  if (hasDebt && !cart.customerId) {
+    alert('Customer is required for debt sales. Please select a customer first.')
+    return
+  }
+
+  // Add current payment if there's remaining amount
+  if (remainingAmount.value > 0 && currentPayment.amount > 0) {
+    addPaymentSplit()
+  }
+
+  // Verify total payments
+  const finalTotal = payments.value.reduce((sum, p) => sum + p.amount, 0)
+  if (finalTotal < total.value) {
+    alert('Payment amount is less than total. Please add more payment or sell as debt.')
+    return
+  }
+
   try {
     // Create transaction
     const transactionData = {
@@ -153,13 +246,15 @@ async function processPayment() {
     }
 
     const txResponse = await posApi.createTransaction(transactionData)
-    const transactionId = txResponse.data.id
+    const transactionId = txResponse.data.data?.id || txResponse.data.id
 
-    // Add payment
-    await posApi.addPayment(transactionId, {
-      paymentType: payment.method,
-      amount: payment.amount
-    })
+    // Add all payments
+    for (const payment of payments.value) {
+      await posApi.addPayment(transactionId, {
+        paymentType: payment.method,
+        amount: payment.amount
+      })
+    }
 
     // Complete transaction
     await posApi.completeTransaction(transactionId)
@@ -168,13 +263,33 @@ async function processPayment() {
     cart.items = []
     cart.customerId = null
     cart.customerName = ''
+    payments.value = []
     showPaymentModal.value = false
 
-    alert('Sale completed successfully!')
+    const hasDebtPayment = payments.value.some(p => p.method === 'CREDIT')
+    alert(hasDebtPayment ? 'Sale completed with debt!' : 'Sale completed successfully!')
   } catch (error) {
     console.error('Payment failed:', error)
     alert('Payment failed: ' + (error.response?.data?.message || error.message))
   }
+}
+
+// Quick debt sale - sell entire amount as debt
+function sellAsDebt() {
+  if (!cart.customerId) {
+    alert('Customer is required for debt sales. Please select a customer first.')
+    showCustomerModal.value = true
+    return
+  }
+
+  payments.value = [{
+    method: 'CREDIT',
+    amount: total.value,
+    received: 0
+  }]
+
+  currentPayment.amount = 0
+  processPayment()
 }
 
 function clearCart() {
@@ -423,8 +538,8 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Payment Button -->
-        <div class="p-4 border-t">
+        <!-- Payment Buttons -->
+        <div class="p-4 border-t space-y-2">
           <button
             @click="openPayment"
             :disabled="cart.items.length === 0"
@@ -432,6 +547,14 @@ onMounted(() => {
           >
             <CreditCardIcon class="h-6 w-6 mr-2" />
             Pay {{ formatCurrency(total) }}
+          </button>
+          <button
+            @click="sellAsDebt"
+            :disabled="cart.items.length === 0"
+            class="w-full py-2 text-sm border-2 border-orange-500 text-orange-600 rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center"
+          >
+            <DocumentTextIcon class="h-5 w-5 mr-2" />
+            Sell as Debt
           </button>
         </div>
       </div>
@@ -441,61 +564,117 @@ onMounted(() => {
     <div v-if="showPaymentModal" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showPaymentModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-xl font-bold text-gray-900 mb-6">Payment</h3>
+        <div class="relative bg-white rounded-lg max-w-lg w-full p-6">
+          <h3 class="text-xl font-bold text-gray-900 mb-4">Payment</h3>
 
-          <div class="text-center mb-6">
-            <p class="text-sm text-gray-500">Amount Due</p>
-            <p class="text-4xl font-bold text-primary-600">{{ formatCurrency(total) }}</p>
-          </div>
-
-          <!-- Payment Method -->
+          <!-- Total and Remaining -->
           <div class="grid grid-cols-2 gap-4 mb-6">
-            <button
-              @click="payment.method = 'CASH'"
-              :class="[
-                'p-4 border-2 rounded-lg flex flex-col items-center transition-colors',
-                payment.method === 'CASH' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
-              ]"
-            >
-              <BanknotesIcon class="h-8 w-8 text-green-600 mb-2" />
-              <span class="font-medium">Cash</span>
-            </button>
-            <button
-              @click="payment.method = 'CARD'"
-              :class="[
-                'p-4 border-2 rounded-lg flex flex-col items-center transition-colors',
-                payment.method === 'CARD' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
-              ]"
-            >
-              <CreditCardIcon class="h-8 w-8 text-blue-600 mb-2" />
-              <span class="font-medium">Card</span>
-            </button>
-          </div>
-
-          <!-- Cash Received -->
-          <div v-if="payment.method === 'CASH'" class="mb-6">
-            <label class="label">Amount Received</label>
-            <input
-              v-model.number="payment.received"
-              type="number"
-              step="0.01"
-              min="0"
-              class="input text-xl text-center"
-            />
-            <div v-if="change > 0" class="mt-2 p-3 bg-green-50 rounded-lg text-center">
-              <p class="text-sm text-green-600">Change</p>
-              <p class="text-2xl font-bold text-green-700">{{ formatCurrency(change) }}</p>
+            <div class="text-center p-3 bg-gray-100 rounded-lg">
+              <p class="text-sm text-gray-500">Total</p>
+              <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(total) }}</p>
+            </div>
+            <div class="text-center p-3 rounded-lg" :class="remainingAmount > 0 ? 'bg-orange-100' : 'bg-green-100'">
+              <p class="text-sm" :class="remainingAmount > 0 ? 'text-orange-600' : 'text-green-600'">Remaining</p>
+              <p class="text-2xl font-bold" :class="remainingAmount > 0 ? 'text-orange-700' : 'text-green-700'">
+                {{ formatCurrency(remainingAmount) }}
+              </p>
             </div>
           </div>
 
-          <div class="flex space-x-3">
+          <!-- Added Payments (Split) -->
+          <div v-if="payments.length > 0" class="mb-4">
+            <p class="text-sm font-medium text-gray-700 mb-2">Split Payments:</p>
+            <div class="space-y-2">
+              <div
+                v-for="(payment, index) in payments"
+                :key="index"
+                class="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+              >
+                <div class="flex items-center">
+                  <span class="text-sm font-medium">{{ payment.method }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="font-medium">{{ formatCurrency(payment.amount) }}</span>
+                  <button @click="removePaymentSplit(index)" class="text-red-500 hover:text-red-700">
+                    <XMarkIcon class="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Method Selection -->
+          <div v-if="remainingAmount > 0" class="space-y-4">
+            <p class="text-sm font-medium text-gray-700">Add Payment:</p>
+
+            <div class="grid grid-cols-4 gap-2">
+              <button
+                v-for="method in paymentMethods"
+                :key="method.value"
+                @click="selectPaymentMethod(method.value)"
+                :class="[
+                  'p-3 border-2 rounded-lg flex flex-col items-center transition-colors',
+                  currentPayment.method === method.value ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
+                ]"
+              >
+                <component :is="method.icon" :class="['h-6 w-6 mb-1', method.color]" />
+                <span class="text-xs font-medium">{{ method.label }}</span>
+              </button>
+            </div>
+
+            <!-- Debt warning -->
+            <div v-if="currentPayment.method === 'CREDIT' && !cart.customerId" class="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <p class="text-sm text-orange-700">Customer is required for debt sales. Please select a customer first.</p>
+            </div>
+
+            <!-- Payment Amount -->
+            <div>
+              <label class="label">Amount</label>
+              <input
+                v-model.number="currentPayment.amount"
+                type="number"
+                step="0.01"
+                min="0"
+                :max="remainingAmount"
+                class="input text-lg text-center"
+              />
+            </div>
+
+            <!-- Cash Received -->
+            <div v-if="currentPayment.method === 'CASH'">
+              <label class="label">Amount Received</label>
+              <input
+                v-model.number="currentPayment.received"
+                type="number"
+                step="0.01"
+                min="0"
+                class="input text-lg text-center"
+              />
+              <div v-if="change > 0" class="mt-2 p-3 bg-green-50 rounded-lg text-center">
+                <p class="text-sm text-green-600">Change</p>
+                <p class="text-2xl font-bold text-green-700">{{ formatCurrency(change) }}</p>
+              </div>
+            </div>
+
+            <!-- Add Split Payment Button -->
+            <button
+              @click="addPaymentSplit"
+              :disabled="currentPayment.amount <= 0 || (currentPayment.method === 'CREDIT' && !cart.customerId)"
+              class="w-full py-2 border-2 border-primary-500 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
+            >
+              <PlusIcon class="h-5 w-5 inline mr-1" />
+              Add Payment
+            </button>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex space-x-3 mt-6">
             <button @click="showPaymentModal = false" class="btn-secondary flex-1">
               Cancel
             </button>
             <button
               @click="processPayment"
-              :disabled="payment.method === 'CASH' && payment.received < total"
+              :disabled="totalPaid < total && remainingAmount > 0"
               class="btn-primary flex-1"
             >
               <CheckIcon class="h-5 w-5 mr-2" />

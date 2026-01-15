@@ -175,7 +175,7 @@ export const customersApi = {
   create: (data) => api.post('/finance/customers', data),
   update: (id, data) => api.put(`/finance/customers/${id}`, data),
   delete: (id) => api.delete(`/finance/customers/${id}`),
-  search: (query) => api.get('/finance/customers/search', { params: { q: query } })
+  search: (query) => api.get('/finance/customers/search', { params: { query } })
 }
 
 // Suppliers/Vendors API - Backend: /api/v1/inventory/vendors
