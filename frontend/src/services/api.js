@@ -274,6 +274,9 @@ export const warehousesApi = {
   delete: (id) => api.delete(`/inventory/locations/${id}`)
 }
 
+// Alias for locations
+export const locationsApi = warehousesApi
+
 // Audit Logs API - Backend: /api/v1/admin/audit-logs
 export const auditLogsApi = {
   getAll: (params) => api.get('/admin/audit-logs', { params })
