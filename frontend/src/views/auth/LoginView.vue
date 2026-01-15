@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
 
@@ -129,9 +130,9 @@ async function handleSubmit() {
               Remember me
             </label>
           </div>
-          <a href="#" class="text-sm font-medium text-primary-600 hover:text-primary-500">
+          <RouterLink to="/forgot-password" class="text-sm font-medium text-primary-600 hover:text-primary-500">
             Forgot password?
-          </a>
+          </RouterLink>
         </div>
 
         <!-- Submit -->
