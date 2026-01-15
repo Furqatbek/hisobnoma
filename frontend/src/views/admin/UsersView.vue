@@ -12,7 +12,8 @@ async function fetchUsers() {
   loading.value = true
   try {
     const response = await usersApi.getAll({ size: 50, search: search.value || undefined })
-    users.value = response.data.content || []
+    // API returns { success: true, data: { content: [...] } }
+    users.value = response.data.data?.content || response.data.content || []
   } catch (error) {
     console.error('Failed to fetch users:', error)
   } finally {
