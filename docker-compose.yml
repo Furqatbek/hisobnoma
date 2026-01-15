@@ -36,12 +36,12 @@ services:
     networks:
       - hisobnoma-network
 
-  # Application
-  app:
+  # Backend Application
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: hisobnoma-app
+    container_name: hisobnoma-backend
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,6 +58,19 @@ services:
       REDIS_PORT: 6379
     ports:
       - "8080:8080"
+    networks:
+      - hisobnoma-network
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hisobnoma-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
     networks:
       - hisobnoma-network
 
