@@ -43,7 +43,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByTenantId(Long tenantId);
 
-    long countByTenantIdAndActiveTrue(Long tenantId);
+    long countByTenantIdAndEnabledTrue(Long tenantId);
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.tenantId = :tenantId AND u.createdAt >= :since")
     long countByTenantIdAndCreatedAtAfter(@Param("tenantId") Long tenantId, @Param("since") Instant since);

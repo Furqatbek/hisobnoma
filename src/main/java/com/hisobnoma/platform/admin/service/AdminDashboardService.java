@@ -88,7 +88,7 @@ public class AdminDashboardService {
 
     private Long getActiveUserCount(Long tenantId) {
         try {
-            return userRepository.countByTenantIdAndActiveTrue(tenantId);
+            return userRepository.countByTenantIdAndEnabledTrue(tenantId);
         } catch (Exception e) {
             log.warn("Failed to get active user count: {}", e.getMessage());
             return 0L;
