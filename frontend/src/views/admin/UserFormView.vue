@@ -67,6 +67,9 @@ async function handleSubmit() {
   if (!validate()) return
 
   saving.value = true
+  // Clear previous errors
+  Object.keys(errors).forEach(key => delete errors[key])
+
   try {
     const data = { ...form }
     if (isEdit.value && !data.password) {
@@ -80,7 +83,19 @@ async function handleSubmit() {
     }
     router.push('/admin/users')
   } catch (error) {
-    errors.general = error.response?.data?.message || 'Failed to save'
+    const response = error.response?.data
+
+    // Handle validation errors from backend
+    if (response?.validationErrors && Array.isArray(response.validationErrors)) {
+      response.validationErrors.forEach(err => {
+        if (err.field) {
+          errors[err.field] = err.message
+        }
+      })
+      errors.general = 'Please fix the errors below'
+    } else {
+      errors.general = response?.message || 'Failed to save user'
+    }
   } finally {
     saving.value = false
   }
@@ -139,7 +154,8 @@ function toggleRole(roleCode) {
           </div>
           <div>
             <label class="label">Phone</label>
-            <input v-model="form.phone" type="tel" class="input" />
+            <input v-model="form.phone" type="tel" :class="[errors.phone ? 'input-error' : 'input']" placeholder="+998901234567" />
+            <p v-if="errors.phone" class="mt-1 text-sm text-red-600">{{ errors.phone }}</p>
           </div>
           <div class="flex items-center">
             <label class="flex items-center">
