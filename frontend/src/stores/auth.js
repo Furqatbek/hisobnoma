@@ -30,7 +30,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const response = await authApi.login(credentials)
-      const { accessToken, refreshToken, user: userData } = response.data
+      const { accessToken, refreshToken, user: userData } = response.data.data
 
       localStorage.setItem('accessToken', accessToken)
       localStorage.setItem('refreshToken', refreshToken)
@@ -66,7 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const response = await authApi.me()
-      user.value = response.data
+      user.value = response.data.data
     } catch (err) {
       console.error('Failed to fetch user:', err)
       localStorage.removeItem('accessToken')
