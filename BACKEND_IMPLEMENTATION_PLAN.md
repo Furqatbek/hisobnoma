@@ -196,11 +196,12 @@ com.hisobnoma.platform/
 **Complexity: High**
 
 ### Checkpoint 2.1: RBAC Domain Model
-- [ ] Create User entity
-  - id, username, email, passwordHash, firstName, lastName
-  - enabled, locked, emailVerified
+- [x] Create User entity
+  - id, username, phone, passwordHash, firstName, lastName
+  - enabled, locked, phoneVerified
   - lastLoginAt, failedLoginAttempts, lockedUntil
   - tenantId (for multi-tenancy)
+  - **Note:** Phone-based auth chosen over email for better adoption in target markets
 - [ ] Create Role entity
   - id, name, code, description
   - isSystemRole (cannot be deleted)

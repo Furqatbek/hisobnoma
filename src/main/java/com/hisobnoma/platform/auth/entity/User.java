@@ -9,6 +9,29 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * User entity for authentication and authorization.
+ *
+ * <h3>Design Decision: Phone-Based Authentication</h3>
+ * <p>
+ * This platform uses phone number as the primary identifier for user authentication
+ * instead of email. This design decision was made for the following reasons:
+ * </p>
+ * <ul>
+ *   <li>Higher adoption rates in target markets (Asia, Middle East, Africa) where
+ *       phone-based auth is the standard</li>
+ *   <li>Faster onboarding with OTP verification vs email confirmation</li>
+ *   <li>Better suited for retail/POS environments where staff may not have
+ *       corporate email addresses</li>
+ *   <li>Simplified password recovery via SMS OTP</li>
+ * </ul>
+ * <p>
+ * If email-based authentication is required in the future, add optional
+ * {@code email} and {@code emailVerified} fields without removing phone support.
+ * </p>
+ *
+ * @see com.hisobnoma.platform.auth.service.AuthService
+ */
 @Entity
 @Table(name = "users", indexes = {
     @Index(name = "idx_users_username", columnList = "username"),

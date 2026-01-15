@@ -256,24 +256,25 @@ These are cross-module integrations that are partially implemented but not conne
 
 ---
 
-## Phase 4: User Entity Email Field Decision (Block 2)
+## Phase 4: User Entity Email Field Decision (Block 2) ✅ COMPLETED
 **Priority: LOW | Estimated Items: 1**
 
-### 4.1 Add Email Field to User Entity
-**Current State:** Uses phone instead of email
-**Decision Required:** Keep phone-only OR add email as optional
+### 4.1 Phone-Based Authentication (Option A Selected)
+**Decision:** Keep phone-only authentication
 
-**Option A: Keep Phone-Only (Document Decision)**
-- [ ] Update BACKEND_IMPLEMENTATION_PLAN.md to reflect phone-based auth
-- [ ] Add comment in User entity explaining design decision
+**Rationale:**
+- Higher adoption rates in target markets (Asia, Middle East, Africa)
+- Faster onboarding with OTP verification vs email confirmation
+- Better suited for retail/POS environments where staff may not have corporate email
+- Simplified password recovery via SMS OTP
 
-**Option B: Add Email Field**
-- [ ] Add `email` and `emailVerified` fields to User entity
-- [ ] Create migration to add columns
-- [ ] Update UserDto, CreateUserRequest, UpdateUserRequest
-- [ ] Update UserMapper
-- [ ] Add email validation in UserService
-- [ ] Support login by email OR phone
+**Completed Tasks:**
+- [x] Updated BACKEND_IMPLEMENTATION_PLAN.md to reflect phone-based auth
+- [x] Added design decision documentation in User.java entity
+
+**Future Enhancement Path:**
+If email-based auth is needed later, add optional `email` and `emailVerified` fields
+without removing phone support to allow dual authentication methods.
 
 ---
 
@@ -473,9 +474,9 @@ As listed in Phase 5
 - [x] **Phase 1:** 5 integration fixes ✅ COMPLETED
 - [x] **Phase 2:** 8 API implementations ✅ COMPLETED
 - [x] **Phase 3:** 1 event system ✅ COMPLETED
-- [ ] **Phase 4:** 1 email decision
+- [x] **Phase 4:** 1 auth decision (Phone-based) ✅ COMPLETED
 - [ ] **Phase 5:** 45+ test classes
 - [ ] **Phase 6:** 3 documentation updates (Partially completed in Phase 2)
 
 **Total Tasks: ~63 items**
-**Completed: Phases 1, 2, 3**
+**Completed: Phases 1, 2, 3, 4**
