@@ -15,8 +15,11 @@ const filters = reactive({
 async function fetchReport() {
   loading.value = true
   try {
-    const response = await reportsApi.getSalesSummary(filters)
-    report.value = response.data
+    const response = await reportsApi.getSalesSummary({
+      startDate: filters.startDate,
+      endDate: filters.endDate
+    })
+    report.value = response.data.data
   } catch (error) {
     console.error('Failed to fetch report:', error)
   } finally {
@@ -28,7 +31,11 @@ onMounted(fetchReport)
 
 async function exportReport() {
   try {
-    const response = await reportsApi.exportReport('sales', { ...filters, format: 'xlsx' })
+    const response = await reportsApi.exportSalesSummary({
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      exportFormat: 'EXCEL'
+    })
     const url = window.URL.createObjectURL(new Blob([response.data]))
     const link = document.createElement('a')
     link.href = url

@@ -163,13 +163,30 @@ export const purchaseOrdersApi = {
   cancel: (id) => api.post(`/inventory/purchase-orders/${id}/cancel`)
 }
 
-// Reports API - Backend: /api/v1/reports
+// Reports API - Backend: /api/v1/reports (uses POST with request body)
 export const reportsApi = {
-  getSalesSummary: (params) => api.get('/reports/sales/summary', { params }),
-  getSalesDetailed: (params) => api.get('/reports/sales/detailed', { params }),
-  getInventoryReport: (params) => api.get('/reports/inventory', { params }),
-  getFinancialReport: (params) => api.get('/reports/financial', { params }),
-  exportReport: (type, params) => api.get(`/reports/${type}/export`, { params, responseType: 'blob' })
+  // Sales Reports
+  getSalesSummary: (data) => api.post('/reports/sales/summary', data),
+  exportSalesSummary: (data) => api.post('/reports/sales/summary/export', data, { responseType: 'blob' }),
+
+  // Inventory Reports
+  getStockOnHand: (data) => api.post('/reports/inventory/stock-on-hand', data),
+  exportStockOnHand: (data) => api.post('/reports/inventory/stock-on-hand/export', data, { responseType: 'blob' }),
+  getInventoryValuation: (data) => api.post('/reports/inventory/valuation', data),
+  exportInventoryValuation: (data) => api.post('/reports/inventory/valuation/export', data, { responseType: 'blob' }),
+
+  // Financial Reports
+  getTrialBalance: (data) => api.post('/reports/financial/trial-balance', data),
+  exportTrialBalance: (data) => api.post('/reports/financial/trial-balance/export', data, { responseType: 'blob' }),
+  getARAgingReport: (data) => api.post('/reports/financial/ar-aging', data),
+  exportARAgingReport: (data) => api.post('/reports/financial/ar-aging/export', data, { responseType: 'blob' }),
+  getAPAgingReport: (data) => api.post('/reports/financial/ap-aging', data),
+  exportAPAgingReport: (data) => api.post('/reports/financial/ap-aging/export', data, { responseType: 'blob' }),
+
+  // Report definitions & schedules
+  getDefinitions: (params) => api.get('/reports/definitions', { params }),
+  getSchedules: (params) => api.get('/reports/schedules', { params }),
+  getExecutions: (params) => api.get('/reports/executions', { params })
 }
 
 // Dashboard API - Backend: /api/v1/admin/dashboard

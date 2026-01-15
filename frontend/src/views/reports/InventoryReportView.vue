@@ -10,8 +10,8 @@ const filter = ref('all') // all, low, out
 async function fetchReport() {
   loading.value = true
   try {
-    const response = await reportsApi.getInventoryReport({})
-    report.value = response.data
+    const response = await reportsApi.getStockOnHand({})
+    report.value = response.data.data
   } catch (error) {
     console.error('Failed to fetch report:', error)
   } finally {
