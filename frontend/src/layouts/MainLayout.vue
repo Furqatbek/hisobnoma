@@ -111,7 +111,7 @@ function isChildActive(children) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100">
+  <div class="min-h-screen bg-gray-100 lg:flex">
     <!-- Mobile sidebar overlay -->
     <div
       v-if="sidebarOpen"
@@ -122,7 +122,7 @@ function isChildActive(children) {
     <!-- Sidebar -->
     <aside
       :class="[
-        'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto',
+        'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto lg:flex-shrink-0',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       ]"
     >
@@ -252,7 +252,7 @@ function isChildActive(children) {
     </aside>
 
     <!-- Main content -->
-    <div class="lg:pl-64">
+    <div class="flex-1 min-w-0">
       <!-- Top bar -->
       <header class="sticky top-0 z-30 bg-white shadow-sm">
         <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
