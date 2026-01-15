@@ -22,8 +22,9 @@ const errors = reactive({})
 async function fetchWarehouses() {
   loading.value = true
   try {
-    const response = await warehousesApi.getAll({ size: 100 })
-    warehouses.value = response.data.content || []
+    const response = await warehousesApi.getAll()
+    // Backend returns a list directly (not paginated)
+    warehouses.value = response.data.data || response.data || []
   } catch (error) {
     console.error('Failed to fetch warehouses:', error)
   } finally {

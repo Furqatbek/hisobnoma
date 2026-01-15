@@ -31,8 +31,9 @@ function onNameChange() {
 async function fetchCategories() {
   loading.value = true
   try {
-    const response = await categoriesApi.getAll({ size: 100 })
-    categories.value = response.data.data?.content || response.data.content || []
+    const response = await categoriesApi.getAll()
+    // Backend returns a list directly (not paginated)
+    categories.value = response.data.data || response.data || []
   } catch (error) {
     console.error('Failed to fetch categories:', error)
   } finally {

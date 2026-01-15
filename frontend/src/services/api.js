@@ -94,18 +94,27 @@ export const productsApi = {
 }
 
 // Categories API - Backend: /api/v1/inventory/categories
+// Note: GET /inventory/categories returns a list (not paginated)
 export const categoriesApi = {
-  getAll: (params) => api.get('/inventory/categories', { params }),
+  getAll: () => api.get('/inventory/categories'),
+  getTree: () => api.get('/inventory/categories/tree'),
+  getRoots: () => api.get('/inventory/categories/roots'),
   getById: (id) => api.get(`/inventory/categories/${id}`),
+  getChildren: (id) => api.get(`/inventory/categories/${id}/children`),
+  search: (query, params) => api.get('/inventory/categories/search', { params: { q: query, ...params } }),
   create: (data) => api.post('/inventory/categories', data),
   update: (id, data) => api.put(`/inventory/categories/${id}`, data),
   delete: (id) => api.delete(`/inventory/categories/${id}`)
 }
 
 // Brands API - Backend: /api/v1/inventory/brands
+// Note: GET /inventory/brands returns a list; use /paginated for pagination
 export const brandsApi = {
-  getAll: (params) => api.get('/inventory/brands', { params }),
+  getAll: () => api.get('/inventory/brands'),
+  getPaginated: (params) => api.get('/inventory/brands/paginated', { params }),
+  getActive: () => api.get('/inventory/brands/active'),
   getById: (id) => api.get(`/inventory/brands/${id}`),
+  search: (query) => api.get('/inventory/brands/search', { params: { q: query } }),
   create: (data) => api.post('/inventory/brands', data),
   update: (id, data) => api.put(`/inventory/brands/${id}`, data),
   delete: (id) => api.delete(`/inventory/brands/${id}`)
@@ -113,11 +122,22 @@ export const brandsApi = {
 
 // Stock API - Backend: /api/v1/inventory/stock
 export const stockApi = {
+  getAll: (params) => api.get('/inventory/stock', { params }),
   getByProduct: (productId) => api.get(`/inventory/stock/product/${productId}`),
   getByLocation: (locationId) => api.get(`/inventory/stock/location/${locationId}`),
+  getByProductAndLocation: (productId, locationId) => api.get(`/inventory/stock/product/${productId}/location/${locationId}`),
   getLowStock: () => api.get('/inventory/stock/low-stock'),
-  adjust: (data) => api.post('/inventory/stock/adjust', data),
-  transfer: (data) => api.post('/inventory/stock/transfer', data)
+  getValuation: () => api.get('/inventory/stock/valuation'),
+  getAvailable: (productId) => api.get(`/inventory/stock/available/${productId}`),
+  checkAvailability: (params) => api.get('/inventory/stock/check-availability', { params }),
+  search: (query, params) => api.get('/inventory/stock/search', { params: { q: query, ...params } }),
+  getMovements: (params) => api.get('/inventory/stock/movements', { params }),
+  getMovementsByProduct: (productId, params) => api.get(`/inventory/stock/movements/product/${productId}`, { params }),
+  getMovementsByLocation: (locationId, params) => api.get(`/inventory/stock/movements/location/${locationId}`, { params }),
+  receive: (data) => api.post('/inventory/stock/receive', data),
+  issue: (data) => api.post('/inventory/stock/issue', data),
+  transfer: (data) => api.post('/inventory/stock/transfer', data),
+  adjust: (data) => api.post('/inventory/stock/adjust', data)
 }
 
 // POS API - Backend: /api/v1/pos/transactions
@@ -156,11 +176,25 @@ export const suppliersApi = {
 export const purchaseOrdersApi = {
   getAll: (params) => api.get('/inventory/purchase-orders', { params }),
   getById: (id) => api.get(`/inventory/purchase-orders/${id}`),
+  getByStatus: (status, params) => api.get(`/inventory/purchase-orders/status/${status}`, { params }),
+  getByVendor: (vendorId, params) => api.get(`/inventory/purchase-orders/vendor/${vendorId}`, { params }),
+  search: (query, params) => api.get('/inventory/purchase-orders/search', { params: { q: query, ...params } }),
   create: (data) => api.post('/inventory/purchase-orders', data),
-  update: (id, data) => api.put(`/inventory/purchase-orders/${id}`, data),
-  approve: (id) => api.post(`/inventory/purchase-orders/${id}/approve`),
-  receive: (id, data) => api.post(`/inventory/purchase-orders/${id}/receive`, data),
-  cancel: (id) => api.post(`/inventory/purchase-orders/${id}/cancel`)
+  submit: (id) => api.put(`/inventory/purchase-orders/${id}/submit`),
+  approve: (id) => api.put(`/inventory/purchase-orders/${id}/approve`),
+  cancel: (id, reason) => api.put(`/inventory/purchase-orders/${id}/cancel`, { reason })
+}
+
+// Receiving API - Backend: /api/v1/inventory/receiving
+export const receivingApi = {
+  getAll: (params) => api.get('/inventory/receiving', { params }),
+  getById: (id) => api.get(`/inventory/receiving/${id}`),
+  getByStatus: (status, params) => api.get(`/inventory/receiving/status/${status}`, { params }),
+  getByPurchaseOrder: (poId, params) => api.get(`/inventory/receiving/purchase-order/${poId}`, { params }),
+  search: (query, params) => api.get('/inventory/receiving/search', { params: { q: query, ...params } }),
+  create: (data) => api.post('/inventory/receiving', data),
+  confirm: (id) => api.put(`/inventory/receiving/${id}/confirm`),
+  cancel: (id, reason) => api.put(`/inventory/receiving/${id}/cancel`, { reason })
 }
 
 // Reports API - Backend: /api/v1/reports (uses POST with request body)
@@ -197,8 +231,18 @@ export const dashboardApi = {
 
 // Warehouses/Locations API - Backend: /api/v1/inventory/locations
 export const warehousesApi = {
-  getAll: (params) => api.get('/inventory/locations', { params }),
+  getAll: () => api.get('/inventory/locations'),
+  getPaginated: (params) => api.get('/inventory/locations/paginated', { params }),
+  getActive: () => api.get('/inventory/locations/active'),
+  getTree: () => api.get('/inventory/locations/tree'),
+  getRoots: () => api.get('/inventory/locations/roots'),
+  getByType: (type) => api.get(`/inventory/locations/type/${type}`),
+  getWarehouseAndStore: () => api.get('/inventory/locations/warehouse-store'),
+  getDefault: () => api.get('/inventory/locations/default'),
   getById: (id) => api.get(`/inventory/locations/${id}`),
+  getByCode: (code) => api.get(`/inventory/locations/code/${code}`),
+  getChildren: (id) => api.get(`/inventory/locations/${id}/children`),
+  search: (query, params) => api.get('/inventory/locations/search', { params: { q: query, ...params } }),
   create: (data) => api.post('/inventory/locations', data),
   update: (id, data) => api.put(`/inventory/locations/${id}`, data),
   delete: (id) => api.delete(`/inventory/locations/${id}`)

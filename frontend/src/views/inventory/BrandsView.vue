@@ -8,14 +8,26 @@ const loading = ref(true)
 const showModal = ref(false)
 const editingBrand = ref(null)
 
-const form = reactive({ name: '', description: '' })
+const form = reactive({ name: '', code: '', description: '' })
 const errors = reactive({})
+
+// Auto-generate code from name
+function generateCode(name) {
+  return name.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 50)
+}
+
+function onNameChange() {
+  if (!editingBrand.value && form.name) {
+    form.code = generateCode(form.name)
+  }
+}
 
 async function fetchBrands() {
   loading.value = true
   try {
-    const response = await brandsApi.getAll({ size: 100 })
-    brands.value = response.data.content || []
+    const response = await brandsApi.getAll()
+    // Backend returns a list directly (not paginated)
+    brands.value = response.data.data || response.data || []
   } catch (error) {
     console.error('Failed to fetch brands:', error)
   } finally {
@@ -28,16 +40,21 @@ onMounted(fetchBrands)
 function openModal(brand = null) {
   editingBrand.value = brand
   form.name = brand?.name || ''
+  form.code = brand?.code || ''
   form.description = brand?.description || ''
   Object.keys(errors).forEach(key => delete errors[key])
   showModal.value = true
 }
 
 async function saveBrand() {
+  Object.keys(errors).forEach(key => delete errors[key])
   if (!form.name?.trim()) {
     errors.name = 'Name is required'
-    return
   }
+  if (!form.code?.trim()) {
+    errors.code = 'Code is required'
+  }
+  if (Object.keys(errors).length > 0) return
 
   try {
     if (editingBrand.value) {
@@ -90,6 +107,7 @@ async function deleteBrand(brand) {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Code</th>
               <th>Description</th>
               <th>Products</th>
               <th class="text-right">Actions</th>
@@ -98,6 +116,7 @@ async function deleteBrand(brand) {
           <tbody class="divide-y divide-gray-200">
             <tr v-for="brand in brands" :key="brand.id">
               <td class="font-medium">{{ brand.name }}</td>
+              <td class="font-mono text-sm text-gray-500">{{ brand.code }}</td>
               <td class="text-gray-500">{{ brand.description || '-' }}</td>
               <td>{{ brand.productCount || 0 }}</td>
               <td class="text-right">
@@ -128,8 +147,14 @@ async function deleteBrand(brand) {
           <div class="space-y-4">
             <div>
               <label class="label">Name *</label>
-              <input v-model="form.name" type="text" :class="[errors.name ? 'input-error' : 'input']" />
+              <input v-model="form.name" @input="onNameChange" type="text" :class="[errors.name ? 'input-error' : 'input']" />
               <p v-if="errors.name" class="mt-1 text-sm text-red-600">{{ errors.name }}</p>
+            </div>
+
+            <div>
+              <label class="label">Code *</label>
+              <input v-model="form.code" type="text" :class="[errors.code ? 'input-error' : 'input']" placeholder="auto-generated from name" />
+              <p v-if="errors.code" class="mt-1 text-sm text-red-600">{{ errors.code }}</p>
             </div>
 
             <div>
