@@ -10,17 +10,29 @@ const editingCategory = ref(null)
 
 const form = reactive({
   name: '',
+  code: '',
   description: '',
   parentId: null
 })
 
 const errors = reactive({})
 
+// Auto-generate code from name
+function generateCode(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 50)
+}
+
+function onNameChange() {
+  if (!editingCategory.value && form.name) {
+    form.code = generateCode(form.name)
+  }
+}
+
 async function fetchCategories() {
   loading.value = true
   try {
     const response = await categoriesApi.getAll({ size: 100 })
-    categories.value = response.data.content || []
+    categories.value = response.data.data?.content || response.data.content || []
   } catch (error) {
     console.error('Failed to fetch categories:', error)
   } finally {
@@ -34,10 +46,12 @@ function openModal(category = null) {
   editingCategory.value = category
   if (category) {
     form.name = category.name
+    form.code = category.code || ''
     form.description = category.description || ''
     form.parentId = category.parent?.id || null
   } else {
     form.name = ''
+    form.code = ''
     form.description = ''
     form.parentId = null
   }
@@ -48,6 +62,7 @@ function openModal(category = null) {
 function validate() {
   Object.keys(errors).forEach(key => delete errors[key])
   if (!form.name?.trim()) errors.name = 'Name is required'
+  if (!form.code?.trim()) errors.code = 'Code is required'
   return Object.keys(errors).length === 0
 }
 
@@ -107,6 +122,7 @@ async function deleteCategory(category) {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Code</th>
               <th>Description</th>
               <th>Products</th>
               <th class="text-right">Actions</th>
@@ -115,6 +131,7 @@ async function deleteCategory(category) {
           <tbody class="divide-y divide-gray-200">
             <tr v-for="category in categories" :key="category.id">
               <td class="font-medium">{{ category.name }}</td>
+              <td class="font-mono text-sm text-gray-500">{{ category.code }}</td>
               <td class="text-gray-500">{{ category.description || '-' }}</td>
               <td>{{ category.productCount || 0 }}</td>
               <td class="text-right">
@@ -149,8 +166,14 @@ async function deleteCategory(category) {
           <div class="space-y-4">
             <div>
               <label class="label">Name *</label>
-              <input v-model="form.name" type="text" :class="[errors.name ? 'input-error' : 'input']" />
+              <input v-model="form.name" @input="onNameChange" type="text" :class="[errors.name ? 'input-error' : 'input']" />
               <p v-if="errors.name" class="mt-1 text-sm text-red-600">{{ errors.name }}</p>
+            </div>
+
+            <div>
+              <label class="label">Code *</label>
+              <input v-model="form.code" type="text" :class="[errors.code ? 'input-error' : 'input']" placeholder="auto-generated from name" />
+              <p v-if="errors.code" class="mt-1 text-sm text-red-600">{{ errors.code }}</p>
             </div>
 
             <div>
