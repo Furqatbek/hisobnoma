@@ -46,7 +46,8 @@ const navigation = computed(() => [
       { name: 'Categories', href: '/inventory/categories', icon: ArchiveBoxIcon },
       { name: 'Brands', href: '/inventory/brands', icon: BuildingStorefrontIcon },
       { name: 'Stock', href: '/inventory/stock', icon: ClipboardDocumentListIcon },
-      { name: 'Warehouses', href: '/inventory/warehouses', icon: BuildingStorefrontIcon }
+      { name: 'Warehouses', href: '/inventory/warehouses', icon: BuildingStorefrontIcon },
+      { name: 'Units of Measure', href: '/inventory/uom', icon: TagIcon }
     ]
   },
   {

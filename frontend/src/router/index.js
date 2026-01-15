@@ -76,6 +76,11 @@ const routes = [
             path: 'warehouses',
             name: 'warehouses',
             component: () => import('@/views/inventory/WarehousesView.vue')
+          },
+          {
+            path: 'uom',
+            name: 'uom',
+            component: () => import('@/views/inventory/UOMView.vue')
           }
         ]
       },
