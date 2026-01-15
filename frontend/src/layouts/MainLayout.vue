@@ -228,19 +228,21 @@ function isChildActive(children) {
       <!-- User section -->
       <div class="border-t border-gray-200 p-4">
         <div class="flex items-center">
-          <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-            <span class="text-primary-700 font-medium text-sm">
-              {{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}
-            </span>
-          </div>
-          <div class="ml-3 flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-900 truncate">
-              {{ authStore.user?.username || 'User' }}
-            </p>
-            <p class="text-xs text-gray-500 truncate">
-              {{ authStore.user?.roles?.[0] || 'User' }}
-            </p>
-          </div>
+          <RouterLink to="/profile" class="flex items-center flex-1 min-w-0 hover:opacity-80 transition-opacity">
+            <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+              <span class="text-primary-700 font-medium text-sm">
+                {{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}
+              </span>
+            </div>
+            <div class="ml-3 flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 truncate">
+                {{ authStore.user?.username || 'User' }}
+              </p>
+              <p class="text-xs text-gray-500 truncate">
+                {{ authStore.user?.roles?.[0] || 'User' }}
+              </p>
+            </div>
+          </RouterLink>
           <button
             @click="authStore.logout()"
             class="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100"
