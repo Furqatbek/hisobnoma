@@ -79,4 +79,17 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
 
     @Query("SELECT s FROM Stock s WHERE s.tenantId = :tenantId")
     List<Stock> findByTenantId(@Param("tenantId") Long tenantId);
+
+    // Mobile dashboard methods
+    @Query("SELECT COALESCE(SUM(s.quantityOnHand * COALESCE(s.averageCost, s.product.costPrice, 0)), 0) FROM Stock s WHERE s.tenantId = :tenantId")
+    BigDecimal calculateTotalInventoryValue(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT COUNT(DISTINCT s.product.id) FROM Stock s WHERE s.tenantId = :tenantId AND " +
+           "(s.quantityOnHand - s.quantityReserved) <= COALESCE(s.reorderPoint, s.product.reorderPoint, 0) AND " +
+           "(s.quantityOnHand - s.quantityReserved) > 0")
+    Integer countLowStockProducts(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT COUNT(DISTINCT s.product.id) FROM Stock s WHERE s.tenantId = :tenantId AND " +
+           "(s.quantityOnHand - s.quantityReserved) <= 0")
+    Integer countOutOfStockProducts(@Param("tenantId") Long tenantId);
 }

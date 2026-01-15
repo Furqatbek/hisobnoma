@@ -67,4 +67,9 @@ public interface StockBatchRepository extends JpaRepository<StockBatch, Long> {
     @Query("SELECT COUNT(b) FROM StockBatch b WHERE b.tenantId = :tenantId AND b.status = 'ACTIVE' AND " +
            "b.expiryDate IS NOT NULL AND b.expiryDate BETWEEN CURRENT_DATE AND :warningDate")
     Long countExpiringWithinDays(@Param("tenantId") Long tenantId, @Param("warningDate") LocalDate warningDate);
+
+    // Mobile module method
+    @Query("SELECT COUNT(b) FROM StockBatch b WHERE b.tenantId = :tenantId AND b.status = 'ACTIVE' AND " +
+           "b.expiryDate IS NOT NULL AND b.expiryDate BETWEEN CURRENT_DATE AND :threshold")
+    Integer countExpiringBatches(@Param("tenantId") Long tenantId, @Param("threshold") LocalDate threshold);
 }

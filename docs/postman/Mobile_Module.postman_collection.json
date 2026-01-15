@@ -1,0 +1,553 @@
+{
+  "info": {
+    "_postman_id": "mobile-module-v1",
+    "name": "Mobile Module",
+    "description": "API collection for Mobile App Integration - Dashboard, Alerts, Quick Actions, and Offline Sync",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1/mobile"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+998901234567\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Register Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"unique-device-id\",\n  \"fcmToken\": \"firebase-token\",\n  \"platform\": \"ANDROID\",\n  \"deviceName\": \"Samsung Galaxy S21\",\n  \"deviceModel\": \"SM-G991B\",\n  \"osVersion\": \"14.0\",\n  \"appVersion\": \"1.0.0\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register-device",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register-device"]
+            }
+          }
+        },
+        {
+          "name": "Get Registered Devices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/auth/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "devices"]
+            }
+          }
+        },
+        {
+          "name": "Deactivate Device",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/auth/devices/unique-device-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "devices", "unique-device-id"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout?deviceId=unique-device-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"],
+              "query": [
+                {
+                  "key": "deviceId",
+                  "value": "unique-device-id"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Revenue Summary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/revenue",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "revenue"]
+            }
+          }
+        },
+        {
+          "name": "Get Revenue Chart - Hourly",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/revenue/chart?period=hourly",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "revenue", "chart"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "hourly"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Revenue Chart - Daily",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/revenue/chart?period=daily",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "revenue", "chart"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "daily"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Revenue Chart - Monthly",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/revenue/chart?period=monthly",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "revenue", "chart"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Inventory Summary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/inventory",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "inventory"]
+            }
+          }
+        },
+        {
+          "name": "Get Financial Summary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/financial",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "financial"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alerts",
+      "item": [
+        {
+          "name": "Get Alerts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/alerts?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["alerts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Alerts Only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/alerts?unreadOnly=true&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["alerts"],
+              "query": [
+                {
+                  "key": "unreadOnly",
+                  "value": "true"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/alerts/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["alerts", "unread-count"]
+            }
+          }
+        },
+        {
+          "name": "Mark Alert as Read",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/alerts/1/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["alerts", "1", "read"]
+            }
+          }
+        },
+        {
+          "name": "Mark All Alerts as Read",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/alerts/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["alerts", "read-all"]
+            }
+          }
+        },
+        {
+          "name": "Get Alert Preferences",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/alerts/preferences",
+              "host": ["{{baseUrl}}"],
+              "path": ["alerts", "preferences"]
+            }
+          }
+        },
+        {
+          "name": "Update Alert Preference",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pushEnabled\": true,\n  \"inAppEnabled\": true,\n  \"emailEnabled\": false,\n  \"smsEnabled\": false,\n  \"thresholdValue\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/alerts/preferences/LOW_STOCK",
+              "host": ["{{baseUrl}}"],
+              "path": ["alerts", "preferences", "LOW_STOCK"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quick Actions",
+      "item": [
+        {
+          "name": "Barcode Lookup",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/barcode/1234567890123",
+              "host": ["{{baseUrl}}"],
+              "path": ["barcode", "1234567890123"]
+            }
+          }
+        },
+        {
+          "name": "Quick Stock Count",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": 1,\n  \"locationId\": 1,\n  \"countedQuantity\": 95,\n  \"notes\": \"Shelf count\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/quick-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["quick-count"]
+            }
+          }
+        },
+        {
+          "name": "Quick Sale",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"terminalId\": 1,\n  \"customerId\": null,\n  \"items\": [\n    {\n      \"productId\": 1,\n      \"variantId\": null,\n      \"quantity\": 2,\n      \"unitPrice\": 25000.00,\n      \"discountAmount\": 0\n    }\n  ],\n  \"paymentType\": \"CASH\",\n  \"tenderedAmount\": 50000.00,\n  \"notes\": \"Walk-in customer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/quick-sale",
+              "host": ["{{baseUrl}}"],
+              "path": ["quick-sale"]
+            }
+          }
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products/search?query=laptop&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "laptop"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Customers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/customers/search?query=john&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "john"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Offline Sync",
+      "item": [
+        {
+          "name": "Get Products (Full Sync)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/sync/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "products"]
+            }
+          }
+        },
+        {
+          "name": "Get Products (Incremental Sync)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/sync/products?lastSyncAt=2026-01-14T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "products"],
+              "query": [
+                {
+                  "key": "lastSyncAt",
+                  "value": "2026-01-14T00:00:00Z"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Customers (Full Sync)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/sync/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "customers"]
+            }
+          }
+        },
+        {
+          "name": "Get Customers (Incremental Sync)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/sync/customers?lastSyncAt=2026-01-14T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "customers"],
+              "query": [
+                {
+                  "key": "lastSyncAt",
+                  "value": "2026-01-14T00:00:00Z"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/sync/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Check Last Updated",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/sync/last-updated",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "last-updated"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

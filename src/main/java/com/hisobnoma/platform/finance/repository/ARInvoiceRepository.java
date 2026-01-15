@@ -91,4 +91,9 @@ public interface ARInvoiceRepository extends JpaRepository<ARInvoice, Long> {
     @Query("SELECT MAX(CAST(SUBSTRING(i.invoiceNumber, 5) AS integer)) FROM ARInvoice i " +
            "WHERE i.tenantId = :tenantId AND i.invoiceNumber LIKE 'INV-%'")
     Integer findMaxInvoiceNumber(@Param("tenantId") Long tenantId);
+
+    // Mobile module method
+    @Query("SELECT COALESCE(SUM(i.balanceDue), 0) FROM ARInvoice i " +
+           "WHERE i.tenantId = :tenantId AND i.status NOT IN ('CANCELLED', 'PAID')")
+    BigDecimal sumOutstandingBalance(@Param("tenantId") Long tenantId);
 }

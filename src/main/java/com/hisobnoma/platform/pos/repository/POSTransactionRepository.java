@@ -87,4 +87,21 @@ public interface POSTransactionRepository extends JpaRepository<POSTransaction, 
             @Param("customerId") Long customerId,
             @Param("tenantId") Long tenantId,
             @Param("status") TransactionStatus status);
+
+    // Mobile dashboard methods
+    @Query("SELECT COALESCE(SUM(t.totalAmount), 0) FROM POSTransaction t WHERE t.tenantId = :tenantId " +
+           "AND t.status = 'COMPLETED' AND t.transactionType = 'SALE' " +
+           "AND t.completedAt >= :startDate AND t.completedAt < :endDate")
+    BigDecimal sumCompletedSalesByDateRange(
+            @Param("tenantId") Long tenantId,
+            @Param("startDate") Instant startDate,
+            @Param("endDate") Instant endDate);
+
+    @Query("SELECT COUNT(t) FROM POSTransaction t WHERE t.tenantId = :tenantId " +
+           "AND t.status = 'COMPLETED' AND t.transactionType = 'SALE' " +
+           "AND t.completedAt >= :startDate AND t.completedAt < :endDate")
+    Integer countCompletedSalesByDateRange(
+            @Param("tenantId") Long tenantId,
+            @Param("startDate") Instant startDate,
+            @Param("endDate") Instant endDate);
 }

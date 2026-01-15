@@ -52,4 +52,8 @@ public interface BankAccountRepository extends JpaRepository<BankAccount, Long> 
            "OR LOWER(ba.accountName) LIKE LOWER(CONCAT('%', :search, '%')) " +
            "OR LOWER(ba.bankName) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<BankAccount> searchByTenantId(@Param("search") String search, @Param("tenantId") Long tenantId, Pageable pageable);
+
+    // Mobile module method
+    @Query("SELECT COALESCE(SUM(ba.currentBalance), 0) FROM BankAccount ba WHERE ba.tenantId = :tenantId AND ba.active = true")
+    java.math.BigDecimal sumTotalBalance(@Param("tenantId") Long tenantId);
 }

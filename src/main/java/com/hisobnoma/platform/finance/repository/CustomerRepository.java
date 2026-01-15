@@ -47,4 +47,20 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     @Query("SELECT c FROM Customer c WHERE c.tenantId = :tenantId AND c.currentBalance > c.creditLimit AND c.creditLimit IS NOT NULL")
     List<Customer> findOverCreditLimitByTenantId(@Param("tenantId") Long tenantId);
+
+    // Mobile module methods
+    @Query("SELECT c FROM Customer c WHERE c.tenantId = :tenantId AND c.active = true")
+    List<Customer> findByTenantIdAndActiveTrue(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT c FROM Customer c WHERE c.tenantId = :tenantId AND c.updatedAt > :since")
+    List<Customer> findByTenantIdAndUpdatedAtAfter(@Param("tenantId") Long tenantId, @Param("since") java.time.Instant since);
+
+    @Query("SELECT MAX(c.updatedAt) FROM Customer c WHERE c.tenantId = :tenantId")
+    java.time.Instant findMaxUpdatedAt(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT c FROM Customer c WHERE c.tenantId = :tenantId AND c.active = true AND " +
+           "(LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(c.code) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "c.phone LIKE CONCAT('%', :query, '%'))")
+    Page<Customer> searchByNameOrCodeOrPhone(@Param("tenantId") Long tenantId, @Param("query") String query, Pageable pageable);
 }

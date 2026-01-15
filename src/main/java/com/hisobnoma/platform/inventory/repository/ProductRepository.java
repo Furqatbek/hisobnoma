@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -87,4 +88,23 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT COUNT(p) FROM Product p WHERE (p.tenantId = :tenantId OR p.tenantId IS NULL) AND p.active = true")
     long countActiveByTenantId(@Param("tenantId") Long tenantId);
+
+    // Mobile module methods
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.tenantId = :tenantId AND p.active = true")
+    Integer countByTenantIdAndActiveTrue(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT p FROM Product p WHERE p.tenantId = :tenantId AND p.active = true")
+    List<Product> findByTenantIdAndActiveTrue(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT p FROM Product p WHERE p.tenantId = :tenantId AND p.updatedAt > :since")
+    List<Product> findByTenantIdAndUpdatedAtAfter(@Param("tenantId") Long tenantId, @Param("since") Instant since);
+
+    @Query("SELECT MAX(p.updatedAt) FROM Product p WHERE p.tenantId = :tenantId")
+    Instant findMaxUpdatedAt(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT p FROM Product p WHERE p.tenantId = :tenantId AND p.active = true AND " +
+           "(LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.sku) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "p.barcode = :query)")
+    Page<Product> searchByNameOrSkuOrBarcode(@Param("tenantId") Long tenantId, @Param("query") String query, Pageable pageable);
 }

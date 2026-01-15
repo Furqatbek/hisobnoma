@@ -85,4 +85,9 @@ public interface APInvoiceRepository extends JpaRepository<APInvoice, Long> {
     @Query("SELECT MAX(CAST(SUBSTRING(i.invoiceNumber, 4) AS integer)) FROM APInvoice i " +
            "WHERE i.tenantId = :tenantId AND i.invoiceNumber LIKE 'AP-%'")
     Integer findMaxInvoiceNumber(@Param("tenantId") Long tenantId);
+
+    // Mobile module method
+    @Query("SELECT COALESCE(SUM(i.balanceDue), 0) FROM APInvoice i " +
+           "WHERE i.tenantId = :tenantId AND i.status NOT IN ('CANCELLED', 'PAID')")
+    BigDecimal sumOutstandingBalance(@Param("tenantId") Long tenantId);
 }
