@@ -95,7 +95,8 @@ async function handleChangePassword() {
   try {
     await authApi.changePassword({
       currentPassword: passwordForm.currentPassword,
-      newPassword: passwordForm.newPassword
+      newPassword: passwordForm.newPassword,
+      confirmPassword: passwordForm.confirmPassword
     })
 
     passwordSuccess.value = true
