@@ -1,0 +1,708 @@
+{
+  "info": {
+    "name": "Hisobnoma - Reports Module",
+    "description": "API Collection for the Reporting Module (Block 15) including inventory, sales, and financial reports with scheduling and export capabilities.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Report Definitions",
+      "item": [
+        {
+          "name": "Get All Report Definitions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/definitions?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "definitions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get paginated list of all available report definitions."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": 1,\n        \"code\": \"STOCK_ON_HAND\",\n        \"name\": \"Stock on Hand Report\",\n        \"description\": \"Current inventory levels across all locations\",\n        \"category\": \"INVENTORY\",\n        \"active\": true\n      }\n    ],\n    \"totalElements\": 6,\n    \"totalPages\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Report Definition by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/definitions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "definitions", "1"]
+            },
+            "description": "Get a specific report definition by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Report Definition by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/definitions/code/STOCK_ON_HAND",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "definitions", "code", "STOCK_ON_HAND"]
+            },
+            "description": "Get a specific report definition by code."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Reports by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/definitions/category/INVENTORY?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "definitions", "category", "INVENTORY"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get all report definitions for a specific category (INVENTORY, SALES, FINANCIAL, OPERATIONAL, CUSTOM)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory Reports",
+      "item": [
+        {
+          "name": "Generate Stock on Hand Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locationId\": null,\n  \"categoryId\": null,\n  \"includeZeroStock\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/inventory/stock-on-hand",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "inventory", "stock-on-hand"]
+            },
+            "description": "Generate Stock on Hand report with optional filters for location and category."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"metadata\": {\n      \"reportName\": \"Stock on Hand Report\",\n      \"generatedAt\": \"2026-01-15T10:30:00Z\",\n      \"asOfDate\": \"2026-01-15\",\n      \"locationFilter\": \"All Locations\",\n      \"categoryFilter\": \"All Categories\"\n    },\n    \"summary\": {\n      \"totalItems\": 150,\n      \"totalQuantity\": 5000,\n      \"totalValue\": 125000.00,\n      \"lowStockItems\": 12,\n      \"outOfStockItems\": 3,\n      \"overstockItems\": 5\n    },\n    \"items\": [\n      {\n        \"productId\": 1,\n        \"sku\": \"SKU-001\",\n        \"productName\": \"Product A\",\n        \"categoryName\": \"Electronics\",\n        \"locationName\": \"Main Warehouse\",\n        \"quantityOnHand\": 100,\n        \"quantityReserved\": 10,\n        \"quantityAvailable\": 90,\n        \"unitCost\": 25.00,\n        \"reorderPoint\": 20,\n        \"stockStatus\": \"IN_STOCK\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Generate Inventory Valuation Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": null,\n  \"valuationMethod\": \"AVERAGE_COST\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/inventory/valuation",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "inventory", "valuation"]
+            },
+            "description": "Generate Inventory Valuation report showing total inventory value by product and category."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"metadata\": {\n      \"reportName\": \"Inventory Valuation Report\",\n      \"generatedAt\": \"2026-01-15T10:30:00Z\",\n      \"asOfDate\": \"2026-01-15\",\n      \"valuationMethod\": \"AVERAGE_COST\",\n      \"categoryFilter\": \"All Categories\"\n    },\n    \"summary\": {\n      \"totalItems\": 150,\n      \"totalQuantity\": 5000,\n      \"totalCostValue\": 125000.00,\n      \"totalRetailValue\": 175000.00,\n      \"potentialGrossMargin\": 50000.00,\n      \"averageMarginPercent\": 28.57\n    },\n    \"items\": [\n      {\n        \"productId\": 1,\n        \"sku\": \"SKU-001\",\n        \"productName\": \"Product A\",\n        \"categoryId\": 1,\n        \"categoryName\": \"Electronics\",\n        \"quantityOnHand\": 100,\n        \"unitCost\": 25.00,\n        \"totalCostValue\": 2500.00,\n        \"unitRetailPrice\": 35.00,\n        \"totalRetailValue\": 3500.00,\n        \"marginPercent\": 28.57\n      }\n    ],\n    \"byCategory\": [\n      {\n        \"categoryId\": 1,\n        \"categoryName\": \"Electronics\",\n        \"itemCount\": 50,\n        \"totalQuantity\": 2000,\n        \"totalCostValue\": 50000.00,\n        \"totalRetailValue\": 70000.00,\n        \"percentOfTotal\": 40.00\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Export Stock on Hand Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locationId\": null,\n  \"categoryId\": null,\n  \"includeZeroStock\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/inventory/stock-on-hand/export?format=EXCEL",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "inventory", "stock-on-hand", "export"],
+              "query": [
+                { "key": "format", "value": "EXCEL" }
+              ]
+            },
+            "description": "Export Stock on Hand report to specified format (EXCEL, CSV, JSON). Returns file download."
+          },
+          "response": []
+        },
+        {
+          "name": "Export Inventory Valuation Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": null,\n  \"valuationMethod\": \"AVERAGE_COST\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/inventory/valuation/export?format=CSV",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "inventory", "valuation", "export"],
+              "query": [
+                { "key": "format", "value": "CSV" }
+              ]
+            },
+            "description": "Export Inventory Valuation report to specified format (EXCEL, CSV, JSON)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sales Reports",
+      "item": [
+        {
+          "name": "Generate Sales Summary Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-01-15\",\n  \"locationId\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/sales/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "sales", "summary"]
+            },
+            "description": "Generate comprehensive sales summary report with daily breakdown, category analysis, top products, and payment method breakdown."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"metadata\": {\n      \"reportName\": \"Sales Summary Report\",\n      \"generatedAt\": \"2026-01-15T10:30:00Z\",\n      \"startDate\": \"2026-01-01\",\n      \"endDate\": \"2026-01-15\",\n      \"locationFilter\": \"All Locations\"\n    },\n    \"summary\": {\n      \"grossSales\": 50000.00,\n      \"discounts\": 2500.00,\n      \"returns\": 1000.00,\n      \"netSales\": 46500.00,\n      \"costOfGoods\": 30000.00,\n      \"grossProfit\": 16500.00,\n      \"grossMarginPercent\": 35.48,\n      \"transactionCount\": 250,\n      \"averageTransactionValue\": 186.00,\n      \"itemsSold\": 1500\n    },\n    \"dailyBreakdown\": [\n      {\n        \"date\": \"2026-01-15\",\n        \"dayOfWeek\": \"Wednesday\",\n        \"netSales\": 3200.00,\n        \"transactionCount\": 18,\n        \"averageTransaction\": 177.78\n      }\n    ],\n    \"byCategory\": [\n      {\n        \"categoryId\": 1,\n        \"categoryName\": \"Electronics\",\n        \"netSales\": 20000.00,\n        \"itemsSold\": 500,\n        \"percentOfTotal\": 43.01\n      }\n    ],\n    \"topProducts\": [\n      {\n        \"productId\": 1,\n        \"sku\": \"SKU-001\",\n        \"productName\": \"Product A\",\n        \"quantitySold\": 100,\n        \"netSales\": 5000.00,\n        \"profit\": 1500.00\n      }\n    ],\n    \"byPaymentMethod\": [\n      {\n        \"paymentMethod\": \"CASH\",\n        \"amount\": 25000.00,\n        \"transactionCount\": 150,\n        \"percentOfTotal\": 53.76\n      },\n      {\n        \"paymentMethod\": \"CARD\",\n        \"amount\": 21500.00,\n        \"transactionCount\": 100,\n        \"percentOfTotal\": 46.24\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Export Sales Summary Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-01-15\",\n  \"locationId\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/sales/summary/export?format=EXCEL",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "sales", "summary", "export"],
+              "query": [
+                { "key": "format", "value": "EXCEL" }
+              ]
+            },
+            "description": "Export Sales Summary report to specified format."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Financial Reports",
+      "item": [
+        {
+          "name": "Generate Trial Balance Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-01-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/financial/trial-balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "financial", "trial-balance"]
+            },
+            "description": "Generate Trial Balance report showing all account balances as of a specific date."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"metadata\": {\n      \"reportName\": \"Trial Balance\",\n      \"generatedAt\": \"2026-01-15T10:30:00Z\",\n      \"asOfDate\": \"2026-01-15\",\n      \"fiscalYear\": \"2026\",\n      \"period\": \"JANUARY\"\n    },\n    \"accounts\": [\n      {\n        \"accountId\": 1,\n        \"accountCode\": \"1000\",\n        \"accountName\": \"Cash\",\n        \"accountType\": \"ASSET\",\n        \"debitBalance\": 50000.00,\n        \"creditBalance\": 0.00,\n        \"level\": 1,\n        \"isHeader\": false\n      },\n      {\n        \"accountId\": 10,\n        \"accountCode\": \"2000\",\n        \"accountName\": \"Accounts Payable\",\n        \"accountType\": \"LIABILITY\",\n        \"debitBalance\": 0.00,\n        \"creditBalance\": 15000.00,\n        \"level\": 1,\n        \"isHeader\": false\n      }\n    ],\n    \"totals\": {\n      \"totalDebits\": 100000.00,\n      \"totalCredits\": 100000.00,\n      \"isBalanced\": true,\n      \"difference\": 0.00\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Generate AR Aging Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-01-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/financial/ar-aging",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "financial", "ar-aging"]
+            },
+            "description": "Generate Accounts Receivable Aging report showing outstanding customer invoices by age bucket."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"metadata\": {\n      \"reportName\": \"Accounts Receivable Aging Report\",\n      \"reportType\": \"AR\",\n      \"generatedAt\": \"2026-01-15T10:30:00Z\",\n      \"asOfDate\": \"2026-01-15\"\n    },\n    \"summary\": {\n      \"totalOutstanding\": 50000.00,\n      \"current\": 30000.00,\n      \"days1to30\": 10000.00,\n      \"days31to60\": 5000.00,\n      \"days61to90\": 3000.00,\n      \"over90Days\": 2000.00,\n      \"totalAccounts\": 25,\n      \"overdueAccounts\": 10\n    },\n    \"details\": [\n      {\n        \"entityId\": 1,\n        \"entityCode\": \"CUST-001\",\n        \"entityName\": \"ABC Company\",\n        \"contactInfo\": \"+998901234567\",\n        \"creditLimit\": 100000.00,\n        \"totalOutstanding\": 15000.00,\n        \"current\": 10000.00,\n        \"days1to30\": 3000.00,\n        \"days31to60\": 1500.00,\n        \"days61to90\": 500.00,\n        \"over90Days\": 0.00,\n        \"overdueInvoices\": 3,\n        \"oldestInvoiceDate\": \"2025-12-01\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Generate AP Aging Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-01-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/financial/ap-aging",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "financial", "ap-aging"]
+            },
+            "description": "Generate Accounts Payable Aging report showing outstanding vendor invoices by age bucket."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"metadata\": {\n      \"reportName\": \"Accounts Payable Aging Report\",\n      \"reportType\": \"AP\",\n      \"generatedAt\": \"2026-01-15T10:30:00Z\",\n      \"asOfDate\": \"2026-01-15\"\n    },\n    \"summary\": {\n      \"totalOutstanding\": 35000.00,\n      \"current\": 20000.00,\n      \"days1to30\": 8000.00,\n      \"days31to60\": 4000.00,\n      \"days61to90\": 2000.00,\n      \"over90Days\": 1000.00,\n      \"totalAccounts\": 15,\n      \"overdueAccounts\": 5\n    },\n    \"details\": [\n      {\n        \"entityId\": 1,\n        \"entityCode\": \"V-1\",\n        \"entityName\": \"XYZ Supplier\",\n        \"totalOutstanding\": 12000.00,\n        \"current\": 8000.00,\n        \"days1to30\": 2500.00,\n        \"days31to60\": 1000.00,\n        \"days61to90\": 500.00,\n        \"over90Days\": 0.00,\n        \"overdueInvoices\": 2,\n        \"oldestInvoiceDate\": \"2025-12-15\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Export Trial Balance Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-01-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/financial/trial-balance/export?format=EXCEL",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "financial", "trial-balance", "export"],
+              "query": [
+                { "key": "format", "value": "EXCEL" }
+              ]
+            },
+            "description": "Export Trial Balance report to specified format."
+          },
+          "response": []
+        },
+        {
+          "name": "Export AR Aging Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-01-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/financial/ar-aging/export?format=EXCEL",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "financial", "ar-aging", "export"],
+              "query": [
+                { "key": "format", "value": "EXCEL" }
+              ]
+            },
+            "description": "Export AR Aging report to specified format."
+          },
+          "response": []
+        },
+        {
+          "name": "Export AP Aging Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-01-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/financial/ap-aging/export?format=CSV",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "financial", "ap-aging", "export"],
+              "query": [
+                { "key": "format", "value": "CSV" }
+              ]
+            },
+            "description": "Export AP Aging report to specified format."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Report Schedules",
+      "item": [
+        {
+          "name": "Get All Schedules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/schedules?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "schedules"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get paginated list of all report schedules."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": 1,\n        \"reportDefinitionId\": 1,\n        \"reportCode\": \"STOCK_ON_HAND\",\n        \"reportName\": \"Stock on Hand Report\",\n        \"name\": \"Daily Stock Report\",\n        \"frequency\": \"DAILY\",\n        \"runTime\": \"08:00:00\",\n        \"exportFormat\": \"EXCEL\",\n        \"deliveryMethod\": \"EMAIL\",\n        \"emailRecipients\": \"manager@example.com\",\n        \"lastRunAt\": \"2026-01-15T08:00:00Z\",\n        \"nextRunAt\": \"2026-01-16T08:00:00Z\",\n        \"lastRunStatus\": \"SUCCESS\",\n        \"active\": true\n      }\n    ],\n    \"totalElements\": 5,\n    \"totalPages\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Schedule by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/schedules/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "schedules", "1"]
+            },
+            "description": "Get a specific report schedule by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Report Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportDefinitionId\": 1,\n  \"name\": \"Daily Stock Report\",\n  \"frequency\": \"DAILY\",\n  \"runTime\": \"08:00:00\",\n  \"parameters\": \"{\\\"locationId\\\": null, \\\"categoryId\\\": null}\",\n  \"exportFormat\": \"EXCEL\",\n  \"deliveryMethod\": \"EMAIL\",\n  \"emailRecipients\": \"manager@example.com,supervisor@example.com\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/schedules",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "schedules"]
+            },
+            "description": "Create a new report schedule. Frequency options: DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY, CUSTOM_CRON."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Report schedule created successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"reportDefinitionId\": 1,\n    \"reportCode\": \"STOCK_ON_HAND\",\n    \"reportName\": \"Stock on Hand Report\",\n    \"name\": \"Daily Stock Report\",\n    \"frequency\": \"DAILY\",\n    \"runTime\": \"08:00:00\",\n    \"exportFormat\": \"EXCEL\",\n    \"deliveryMethod\": \"EMAIL\",\n    \"emailRecipients\": \"manager@example.com,supervisor@example.com\",\n    \"nextRunAt\": \"2026-01-16T08:00:00Z\",\n    \"active\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Weekly Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportDefinitionId\": 3,\n  \"name\": \"Weekly Sales Summary\",\n  \"frequency\": \"WEEKLY\",\n  \"runTime\": \"09:00:00\",\n  \"dayOfWeek\": 1,\n  \"parameters\": \"{\\\"startDate\\\": null, \\\"endDate\\\": null}\",\n  \"exportFormat\": \"EXCEL\",\n  \"deliveryMethod\": \"EMAIL\",\n  \"emailRecipients\": \"sales-manager@example.com\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/schedules",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "schedules"]
+            },
+            "description": "Create a weekly report schedule. dayOfWeek: 1=Monday to 7=Sunday."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Monthly Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportDefinitionId\": 4,\n  \"name\": \"Monthly Trial Balance\",\n  \"frequency\": \"MONTHLY\",\n  \"runTime\": \"06:00:00\",\n  \"dayOfMonth\": 1,\n  \"parameters\": \"{}\",\n  \"exportFormat\": \"EXCEL\",\n  \"deliveryMethod\": \"EMAIL\",\n  \"emailRecipients\": \"accounting@example.com,cfo@example.com\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/schedules",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "schedules"]
+            },
+            "description": "Create a monthly report schedule. dayOfMonth: 1-28 (use 1 for first day of month)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Schedule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"reportDefinitionId\": 1,\n  \"name\": \"Daily Stock Report - Updated\",\n  \"frequency\": \"DAILY\",\n  \"runTime\": \"07:00:00\",\n  \"parameters\": \"{\\\"locationId\\\": 1, \\\"categoryId\\\": null}\",\n  \"exportFormat\": \"EXCEL\",\n  \"deliveryMethod\": \"EMAIL\",\n  \"emailRecipients\": \"manager@example.com,warehouse@example.com\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/schedules/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "schedules", "1"]
+            },
+            "description": "Update an existing report schedule."
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle Schedule Active Status",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/schedules/1/toggle?active=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "schedules", "1", "toggle"],
+              "query": [
+                { "key": "active", "value": "false" }
+              ]
+            },
+            "description": "Enable or disable a report schedule."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Schedule",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/schedules/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "schedules", "1"]
+            },
+            "description": "Delete a report schedule."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Report Executions",
+      "item": [
+        {
+          "name": "Get All Executions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/executions?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "executions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get paginated list of all report execution history."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": 1,\n        \"reportDefinitionId\": 1,\n        \"reportCode\": \"STOCK_ON_HAND\",\n        \"reportName\": \"Stock on Hand Report\",\n        \"scheduleId\": 1,\n        \"scheduleName\": \"Daily Stock Report\",\n        \"status\": \"COMPLETED\",\n        \"startedAt\": \"2026-01-15T08:00:00Z\",\n        \"completedAt\": \"2026-01-15T08:00:15Z\",\n        \"durationMs\": 15000,\n        \"exportFormat\": \"EXCEL\",\n        \"filePath\": \"/reports/2026/01/stock_on_hand_20260115.xlsx\",\n        \"fileSizeBytes\": 25600,\n        \"executedByUserId\": 1,\n        \"executedByUsername\": \"admin\"\n      }\n    ],\n    \"totalElements\": 50,\n    \"totalPages\": 3\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Executions by Report Definition",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/executions/report/1?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "executions", "report", "1"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get execution history for a specific report definition."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Execution by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/executions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "executions", "1"]
+            },
+            "description": "Get details of a specific report execution."
+          },
+          "response": []
+        },
+        {
+          "name": "Download Execution File",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/executions/1/download",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "executions", "1", "download"]
+            },
+            "description": "Download the generated report file from a completed execution."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

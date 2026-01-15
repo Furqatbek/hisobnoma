@@ -92,4 +92,32 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
     @Query("SELECT COUNT(DISTINCT s.product.id) FROM Stock s WHERE s.tenantId = :tenantId AND " +
            "(s.quantityOnHand - s.quantityReserved) <= 0")
     Integer countOutOfStockProducts(@Param("tenantId") Long tenantId);
+
+    // Report query methods
+    @Query("SELECT p.id, p.sku, p.name, COALESCE(c.name, 'Uncategorized'), l.name, " +
+           "s.quantityOnHand, s.quantityReserved, (s.quantityOnHand - s.quantityReserved), " +
+           "COALESCE(s.averageCost, p.costPrice, 0), COALESCE(s.reorderPoint, p.reorderPoint, 0) " +
+           "FROM Stock s " +
+           "JOIN s.product p " +
+           "LEFT JOIN p.category c " +
+           "JOIN s.location l " +
+           "WHERE s.tenantId = :tenantId " +
+           "AND (:locationId IS NULL OR l.id = :locationId) " +
+           "AND (:categoryId IS NULL OR c.id = :categoryId) " +
+           "ORDER BY p.sku")
+    List<Object[]> getStockOnHandReport(@Param("tenantId") Long tenantId,
+                                        @Param("locationId") Long locationId,
+                                        @Param("categoryId") Long categoryId);
+
+    @Query("SELECT p.id, p.sku, p.name, c.id, SUM(s.quantityOnHand), " +
+           "COALESCE(AVG(s.averageCost), AVG(p.costPrice), 0), AVG(p.sellingPrice), c.name " +
+           "FROM Stock s " +
+           "JOIN s.product p " +
+           "LEFT JOIN p.category c " +
+           "WHERE s.tenantId = :tenantId " +
+           "AND (:categoryId IS NULL OR c.id = :categoryId) " +
+           "GROUP BY p.id, p.sku, p.name, c.id, c.name " +
+           "ORDER BY p.sku")
+    List<Object[]> getInventoryValuationReport(@Param("tenantId") Long tenantId,
+                                               @Param("categoryId") Long categoryId);
 }
