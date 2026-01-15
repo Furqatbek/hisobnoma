@@ -11,8 +11,13 @@ import com.hisobnoma.platform.inventory.repository.ProductRepository;
 import com.hisobnoma.platform.inventory.repository.StockRepository;
 import com.hisobnoma.platform.mobile.dto.QuickSaleRequest;
 import com.hisobnoma.platform.mobile.dto.QuickStockCountRequest;
+import com.hisobnoma.platform.pos.dto.AddLineRequest;
+import com.hisobnoma.platform.pos.dto.AddPaymentRequest;
+import com.hisobnoma.platform.pos.dto.CreateTransactionRequest;
 import com.hisobnoma.platform.pos.dto.POSTransactionDto;
-import com.hisobnoma.platform.pos.entity.POSTransaction;
+import com.hisobnoma.platform.pos.entity.POSPaymentType;
+import com.hisobnoma.platform.pos.entity.TransactionType;
+import com.hisobnoma.platform.pos.service.POSPaymentService;
 import com.hisobnoma.platform.pos.service.POSTransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +45,7 @@ public class MobileQuickActionService {
     private final StockRepository stockRepository;
     private final CustomerRepository customerRepository;
     private final POSTransactionService posTransactionService;
+    private final POSPaymentService posPaymentService;
 
     /**
      * Lookup product by barcode.
@@ -143,47 +149,44 @@ public class MobileQuickActionService {
         }
 
         // Create transaction using existing POS service
-        // This delegates to the full POS transaction flow
-        POSTransactionDto transaction = posTransactionService.createTransaction(
-                request.getTerminalId(),
-                POSTransaction.TransactionType.SALE,
-                request.getCustomerId(),
-                request.getNotes()
-        );
+        CreateTransactionRequest createRequest = CreateTransactionRequest.builder()
+                .terminalId(request.getTerminalId())
+                .customerId(request.getCustomerId())
+                .transactionType(TransactionType.SALE)
+                .notes(request.getNotes())
+                .build();
+
+        POSTransactionDto transaction = posTransactionService.createTransaction(createRequest);
 
         // Add items
         for (QuickSaleRequest.QuickSaleItem item : request.getItems()) {
-            posTransactionService.addLineItem(
-                    transaction.getId(),
-                    item.getProductId(),
-                    item.getVariantId(),
-                    item.getQuantity(),
-                    item.getUnitPrice(),
-                    item.getDiscountAmount(),
-                    null,
-                    null,
-                    null
-            );
+            AddLineRequest lineRequest = AddLineRequest.builder()
+                    .productId(item.getProductId())
+                    .variantId(item.getVariantId())
+                    .quantity(item.getQuantity())
+                    .unitPrice(item.getUnitPrice())
+                    .discountAmount(item.getDiscountAmount())
+                    .build();
+            posTransactionService.addLine(transaction.getId(), lineRequest);
         }
 
         // Add payment
-        POSTransaction.PaymentType paymentType;
+        POSPaymentType paymentType;
         try {
-            paymentType = POSTransaction.PaymentType.valueOf(request.getPaymentType().toUpperCase());
+            paymentType = POSPaymentType.valueOf(request.getPaymentType().toUpperCase());
         } catch (IllegalArgumentException e) {
-            paymentType = POSTransaction.PaymentType.CASH;
+            paymentType = POSPaymentType.CASH;
         }
 
         // Get updated transaction for total
-        transaction = posTransactionService.getTransaction(transaction.getId());
+        transaction = posTransactionService.findById(transaction.getId());
 
-        posTransactionService.addPayment(
-                transaction.getId(),
-                paymentType,
-                transaction.getTotalAmount(),
-                request.getTenderedAmount(),
-                null, null, null, null, null, null
-        );
+        AddPaymentRequest paymentRequest = AddPaymentRequest.builder()
+                .paymentType(paymentType)
+                .amount(transaction.getTotalAmount())
+                .tenderedAmount(request.getTenderedAmount())
+                .build();
+        posPaymentService.addPayment(transaction.getId(), paymentRequest);
 
         // Complete transaction
         return posTransactionService.completeTransaction(transaction.getId());

@@ -27,6 +27,14 @@ public class PageResponse<T> {
      * Creates a PageResponse from a Spring Data Page object.
      */
     public static <T> PageResponse<T> of(Page<T> page) {
+        return from(page);
+    }
+
+    /**
+     * Creates a PageResponse from a Spring Data Page object.
+     * Alias for of() method.
+     */
+    public static <T> PageResponse<T> from(Page<T> page) {
         return PageResponse.<T>builder()
                 .content(page.getContent())
                 .page(PageMetadata.builder()

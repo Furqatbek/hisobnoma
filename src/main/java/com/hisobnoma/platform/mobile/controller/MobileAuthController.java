@@ -88,12 +88,11 @@ public class MobileAuthController {
     @PostMapping("/logout")
     @Operation(summary = "Mobile logout", description = "Logout from mobile app and deactivate device")
     public ResponseEntity<ApiResponse<Void>> logout(
-            @RequestParam(required = false) String deviceId,
-            @RequestHeader("Authorization") String token) {
+            @RequestParam(required = false) String deviceId) {
         if (deviceId != null) {
             deviceTokenService.deactivateDevice(deviceId);
         }
-        authService.logout(token.replace("Bearer ", ""));
+        authService.logout();
         return ResponseEntity.ok(ApiResponse.success(null, "Logged out successfully"));
     }
 }

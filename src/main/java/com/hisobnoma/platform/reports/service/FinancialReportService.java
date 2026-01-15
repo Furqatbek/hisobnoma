@@ -254,7 +254,7 @@ public class FinancialReportService {
 
         // Get all unpaid AP invoices
         List<APInvoice> allInvoices = apInvoiceRepository.findUnpaidInvoices(tenantId,
-                Arrays.asList(APInvoiceStatus.PENDING, APInvoiceStatus.APPROVED, APInvoiceStatus.PARTIAL));
+                Arrays.asList(APInvoiceStatus.PENDING_APPROVAL, APInvoiceStatus.APPROVED, APInvoiceStatus.PARTIAL));
 
         // Group by vendor
         Map<Long, List<APInvoice>> invoicesByVendor = new HashMap<>();

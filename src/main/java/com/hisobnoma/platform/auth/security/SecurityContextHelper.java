@@ -41,6 +41,17 @@ public class SecurityContextHelper {
         return getRequiredCurrentUser().getTenantId();
     }
 
+    /**
+     * Gets the current tenant ID, throwing UnauthorizedException if not authenticated.
+     */
+    public Long getRequiredTenantId() {
+        Long tenantId = getCurrentTenantId();
+        if (tenantId == null) {
+            throw new UnauthorizedException("Tenant context not available");
+        }
+        return tenantId;
+    }
+
     public boolean isAuthenticated() {
         return getCurrentUser().isPresent();
     }

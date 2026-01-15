@@ -98,7 +98,7 @@ public class MobileSyncService {
                             .name(c.getName())
                             .phone(c.getPhone())
                             .email(c.getEmail())
-                            .priceListId(c.getPriceList() != null ? c.getPriceList().getId() : null)
+                            .priceListId(null) // Price list not yet implemented
                             .creditLimit(c.getCreditLimit())
                             .currentBalance(c.getCurrentBalance())
                             .active(c.isActive())
@@ -113,7 +113,7 @@ public class MobileSyncService {
                             .name(c.getName())
                             .phone(c.getPhone())
                             .email(c.getEmail())
-                            .priceListId(c.getPriceList() != null ? c.getPriceList().getId() : null)
+                            .priceListId(null) // Price list not yet implemented
                             .creditLimit(c.getCreditLimit())
                             .currentBalance(c.getCurrentBalance())
                             .active(c.isActive())

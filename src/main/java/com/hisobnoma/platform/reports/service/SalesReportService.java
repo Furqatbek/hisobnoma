@@ -37,7 +37,7 @@ public class SalesReportService {
      */
     public SalesSummaryReportDTO generateSalesSummaryReport(GenerateReportRequest request) {
         Long tenantId = securityContextHelper.getRequiredTenantId();
-        String userName = securityContextHelper.getRequiredCurrentUser().getFullName();
+        String userName = securityContextHelper.getRequiredCurrentUser().getUsername();
 
         LocalDate startDate = request.getStartDate() != null ? request.getStartDate() : LocalDate.now().minusDays(30);
         LocalDate endDate = request.getEndDate() != null ? request.getEndDate() : LocalDate.now();
@@ -265,8 +265,8 @@ public class SalesReportService {
 
         for (POSTransaction tx : transactions) {
             tx.getPayments().forEach(payment -> {
-                String method = payment.getPaymentMethod() != null
-                        ? payment.getPaymentMethod().name()
+                String method = payment.getPaymentType() != null
+                        ? payment.getPaymentType().name()
                         : "UNKNOWN";
                 amountByMethod.merge(method, payment.getAmount(), BigDecimal::add);
                 countByMethod.merge(method, 1, Integer::sum);

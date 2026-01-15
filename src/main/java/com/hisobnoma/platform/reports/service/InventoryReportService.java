@@ -42,7 +42,7 @@ public class InventoryReportService {
      */
     public StockOnHandReportDTO generateStockOnHandReport(GenerateReportRequest request) {
         Long tenantId = securityContextHelper.getRequiredTenantId();
-        String userName = securityContextHelper.getRequiredCurrentUser().getFullName();
+        String userName = securityContextHelper.getRequiredCurrentUser().getUsername();
 
         log.info("Generating Stock on Hand report for tenant {}", tenantId);
 
