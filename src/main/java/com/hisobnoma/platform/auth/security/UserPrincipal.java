@@ -47,6 +47,29 @@ public class UserPrincipal implements UserDetails {
         boolean isSuperAdmin = user.getRoles().stream()
                 .anyMatch(role -> "SUPER_ADMIN".equals(role.getCode()));
         if (isSuperAdmin) {
+            // Grant all inventory permissions
+            authorities.add(new SimpleGrantedAuthority("INVENTORY_PRODUCT_READ"));
+            authorities.add(new SimpleGrantedAuthority("INVENTORY_PRODUCT_CREATE"));
+            authorities.add(new SimpleGrantedAuthority("INVENTORY_PRODUCT_UPDATE"));
+            authorities.add(new SimpleGrantedAuthority("INVENTORY_PRODUCT_DELETE"));
+            authorities.add(new SimpleGrantedAuthority("INVENTORY_STOCK_READ"));
+            authorities.add(new SimpleGrantedAuthority("INVENTORY_STOCK_ADJUST"));
+            authorities.add(new SimpleGrantedAuthority("INVENTORY_STOCK_TRANSFER"));
+            // Grant all POS permissions
+            authorities.add(new SimpleGrantedAuthority("POS_SALE_CREATE"));
+            authorities.add(new SimpleGrantedAuthority("POS_SALE_VIEW"));
+            authorities.add(new SimpleGrantedAuthority("POS_SALE_VOID"));
+            // Grant all finance permissions
+            authorities.add(new SimpleGrantedAuthority("FINANCE_CUSTOMER_READ"));
+            authorities.add(new SimpleGrantedAuthority("FINANCE_CUSTOMER_CREATE"));
+            authorities.add(new SimpleGrantedAuthority("FINANCE_CUSTOMER_UPDATE"));
+            authorities.add(new SimpleGrantedAuthority("FINANCE_CUSTOMER_DELETE"));
+            // Grant all purchasing permissions
+            authorities.add(new SimpleGrantedAuthority("PURCHASING_VENDOR_READ"));
+            authorities.add(new SimpleGrantedAuthority("PURCHASING_VENDOR_CREATE"));
+            authorities.add(new SimpleGrantedAuthority("PURCHASING_PO_READ"));
+            authorities.add(new SimpleGrantedAuthority("PURCHASING_PO_CREATE"));
+            authorities.add(new SimpleGrantedAuthority("PURCHASING_PO_APPROVE"));
             // Grant all report permissions
             authorities.add(new SimpleGrantedAuthority("REPORT_VIEW"));
             authorities.add(new SimpleGrantedAuthority("REPORT_INVENTORY_VIEW"));
