@@ -285,3 +285,15 @@ export const locationsApi = warehousesApi
 export const auditLogsApi = {
   getAll: (params) => api.get('/admin/audit-logs', { params })
 }
+
+// Roles API - Backend: /api/v1/roles
+export const rolesApi = {
+  getAll: (params) => api.get('/roles', { params }),
+  getSystemRoles: () => api.get('/roles/system'),
+  getById: (id) => api.get(`/roles/${id}`),
+  create: (data) => api.post('/roles', data),
+  update: (id, data) => api.put(`/roles/${id}`, data),
+  delete: (id) => api.delete(`/roles/${id}`),
+  assignPermissions: (id, permissionCodes) => api.put(`/roles/${id}/permissions`, permissionCodes),
+  getAllPermissions: () => api.get('/roles/permissions')
+}

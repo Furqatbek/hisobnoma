@@ -238,6 +238,24 @@ const routes = [
             name: 'terminal-edit',
             component: () => import('@/views/admin/TerminalFormView.vue'),
             meta: { permission: 'POS_TERMINAL_UPDATE' }
+          },
+          {
+            path: 'roles',
+            name: 'roles',
+            component: () => import('@/views/admin/RolesView.vue'),
+            meta: { permission: 'ADMIN_ROLE_MANAGE' }
+          },
+          {
+            path: 'roles/new',
+            name: 'role-create',
+            component: () => import('@/views/admin/RoleFormView.vue'),
+            meta: { permission: 'ADMIN_ROLE_MANAGE' }
+          },
+          {
+            path: 'roles/:id/edit',
+            name: 'role-edit',
+            component: () => import('@/views/admin/RoleFormView.vue'),
+            meta: { permission: 'ADMIN_ROLE_MANAGE' }
           }
         ]
       }

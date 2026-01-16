@@ -23,7 +23,8 @@ import {
   CurrencyDollarIcon,
   ShieldCheckIcon,
   ComputerDesktopIcon,
-  ClockIcon
+  ClockIcon,
+  KeyIcon
 } from '@heroicons/vue/24/outline'
 
 const authStore = useAuthStore()
@@ -92,6 +93,7 @@ const navigation = computed(() => [
     key: 'admin',
     children: [
       { name: 'Foydalanuvchilar', href: '/admin/users', icon: UserGroupIcon },
+      { name: 'Rollar va ruxsatlar', href: '/admin/roles', icon: KeyIcon },
       { name: 'POS Terminallar', href: '/admin/terminals', icon: ComputerDesktopIcon },
       { name: 'Sozlamalar', href: '/admin/settings', icon: Cog6ToothIcon },
       { name: 'Audit jurnali', href: '/admin/audit-logs', icon: DocumentTextIcon }
