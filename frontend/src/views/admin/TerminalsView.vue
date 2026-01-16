@@ -177,7 +177,7 @@ function handleSearch() {
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-for="terminal in terminals" :key="terminal.id">
-              <td class="font-mono text-sm">{{ terminal.code }}</td>
+              <td class="font-mono text-sm">{{ terminal.terminalCode || terminal.code }}</td>
               <td>
                 <div class="flex items-center">
                   <ComputerDesktopIcon class="h-5 w-5 text-gray-400 mr-2" />

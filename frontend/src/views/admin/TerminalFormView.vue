@@ -29,7 +29,7 @@ async function fetchTerminal() {
     const response = await terminalsApi.getById(route.params.id)
     const terminal = response.data.data || response.data
     form.value = {
-      code: terminal.code || '',
+      code: terminal.terminalCode || terminal.code || '',
       name: terminal.name || '',
       locationId: terminal.locationId || terminal.location?.id || '',
       description: terminal.description || '',
@@ -79,7 +79,7 @@ async function saveTerminal() {
   saving.value = true
   try {
     const data = {
-      code: form.value.code.trim().toUpperCase(),
+      terminalCode: form.value.code.trim().toUpperCase(),
       name: form.value.name.trim(),
       locationId: parseInt(form.value.locationId),
       description: form.value.description?.trim() || null,
