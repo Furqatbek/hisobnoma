@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { usersApi } from '@/services/api'
+import { usersApi, rolesApi } from '@/services/api'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
@@ -23,18 +23,17 @@ const form = reactive({
 
 const errors = reactive({})
 
-const availableRoles = [
-  { code: 'ADMIN', name: 'Administrator' },
-  { code: 'MANAGER', name: 'Manager' },
-  { code: 'CASHIER', name: 'Cashier' },
-  { code: 'INVENTORY', name: 'Inventory Staff' },
-  { code: 'VIEWER', name: 'Viewer' }
-]
+const availableRoles = ref([])
 
 onMounted(async () => {
-  if (isEdit.value) {
-    loading.value = true
-    try {
+  loading.value = true
+  try {
+    // Fetch all available roles from API
+    const rolesResponse = await rolesApi.getAll({ size: 100 })
+    availableRoles.value = rolesResponse.data?.content || rolesResponse.data || []
+
+    // If editing, also fetch user data
+    if (isEdit.value) {
       const response = await usersApi.getById(route.params.id)
       const user = response.data
       form.username = user.username
@@ -43,11 +42,11 @@ onMounted(async () => {
       form.phone = user.phone || ''
       form.enabled = user.enabled
       form.roles = user.roles?.map(r => r.code || r) || []
-    } catch (error) {
-      console.error('Failed to load user:', error)
-    } finally {
-      loading.value = false
     }
+  } catch (error) {
+    console.error('Failed to load data:', error)
+  } finally {
+    loading.value = false
   }
 })
 
@@ -167,16 +166,19 @@ function toggleRole(roleCode) {
       </div>
 
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Roles</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">Rollar</h3></div>
         <div class="card-body">
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div v-if="availableRoles.length === 0" class="text-gray-500 text-center py-4">
+            Rollar yuklanmoqda...
+          </div>
+          <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <button
               v-for="role in availableRoles"
               :key="role.code"
               type="button"
               @click="toggleRole(role.code)"
               :class="[
-                'p-4 border-2 rounded-lg text-center transition-colors',
+                'p-4 border-2 rounded-lg text-left transition-colors',
                 form.roles.includes(role.code)
                   ? 'border-primary-500 bg-primary-50 text-primary-700'
                   : 'border-gray-200 hover:border-gray-300'
@@ -184,6 +186,8 @@ function toggleRole(roleCode) {
             >
               <p class="font-medium">{{ role.name }}</p>
               <p class="text-xs text-gray-500 mt-1">{{ role.code }}</p>
+              <p v-if="role.description" class="text-xs text-gray-400 mt-1">{{ role.description }}</p>
+              <span v-if="role.systemRole" class="inline-block mt-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">Tizim</span>
             </button>
           </div>
         </div>
