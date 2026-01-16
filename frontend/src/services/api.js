@@ -163,7 +163,11 @@ export const terminalsApi = {
   getById: (id) => api.get(`/pos/terminals/${id}`),
   getByCode: (code) => api.get(`/pos/terminals/code/${code}`),
   getByLocation: (locationId) => api.get(`/pos/terminals/location/${locationId}`),
-  create: (data) => api.post('/pos/terminals', data)
+  create: (data) => api.post('/pos/terminals', data),
+  update: (id, data) => api.put(`/pos/terminals/${id}`, data),
+  delete: (id) => api.delete(`/pos/terminals/${id}`),
+  activate: (id) => api.put(`/pos/terminals/${id}/activate`),
+  deactivate: (id) => api.put(`/pos/terminals/${id}/deactivate`)
 }
 
 // POS API - Backend: /api/v1/pos/transactions

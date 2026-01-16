@@ -21,14 +21,16 @@ import {
   UserGroupIcon,
   DocumentTextIcon,
   CurrencyDollarIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  ComputerDesktopIcon,
+  ClockIcon
 } from '@heroicons/vue/24/outline'
 
 const authStore = useAuthStore()
 const route = useRoute()
 
 const sidebarOpen = ref(false)
-const expandedMenus = ref(['inventory', 'purchases', 'reports', 'admin'])
+const expandedMenus = ref(['inventory', 'pos', 'purchases', 'reports', 'admin'])
 
 const navigation = computed(() => [
   {
@@ -51,10 +53,13 @@ const navigation = computed(() => [
     ]
   },
   {
-    name: 'Point of Sale',
-    href: '/pos',
+    name: 'Sotuv (POS)',
     icon: ShoppingCartIcon,
-    current: route.path.startsWith('/pos')
+    key: 'pos',
+    children: [
+      { name: 'Kassa', href: '/pos', icon: ShoppingCartIcon },
+      { name: 'Sotuv tarixi', href: '/pos/transactions', icon: ClockIcon }
+    ]
   },
   {
     name: 'Customers',
@@ -86,9 +91,10 @@ const navigation = computed(() => [
     icon: ShieldCheckIcon,
     key: 'admin',
     children: [
-      { name: 'Users', href: '/admin/users', icon: UserGroupIcon },
-      { name: 'Settings', href: '/admin/settings', icon: Cog6ToothIcon },
-      { name: 'Audit Logs', href: '/admin/audit-logs', icon: DocumentTextIcon }
+      { name: 'Foydalanuvchilar', href: '/admin/users', icon: UserGroupIcon },
+      { name: 'POS Terminallar', href: '/admin/terminals', icon: ComputerDesktopIcon },
+      { name: 'Sozlamalar', href: '/admin/settings', icon: Cog6ToothIcon },
+      { name: 'Audit jurnali', href: '/admin/audit-logs', icon: DocumentTextIcon }
     ]
   }
 ])

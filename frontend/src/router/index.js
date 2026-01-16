@@ -220,6 +220,24 @@ const routes = [
             name: 'audit-logs',
             component: () => import('@/views/admin/AuditLogsView.vue'),
             meta: { permission: 'AUDIT_VIEW' }
+          },
+          {
+            path: 'terminals',
+            name: 'terminals',
+            component: () => import('@/views/admin/TerminalsView.vue'),
+            meta: { permission: 'POS_TERMINAL_READ' }
+          },
+          {
+            path: 'terminals/new',
+            name: 'terminal-create',
+            component: () => import('@/views/admin/TerminalFormView.vue'),
+            meta: { permission: 'POS_TERMINAL_CREATE' }
+          },
+          {
+            path: 'terminals/:id/edit',
+            name: 'terminal-edit',
+            component: () => import('@/views/admin/TerminalFormView.vue'),
+            meta: { permission: 'POS_TERMINAL_UPDATE' }
           }
         ]
       }
