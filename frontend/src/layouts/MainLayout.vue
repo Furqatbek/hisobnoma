@@ -24,14 +24,15 @@ import {
   ShieldCheckIcon,
   ComputerDesktopIcon,
   ClockIcon,
-  KeyIcon
+  KeyIcon,
+  BanknotesIcon
 } from '@heroicons/vue/24/outline'
 
 const authStore = useAuthStore()
 const route = useRoute()
 
 const sidebarOpen = ref(false)
-const expandedMenus = ref(['inventory', 'pos', 'purchases', 'reports', 'admin'])
+const expandedMenus = ref(['inventory', 'pos', 'purchases', 'finance', 'reports', 'admin'])
 
 const navigation = computed(() => [
   {
@@ -75,6 +76,14 @@ const navigation = computed(() => [
     children: [
       { name: 'Suppliers', href: '/purchases/suppliers', icon: UserGroupIcon },
       { name: 'Purchase Orders', href: '/purchases/orders', icon: DocumentTextIcon }
+    ]
+  },
+  {
+    name: 'Moliya',
+    icon: BanknotesIcon,
+    key: 'finance',
+    children: [
+      { name: 'Xarajatlar', href: '/finance/expenses', icon: CurrencyDollarIcon }
     ]
   },
   {

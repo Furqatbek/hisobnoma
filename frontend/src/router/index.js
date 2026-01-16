@@ -187,6 +187,32 @@ const routes = [
           }
         ]
       },
+      // Finance
+      {
+        path: 'finance',
+        children: [
+          {
+            path: 'expenses',
+            name: 'expenses',
+            component: () => import('@/views/finance/ExpensesView.vue')
+          },
+          {
+            path: 'expenses/new',
+            name: 'expense-create',
+            component: () => import('@/views/finance/ExpenseFormView.vue')
+          },
+          {
+            path: 'expenses/:id',
+            name: 'expense-detail',
+            component: () => import('@/views/finance/ExpenseDetailView.vue')
+          },
+          {
+            path: 'expenses/:id/edit',
+            name: 'expense-edit',
+            component: () => import('@/views/finance/ExpenseFormView.vue')
+          }
+        ]
+      },
       // Admin
       {
         path: 'admin',

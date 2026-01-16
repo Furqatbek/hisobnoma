@@ -297,3 +297,25 @@ export const rolesApi = {
   assignPermissions: (id, permissionCodes) => api.put(`/roles/${id}/permissions`, permissionCodes),
   getAllPermissions: () => api.get('/roles/permissions')
 }
+
+// AP Invoices (Expenses) API - Backend: /api/v1/ap/invoices
+export const expensesApi = {
+  getAll: (params) => api.get('/ap/invoices', { params }),
+  getById: (id) => api.get(`/ap/invoices/${id}`),
+  getByVendor: (vendorId, params) => api.get(`/ap/invoices/vendor/${vendorId}`, { params }),
+  getByStatus: (status, params) => api.get(`/ap/invoices/status/${status}`, { params }),
+  getUnpaidByVendor: (vendorId) => api.get(`/ap/invoices/vendor/${vendorId}/unpaid`),
+  getOverdue: () => api.get('/ap/invoices/overdue'),
+  create: (data) => api.post('/ap/invoices', data),
+  createFromReceiving: (receivingOrderId) => api.post(`/ap/invoices/from-receiving/${receivingOrderId}`),
+  update: (id, data) => api.put(`/ap/invoices/${id}`, data),
+  submit: (id) => api.post(`/ap/invoices/${id}/submit`),
+  approve: (id) => api.post(`/ap/invoices/${id}/approve`),
+  reject: (id, reason) => api.post(`/ap/invoices/${id}/reject`, { reason }),
+  cancel: (id, reason) => api.post(`/ap/invoices/${id}/cancel`, { reason }),
+  hold: (id) => api.post(`/ap/invoices/${id}/hold`),
+  releaseHold: (id) => api.post(`/ap/invoices/${id}/release-hold`),
+  getTotalPayable: () => api.get('/ap/invoices/summary/total-payable'),
+  getVendorBalance: (vendorId) => api.get(`/ap/invoices/summary/vendor/${vendorId}/balance`),
+  getOverdueBalance: () => api.get('/ap/invoices/summary/overdue-balance')
+}
