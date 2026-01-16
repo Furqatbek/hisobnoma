@@ -58,6 +58,7 @@ public class Permission extends BaseEntity {
         EXPORT,
         APPROVE,
         MANAGE,
-        VIEW
+        VIEW,
+        GENERATE
     }
 }
