@@ -30,12 +30,13 @@ onMounted(async () => {
   try {
     // Fetch all available roles from API
     const rolesResponse = await rolesApi.getAll({ size: 100 })
-    availableRoles.value = rolesResponse.data?.content || rolesResponse.data || []
+    // Response structure: { data: { content: [...], totalElements, ... } }
+    availableRoles.value = rolesResponse.data.data?.content || rolesResponse.data.data || []
 
     // If editing, also fetch user data
     if (isEdit.value) {
       const response = await usersApi.getById(route.params.id)
-      const user = response.data
+      const user = response.data.data
       form.username = user.username
       form.firstName = user.firstName || ''
       form.lastName = user.lastName || ''
