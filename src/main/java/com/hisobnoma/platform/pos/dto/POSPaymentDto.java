@@ -32,9 +32,12 @@ public class POSPaymentDto {
     private String checkNumber;
     private String mobileReference;
     private Instant processedAt;
+    private Long processedBy;
     private Instant voidedAt;
+    private Long voidedBy;
     private String voidReason;
     private Instant refundedAt;
+    private Long refundedBy;
     private BigDecimal refundAmount;
     private String refundReason;
     private String notes;

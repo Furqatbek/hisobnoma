@@ -21,6 +21,8 @@ public class POSTransactionLineDto {
     private String productName;
     private String variantName;
     private String barcode;
+    private String uomCode;
+    private String uomName;
     private BigDecimal quantity;
     private BigDecimal unitPrice;
     private BigDecimal originalPrice;
@@ -34,6 +36,7 @@ public class POSTransactionLineDto {
     private BigDecimal lineTotal;
     private boolean isReturn;
     private Long originalLineId;
+    private String returnReason;
     private String serialNumber;
     private String batchNumber;
     private Long locationId;

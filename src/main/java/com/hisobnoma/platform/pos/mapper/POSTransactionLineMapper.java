@@ -13,6 +13,8 @@ public interface POSTransactionLineMapper {
     @Mapping(source = "transaction.id", target = "transactionId")
     @Mapping(source = "product.id", target = "productId")
     @Mapping(source = "variant.id", target = "variantId")
+    @Mapping(source = "product.baseUom.code", target = "uomCode")
+    @Mapping(source = "product.baseUom.name", target = "uomName")
     POSTransactionLineDto toDto(POSTransactionLine line);
 
     List<POSTransactionLineDto> toDtoList(List<POSTransactionLine> lines);
