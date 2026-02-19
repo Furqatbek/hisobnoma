@@ -201,7 +201,7 @@ const tabs = [
             <div class="flex-1 card">
               <div class="card-header">
                 <h3 class="text-lg font-medium">Chek ma'lumotlari</h3>
-                <p class="text-sm text-gray-500 mt-1">Termal printer uchun chek shabloni</p>
+                <p class="text-sm text-gray-500 mt-1">{{ receiptSettings.paperWidth === 'A4' ? 'A4 formatdagi hisob-faktura shabloni' : 'Termal printer uchun chek shabloni' }}</p>
               </div>
               <div class="card-body space-y-4">
                 <div>
@@ -283,22 +283,33 @@ const tabs = [
               </div>
             </div>
 
-            <!-- Receipt Preview -->
-            <div :class="receiptSettings.paperWidth === 'A4' ? 'flex-1 max-w-lg' : 'w-80'">
+            <!-- Receipt Preview (80mm / 58mm) -->
+            <div v-if="receiptSettings.paperWidth !== 'A4'" class="w-80">
               <div class="card">
                 <div class="card-header">
-                  <h3 class="text-lg font-medium text-center">Ko'rinishi</h3>
+                  <h3 class="text-lg font-medium text-center">Ko'rinishi ({{ receiptSettings.paperWidth }}mm)</h3>
                 </div>
                 <div class="card-body p-2">
                   <div class="bg-white border rounded-lg overflow-hidden">
                     <ReceiptTemplate
-                      v-show="receiptSettings.paperWidth !== 'A4'"
                       ref="receiptRef"
                       :transaction="sampleTransaction"
                       type="sale"
                     />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Invoice Preview (A4) -->
+            <div v-else class="flex-1 max-w-lg">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="text-lg font-medium text-center">Ko'rinishi (A4)</h3>
+                </div>
+                <div class="card-body p-2">
+                  <div class="bg-white border rounded-lg overflow-hidden">
                     <InvoiceA4Template
-                      v-show="receiptSettings.paperWidth === 'A4'"
                       ref="invoiceA4Ref"
                       :transaction="sampleTransaction"
                     />
