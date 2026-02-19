@@ -35,13 +35,20 @@ async function fetchTerminals() {
     if (search.value) {
       params.search = search.value
     }
-    if (statusFilter.value !== 'all') {
-      params.status = statusFilter.value
-    }
 
     const response = await terminalsApi.getAll(params)
     const data = response.data.data || response.data
-    terminals.value = data.content || data || []
+    let items = data.content || data || []
+    // Backend returns boolean `active`, map to status string for frontend
+    items = items.map(t => ({
+      ...t,
+      status: t.status || (t.active ? 'ACTIVE' : 'INACTIVE')
+    }))
+    // Client-side status filter
+    if (statusFilter.value !== 'all') {
+      items = items.filter(t => t.status === statusFilter.value)
+    }
+    terminals.value = items
     pagination.value.totalPages = data.page?.totalPages || data.totalPages || 1
     pagination.value.totalElements = data.page?.totalElements || data.totalElements || terminals.value.length
   } catch (error) {

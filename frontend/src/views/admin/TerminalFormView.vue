@@ -33,7 +33,7 @@ async function fetchTerminal() {
       name: terminal.name || '',
       locationId: terminal.locationId || terminal.location?.id || '',
       description: terminal.description || '',
-      status: terminal.status || 'ACTIVE'
+      status: terminal.status || (terminal.active ? 'ACTIVE' : 'INACTIVE')
     }
   } catch (error) {
     console.error('Terminalni yuklashda xatolik:', error)
@@ -82,14 +82,25 @@ async function saveTerminal() {
       terminalCode: form.value.code.trim().toUpperCase(),
       name: form.value.name.trim(),
       locationId: parseInt(form.value.locationId),
-      description: form.value.description?.trim() || null,
-      status: form.value.status
+      description: form.value.description?.trim() || null
     }
 
+    let terminalId = route.params.id
     if (isEdit.value) {
-      await terminalsApi.update(route.params.id, data)
+      await terminalsApi.update(terminalId, data)
     } else {
-      await terminalsApi.create(data)
+      const res = await terminalsApi.create(data)
+      const created = res.data.data || res.data
+      terminalId = created.id
+    }
+
+    // Set active/inactive status via dedicated endpoints
+    if (terminalId) {
+      if (form.value.status === 'ACTIVE') {
+        await terminalsApi.activate(terminalId)
+      } else {
+        await terminalsApi.deactivate(terminalId)
+      }
     }
 
     router.push('/admin/terminals')
