@@ -24,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -370,7 +371,7 @@ public class ARInvoiceService {
      * @param transaction The POS transaction with credit payment
      * @return The created AR Invoice DTO
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ARInvoiceDto createFromPOSTransaction(POSTransaction transaction) {
         if (transaction.getCustomer() == null) {
             throw new BusinessException("Credit sales require a customer to be associated with the transaction");

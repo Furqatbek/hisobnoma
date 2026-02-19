@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -242,10 +243,10 @@ public class StockService {
         for (StockIssueRequest.IssueItem item : request.getItems()) {
             Product product = getProduct(item.getProductId(), tenantId);
 
-            // Get stock record with lock
+            // Get stock record with lock, or auto-create with zero quantity
             Stock stock = stockRepository.findByProductIdAndLocationIdWithLock(
                     item.getProductId(), request.getLocationId(), tenantId)
-                    .orElseThrow(() -> new BusinessException("No stock found for product: " + product.getSku()));
+                    .orElseGet(() -> stockRepository.save(createNewStock(product, location, tenantId)));
 
             BigDecimal available = stock.getQuantityAvailable();
 
@@ -714,9 +715,10 @@ public class StockService {
     }
 
     /**
-     * Convenience method to deduct stock using string reference type (for POS module)
+     * Convenience method to deduct stock using string reference type (for POS module).
+     * Uses REQUIRES_NEW to prevent rollback-only poisoning of the caller's transaction.
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deductStock(Long productId, Long locationId, BigDecimal quantity,
                             String referenceType, Long referenceId, String description) {
         MovementReferenceType refType = MovementReferenceType.valueOf(referenceType);
@@ -725,9 +727,10 @@ public class StockService {
     }
 
     /**
-     * Convenience method to add stock using string reference type (for POS void/returns)
+     * Convenience method to add stock using string reference type (for POS void/returns).
+     * Uses REQUIRES_NEW to prevent rollback-only poisoning of the caller's transaction.
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void addStock(Long productId, Long locationId, BigDecimal quantity,
                          String referenceType, Long referenceId, String description) {
         MovementReferenceType refType = MovementReferenceType.valueOf(referenceType);

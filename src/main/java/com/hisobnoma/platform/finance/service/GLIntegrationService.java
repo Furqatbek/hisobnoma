@@ -9,6 +9,7 @@ import com.hisobnoma.platform.finance.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -771,7 +772,7 @@ public class GLIntegrationService {
      * @param transaction The POS transaction to post
      * @return The ID of the created journal entry
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Long postPOSTransaction(Object transaction) {
         // Use reflection or duck typing to get transaction properties
         // This allows us to avoid circular dependency with POS module
@@ -839,7 +840,7 @@ public class GLIntegrationService {
      *
      * @param journalEntryId The ID of the journal entry to reverse
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void reverseSalesTransaction(Long journalEntryId) {
         if (journalEntryId == null) {
             log.warn("No journal entry ID provided for reversal");

@@ -404,12 +404,15 @@ public class POSTransactionService {
         if (transaction.getStatus() == TransactionStatus.COMPLETED) {
             // If already completed, we need to reverse the effects
             if (transaction.isStockDeducted()) {
-                // Restore stock
                 restoreStock(transaction);
             }
             if (transaction.isGlPosted()) {
-                // Reverse GL entry
-                glIntegrationService.reverseSalesTransaction(transaction.getGlJournalEntryId());
+                try {
+                    glIntegrationService.reverseSalesTransaction(transaction.getGlJournalEntryId());
+                } catch (Exception e) {
+                    log.warn("Failed to reverse GL entry for transaction {}: {}",
+                            transaction.getTransactionNumber(), e.getMessage());
+                }
             }
         }
 
