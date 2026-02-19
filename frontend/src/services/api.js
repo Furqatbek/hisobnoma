@@ -170,6 +170,17 @@ export const terminalsApi = {
   deactivate: (id) => api.put(`/pos/terminals/${id}/deactivate`)
 }
 
+// POS Shifts API - Backend: /api/v1/pos/shifts
+export const shiftsApi = {
+  getAll: (params) => api.get('/pos/shifts', { params }),
+  getById: (id) => api.get(`/pos/shifts/${id}`),
+  getCurrentForUser: () => api.get('/pos/shifts/current'),
+  getCurrentForTerminal: (terminalId) => api.get(`/pos/shifts/current/terminal/${terminalId}`),
+  getOpen: () => api.get('/pos/shifts/open'),
+  open: (data) => api.post('/pos/shifts/open', data),
+  close: (id, data) => api.post(`/pos/shifts/${id}/close`, data)
+}
+
 // POS API - Backend: /api/v1/pos/transactions
 export const posApi = {
   createTransaction: (data) => api.post('/pos/transactions', data),

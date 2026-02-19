@@ -1,6 +1,6 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
-import { productsApi, customersApi, posApi, terminalsApi } from '@/services/api'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { productsApi, customersApi, posApi, terminalsApi, shiftsApi } from '@/services/api'
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -11,7 +11,9 @@ import {
   BanknotesIcon,
   XMarkIcon,
   CheckIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  ClockIcon,
+  ArrowRightStartOnRectangleIcon
 } from '@heroicons/vue/24/outline'
 
 // State
@@ -23,6 +25,14 @@ const loading = ref(false)
 // Terminal state
 const terminals = ref([])
 const selectedTerminalId = ref(null)
+
+// Shift state
+const currentShift = ref(null)
+const showOpenShiftModal = ref(false)
+const showCloseShiftModal = ref(false)
+const openingCash = ref(0)
+const closingCash = ref(0)
+const shiftLoading = ref(false)
 
 const cart = reactive({
   items: [],
@@ -328,8 +338,7 @@ async function createQuickCustomer() {
     const response = await customersApi.create({
       name: newCustomer.name,
       phone: newCustomer.phone || null,
-      email: newCustomer.email || null,
-      code: 'CUST-' + Date.now()
+      email: newCustomer.email || null
     })
     const customer = response.data.data || response.data
     cart.customerId = customer.id
@@ -384,9 +393,60 @@ async function fetchTerminals() {
   }
 }
 
+// Shift management
+async function fetchCurrentShift() {
+  if (!selectedTerminalId.value) return
+  try {
+    const response = await shiftsApi.getCurrentForTerminal(selectedTerminalId.value)
+    currentShift.value = response.data.data || response.data || null
+  } catch (error) {
+    currentShift.value = null
+  }
+}
+
+async function openShift() {
+  if (!selectedTerminalId.value) return
+  shiftLoading.value = true
+  try {
+    const response = await shiftsApi.open({
+      terminalId: selectedTerminalId.value,
+      openingCash: openingCash.value
+    })
+    currentShift.value = response.data.data || response.data
+    showOpenShiftModal.value = false
+    openingCash.value = 0
+  } catch (error) {
+    alert('Smenani ochishda xatolik: ' + (error.response?.data?.message || error.message))
+  } finally {
+    shiftLoading.value = false
+  }
+}
+
+async function closeShift() {
+  if (!currentShift.value) return
+  shiftLoading.value = true
+  try {
+    await shiftsApi.close(currentShift.value.id, {
+      closingCash: closingCash.value
+    })
+    currentShift.value = null
+    showCloseShiftModal.value = false
+    closingCash.value = 0
+  } catch (error) {
+    alert('Smenani yopishda xatolik: ' + (error.response?.data?.message || error.message))
+  } finally {
+    shiftLoading.value = false
+  }
+}
+
+// Re-fetch shift when terminal changes
+watch(selectedTerminalId, () => {
+  fetchCurrentShift()
+})
+
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
-  fetchTerminals()
+  fetchTerminals().then(() => fetchCurrentShift())
 })
 </script>
 
@@ -462,6 +522,23 @@ onMounted(() => {
             {{ terminal.name || terminal.terminalCode }}
           </option>
         </select>
+      </div>
+
+      <!-- Shift Status -->
+      <div v-if="currentShift" class="mb-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+        <div class="flex items-center">
+          <ClockIcon class="h-4 w-4 text-green-600 mr-2" />
+          <span class="text-sm text-green-700 font-medium">Smena ochiq: {{ currentShift.shiftNumber }}</span>
+        </div>
+        <button @click="showCloseShiftModal = true" class="text-sm text-red-600 hover:text-red-700 font-medium">
+          Smenani yopish
+        </button>
+      </div>
+      <div v-else-if="terminals.length > 0" class="mb-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
+        <span class="text-sm text-yellow-700">Smena ochilmagan. Sotish uchun smenani oching.</span>
+        <button @click="showOpenShiftModal = true" class="btn-primary text-sm py-1 px-3">
+          Smena ochish
+        </button>
       </div>
 
       <div class="card flex-1 flex flex-col overflow-hidden">
@@ -584,7 +661,7 @@ onMounted(() => {
         <div class="p-4 border-t space-y-2">
           <button
             @click="openPayment"
-            :disabled="cart.items.length === 0"
+            :disabled="cart.items.length === 0 || !currentShift"
             class="btn-primary w-full py-3 text-lg"
           >
             <CreditCardIcon class="h-6 w-6 mr-2" />
@@ -592,7 +669,7 @@ onMounted(() => {
           </button>
           <button
             @click="sellAsDebt"
-            :disabled="cart.items.length === 0"
+            :disabled="cart.items.length === 0 || !currentShift"
             class="w-full py-2 text-sm border-2 border-orange-500 text-orange-600 rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center"
           >
             <DocumentTextIcon class="h-5 w-5 mr-2" />
@@ -793,6 +870,98 @@ onMounted(() => {
             <button @click="createQuickCustomer" class="btn-primary flex-1">
               <PlusIcon class="h-5 w-5 mr-2" />
               Create & Select
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Open Shift Modal -->
+    <div v-if="showOpenShiftModal" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showOpenShiftModal = false"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Smena ochish</h3>
+
+          <div class="space-y-4">
+            <div>
+              <label class="label">Terminal</label>
+              <p class="text-sm text-gray-700 font-medium">
+                {{ terminals.find(t => t.id === selectedTerminalId)?.name || terminals.find(t => t.id === selectedTerminalId)?.terminalCode }}
+              </p>
+            </div>
+            <div>
+              <label class="label">Kassadagi boshlang'ich naqd pul</label>
+              <input
+                v-model.number="openingCash"
+                type="number"
+                min="0"
+                step="1000"
+                class="input text-lg"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div class="flex space-x-3 mt-6">
+            <button @click="showOpenShiftModal = false" class="btn-secondary flex-1">
+              Bekor qilish
+            </button>
+            <button @click="openShift" :disabled="shiftLoading" class="btn-primary flex-1">
+              <ClockIcon class="h-5 w-5 mr-2" />
+              {{ shiftLoading ? 'Ochilmoqda...' : 'Smena ochish' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Close Shift Modal -->
+    <div v-if="showCloseShiftModal" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showCloseShiftModal = false"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Smenani yopish</h3>
+
+          <div class="space-y-4">
+            <div class="p-3 bg-gray-50 rounded-lg space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Smena raqami:</span>
+                <span class="font-medium">{{ currentShift?.shiftNumber }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Boshlang'ich naqd:</span>
+                <span class="font-medium">{{ formatCurrency(currentShift?.openingCash || 0) }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Tranzaksiyalar soni:</span>
+                <span class="font-medium">{{ currentShift?.transactionCount || 0 }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Jami sotuvlar:</span>
+                <span class="font-medium">{{ formatCurrency(currentShift?.totalSales || 0) }}</span>
+              </div>
+            </div>
+            <div>
+              <label class="label">Kassadagi yakuniy naqd pul</label>
+              <input
+                v-model.number="closingCash"
+                type="number"
+                min="0"
+                step="1000"
+                class="input text-lg"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div class="flex space-x-3 mt-6">
+            <button @click="showCloseShiftModal = false" class="btn-secondary flex-1">
+              Bekor qilish
+            </button>
+            <button @click="closeShift" :disabled="shiftLoading" class="btn-primary flex-1 !bg-red-600 hover:!bg-red-700">
+              <ArrowRightStartOnRectangleIcon class="h-5 w-5 mr-2" />
+              {{ shiftLoading ? 'Yopilmoqda...' : 'Smenani yopish' }}
             </button>
           </div>
         </div>
