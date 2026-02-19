@@ -23,10 +23,10 @@ spring:
 
   # JPA - More verbose for development
   jpa:
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
 
   # DevTools
   devtools:
@@ -41,8 +41,8 @@ logging:
     root: INFO
     com.hisobnoma: DEBUG
     org.springframework.web: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
 
 # Swagger enabled
 springdoc:

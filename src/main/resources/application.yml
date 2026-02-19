@@ -13,7 +13,7 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
+        format_sql: false
         jdbc:
           time_zone: UTC
         order_inserts: true
@@ -77,8 +77,8 @@ logging:
     root: INFO
     com.hisobnoma: DEBUG
     org.springframework.security: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
 
 # OpenAPI Configuration
 springdoc:
