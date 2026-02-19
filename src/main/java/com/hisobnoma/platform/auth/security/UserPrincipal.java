@@ -87,6 +87,7 @@ public class UserPrincipal implements UserDetails {
             authorities.add(new SimpleGrantedAuthority("POS_SHIFT_OPEN"));
             authorities.add(new SimpleGrantedAuthority("POS_SHIFT_CLOSE"));
             authorities.add(new SimpleGrantedAuthority("POS_PAYMENT_CREATE"));
+            authorities.add(new SimpleGrantedAuthority("POS_PAYMENT_PROCESS"));
             authorities.add(new SimpleGrantedAuthority("POS_PAYMENT_VOID"));
             // Grant all finance permissions
             authorities.add(new SimpleGrantedAuthority("FINANCE_CUSTOMER_READ"));
