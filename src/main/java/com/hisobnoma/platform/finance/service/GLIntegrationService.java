@@ -39,6 +39,7 @@ public class GLIntegrationService {
     private static final String ACCOUNTS_RECEIVABLE = "1200"; // Asset: Accounts Receivable
     private static final String ACCOUNTS_PAYABLE = "2100";   // Liability: Accounts Payable
     private static final String PURCHASE_EXPENSE = "5200";   // Expense: Purchases
+    private static final String SALES_DISCOUNTS_ACCOUNT = "4200"; // Contra-Revenue: Sales Discounts
 
     /**
      * Posts an inventory movement to the general ledger.
@@ -121,14 +122,38 @@ public class GLIntegrationService {
             String description,
             LocalDate saleDate
     ) {
+        return postSalesTransaction(referenceId, referenceNumber, salesAmount, costAmount,
+                BigDecimal.ZERO, paymentType, description, saleDate);
+    }
+
+    @Transactional
+    public JournalEntry postSalesTransaction(
+            Long referenceId,
+            String referenceNumber,
+            BigDecimal salesAmount,
+            BigDecimal costAmount,
+            BigDecimal discountAmount,
+            String paymentType,
+            String description,
+            LocalDate saleDate
+    ) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
         List<CreateJournalLineRequest> lines = new ArrayList<>();
 
         // Revenue entry: Debit Cash/AR, Credit Sales Revenue
+        // Cash/AR is debited for the net amount (what customer actually pays)
         String receivableAccount = "CASH".equals(paymentType) ? CASH_ACCOUNT : ACCOUNTS_RECEIVABLE;
         lines.add(createLine(receivableAccount, salesAmount, null, "Payment for sale"));
-        lines.add(createLine(SALES_REVENUE_ACCOUNT, null, salesAmount, "Sales revenue"));
+
+        // If discount was given, record gross revenue and debit discount account
+        if (discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal grossRevenue = salesAmount.add(discountAmount);
+            lines.add(createLine(SALES_REVENUE_ACCOUNT, null, grossRevenue, "Sales revenue (gross)"));
+            lines.add(createLine(SALES_DISCOUNTS_ACCOUNT, discountAmount, null, "Sales discount given"));
+        } else {
+            lines.add(createLine(SALES_REVENUE_ACCOUNT, null, salesAmount, "Sales revenue"));
+        }
 
         // COGS entry if cost is provided: Debit COGS, Credit Inventory
         if (costAmount != null && costAmount.compareTo(BigDecimal.ZERO) > 0) {
@@ -146,7 +171,8 @@ public class GLIntegrationService {
                 .lines(lines)
                 .build();
 
-        log.info("Posting sales transaction to GL: {} - {} - {}", referenceNumber, salesAmount, costAmount);
+        log.info("Posting sales transaction to GL: {} - {} - {} (discount: {})",
+                referenceNumber, salesAmount, costAmount, discountAmount);
         return journalEntryService.createAndPostEntry(request, tenantId);
     }
 
@@ -759,7 +785,17 @@ public class GLIntegrationService {
             String transactionNumber = (String) getTransactionNumber.invoke(transaction);
             BigDecimal salesAmount = (BigDecimal) getTotalAmount.invoke(transaction);
 
-            // Calculate COGS from line items
+            // Extract discount amount (transaction-level + line-level)
+            BigDecimal discountAmount = BigDecimal.ZERO;
+            try {
+                java.lang.reflect.Method getDiscountAmount = transaction.getClass().getMethod("getDiscountAmount");
+                BigDecimal txDiscount = (BigDecimal) getDiscountAmount.invoke(transaction);
+                if (txDiscount != null) {
+                    discountAmount = discountAmount.add(txDiscount);
+                }
+            } catch (NoSuchMethodException ignored) {}
+
+            // Calculate COGS and line-level discounts from line items
             BigDecimal costAmount = BigDecimal.ZERO;
             @SuppressWarnings("unchecked")
             java.util.List<Object> lines = (java.util.List<Object>) getLines.invoke(transaction);
@@ -771,6 +807,14 @@ public class GLIntegrationService {
                 if (costPrice != null && quantity != null) {
                     costAmount = costAmount.add(costPrice.multiply(quantity));
                 }
+                // Accumulate line-level discounts
+                try {
+                    java.lang.reflect.Method getLineDiscount = line.getClass().getMethod("getDiscountAmount");
+                    BigDecimal lineDiscount = (BigDecimal) getLineDiscount.invoke(line);
+                    if (lineDiscount != null && lineDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                        discountAmount = discountAmount.add(lineDiscount);
+                    }
+                } catch (NoSuchMethodException ignored) {}
             }
 
             JournalEntry entry = postSalesTransaction(
@@ -778,6 +822,7 @@ public class GLIntegrationService {
                     transactionNumber,
                     salesAmount,
                     costAmount,
+                    discountAmount,
                     "POS",
                     "POS Sale: " + transactionNumber,
                     LocalDate.now()

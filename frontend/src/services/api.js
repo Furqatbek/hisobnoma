@@ -189,6 +189,7 @@ export const posApi = {
   addLineItem: (transactionId, data) => api.post(`/pos/transactions/${transactionId}/items`, data),
   removeLineItem: (transactionId, itemId) => api.delete(`/pos/transactions/${transactionId}/items/${itemId}`),
   addPayment: (transactionId, data) => api.post(`/pos/transactions/${transactionId}/payments`, data),
+  applyDiscount: (transactionId, data) => api.post(`/pos/transactions/${transactionId}/discount`, data),
   completeTransaction: (transactionId) => api.post(`/pos/transactions/${transactionId}/complete`),
   voidTransaction: (transactionId, reason) => api.post(`/pos/transactions/${transactionId}/void`, { reason }),
   getDailySummary: (date) => api.get('/pos/transactions/daily-summary', { params: { date } })

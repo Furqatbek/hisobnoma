@@ -54,6 +54,21 @@ const currentPayment = reactive({
 
 // Tax settings - can be manually controlled
 const taxRate = ref(0) // 0% tax by default
+
+// Discount state
+const showDiscountModal = ref(false)
+const discountTarget = ref('transaction') // 'transaction' or item index
+const discountForm = reactive({
+  type: 'percent', // 'percent' or 'amount'
+  value: 0,
+  reason: ''
+})
+const transactionDiscount = reactive({
+  type: null, // 'percent' or 'amount'
+  value: 0,
+  reason: ''
+})
+
 const showNewCustomerModal = ref(false)
 const newCustomer = reactive({
   name: '',
@@ -74,8 +89,26 @@ const subtotal = computed(() => {
   return cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 })
 
-const tax = computed(() => subtotal.value * (taxRate.value / 100))
-const total = computed(() => subtotal.value + tax.value)
+// Total item-level discounts
+const itemDiscountTotal = computed(() => {
+  return cart.items.reduce((sum, item) => sum + (item.discount || 0), 0)
+})
+
+// Transaction-level discount amount
+const transactionDiscountAmount = computed(() => {
+  if (!transactionDiscount.type) return 0
+  const afterItemDiscounts = subtotal.value - itemDiscountTotal.value
+  if (transactionDiscount.type === 'percent') {
+    return afterItemDiscounts * (transactionDiscount.value / 100)
+  }
+  return Math.min(transactionDiscount.value, afterItemDiscounts)
+})
+
+const totalDiscount = computed(() => itemDiscountTotal.value + transactionDiscountAmount.value)
+
+const discountedSubtotal = computed(() => subtotal.value - totalDiscount.value)
+const tax = computed(() => discountedSubtotal.value * (taxRate.value / 100))
+const total = computed(() => discountedSubtotal.value + tax.value)
 
 // Total paid from split payments
 const totalPaid = computed(() => {
@@ -178,6 +211,58 @@ function clearCustomer() {
   cart.customerName = ''
 }
 
+// Discount functions
+function openTransactionDiscount() {
+  discountTarget.value = 'transaction'
+  discountForm.type = transactionDiscount.type || 'percent'
+  discountForm.value = transactionDiscount.value || 0
+  discountForm.reason = transactionDiscount.reason || ''
+  showDiscountModal.value = true
+}
+
+function openItemDiscount(index) {
+  const item = cart.items[index]
+  discountTarget.value = index
+  const itemTotal = item.price * item.quantity
+  if (item.discountPercent) {
+    discountForm.type = 'percent'
+    discountForm.value = item.discountPercent
+  } else {
+    discountForm.type = 'amount'
+    discountForm.value = item.discount || 0
+  }
+  discountForm.reason = item.discountReason || ''
+  showDiscountModal.value = true
+}
+
+function applyDiscountFromModal() {
+  if (discountForm.value < 0) return
+
+  if (discountTarget.value === 'transaction') {
+    transactionDiscount.type = discountForm.type
+    transactionDiscount.value = discountForm.value
+    transactionDiscount.reason = discountForm.reason
+  } else {
+    const item = cart.items[discountTarget.value]
+    const itemTotal = item.price * item.quantity
+    if (discountForm.type === 'percent') {
+      item.discountPercent = discountForm.value
+      item.discount = itemTotal * (discountForm.value / 100)
+    } else {
+      item.discountPercent = null
+      item.discount = Math.min(discountForm.value, itemTotal)
+    }
+    item.discountReason = discountForm.reason
+  }
+  showDiscountModal.value = false
+}
+
+function clearTransactionDiscount() {
+  transactionDiscount.type = null
+  transactionDiscount.value = 0
+  transactionDiscount.reason = ''
+}
+
 function openPayment() {
   if (cart.items.length === 0) return
   payments.value = []
@@ -262,12 +347,25 @@ async function processPayment() {
       items: cart.items.map(item => ({
         productId: item.productId,
         quantity: item.quantity,
-        unitPrice: item.price
+        unitPrice: item.price,
+        discountAmount: item.discount || undefined,
+        discountReason: item.discountReason || undefined
       }))
     }
 
     const txResponse = await posApi.createTransaction(transactionData)
     const transactionId = txResponse.data.data?.id || txResponse.data.id
+
+    // Apply transaction-level discount if set
+    if (transactionDiscount.type && transactionDiscount.value > 0) {
+      const discountData = { reason: transactionDiscount.reason || undefined }
+      if (transactionDiscount.type === 'percent') {
+        discountData.percent = transactionDiscount.value
+      } else {
+        discountData.amount = transactionDiscountAmount.value
+      }
+      await posApi.applyDiscount(transactionId, discountData)
+    }
 
     // Add all payments
     for (const payment of payments.value) {
@@ -285,6 +383,7 @@ async function processPayment() {
     cart.customerId = null
     cart.customerName = ''
     payments.value = []
+    clearTransactionDiscount()
     showPaymentModal.value = false
 
     const hasDebtPayment = payments.value.some(p => p.method === 'CREDIT')
@@ -318,6 +417,7 @@ function clearCart() {
     cart.items = []
     cart.customerId = null
     cart.customerName = ''
+    clearTransactionDiscount()
   }
 }
 
@@ -594,7 +694,7 @@ onMounted(() => {
           </div>
 
           <ul v-else class="divide-y">
-            <li v-for="item in cart.items" :key="item.productId" class="p-4">
+            <li v-for="(item, index) in cart.items" :key="item.productId" class="p-4">
               <div class="flex justify-between">
                 <div class="flex-1 min-w-0">
                   <p class="font-medium text-gray-900 truncate">{{ item.name }}</p>
@@ -624,7 +724,16 @@ onMounted(() => {
                     <PlusIcon class="h-4 w-4" />
                   </button>
                 </div>
-                <span class="font-medium">{{ formatCurrency(item.price * item.quantity) }}</span>
+                <div class="text-right">
+                  <span class="font-medium">{{ formatCurrency(item.price * item.quantity) }}</span>
+                  <button
+                    @click="openItemDiscount(index)"
+                    class="ml-2 text-xs px-1.5 py-0.5 rounded border hover:bg-gray-100"
+                    :class="item.discount ? 'text-green-600 border-green-300 bg-green-50' : 'text-gray-400 border-gray-200'"
+                  >
+                    {{ item.discount ? ('-' + formatCurrency(item.discount)) : '%' }}
+                  </button>
+                </div>
               </div>
             </li>
           </ul>
@@ -636,6 +745,35 @@ onMounted(() => {
             <span class="text-gray-500">Subtotal</span>
             <span>{{ formatCurrency(subtotal) }}</span>
           </div>
+
+          <!-- Discount row -->
+          <div v-if="totalDiscount > 0" class="flex justify-between text-sm text-green-600">
+            <span>
+              Chegirma
+              <span v-if="transactionDiscount.type === 'percent'" class="text-xs">({{ transactionDiscount.value }}%)</span>
+            </span>
+            <span>-{{ formatCurrency(totalDiscount) }}</span>
+          </div>
+
+          <!-- Discount button -->
+          <div class="flex items-center gap-2">
+            <button
+              @click="openTransactionDiscount"
+              :disabled="cart.items.length === 0"
+              class="text-xs px-2 py-1 rounded border transition-colors"
+              :class="transactionDiscount.type ? 'text-green-600 border-green-300 bg-green-50 hover:bg-green-100' : 'text-gray-500 border-gray-200 hover:bg-gray-100'"
+            >
+              {{ transactionDiscount.type ? 'Chegirmani o\'zgartirish' : '+ Chegirma' }}
+            </button>
+            <button
+              v-if="transactionDiscount.type"
+              @click="clearTransactionDiscount"
+              class="text-xs text-red-500 hover:text-red-700"
+            >
+              <XMarkIcon class="h-3.5 w-3.5" />
+            </button>
+          </div>
+
           <div class="flex justify-between items-center text-sm">
             <div class="flex items-center gap-2">
               <span class="text-gray-500">Tax</span>
@@ -962,6 +1100,88 @@ onMounted(() => {
             <button @click="closeShift" :disabled="shiftLoading" class="btn-primary flex-1 !bg-red-600 hover:!bg-red-700">
               <ArrowRightStartOnRectangleIcon class="h-5 w-5 mr-2" />
               {{ shiftLoading ? 'Yopilmoqda...' : 'Smenani yopish' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Discount Modal -->
+    <div v-if="showDiscountModal" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showDiscountModal = false"></div>
+        <div class="relative bg-white rounded-lg max-w-sm w-full p-6">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">
+            {{ discountTarget === 'transaction' ? 'Chegirma (umumiy)' : 'Chegirma (mahsulot)' }}
+          </h3>
+
+          <div class="space-y-4">
+            <!-- Discount type toggle -->
+            <div class="flex rounded-lg border overflow-hidden">
+              <button
+                @click="discountForm.type = 'percent'"
+                :class="['flex-1 py-2 text-sm font-medium transition-colors', discountForm.type === 'percent' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50']"
+              >
+                Foiz (%)
+              </button>
+              <button
+                @click="discountForm.type = 'amount'"
+                :class="['flex-1 py-2 text-sm font-medium transition-colors', discountForm.type === 'amount' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50']"
+              >
+                Summa
+              </button>
+            </div>
+
+            <!-- Discount value -->
+            <div>
+              <label class="label">
+                {{ discountForm.type === 'percent' ? 'Foiz (%)' : 'Summa' }}
+              </label>
+              <input
+                v-model.number="discountForm.value"
+                type="number"
+                step="0.01"
+                min="0"
+                :max="discountForm.type === 'percent' ? 100 : undefined"
+                class="input text-lg text-center"
+                autofocus
+              />
+            </div>
+
+            <!-- Quick percent buttons -->
+            <div v-if="discountForm.type === 'percent'" class="flex gap-2">
+              <button
+                v-for="pct in [5, 10, 15, 20, 25]"
+                :key="pct"
+                @click="discountForm.value = pct"
+                :class="['flex-1 py-2 text-sm border rounded-lg transition-colors', discountForm.value === pct ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 hover:bg-gray-50']"
+              >
+                {{ pct }}%
+              </button>
+            </div>
+
+            <!-- Reason -->
+            <div>
+              <label class="label">Sabab</label>
+              <input
+                v-model="discountForm.reason"
+                type="text"
+                class="input"
+                placeholder="Chegirma sababi..."
+              />
+            </div>
+          </div>
+
+          <div class="flex space-x-3 mt-6">
+            <button @click="showDiscountModal = false" class="btn-secondary flex-1">
+              Bekor qilish
+            </button>
+            <button
+              @click="applyDiscountFromModal"
+              :disabled="discountForm.value <= 0"
+              class="btn-primary flex-1"
+            >
+              Qo'llash
             </button>
           </div>
         </div>

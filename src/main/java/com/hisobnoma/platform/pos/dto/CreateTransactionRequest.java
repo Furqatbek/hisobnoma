@@ -55,5 +55,7 @@ public class CreateTransactionRequest {
         @NotNull(message = "Quantity is required")
         private BigDecimal quantity;
         private BigDecimal unitPrice;
+        private BigDecimal discountAmount;
+        private String discountReason;
     }
 }
