@@ -22,11 +22,11 @@ public interface POSTransactionRepository extends JpaRepository<POSTransaction, 
     @Query("SELECT t FROM POSTransaction t WHERE t.tenantId = :tenantId ORDER BY t.createdAt DESC")
     Page<POSTransaction> findByTenantId(@Param("tenantId") Long tenantId, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"terminal", "terminal.location", "shift", "customer", "lines", "lines.product", "lines.product.baseUom", "lines.variant", "payments"})
+    @EntityGraph(attributePaths = {"terminal", "terminal.location", "shift", "customer"})
     @Query("SELECT t FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.id = :id")
     Optional<POSTransaction> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
-    @EntityGraph(attributePaths = {"terminal", "terminal.location", "shift", "customer", "lines", "lines.product", "lines.product.baseUom", "lines.variant", "payments"})
+    @EntityGraph(attributePaths = {"terminal", "terminal.location", "shift", "customer"})
     @Query("SELECT t FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.transactionNumber = :number")
     Optional<POSTransaction> findByTransactionNumberAndTenantId(@Param("number") String number, @Param("tenantId") Long tenantId);
 
