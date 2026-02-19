@@ -45,24 +45,24 @@ function getPaymentLabel(type) {
 function printInvoice() {
   const printWindow = window.open('', '_blank', 'width=800,height=900')
 
-  const items = props.transaction.items || []
+  const items = props.transaction.lines || []
   const itemRows = items.map((item, i) => `
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${i + 1}</td>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
-        <strong>${item.product?.name || item.productName || item.name || ''}</strong>
-        ${item.sku ? '<br><span style="color: #6b7280; font-size: 12px;">' + item.sku + '</span>' : ''}
+        <strong>${item.productName || ''}</strong>
+        ${item.productCode ? '<br><span style="color: #6b7280; font-size: 12px;">' + item.productCode + '</span>' : ''}
       </td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.unitPrice || item.price || 0)}</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatCurrency((item.quantity || 1) * (item.unitPrice || item.price || 0))}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}${item.uomCode ? ' ' + item.uomCode : ''}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.unitPrice || 0)}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatCurrency(item.lineTotal || 0)}</td>
     </tr>
   `).join('')
 
   const payments = props.transaction.payments || []
   const paymentRows = payments.map(p => `
     <tr>
-      <td style="padding: 4px 0;">${getPaymentLabel(p.paymentType || p.type)}</td>
+      <td style="padding: 4px 0;">${getPaymentLabel(p.paymentType)}</td>
       <td style="padding: 4px 0; text-align: right;">${formatCurrency(p.amount)} so'm</td>
     </tr>
   `).join('')
@@ -102,25 +102,24 @@ function printInvoice() {
         </div>
         <div style="text-align: right;">
           <div style="font-size: 28px; font-weight: bold; color: #111827; text-transform: uppercase; letter-spacing: 2px;">Hisob-faktura</div>
-          <div style="font-size: 16px; color: #4b5563; margin-top: 4px;">${props.transaction.transactionNumber || props.transaction.orderNumber || '#' + props.transaction.id}</div>
-          <div style="color: #6b7280; margin-top: 4px;">Sana: ${formatDate(props.transaction.createdAt || props.transaction.orderDate)}</div>
+          <div style="font-size: 16px; color: #4b5563; margin-top: 4px;">${props.transaction.transactionNumber || '#' + props.transaction.id}</div>
+          <div style="color: #6b7280; margin-top: 4px;">Sana: ${formatDate(props.transaction.createdAt)}</div>
         </div>
       </div>
 
       <!-- Customer & Meta Info -->
       <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
         <div style="flex: 1;">
-          ${props.transaction.customer ? `
+          ${props.transaction.customerName ? `
             <div style="font-size: 12px; text-transform: uppercase; color: #9ca3af; font-weight: 600; letter-spacing: 1px; margin-bottom: 6px;">Mijoz</div>
-            <div style="font-weight: 600; font-size: 15px;">${props.transaction.customer.name}</div>
-            ${props.transaction.customer.phone ? '<div style="color: #6b7280;">Tel: ' + props.transaction.customer.phone + '</div>' : ''}
-            ${props.transaction.customer.email ? '<div style="color: #6b7280;">' + props.transaction.customer.email + '</div>' : ''}
-            ${props.transaction.customer.address ? '<div style="color: #6b7280;">' + props.transaction.customer.address + '</div>' : ''}
+            <div style="font-weight: 600; font-size: 15px;">${props.transaction.customerName}</div>
+            ${props.transaction.customerPhone ? '<div style="color: #6b7280;">Tel: ' + props.transaction.customerPhone + '</div>' : ''}
           ` : '<div style="color: #9ca3af;">Mijoz ko\'rsatilmagan</div>'}
         </div>
         <div style="text-align: right;">
-          ${props.transaction.terminal ? '<div style="color: #6b7280;">Terminal: ' + (props.transaction.terminal.name || '') + '</div>' : ''}
-          ${props.transaction.cashier ? '<div style="color: #6b7280;">Kassir: ' + props.transaction.cashier.name + '</div>' : ''}
+          ${props.transaction.terminalName ? '<div style="color: #6b7280;">Terminal: ' + props.transaction.terminalName + '</div>' : ''}
+          ${props.transaction.locationName ? '<div style="color: #6b7280;">Filial: ' + props.transaction.locationName + '</div>' : ''}
+          ${props.transaction.cashierName ? '<div style="color: #6b7280;">Kassir: ' + props.transaction.cashierName + '</div>' : ''}
         </div>
       </div>
 
@@ -149,21 +148,21 @@ function printInvoice() {
               <td style="padding: 6px 0; text-align: right;">${formatCurrency(props.transaction.subtotal)} so'm</td>
             </tr>
           ` : ''}
-          ${props.transaction.discount ? `
+          ${props.transaction.discountAmount > 0 ? `
             <tr>
               <td style="padding: 6px 0; color: #6b7280;">Chegirma:</td>
-              <td style="padding: 6px 0; text-align: right; color: #dc2626;">-${formatCurrency(props.transaction.discount)} so'm</td>
+              <td style="padding: 6px 0; text-align: right; color: #dc2626;">-${formatCurrency(props.transaction.discountAmount)} so'm</td>
             </tr>
           ` : ''}
-          ${props.transaction.tax ? `
+          ${props.transaction.taxAmount > 0 ? `
             <tr>
               <td style="padding: 6px 0; color: #6b7280;">Soliq:</td>
-              <td style="padding: 6px 0; text-align: right;">${formatCurrency(props.transaction.tax)} so'm</td>
+              <td style="padding: 6px 0; text-align: right;">${formatCurrency(props.transaction.taxAmount)} so'm</td>
             </tr>
           ` : ''}
           <tr style="border-top: 2px solid #111827;">
             <td style="padding: 12px 0; font-size: 18px; font-weight: bold;">JAMI:</td>
-            <td style="padding: 12px 0; text-align: right; font-size: 18px; font-weight: bold;">${formatCurrency(props.transaction.totalAmount || props.transaction.total)} so'm</td>
+            <td style="padding: 12px 0; text-align: right; font-size: 18px; font-weight: bold;">${formatCurrency(props.transaction.totalAmount)} so'm</td>
           </tr>
         </table>
       </div>
@@ -174,10 +173,10 @@ function printInvoice() {
           <div style="font-size: 12px; text-transform: uppercase; color: #9ca3af; font-weight: 600; letter-spacing: 1px; margin-bottom: 8px;">To'lov ma'lumotlari</div>
           <table style="width: 300px; border-collapse: collapse;">
             ${paymentRows}
-            ${props.transaction.change > 0 ? `
+            ${props.transaction.changeAmount > 0 ? `
               <tr>
                 <td style="padding: 4px 0; color: #6b7280;">Qaytim:</td>
-                <td style="padding: 4px 0; text-align: right;">${formatCurrency(props.transaction.change)} so'm</td>
+                <td style="padding: 4px 0; text-align: right;">${formatCurrency(props.transaction.changeAmount)} so'm</td>
               </tr>
             ` : ''}
           </table>
@@ -192,7 +191,7 @@ function printInvoice() {
           <div style="margin-bottom: 20px;">
             <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">F.I.O.</div>
             <div style="border-bottom: 1px solid #111827; min-height: 24px; padding-bottom: 2px; font-size: 14px;">
-              ${props.transaction.cashier?.name || ''}
+              ${props.transaction.cashierName || ''}
             </div>
           </div>
           <div>
@@ -207,7 +206,7 @@ function printInvoice() {
           <div style="margin-bottom: 20px;">
             <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">F.I.O.</div>
             <div style="border-bottom: 1px solid #111827; min-height: 24px; padding-bottom: 2px; font-size: 14px;">
-              ${props.transaction.customer?.name || ''}
+              ${props.transaction.customerName || ''}
             </div>
           </div>
           <div>
@@ -251,16 +250,16 @@ defineExpose({ printInvoice })
       </div>
       <div class="invoice-title-block">
         <div class="invoice-title">Hisob-faktura</div>
-        <div class="invoice-number">{{ transaction.transactionNumber || transaction.orderNumber || `#${transaction.id}` }}</div>
-        <div class="invoice-date">{{ formatDate(transaction.createdAt || transaction.orderDate) }}</div>
+        <div class="invoice-number">{{ transaction.transactionNumber || `#${transaction.id}` }}</div>
+        <div class="invoice-date">{{ formatDate(transaction.createdAt) }}</div>
       </div>
     </div>
 
     <!-- Customer -->
-    <div class="customer-section" v-if="transaction.customer">
+    <div class="customer-section" v-if="transaction.customerName">
       <div class="section-label">Mijoz</div>
-      <div class="customer-name">{{ transaction.customer.name }}</div>
-      <div class="customer-detail" v-if="transaction.customer.phone">Tel: {{ transaction.customer.phone }}</div>
+      <div class="customer-name">{{ transaction.customerName }}</div>
+      <div class="customer-detail" v-if="transaction.customerPhone">Tel: {{ transaction.customerPhone }}</div>
     </div>
 
     <!-- Items Table -->
@@ -275,12 +274,12 @@ defineExpose({ printInvoice })
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, index) in transaction.items" :key="index">
+        <tr v-for="(item, index) in transaction.lines" :key="index">
           <td class="td-num">{{ index + 1 }}</td>
-          <td>{{ item.product?.name || item.productName || item.name }}</td>
-          <td class="td-qty">{{ item.quantity }}</td>
-          <td class="td-price">{{ formatCurrency(item.unitPrice || item.price) }}</td>
-          <td class="td-total">{{ formatCurrency((item.quantity || 1) * (item.unitPrice || item.price || 0)) }}</td>
+          <td>{{ item.productName }}</td>
+          <td class="td-qty">{{ item.quantity }}{{ item.uomCode ? ' ' + item.uomCode : '' }}</td>
+          <td class="td-price">{{ formatCurrency(item.unitPrice) }}</td>
+          <td class="td-total">{{ formatCurrency(item.lineTotal) }}</td>
         </tr>
       </tbody>
     </table>
@@ -289,7 +288,7 @@ defineExpose({ printInvoice })
     <div class="totals-section">
       <div class="total-row grand-total">
         <span>JAMI:</span>
-        <span>{{ formatCurrency(transaction.totalAmount || transaction.total) }} so'm</span>
+        <span>{{ formatCurrency(transaction.totalAmount) }} so'm</span>
       </div>
     </div>
 
@@ -297,7 +296,7 @@ defineExpose({ printInvoice })
     <div class="payments-section" v-if="transaction.payments?.length">
       <div class="section-label">To'lov</div>
       <div class="payment-row" v-for="(payment, index) in transaction.payments" :key="index">
-        <span>{{ getPaymentLabel(payment.paymentType || payment.type) }}:</span>
+        <span>{{ getPaymentLabel(payment.paymentType) }}:</span>
         <span>{{ formatCurrency(payment.amount) }} so'm</span>
       </div>
     </div>
@@ -308,7 +307,7 @@ defineExpose({ printInvoice })
         <div class="signature-title">Topshirdi (Sotuvchi)</div>
         <div class="signature-field">
           <div class="signature-label">F.I.O.</div>
-          <div class="signature-line">{{ transaction.cashier?.name || '' }}</div>
+          <div class="signature-line">{{ transaction.cashierName || '' }}</div>
         </div>
         <div class="signature-field">
           <div class="signature-label">Imzo</div>
@@ -319,7 +318,7 @@ defineExpose({ printInvoice })
         <div class="signature-title">Qabul qildi (Xaridor)</div>
         <div class="signature-field">
           <div class="signature-label">F.I.O.</div>
-          <div class="signature-line">{{ transaction.customer?.name || '' }}</div>
+          <div class="signature-line">{{ transaction.customerName || '' }}</div>
         </div>
         <div class="signature-field">
           <div class="signature-label">Imzo</div>

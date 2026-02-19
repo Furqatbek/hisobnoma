@@ -212,24 +212,24 @@ defineExpose({ printReceipt })
         <div><strong>Sana:</strong> {{ formatDate(transaction.createdAt || transaction.orderDate) }}</div>
       </div>
       <div style="text-align: right;">
-        <div v-if="transaction.terminal">{{ transaction.terminal.name }}</div>
-        <div v-if="transaction.cashier">Kassir: {{ transaction.cashier.name }}</div>
+        <div v-if="transaction.terminalName">{{ transaction.terminalName }}</div>
+        <div v-if="transaction.cashierName">Kassir: {{ transaction.cashierName }}</div>
       </div>
     </div>
 
     <!-- Customer Info -->
-    <div v-if="transaction.customer" class="customer-info">
-      <div><strong>Mijoz:</strong> {{ transaction.customer.name }}</div>
-      <div v-if="transaction.customer.phone">Tel: {{ transaction.customer.phone }}</div>
+    <div v-if="transaction.customerName" class="customer-info">
+      <div><strong>Mijoz:</strong> {{ transaction.customerName }}</div>
+      <div v-if="transaction.customerPhone">Tel: {{ transaction.customerPhone }}</div>
     </div>
 
     <!-- Items -->
     <div class="receipt-items">
-      <div class="item-row" v-for="(item, index) in transaction.items" :key="index">
-        <div class="item-name">{{ item.product?.name || item.productName || item.name }}</div>
+      <div class="item-row" v-for="(item, index) in transaction.lines" :key="index">
+        <div class="item-name">{{ item.productName }}</div>
         <div class="item-details">
-          <span>{{ item.quantity }} x {{ formatCurrency(item.unitPrice || item.price) }}</span>
-          <span>{{ formatCurrency((item.quantity || 1) * (item.unitPrice || item.price || 0)) }} so'm</span>
+          <span>{{ item.quantity }} x {{ formatCurrency(item.unitPrice) }}</span>
+          <span>{{ formatCurrency(item.lineTotal) }} so'm</span>
         </div>
       </div>
     </div>
@@ -238,19 +238,19 @@ defineExpose({ printReceipt })
     <div class="totals">
       <div class="total-row">
         <span>Jami mahsulotlar:</span>
-        <span>{{ transaction.items?.length || 0 }} ta</span>
+        <span>{{ transaction.lineCount || transaction.lines?.length || 0 }} ta</span>
       </div>
       <div class="total-row" v-if="transaction.subtotal">
         <span>Oraliq summa:</span>
         <span>{{ formatCurrency(transaction.subtotal) }} so'm</span>
       </div>
-      <div class="total-row" v-if="transaction.discount">
+      <div class="total-row" v-if="transaction.discountAmount > 0">
         <span>Chegirma:</span>
-        <span>-{{ formatCurrency(transaction.discount) }} so'm</span>
+        <span>-{{ formatCurrency(transaction.discountAmount) }} so'm</span>
       </div>
-      <div class="total-row" v-if="transaction.tax">
+      <div class="total-row" v-if="transaction.taxAmount > 0">
         <span>Soliq:</span>
-        <span>{{ formatCurrency(transaction.tax) }} so'm</span>
+        <span>{{ formatCurrency(transaction.taxAmount) }} so'm</span>
       </div>
       <div class="total-row grand-total">
         <span>JAMI:</span>
@@ -265,9 +265,9 @@ defineExpose({ printReceipt })
         <span>{{ getPaymentLabel(payment.paymentType || payment.type) }}:</span>
         <span>{{ formatCurrency(payment.amount) }} so'm</span>
       </div>
-      <div class="payment-row" v-if="transaction.change > 0">
+      <div class="payment-row" v-if="transaction.changeAmount > 0">
         <span>Qaytim:</span>
-        <span>{{ formatCurrency(transaction.change) }} so'm</span>
+        <span>{{ formatCurrency(transaction.changeAmount) }} so'm</span>
       </div>
     </div>
 

@@ -185,6 +185,7 @@ function handleSearch() {
             <tr>
               <th>Chek №</th>
               <th>Sana</th>
+              <th>Kassir</th>
               <th>Mijoz</th>
               <th>Mahsulotlar</th>
               <th class="text-right">Summa</th>
@@ -197,8 +198,9 @@ function handleSearch() {
             <tr v-for="tx in transactions" :key="tx.id">
               <td class="font-mono text-sm">{{ tx.transactionNumber || `#${tx.id}` }}</td>
               <td class="text-sm text-gray-500">{{ formatDate(tx.createdAt) }}</td>
-              <td>{{ tx.customer?.name || 'Tashrif buyuruvchi' }}</td>
-              <td>{{ tx.items?.length || 0 }} ta</td>
+              <td class="text-sm">{{ tx.cashierName || '-' }}</td>
+              <td>{{ tx.customerName || 'Tashrif buyuruvchi' }}</td>
+              <td>{{ tx.lineCount || 0 }} ta</td>
               <td class="text-right font-medium">{{ formatCurrency(tx.totalAmount) }} so'm</td>
               <td>
                 <span :class="['badge', getStatusClass(tx.status)]">
@@ -313,15 +315,30 @@ function handleSearch() {
                 </div>
                 <div>
                   <label class="text-sm text-gray-500">Mijoz</label>
-                  <p class="font-medium">{{ selectedTransaction.customer?.name || 'Tashrif buyuruvchi' }}</p>
-                  <p v-if="selectedTransaction.customer?.phone" class="text-sm text-gray-500">
-                    {{ selectedTransaction.customer.phone }}
+                  <p class="font-medium">{{ selectedTransaction.customerName || 'Tashrif buyuruvchi' }}</p>
+                  <p v-if="selectedTransaction.customerPhone" class="text-sm text-gray-500">
+                    {{ selectedTransaction.customerPhone }}
                   </p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Terminal</label>
-                  <p class="font-medium">{{ selectedTransaction.terminal?.name || '-' }}</p>
+                  <label class="text-sm text-gray-500">Kassir</label>
+                  <p class="font-medium">{{ selectedTransaction.cashierName || '-' }}</p>
                 </div>
+                <div>
+                  <label class="text-sm text-gray-500">Terminal</label>
+                  <p class="font-medium">{{ selectedTransaction.terminalName || selectedTransaction.terminalCode || '-' }}</p>
+                </div>
+                <div>
+                  <label class="text-sm text-gray-500">Filial</label>
+                  <p class="font-medium">{{ selectedTransaction.locationName || '-' }}</p>
+                </div>
+              </div>
+
+              <!-- Void info -->
+              <div v-if="selectedTransaction.status === 'VOIDED' && selectedTransaction.voidReason" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p class="text-sm font-medium text-red-800">Bekor qilish sababi:</p>
+                <p class="text-sm text-red-700">{{ selectedTransaction.voidReason }}</p>
+                <p v-if="selectedTransaction.voidedAt" class="text-xs text-red-500 mt-1">{{ formatDate(selectedTransaction.voidedAt) }}</p>
               </div>
 
               <!-- Items -->
@@ -338,14 +355,14 @@ function handleSearch() {
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                      <tr v-for="item in selectedTransaction.items" :key="item.id">
+                      <tr v-for="item in selectedTransaction.lines" :key="item.id">
                         <td class="px-4 py-3">
-                          <p class="font-medium">{{ item.product?.name || item.productName }}</p>
-                          <p v-if="item.product?.sku" class="text-sm text-gray-500">{{ item.product.sku }}</p>
+                          <p class="font-medium">{{ item.productName }}</p>
+                          <p v-if="item.productCode" class="text-sm text-gray-500">{{ item.productCode }}</p>
                         </td>
-                        <td class="px-4 py-3 text-right">{{ item.quantity }}</td>
+                        <td class="px-4 py-3 text-right">{{ item.quantity }} <span v-if="item.uomCode" class="text-xs text-gray-500">{{ item.uomCode }}</span></td>
                         <td class="px-4 py-3 text-right">{{ formatCurrency(item.unitPrice) }} so'm</td>
-                        <td class="px-4 py-3 text-right font-medium">{{ formatCurrency(item.quantity * item.unitPrice) }} so'm</td>
+                        <td class="px-4 py-3 text-right font-medium">{{ formatCurrency(item.lineTotal) }} so'm</td>
                       </tr>
                     </tbody>
                   </table>
@@ -355,17 +372,17 @@ function handleSearch() {
               <!-- Totals -->
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="space-y-2">
-                  <div class="flex justify-between" v-if="selectedTransaction.subtotal">
+                  <div class="flex justify-between">
                     <span class="text-gray-600">Oraliq summa:</span>
                     <span>{{ formatCurrency(selectedTransaction.subtotal) }} so'm</span>
                   </div>
-                  <div class="flex justify-between" v-if="selectedTransaction.discount">
+                  <div class="flex justify-between" v-if="selectedTransaction.discountAmount > 0">
                     <span class="text-gray-600">Chegirma:</span>
-                    <span class="text-green-600">-{{ formatCurrency(selectedTransaction.discount) }} so'm</span>
+                    <span class="text-green-600">-{{ formatCurrency(selectedTransaction.discountAmount) }} so'm</span>
                   </div>
-                  <div class="flex justify-between" v-if="selectedTransaction.tax">
+                  <div class="flex justify-between" v-if="selectedTransaction.taxAmount > 0">
                     <span class="text-gray-600">Soliq:</span>
-                    <span>{{ formatCurrency(selectedTransaction.tax) }} so'm</span>
+                    <span>{{ formatCurrency(selectedTransaction.taxAmount) }} so'm</span>
                   </div>
                   <div class="flex justify-between text-lg font-bold border-t pt-2">
                     <span>Jami:</span>
@@ -385,10 +402,21 @@ function handleSearch() {
                   >
                     <span class="flex items-center gap-2">
                       <span class="badge badge-info">{{ getPaymentLabel(payment.paymentType) }}</span>
+                      <span v-if="payment.cardLastFour" class="text-sm text-gray-500">****{{ payment.cardLastFour }}</span>
                     </span>
                     <span class="font-medium">{{ formatCurrency(payment.amount) }} so'm</span>
                   </div>
+                  <div v-if="selectedTransaction.changeAmount > 0" class="flex justify-between items-center px-4 py-2 text-sm text-gray-600">
+                    <span>Qaytim:</span>
+                    <span>{{ formatCurrency(selectedTransaction.changeAmount) }} so'm</span>
+                  </div>
                 </div>
+              </div>
+
+              <!-- Notes -->
+              <div v-if="selectedTransaction.notes" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p class="text-sm font-medium text-yellow-800">Izoh:</p>
+                <p class="text-sm text-yellow-700">{{ selectedTransaction.notes }}</p>
               </div>
             </div>
           </div>
