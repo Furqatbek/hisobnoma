@@ -58,6 +58,10 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @Query("SELECT MAX(c.updatedAt) FROM Customer c WHERE c.tenantId = :tenantId")
     java.time.Instant findMaxUpdatedAt(@Param("tenantId") Long tenantId);
 
+    @Query("SELECT MAX(CAST(SUBSTRING(c.code, 6) AS integer)) FROM Customer c " +
+           "WHERE c.tenantId = :tenantId AND c.code LIKE 'CUST-%'")
+    Integer findMaxCustomerCodeNumber(@Param("tenantId") Long tenantId);
+
     @Query("SELECT c FROM Customer c WHERE c.tenantId = :tenantId AND c.active = true AND " +
            "(LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(c.code) LIKE LOWER(CONCAT('%', :query, '%')) OR " +

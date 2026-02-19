@@ -69,6 +69,11 @@ public class CustomerService {
     public CustomerDto createCustomer(CreateCustomerRequest request) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
+        // Auto-generate code if not provided
+        if (request.getCode() == null || request.getCode().isBlank()) {
+            request.setCode(generateCustomerCode(tenantId));
+        }
+
         // Check for duplicate code
         if (customerRepository.existsByCodeAndTenantId(request.getCode(), tenantId)) {
             throw new BusinessException("Customer with code '" + request.getCode() + "' already exists");
@@ -191,6 +196,12 @@ public class CustomerService {
             customer.setCurrentBalance(currentBalance.add(amount));
             customerRepository.save(customer);
         });
+    }
+
+    private String generateCustomerCode(Long tenantId) {
+        Integer maxNumber = customerRepository.findMaxCustomerCodeNumber(tenantId);
+        int nextNumber = (maxNumber != null ? maxNumber : 0) + 1;
+        return String.format("CUST-%06d", nextNumber);
     }
 
     /**

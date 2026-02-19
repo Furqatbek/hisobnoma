@@ -14,7 +14,6 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class CreateCustomerRequest {
 
-    @NotBlank(message = "Customer code is required")
     @Size(max = 50, message = "Customer code cannot exceed 50 characters")
     private String code;
 
