@@ -73,8 +73,13 @@ public class UserPrincipal implements UserDetails {
             authorities.add(new SimpleGrantedAuthority("INVENTORY_UOM_DELETE"));
             // Grant all POS permissions
             authorities.add(new SimpleGrantedAuthority("POS_SALE_CREATE"));
+            authorities.add(new SimpleGrantedAuthority("POS_SALE_READ"));
             authorities.add(new SimpleGrantedAuthority("POS_SALE_VIEW"));
             authorities.add(new SimpleGrantedAuthority("POS_SALE_VOID"));
+            authorities.add(new SimpleGrantedAuthority("POS_SALE_HOLD"));
+            authorities.add(new SimpleGrantedAuthority("POS_SALE_REFUND"));
+            authorities.add(new SimpleGrantedAuthority("POS_DISCOUNT_APPLY"));
+            authorities.add(new SimpleGrantedAuthority("POS_RETURN_CREATE"));
             authorities.add(new SimpleGrantedAuthority("POS_TERMINAL_READ"));
             authorities.add(new SimpleGrantedAuthority("POS_TERMINAL_CREATE"));
             authorities.add(new SimpleGrantedAuthority("POS_TERMINAL_UPDATE"));
@@ -86,6 +91,7 @@ public class UserPrincipal implements UserDetails {
             authorities.add(new SimpleGrantedAuthority("POS_SHIFT_READ"));
             authorities.add(new SimpleGrantedAuthority("POS_SHIFT_OPEN"));
             authorities.add(new SimpleGrantedAuthority("POS_SHIFT_CLOSE"));
+            authorities.add(new SimpleGrantedAuthority("POS_SHIFT_CASH_OPERATION"));
             authorities.add(new SimpleGrantedAuthority("POS_PAYMENT_CREATE"));
             authorities.add(new SimpleGrantedAuthority("POS_PAYMENT_PROCESS"));
             authorities.add(new SimpleGrantedAuthority("POS_PAYMENT_VOID"));
