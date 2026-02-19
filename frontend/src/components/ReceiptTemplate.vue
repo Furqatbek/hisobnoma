@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useReceiptStore } from '@/stores/receipt'
+import InvoiceA4Template from '@/components/InvoiceA4Template.vue'
 
 const props = defineProps({
   transaction: {
@@ -16,6 +17,7 @@ const props = defineProps({
 const receiptStore = useReceiptStore()
 const config = computed(() => receiptStore.config)
 const receiptRef = ref(null)
+const invoiceA4Ref = ref(null)
 
 // Format currency in UZS
 function formatCurrency(value) {
@@ -52,142 +54,19 @@ function getPaymentLabel(type) {
 
 // Print receipt
 function printReceipt() {
+  // For A4, delegate to the dedicated invoice template
+  if (config.value.paperWidth === 'A4') {
+    if (invoiceA4Ref.value) {
+      invoiceA4Ref.value.printInvoice()
+    }
+    return
+  }
+
   const printContent = receiptRef.value.innerHTML
-  const isA4 = config.value.paperWidth === 'A4'
-  const printWindow = window.open('', '_blank', isA4 ? 'width=800,height=900' : 'width=400,height=600')
+  const paperWidth = config.value.paperWidth === '58' ? '58mm' : '80mm'
+  const printWindow = window.open('', '_blank', 'width=400,height=600')
 
-  if (isA4) {
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Chek - A4</title>
-        <style>
-          @page {
-            size: A4;
-            margin: 15mm;
-          }
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          body {
-            font-family: 'Arial', 'Helvetica', sans-serif;
-            font-size: 14px;
-            line-height: 1.5;
-            width: 210mm;
-            padding: 15mm;
-            color: #000;
-          }
-          .receipt-header {
-            text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 16px;
-            margin-bottom: 20px;
-          }
-          .brand-name {
-            font-size: 28px;
-            font-weight: bold;
-            margin-bottom: 8px;
-          }
-          .header-info {
-            font-size: 13px;
-            margin-bottom: 2px;
-          }
-          .receipt-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 16px;
-          }
-          .customer-info {
-            font-size: 13px;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid #ccc;
-          }
-          .receipt-items {
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 16px;
-            margin-bottom: 20px;
-          }
-          .item-row {
-            margin-bottom: 10px;
-            padding: 6px 0;
-            border-bottom: 1px dotted #eee;
-          }
-          .item-row:last-child {
-            border-bottom: none;
-          }
-          .item-name {
-            font-weight: bold;
-            font-size: 14px;
-          }
-          .item-details {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            color: #333;
-          }
-          .totals {
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 16px;
-            margin-bottom: 20px;
-          }
-          .total-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 6px;
-            font-size: 14px;
-          }
-          .grand-total {
-            font-size: 20px;
-            font-weight: bold;
-            border-top: 2px solid #000;
-            padding-top: 10px;
-            margin-top: 10px;
-          }
-          .payments {
-            margin-bottom: 20px;
-            font-size: 13px;
-          }
-          .payment-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-          }
-          .receipt-footer {
-            text-align: center;
-            font-size: 12px;
-            padding-top: 20px;
-            border-top: 1px solid #ccc;
-          }
-          .footer-thanks {
-            font-size: 16px;
-            font-weight: bold;
-            margin-top: 12px;
-          }
-          @media print {
-            body {
-              width: 100%;
-              padding: 0;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        ${printContent}
-      </body>
-      </html>
-    `)
-  } else {
-    const paperWidth = config.value.paperWidth === '58' ? '58mm' : '80mm'
-
-    printWindow.document.write(`
+  printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -302,7 +181,6 @@ function printReceipt() {
       </body>
       </html>
     `)
-  }
 
   printWindow.document.close()
   printWindow.focus()
@@ -401,6 +279,11 @@ defineExpose({ printReceipt })
         {{ formatDate(new Date().toISOString()) }}
       </div>
     </div>
+  </div>
+
+  <!-- A4 Invoice Template (hidden, used for A4 printing) -->
+  <div v-show="config.paperWidth === 'A4'" style="position: absolute; left: -9999px;">
+    <InvoiceA4Template ref="invoiceA4Ref" :transaction="transaction" />
   </div>
 </template>
 

@@ -3,10 +3,12 @@ import { ref, reactive, onMounted } from 'vue'
 import { Cog6ToothIcon, BuildingStorefrontIcon, CurrencyDollarIcon, BellIcon, PrinterIcon } from '@heroicons/vue/24/outline'
 import { useReceiptStore } from '@/stores/receipt'
 import ReceiptTemplate from '@/components/ReceiptTemplate.vue'
+import InvoiceA4Template from '@/components/InvoiceA4Template.vue'
 
 const receiptStore = useReceiptStore()
 const activeTab = ref('general')
 const receiptRef = ref(null)
+const invoiceA4Ref = ref(null)
 
 const settings = reactive({
   company: {
@@ -87,7 +89,11 @@ function saveReceiptSettings() {
 }
 
 function printTestReceipt() {
-  if (receiptRef.value) {
+  if (receiptSettings.paperWidth === 'A4') {
+    if (invoiceA4Ref.value) {
+      invoiceA4Ref.value.printInvoice()
+    }
+  } else if (receiptRef.value) {
     receiptRef.value.printReceipt()
   }
 }
@@ -278,7 +284,7 @@ const tabs = [
             </div>
 
             <!-- Receipt Preview -->
-            <div class="w-80">
+            <div :class="receiptSettings.paperWidth === 'A4' ? 'flex-1 max-w-lg' : 'w-80'">
               <div class="card">
                 <div class="card-header">
                   <h3 class="text-lg font-medium text-center">Ko'rinishi</h3>
@@ -286,9 +292,15 @@ const tabs = [
                 <div class="card-body p-2">
                   <div class="bg-white border rounded-lg overflow-hidden">
                     <ReceiptTemplate
+                      v-show="receiptSettings.paperWidth !== 'A4'"
                       ref="receiptRef"
                       :transaction="sampleTransaction"
                       type="sale"
+                    />
+                    <InvoiceA4Template
+                      v-show="receiptSettings.paperWidth === 'A4'"
+                      ref="invoiceA4Ref"
+                      :transaction="sampleTransaction"
                     />
                   </div>
                 </div>
