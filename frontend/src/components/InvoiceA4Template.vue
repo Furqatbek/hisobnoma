@@ -184,6 +184,39 @@ function printInvoice() {
         </div>
       ` : ''}
 
+      <!-- Signatures -->
+      <div style="display: flex; justify-content: space-between; margin-top: 48px; padding-top: 24px;">
+        <!-- Seller -->
+        <div style="width: 45%;">
+          <div style="font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 600; letter-spacing: 1px; margin-bottom: 16px;">Topshirdi (Sotuvchi)</div>
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">F.I.O.</div>
+            <div style="border-bottom: 1px solid #111827; min-height: 24px; padding-bottom: 2px; font-size: 14px;">
+              ${props.transaction.cashier?.name || ''}
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">Imzo</div>
+            <div style="border-bottom: 1px solid #111827; min-height: 40px;"></div>
+          </div>
+        </div>
+
+        <!-- Receiver -->
+        <div style="width: 45%;">
+          <div style="font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 600; letter-spacing: 1px; margin-bottom: 16px;">Qabul qildi (Xaridor)</div>
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">F.I.O.</div>
+            <div style="border-bottom: 1px solid #111827; min-height: 24px; padding-bottom: 2px; font-size: 14px;">
+              ${props.transaction.customer?.name || ''}
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">Imzo</div>
+            <div style="border-bottom: 1px solid #111827; min-height: 40px;"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Footer -->
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 12px;">
         <div style="font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 4px;">${config.value.footerText || ''}</div>
@@ -266,6 +299,32 @@ defineExpose({ printInvoice })
       <div class="payment-row" v-for="(payment, index) in transaction.payments" :key="index">
         <span>{{ getPaymentLabel(payment.paymentType || payment.type) }}:</span>
         <span>{{ formatCurrency(payment.amount) }} so'm</span>
+      </div>
+    </div>
+
+    <!-- Signatures -->
+    <div class="signatures-section">
+      <div class="signature-block">
+        <div class="signature-title">Topshirdi (Sotuvchi)</div>
+        <div class="signature-field">
+          <div class="signature-label">F.I.O.</div>
+          <div class="signature-line">{{ transaction.cashier?.name || '' }}</div>
+        </div>
+        <div class="signature-field">
+          <div class="signature-label">Imzo</div>
+          <div class="signature-line signature-line-tall"></div>
+        </div>
+      </div>
+      <div class="signature-block">
+        <div class="signature-title">Qabul qildi (Xaridor)</div>
+        <div class="signature-field">
+          <div class="signature-label">F.I.O.</div>
+          <div class="signature-line">{{ transaction.customer?.name || '' }}</div>
+        </div>
+        <div class="signature-field">
+          <div class="signature-label">Imzo</div>
+          <div class="signature-line signature-line-tall"></div>
+        </div>
       </div>
     </div>
 
@@ -420,11 +479,53 @@ defineExpose({ printInvoice })
   margin-bottom: 2px;
 }
 
+.signatures-section {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 12px;
+}
+
+.signature-block {
+  width: 45%;
+}
+
+.signature-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: #6b7280;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.signature-field {
+  margin-bottom: 10px;
+}
+
+.signature-label {
+  font-size: 9px;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.signature-line {
+  border-bottom: 1px solid #111827;
+  min-height: 16px;
+  font-size: 10px;
+  padding-bottom: 1px;
+}
+
+.signature-line-tall {
+  min-height: 24px;
+}
+
 .invoice-footer {
   text-align: center;
   font-size: 10px;
   color: #6b7280;
   padding-top: 8px;
+  margin-top: 16px;
   border-top: 1px solid #e5e7eb;
   font-weight: 600;
 }
