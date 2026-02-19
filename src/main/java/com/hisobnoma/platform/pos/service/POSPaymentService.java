@@ -82,6 +82,11 @@ public class POSPaymentService {
         payment.approve();
         payment.setProcessedBy(userId);
 
+        // Persist payment explicitly first to avoid TransientObjectException
+        // (transactionRepository.save calls merge() on managed entity, which doesn't
+        // cascade-persist transient children properly)
+        payment = paymentRepository.save(payment);
+
         transaction.addPayment(payment);
         transactionRepository.save(transaction);
 

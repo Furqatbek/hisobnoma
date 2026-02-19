@@ -8,6 +8,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -35,4 +38,22 @@ public class CreateTransactionRequest {
 
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;
+
+    /**
+     * Optional line items to add during transaction creation.
+     */
+    private List<LineItem> items;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LineItem {
+        @NotNull(message = "Product ID is required")
+        private Long productId;
+        private Long variantId;
+        @NotNull(message = "Quantity is required")
+        private BigDecimal quantity;
+        private BigDecimal unitPrice;
+    }
 }

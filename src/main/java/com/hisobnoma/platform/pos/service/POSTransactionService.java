@@ -143,6 +143,64 @@ public class POSTransactionService {
         transaction = transactionRepository.save(transaction);
         log.info("Created POS transaction {} of type {}", transactionNumber, request.getTransactionType());
 
+        // Add line items if provided
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            int lineNumber = 0;
+            for (CreateTransactionRequest.LineItem item : request.getItems()) {
+                lineNumber++;
+                Product product = productRepository.findByIdAndTenantId(item.getProductId(), tenantId)
+                        .orElseThrow(() -> new NotFoundException("Product not found: " + item.getProductId()));
+
+                ProductVariant variant = null;
+                if (item.getVariantId() != null) {
+                    variant = variantRepository.findById(item.getVariantId())
+                            .orElseThrow(() -> new NotFoundException("Variant not found: " + item.getVariantId()));
+                }
+
+                BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() :
+                        (variant != null && variant.getSellingPrice() != null ? variant.getSellingPrice() : product.getSellingPrice());
+
+                // Calculate tax
+                BigDecimal taxAmount = BigDecimal.ZERO;
+                BigDecimal taxRate = BigDecimal.ZERO;
+                String taxCode = null;
+
+                if (product.getTaxCode() != null) {
+                    taxCode = product.getTaxCode();
+                    TaxRate rate = taxCalculationService.getApplicableRate(taxCode, LocalDate.now());
+                    if (rate != null) {
+                        taxRate = rate.getRate();
+                        BigDecimal grossAmount = unitPrice.multiply(item.getQuantity());
+                        taxAmount = grossAmount.multiply(taxRate).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                    }
+                }
+
+                POSTransactionLine line = POSTransactionLine.builder()
+                        .transaction(transaction)
+                        .lineNumber(lineNumber)
+                        .product(product)
+                        .variant(variant)
+                        .productCode(product.getSku())
+                        .productName(product.getName())
+                        .variantName(variant != null ? variant.getName() : null)
+                        .barcode(product.getBarcode())
+                        .quantity(item.getQuantity())
+                        .unitPrice(unitPrice)
+                        .originalPrice(product.getSellingPrice())
+                        .costPrice(product.getCostPrice())
+                        .discountAmount(BigDecimal.ZERO)
+                        .taxCode(taxCode)
+                        .taxRate(taxRate)
+                        .taxAmount(taxAmount)
+                        .isReturn(transaction.getTransactionType() == TransactionType.RETURN)
+                        .build();
+
+                line.calculateLineTotal();
+                transaction.addLine(line);
+            }
+            transaction = transactionRepository.save(transaction);
+        }
+
         return transactionMapper.toDto(transaction);
     }
 
