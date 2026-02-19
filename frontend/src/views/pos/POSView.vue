@@ -398,7 +398,7 @@ async function fetchCurrentShift() {
   if (!selectedTerminalId.value) return
   try {
     const response = await shiftsApi.getCurrentForTerminal(selectedTerminalId.value)
-    currentShift.value = response.data.data || response.data || null
+    currentShift.value = response.data.data || null
   } catch (error) {
     currentShift.value = null
   }
