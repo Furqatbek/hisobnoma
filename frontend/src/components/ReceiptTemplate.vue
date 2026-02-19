@@ -53,125 +53,256 @@ function getPaymentLabel(type) {
 // Print receipt
 function printReceipt() {
   const printContent = receiptRef.value.innerHTML
-  const printWindow = window.open('', '_blank', 'width=400,height=600')
+  const isA4 = config.value.paperWidth === 'A4'
+  const printWindow = window.open('', '_blank', isA4 ? 'width=800,height=900' : 'width=400,height=600')
 
-  const paperWidth = config.value.paperWidth === '58' ? '58mm' : '80mm'
-
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Chek</title>
-      <style>
-        @page {
-          size: ${paperWidth} auto;
-          margin: 0;
-        }
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-        body {
-          font-family: 'Courier New', monospace;
-          font-size: 12px;
-          line-height: 1.3;
-          width: ${paperWidth};
-          padding: 4mm;
-          color: #000;
-        }
-        .receipt-header {
-          text-align: center;
-          border-bottom: 1px dashed #000;
-          padding-bottom: 8px;
-          margin-bottom: 8px;
-        }
-        .brand-name {
-          font-size: 16px;
-          font-weight: bold;
-          margin-bottom: 4px;
-        }
-        .header-info {
-          font-size: 10px;
-        }
-        .receipt-meta {
-          display: flex;
-          justify-content: space-between;
-          font-size: 10px;
-          margin-bottom: 8px;
-          border-bottom: 1px dashed #000;
-          padding-bottom: 8px;
-        }
-        .receipt-items {
-          border-bottom: 1px dashed #000;
-          padding-bottom: 8px;
-          margin-bottom: 8px;
-        }
-        .item-row {
-          margin-bottom: 4px;
-        }
-        .item-name {
-          font-weight: bold;
-        }
-        .item-details {
-          display: flex;
-          justify-content: space-between;
-          font-size: 11px;
-        }
-        .totals {
-          border-bottom: 1px dashed #000;
-          padding-bottom: 8px;
-          margin-bottom: 8px;
-        }
-        .total-row {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 2px;
-        }
-        .grand-total {
-          font-size: 14px;
-          font-weight: bold;
-          border-top: 1px solid #000;
-          padding-top: 4px;
-          margin-top: 4px;
-        }
-        .payments {
-          margin-bottom: 8px;
-          font-size: 11px;
-        }
-        .payment-row {
-          display: flex;
-          justify-content: space-between;
-        }
-        .receipt-footer {
-          text-align: center;
-          font-size: 10px;
-          padding-top: 8px;
-        }
-        .footer-thanks {
-          font-size: 12px;
-          font-weight: bold;
-          margin-top: 8px;
-        }
-        .customer-info {
-          font-size: 10px;
-          margin-bottom: 8px;
-          padding-bottom: 8px;
-          border-bottom: 1px dashed #000;
-        }
-        @media print {
-          body {
-            width: ${paperWidth};
+  if (isA4) {
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Chek - A4</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 15mm;
           }
-        }
-      </style>
-    </head>
-    <body>
-      ${printContent}
-    </body>
-    </html>
-  `)
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            width: 210mm;
+            padding: 15mm;
+            color: #000;
+          }
+          .receipt-header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+          }
+          .brand-name {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+          .header-info {
+            font-size: 13px;
+            margin-bottom: 2px;
+          }
+          .receipt-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 16px;
+          }
+          .customer-info {
+            font-size: 13px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #ccc;
+          }
+          .receipt-items {
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+          }
+          .item-row {
+            margin-bottom: 10px;
+            padding: 6px 0;
+            border-bottom: 1px dotted #eee;
+          }
+          .item-row:last-child {
+            border-bottom: none;
+          }
+          .item-name {
+            font-weight: bold;
+            font-size: 14px;
+          }
+          .item-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #333;
+          }
+          .totals {
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 14px;
+          }
+          .grand-total {
+            font-size: 20px;
+            font-weight: bold;
+            border-top: 2px solid #000;
+            padding-top: 10px;
+            margin-top: 10px;
+          }
+          .payments {
+            margin-bottom: 20px;
+            font-size: 13px;
+          }
+          .payment-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+          }
+          .receipt-footer {
+            text-align: center;
+            font-size: 12px;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
+          }
+          .footer-thanks {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 12px;
+          }
+          @media print {
+            body {
+              width: 100%;
+              padding: 0;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${printContent}
+      </body>
+      </html>
+    `)
+  } else {
+    const paperWidth = config.value.paperWidth === '58' ? '58mm' : '80mm'
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Chek</title>
+        <style>
+          @page {
+            size: ${paperWidth} auto;
+            margin: 0;
+          }
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.3;
+            width: ${paperWidth};
+            padding: 4mm;
+            color: #000;
+          }
+          .receipt-header {
+            text-align: center;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+          }
+          .brand-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 4px;
+          }
+          .header-info {
+            font-size: 10px;
+          }
+          .receipt-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            margin-bottom: 8px;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 8px;
+          }
+          .receipt-items {
+            border-bottom: 1px dashed #000;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+          }
+          .item-row {
+            margin-bottom: 4px;
+          }
+          .item-name {
+            font-weight: bold;
+          }
+          .item-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+          }
+          .totals {
+            border-bottom: 1px dashed #000;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+          }
+          .grand-total {
+            font-size: 14px;
+            font-weight: bold;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+            margin-top: 4px;
+          }
+          .payments {
+            margin-bottom: 8px;
+            font-size: 11px;
+          }
+          .payment-row {
+            display: flex;
+            justify-content: space-between;
+          }
+          .receipt-footer {
+            text-align: center;
+            font-size: 10px;
+            padding-top: 8px;
+          }
+          .footer-thanks {
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 8px;
+          }
+          .customer-info {
+            font-size: 10px;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #000;
+          }
+          @media print {
+            body {
+              width: ${paperWidth};
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${printContent}
+      </body>
+      </html>
+    `)
+  }
 
   printWindow.document.close()
   printWindow.focus()

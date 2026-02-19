@@ -259,8 +259,11 @@ const tabs = [
                   <select v-model="receiptSettings.paperWidth" class="input w-40">
                     <option value="58">58mm</option>
                     <option value="80">80mm</option>
+                    <option value="A4">A4</option>
                   </select>
-                  <p class="text-xs text-gray-500 mt-1">Termal printeringiz qog'oz o'lchami</p>
+                  <p class="text-xs text-gray-500 mt-1">
+                    {{ receiptSettings.paperWidth === 'A4' ? 'A4 formatdagi chek (210mm x 297mm)' : 'Termal printeringiz qog\'oz o\'lchami' }}
+                  </p>
                 </div>
 
                 <div class="flex gap-3 pt-4 border-t">
