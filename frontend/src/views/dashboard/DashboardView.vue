@@ -28,14 +28,11 @@ const stats = ref({
   totalPayables: 0
 })
 
-const recentActivities = ref([])
-
 onMounted(async () => {
   try {
     const response = await dashboardApi.getStats()
     const data = response.data.data || response.data
     stats.value = data
-    recentActivities.value = data.recentActivities || []
   } catch (error) {
     console.error('Failed to load dashboard stats:', error)
   } finally {
@@ -195,90 +192,40 @@ function formatNumber(value) {
         </div>
       </div>
 
-      <!-- Two column layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Financial Summary -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="text-lg font-medium text-gray-900">Financial Summary</h3>
-          </div>
-          <div class="card-body">
-            <div class="space-y-4">
-              <div class="flex justify-between items-center p-4 bg-green-50 rounded-lg">
-                <div>
-                  <p class="text-sm text-gray-500">Receivables</p>
-                  <p class="text-xl font-semibold text-green-700">
-                    {{ formatCurrency(stats.totalReceivables) }}
-                  </p>
-                </div>
-                <ArrowTrendingUpIcon class="h-8 w-8 text-green-400" />
-              </div>
-              <div class="flex justify-between items-center p-4 bg-red-50 rounded-lg">
-                <div>
-                  <p class="text-sm text-gray-500">Payables</p>
-                  <p class="text-xl font-semibold text-red-700">
-                    {{ formatCurrency(stats.totalPayables) }}
-                  </p>
-                </div>
-                <ArrowTrendingDownIcon class="h-8 w-8 text-red-400" />
-              </div>
-              <div class="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
-                <div>
-                  <p class="text-sm text-gray-500">Inventory Value</p>
-                  <p class="text-xl font-semibold text-blue-700">
-                    {{ formatCurrency(stats.totalInventoryValue) }}
-                  </p>
-                </div>
-                <CubeIcon class="h-8 w-8 text-blue-400" />
-              </div>
-            </div>
-          </div>
+      <!-- Financial Summary -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="text-lg font-medium text-gray-900">Financial Summary</h3>
         </div>
-
-        <!-- Recent Activity -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
-          </div>
-          <div class="card-body">
-            <div v-if="recentActivities.length === 0" class="text-center py-8 text-gray-500">
-              No recent activity
+        <div class="card-body">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="flex justify-between items-center p-4 bg-green-50 rounded-lg">
+              <div>
+                <p class="text-sm text-gray-500">Receivables</p>
+                <p class="text-xl font-semibold text-green-700">
+                  {{ formatCurrency(stats.totalReceivables) }}
+                </p>
+              </div>
+              <ArrowTrendingUpIcon class="h-8 w-8 text-green-400" />
             </div>
-            <ul v-else class="divide-y divide-gray-200 -my-4">
-              <li
-                v-for="(activity, index) in recentActivities.slice(0, 8)"
-                :key="index"
-                class="py-4"
-              >
-                <div class="flex items-start space-x-3">
-                  <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      <span class="text-xs font-medium text-gray-600">
-                        {{ activity.username?.charAt(0).toUpperCase() || '?' }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm text-gray-900">
-                      {{ activity.description }}
-                    </p>
-                    <p class="text-xs text-gray-500 mt-1">
-                      {{ activity.username }} &bull; {{ activity.timestamp }}
-                    </p>
-                  </div>
-                  <span
-                    :class="[
-                      'badge',
-                      activity.action === 'CREATE' ? 'badge-success' :
-                      activity.action === 'UPDATE' ? 'badge-info' :
-                      activity.action === 'DELETE' ? 'badge-danger' : 'badge-info'
-                    ]"
-                  >
-                    {{ activity.action }}
-                  </span>
-                </div>
-              </li>
-            </ul>
+            <div class="flex justify-between items-center p-4 bg-red-50 rounded-lg">
+              <div>
+                <p class="text-sm text-gray-500">Payables</p>
+                <p class="text-xl font-semibold text-red-700">
+                  {{ formatCurrency(stats.totalPayables) }}
+                </p>
+              </div>
+              <ArrowTrendingDownIcon class="h-8 w-8 text-red-400" />
+            </div>
+            <div class="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
+              <div>
+                <p class="text-sm text-gray-500">Inventory Value</p>
+                <p class="text-xl font-semibold text-blue-700">
+                  {{ formatCurrency(stats.totalInventoryValue) }}
+                </p>
+              </div>
+              <CubeIcon class="h-8 w-8 text-blue-400" />
+            </div>
           </div>
         </div>
       </div>
