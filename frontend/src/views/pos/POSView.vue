@@ -378,6 +378,9 @@ async function processPayment() {
     // Complete transaction
     await posApi.completeTransaction(transactionId)
 
+    // Check before clearing
+    const hasDebtPayment = payments.value.some(p => p.method === 'CREDIT')
+
     // Reset cart
     cart.items = []
     cart.customerId = null
@@ -386,7 +389,6 @@ async function processPayment() {
     clearTransactionDiscount()
     showPaymentModal.value = false
 
-    const hasDebtPayment = payments.value.some(p => p.method === 'CREDIT')
     alert(hasDebtPayment ? 'Sale completed with debt!' : 'Sale completed successfully!')
   } catch (error) {
     console.error('Payment failed:', error)
@@ -395,10 +397,14 @@ async function processPayment() {
 }
 
 // Quick debt sale - sell entire amount as debt
-function sellAsDebt() {
+async function sellAsDebt() {
   if (!cart.customerId) {
     alert('Customer is required for debt sales. Please select a customer first.')
     showCustomerModal.value = true
+    return
+  }
+
+  if (!confirm(`Sell ${formatCurrency(total.value)} as debt to ${cart.customerName}?`)) {
     return
   }
 
@@ -409,7 +415,7 @@ function sellAsDebt() {
   }]
 
   currentPayment.amount = 0
-  processPayment()
+  await processPayment()
 }
 
 function clearCart() {
