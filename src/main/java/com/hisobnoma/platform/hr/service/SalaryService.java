@@ -173,6 +173,17 @@ public class SalaryService {
     }
 
     private SalaryRecordDto toDto(SalaryRecord s) {
+        BigDecimal advanceAmount = s.getAdvanceAmount();
+        BigDecimal payAmount = s.getPayAmount();
+
+        // For pending records, dynamically calculate advance deduction so the user
+        // can see how much will be subtracted before they confirm payment
+        if (s.getStatus() == SalaryRecord.SalaryStatus.PENDING) {
+            advanceAmount = advanceRepository.sumGivenByEmployeeAndPeriod(
+                    s.getTenantId(), s.getEmployee().getId(), s.getPeriodYear(), s.getPeriodMonth());
+            payAmount = s.getNetAmount().subtract(advanceAmount).max(BigDecimal.ZERO);
+        }
+
         return SalaryRecordDto.builder()
                 .id(s.getId())
                 .employeeId(s.getEmployee().getId())
@@ -184,8 +195,8 @@ public class SalaryService {
                 .bonusAmount(s.getBonusAmount())
                 .deductionAmount(s.getDeductionAmount())
                 .netAmount(s.getNetAmount())
-                .advanceAmount(s.getAdvanceAmount())
-                .payAmount(s.getPayAmount())
+                .advanceAmount(advanceAmount)
+                .payAmount(payAmount)
                 .status(s.getStatus().name())
                 .paidDate(s.getPaidDate())
                 .glJournalEntryId(s.getGlJournalEntryId())
