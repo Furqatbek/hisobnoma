@@ -36,7 +36,7 @@ public class GLIntegrationService {
     private static final String INVENTORY_ACCOUNT = "1300";  // Asset: Inventory
     private static final String COGS_ACCOUNT = "5100";       // Expense: Cost of Goods Sold
     private static final String SALES_REVENUE_ACCOUNT = "4100"; // Revenue: Sales Revenue
-    private static final String CASH_ACCOUNT = "1100";       // Asset: Cash
+    private static final String CASH_ACCOUNT = "1110";       // Asset: Cash
     private static final String ACCOUNTS_RECEIVABLE = "1200"; // Asset: Accounts Receivable
     private static final String ACCOUNTS_PAYABLE = "2100";   // Liability: Accounts Payable
     private static final String PURCHASE_EXPENSE = "5200";   // Expense: Purchases

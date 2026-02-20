@@ -318,7 +318,7 @@ public class APPaymentService {
             Long cashAccountId = payment.getCashAccountId();
             if (cashAccountId == null) {
                 // Use default cash account
-                Account cashAccount = accountRepository.findByCodeAndTenantId("1100", payment.getTenantId())
+                Account cashAccount = accountRepository.findByCodeAndTenantId("1110", payment.getTenantId())
                         .orElseThrow(() -> new BusinessException("Cash account not found"));
                 cashAccountId = cashAccount.getId();
                 payment.setCashAccountId(cashAccountId);
