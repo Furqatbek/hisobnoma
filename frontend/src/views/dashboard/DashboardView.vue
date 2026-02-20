@@ -57,10 +57,15 @@ function formatNumber(value) {
 
 <template>
   <div class="space-y-6">
-    <!-- Page header -->
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-      <p class="mt-1 text-sm text-gray-500">Welcome back! Here's an overview of your business.</p>
+    <!-- Page header + CBU informer -->
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p class="mt-1 text-sm text-gray-500">Welcome back! Here's an overview of your business.</p>
+      </div>
+      <a href="https://cbu.uz/" target="_blank" title="O'zbekiston Respublikasi Markaziy banki">
+        <img src="https://cbu.uz/uz/informer/?txtclr=212121&brdclr=FFC700&bgclr=FFE27D&r_choose=USD_EUR_RUB" alt="CBU valyuta kurslari" />
+      </a>
     </div>
 
     <!-- Loading state -->
@@ -275,18 +280,6 @@ function formatNumber(value) {
               </li>
             </ul>
           </div>
-        </div>
-      </div>
-
-      <!-- Currency rates informer -->
-      <div class="card">
-        <div class="card-header">
-          <h3 class="text-lg font-medium text-gray-900">Valyuta kurslari (CBU)</h3>
-        </div>
-        <div class="card-body flex justify-center">
-          <a href="https://cbu.uz/" target="_blank" title="O'zbekiston Respublikasi Markaziy banki">
-            <img src="https://cbu.uz/uz/informer/?txtclr=212121&brdclr=FFC700&bgclr=FFE27D&r_choose=USD_EUR_RUB" alt="CBU valyuta kurslari" />
-          </a>
         </div>
       </div>
 
