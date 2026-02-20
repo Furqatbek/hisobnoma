@@ -10,16 +10,17 @@ const props = defineProps({
   },
   type: {
     type: String,
-    default: 'sale' // 'sale' or 'purchase'
+    default: 'sale'
   }
 })
 
 const receiptStore = useReceiptStore()
 const config = computed(() => receiptStore.config)
-const receiptRef = ref(null)
 const invoiceA4Ref = ref(null)
 
-// Format currency in UZS
+const is80 = computed(() => config.value.paperWidth === '80')
+const charWidth = computed(() => is80.value ? 42 : 32)
+
 function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ', {
     minimumFractionDigits: 0,
@@ -27,7 +28,6 @@ function formatCurrency(value) {
   }).format(value || 0)
 }
 
-// Format date in Uzbek locale
 function formatDate(dateString) {
   const date = new Date(dateString)
   return date.toLocaleDateString('uz-UZ', {
@@ -39,22 +39,19 @@ function formatDate(dateString) {
   })
 }
 
-// Payment type labels in Uzbek
 const paymentTypeLabels = {
   CASH: 'Naqd',
   CARD: 'Karta',
   CREDIT: 'Nasiya',
-  MOBILE_PAYMENT: 'Mobil to\'lov',
-  TRANSFER: 'O\'tkazma'
+  MOBILE_PAYMENT: 'Mobil',
+  TRANSFER: "O'tkazma"
 }
 
 function getPaymentLabel(type) {
   return paymentTypeLabels[type] || type
 }
 
-// Print receipt
 function printReceipt() {
-  // For A4, delegate to the dedicated invoice template
   if (config.value.paperWidth === 'A4') {
     if (invoiceA4Ref.value) {
       invoiceA4Ref.value.printInvoice()
@@ -62,243 +59,286 @@ function printReceipt() {
     return
   }
 
-  const printContent = receiptRef.value.innerHTML
-  const paperWidth = config.value.paperWidth === '58' ? '58mm' : '80mm'
-  const printWindow = window.open('', '_blank', 'width=400,height=600')
+  const t = props.transaction
+  const w = charWidth.value
+  const pw = is80.value ? '80mm' : '58mm'
+  const dash = '─'.repeat(w)
+  const dblDash = '═'.repeat(w)
 
-  printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Chek</title>
-        <style>
-          @page {
-            size: ${paperWidth} auto;
-            margin: 0;
-          }
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          body {
-            font-family: 'Arial', 'Helvetica Neue', sans-serif;
-            font-size: 11px;
-            line-height: 1.3;
-            width: ${paperWidth};
-            padding: 3mm;
-            color: #000;
-          }
-          .receipt-header {
-            text-align: center;
-            margin-bottom: 6px;
-          }
-          .brand-name {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 2px;
-          }
-          .header-info {
-            font-size: 9px;
-          }
-          .meta-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 6px;
-            font-size: 10px;
-          }
-          .meta-table td {
-            padding: 2px 4px;
-            border: 1px solid #000;
-          }
-          .meta-table .label {
-            font-weight: bold;
-            background: #f0f0f0;
-            width: 35%;
-          }
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 6px;
-            font-size: 10px;
-          }
-          .items-table th {
-            padding: 3px 4px;
-            border: 1px solid #000;
-            background: #000;
-            color: #fff;
-            font-weight: bold;
-            text-align: center;
-            font-size: 9px;
-          }
-          .items-table td {
-            padding: 2px 4px;
-            border: 1px solid #000;
-          }
-          .items-table .num { text-align: center; }
-          .items-table .qty { text-align: center; }
-          .items-table .price { text-align: right; }
-          .items-table .total { text-align: right; font-weight: bold; }
-          .totals-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 6px;
-            font-size: 10px;
-          }
-          .totals-table td {
-            padding: 2px 4px;
-            border: 1px solid #000;
-          }
-          .totals-table .label {
-            font-weight: bold;
-            background: #f0f0f0;
-          }
-          .totals-table .value {
-            text-align: right;
-            font-weight: bold;
-          }
-          .grand-total td {
-            background: #000 !important;
-            color: #fff;
-            font-size: 12px;
-            font-weight: bold;
-            padding: 4px;
-          }
-          .receipt-footer {
-            text-align: center;
-            font-size: 9px;
-            margin-top: 6px;
-          }
-          .footer-thanks {
-            font-size: 11px;
-            font-weight: bold;
-            margin-top: 4px;
-          }
-          @media print {
-            body {
-              width: ${paperWidth};
-            }
-          }
-        </style>
-      </head>
-      <body>
-        ${printContent}
-      </body>
-      </html>
-    `)
+  function center(text) {
+    const pad = Math.max(0, Math.floor((w - text.length) / 2))
+    return ' '.repeat(pad) + text
+  }
+
+  function row(label, value) {
+    const dots = w - label.length - value.length - 1
+    if (dots < 1) return label + ' ' + value
+    return label + ' ' + '.'.repeat(dots) + value
+  }
+
+  function rightAlign(text) {
+    const pad = Math.max(0, w - text.length)
+    return ' '.repeat(pad) + text
+  }
+
+  let lines = []
+
+  // Header
+  lines.push(center(config.value.brandName.toUpperCase()))
+  if (config.value.address) lines.push(center(config.value.address))
+  if (config.value.phone) lines.push(center('Tel: ' + config.value.phone))
+  if (config.value.taxId) lines.push(center('STIR: ' + config.value.taxId))
+  lines.push(dash)
+
+  // Transaction meta
+  const txNum = t.transactionNumber || t.orderNumber || `#${t.id}`
+  lines.push(row('Chek', txNum))
+  lines.push(row('Sana', formatDate(t.createdAt || t.orderDate)))
+  if (t.terminalName) lines.push(row('Kassa', t.terminalName))
+  if (t.cashierName) lines.push(row('Kassir', t.cashierName))
+  if (t.customerName) {
+    let custLine = t.customerName
+    if (t.customerPhone) custLine += ' (' + t.customerPhone + ')'
+    lines.push(row('Mijoz', custLine))
+  }
+  lines.push(dblDash)
+
+  // Items header
+  if (is80.value) {
+    // 80mm: №  Mahsulot          Soni   Narx     Summa
+    lines.push(
+      '#  ' +
+      'Mahsulot'.padEnd(16) +
+      'Soni'.padStart(5) +
+      'Narx'.padStart(9) +
+      'Summa'.padStart(10)
+    )
+  } else {
+    lines.push(
+      '#  ' +
+      'Mahsulot'.padEnd(10) +
+      'Son'.padStart(4) +
+      'Narx'.padStart(7) +
+      'Summa'.padStart(9)
+    )
+  }
+  lines.push(dash)
+
+  // Items
+  const items = t.lines || []
+  items.forEach((item, i) => {
+    const num = String(i + 1).padEnd(3)
+    const qty = String(item.quantity)
+    const price = formatCurrency(item.unitPrice)
+    const total = formatCurrency(item.lineTotal)
+
+    if (is80.value) {
+      const nameWidth = 16
+      const name = item.productName.length > nameWidth
+        ? item.productName.substring(0, nameWidth - 1) + '…'
+        : item.productName.padEnd(nameWidth)
+      lines.push(
+        num + name + qty.padStart(5) + price.padStart(9) + total.padStart(10)
+      )
+    } else {
+      const nameWidth = 10
+      const name = item.productName.length > nameWidth
+        ? item.productName.substring(0, nameWidth - 1) + '…'
+        : item.productName.padEnd(nameWidth)
+      lines.push(
+        num + name + qty.padStart(4) + price.padStart(7) + total.padStart(9)
+      )
+    }
+
+    // If name was truncated, show full name on next line
+    const maxNameWidth = is80.value ? 16 : 10
+    if (item.productName.length > maxNameWidth) {
+      lines.push('   ' + item.productName)
+    }
+  })
+  lines.push(dash)
+
+  // Totals
+  if (t.subtotal && t.subtotal !== t.totalAmount) {
+    lines.push(row('Oraliq summa', formatCurrency(t.subtotal)))
+  }
+  if (t.discountAmount > 0) {
+    lines.push(row('Chegirma', '-' + formatCurrency(t.discountAmount)))
+  }
+  if (t.taxAmount > 0) {
+    lines.push(row('Soliq', formatCurrency(t.taxAmount)))
+  }
+  lines.push(dblDash)
+  const totalStr = formatCurrency(t.totalAmount || t.total) + " so'm"
+  lines.push(center('JAMI: ' + totalStr))
+  lines.push(dblDash)
+
+  // Payments
+  if (t.payments?.length) {
+    t.payments.forEach(p => {
+      const label = getPaymentLabel(p.paymentType || p.type)
+      lines.push(row(label, formatCurrency(p.amount) + " so'm"))
+    })
+    if (t.changeAmount > 0) {
+      lines.push(row('Qaytim', formatCurrency(t.changeAmount) + " so'm"))
+    }
+    lines.push(dash)
+  }
+
+  // Footer
+  lines.push('')
+  if (config.value.website) lines.push(center(config.value.website))
+  lines.push(center(config.value.footerText))
+  lines.push('')
+  lines.push(center(formatDate(new Date().toISOString())))
+  lines.push('')
+
+  const content = lines.join('\n')
+
+  const printWindow = window.open('', '_blank', 'width=400,height=600')
+  printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Chek</title>
+<style>
+@page {
+  size: ${pw} auto;
+  margin: 0;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-size: ${is80.value ? '12px' : '11px'};
+  line-height: 1.4;
+  width: ${pw};
+  padding: 2mm;
+  color: #000;
+  white-space: pre;
+}
+@media print {
+  body { width: ${pw}; }
+}
+</style>
+</head>
+<body>${content}</body>
+</html>`)
 
   printWindow.document.close()
   printWindow.focus()
-
   setTimeout(() => {
     printWindow.print()
     printWindow.close()
   }, 250)
 }
 
-// Expose print function
 defineExpose({ printReceipt })
 </script>
 
 <template>
-  <div ref="receiptRef" class="receipt-content">
+  <!-- On-screen preview -->
+  <div
+    class="receipt-preview"
+    :class="is80 ? 'receipt-80' : 'receipt-58'"
+  >
     <!-- Header -->
-    <div class="receipt-header">
-      <div class="brand-name">{{ config.brandName }}</div>
-      <div class="header-info" v-if="config.address">{{ config.address }}</div>
-      <div class="header-info" v-if="config.phone">Tel: {{ config.phone }}</div>
-      <div class="header-info" v-if="config.taxId">STIR: {{ config.taxId }}</div>
+    <div class="r-header">
+      <div class="r-brand">{{ config.brandName }}</div>
+      <div class="r-info" v-if="config.address">{{ config.address }}</div>
+      <div class="r-info" v-if="config.phone">Tel: {{ config.phone }}</div>
+      <div class="r-info" v-if="config.taxId">STIR: {{ config.taxId }}</div>
     </div>
 
-    <!-- Transaction Meta -->
-    <table class="meta-table">
-      <tr>
-        <td class="label">Chek №</td>
-        <td>{{ transaction.transactionNumber || transaction.orderNumber || `#${transaction.id}` }}</td>
-      </tr>
-      <tr>
-        <td class="label">Sana</td>
-        <td>{{ formatDate(transaction.createdAt || transaction.orderDate) }}</td>
-      </tr>
-      <tr v-if="transaction.terminalName">
-        <td class="label">Kassa</td>
-        <td>{{ transaction.terminalName }}</td>
-      </tr>
-      <tr v-if="transaction.cashierName">
-        <td class="label">Kassir</td>
-        <td>{{ transaction.cashierName }}</td>
-      </tr>
-      <tr v-if="transaction.customerName">
-        <td class="label">Mijoz</td>
-        <td>
-          {{ transaction.customerName }}
-          <span v-if="transaction.customerPhone" style="font-size: 9px; color: #666;"> ({{ transaction.customerPhone }})</span>
-        </td>
-      </tr>
-    </table>
+    <div class="r-sep"></div>
 
-    <!-- Items Table -->
-    <table class="items-table">
-      <thead>
-        <tr>
-          <th style="width: 24px;">№</th>
-          <th>Mahsulot</th>
-          <th style="width: 36px;">Soni</th>
-          <th style="width: 56px;">Narx</th>
-          <th style="width: 64px;">Summa</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(item, index) in transaction.lines" :key="index">
-          <td class="num">{{ index + 1 }}</td>
-          <td>{{ item.productName }}</td>
-          <td class="qty">{{ item.quantity }}</td>
-          <td class="price">{{ formatCurrency(item.unitPrice) }}</td>
-          <td class="total">{{ formatCurrency(item.lineTotal) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <!-- Transaction meta -->
+    <div class="r-meta">
+      <div class="r-row">
+        <span>Chek</span>
+        <span>{{ transaction.transactionNumber || transaction.orderNumber || `#${transaction.id}` }}</span>
+      </div>
+      <div class="r-row">
+        <span>Sana</span>
+        <span>{{ formatDate(transaction.createdAt || transaction.orderDate) }}</span>
+      </div>
+      <div class="r-row" v-if="transaction.terminalName">
+        <span>Kassa</span>
+        <span>{{ transaction.terminalName }}</span>
+      </div>
+      <div class="r-row" v-if="transaction.cashierName">
+        <span>Kassir</span>
+        <span>{{ transaction.cashierName }}</span>
+      </div>
+      <div class="r-row" v-if="transaction.customerName">
+        <span>Mijoz</span>
+        <span>{{ transaction.customerName }}</span>
+      </div>
+    </div>
+
+    <div class="r-sep-bold"></div>
+
+    <!-- Items -->
+    <div class="r-items-header">
+      <span class="r-col-num">#</span>
+      <span class="r-col-name">Mahsulot</span>
+      <span class="r-col-qty">Soni</span>
+      <span class="r-col-price">Narx</span>
+      <span class="r-col-total">Summa</span>
+    </div>
+    <div class="r-sep"></div>
+
+    <div class="r-items">
+      <div v-for="(item, index) in transaction.lines" :key="index" class="r-item">
+        <span class="r-col-num">{{ index + 1 }}</span>
+        <span class="r-col-name">{{ item.productName }}</span>
+        <span class="r-col-qty">{{ item.quantity }}</span>
+        <span class="r-col-price">{{ formatCurrency(item.unitPrice) }}</span>
+        <span class="r-col-total">{{ formatCurrency(item.lineTotal) }}</span>
+      </div>
+    </div>
+
+    <div class="r-sep"></div>
 
     <!-- Totals -->
-    <table class="totals-table">
-      <tr v-if="transaction.subtotal && transaction.subtotal !== transaction.totalAmount">
-        <td class="label">Oraliq summa</td>
-        <td class="value">{{ formatCurrency(transaction.subtotal) }}</td>
-      </tr>
-      <tr v-if="transaction.discountAmount > 0">
-        <td class="label">Chegirma</td>
-        <td class="value" style="color: #dc2626;">-{{ formatCurrency(transaction.discountAmount) }}</td>
-      </tr>
-      <tr v-if="transaction.taxAmount > 0">
-        <td class="label">Soliq</td>
-        <td class="value">{{ formatCurrency(transaction.taxAmount) }}</td>
-      </tr>
-      <tr class="grand-total">
-        <td>JAMI</td>
-        <td style="text-align: right;">{{ formatCurrency(transaction.totalAmount || transaction.total) }} so'm</td>
-      </tr>
-    </table>
+    <div class="r-totals">
+      <div class="r-row" v-if="transaction.subtotal && transaction.subtotal !== transaction.totalAmount">
+        <span>Oraliq summa</span>
+        <span>{{ formatCurrency(transaction.subtotal) }}</span>
+      </div>
+      <div class="r-row" v-if="transaction.discountAmount > 0">
+        <span>Chegirma</span>
+        <span>-{{ formatCurrency(transaction.discountAmount) }}</span>
+      </div>
+      <div class="r-row" v-if="transaction.taxAmount > 0">
+        <span>Soliq</span>
+        <span>{{ formatCurrency(transaction.taxAmount) }}</span>
+      </div>
+    </div>
+
+    <div class="r-sep-bold"></div>
+    <div class="r-grand-total">
+      JAMI: {{ formatCurrency(transaction.totalAmount || transaction.total) }} so'm
+    </div>
+    <div class="r-sep-bold"></div>
 
     <!-- Payments -->
-    <table v-if="transaction.payments?.length" class="totals-table">
-      <tr v-for="(payment, index) in transaction.payments" :key="index">
-        <td class="label">{{ getPaymentLabel(payment.paymentType || payment.type) }}</td>
-        <td class="value">{{ formatCurrency(payment.amount) }} so'm</td>
-      </tr>
-      <tr v-if="transaction.changeAmount > 0">
-        <td class="label">Qaytim</td>
-        <td class="value">{{ formatCurrency(transaction.changeAmount) }} so'm</td>
-      </tr>
-    </table>
+    <div v-if="transaction.payments?.length" class="r-payments">
+      <div class="r-row" v-for="(payment, index) in transaction.payments" :key="index">
+        <span>{{ getPaymentLabel(payment.paymentType || payment.type) }}</span>
+        <span>{{ formatCurrency(payment.amount) }} so'm</span>
+      </div>
+      <div class="r-row" v-if="transaction.changeAmount > 0">
+        <span>Qaytim</span>
+        <span>{{ formatCurrency(transaction.changeAmount) }} so'm</span>
+      </div>
+      <div class="r-sep"></div>
+    </div>
 
     <!-- Footer -->
-    <div class="receipt-footer">
+    <div class="r-footer">
       <div v-if="config.website">{{ config.website }}</div>
-      <div class="footer-thanks">{{ config.footerText }}</div>
-      <div style="margin-top: 4px; font-size: 8px;">
-        {{ formatDate(new Date().toISOString()) }}
-      </div>
+      <div class="r-thanks">{{ config.footerText }}</div>
+      <div class="r-timestamp">{{ formatDate(new Date().toISOString()) }}</div>
     </div>
   </div>
 
@@ -309,121 +349,143 @@ defineExpose({ printReceipt })
 </template>
 
 <style scoped>
-.receipt-content {
-  font-family: 'Arial', 'Helvetica Neue', sans-serif;
-  font-size: 11px;
-  line-height: 1.3;
-  max-width: 300px;
+.receipt-preview {
+  font-family: 'Courier New', 'Consolas', monospace;
+  line-height: 1.4;
   padding: 12px;
-  background: white;
+  background: #fff;
   color: #000;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.receipt-80 {
+  width: 302px; /* ~80mm at 96dpi */
+  font-size: 12px;
+}
+.receipt-58 {
+  width: 220px; /* ~58mm at 96dpi */
+  font-size: 10.5px;
 }
 
-.receipt-header {
+/* Header */
+.r-header {
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+}
+.r-brand {
+  font-size: 1.3em;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+.r-info {
+  font-size: 0.85em;
+  color: #555;
 }
 
-.brand-name {
-  font-size: 15px;
-  font-weight: bold;
+/* Separators */
+.r-sep {
+  border-bottom: 1px dashed #000;
+  margin: 6px 0;
+}
+.r-sep-bold {
+  border-bottom: 2px solid #000;
+  margin: 6px 0;
+}
+
+/* Meta rows */
+.r-meta {
   margin-bottom: 2px;
 }
-
-.header-info {
-  font-size: 10px;
-  color: #444;
+.r-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 1px 0;
+  font-size: 0.92em;
 }
 
-.meta-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 8px;
-  font-size: 10px;
-}
-
-.meta-table td {
-  padding: 3px 6px;
-  border: 1px solid #999;
-}
-
-.meta-table .label {
+/* Items */
+.r-items-header {
+  display: flex;
   font-weight: bold;
-  background: #f3f4f6;
-  width: 35%;
-  color: #374151;
-}
-
-.items-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 8px;
-  font-size: 10px;
-}
-
-.items-table th {
-  padding: 4px 5px;
-  border: 1px solid #374151;
-  background: #374151;
-  color: #fff;
-  font-weight: 600;
-  text-align: center;
-  font-size: 9px;
+  font-size: 0.85em;
   text-transform: uppercase;
+  padding: 2px 0;
 }
-
-.items-table td {
-  padding: 3px 5px;
-  border: 1px solid #999;
+.r-items .r-item {
+  display: flex;
+  padding: 2px 0;
+  font-size: 0.92em;
 }
-
-.items-table .num { text-align: center; color: #666; }
-.items-table .qty { text-align: center; }
-.items-table .price { text-align: right; }
-.items-table .total { text-align: right; font-weight: 600; }
-
-.totals-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 8px;
-  font-size: 10px;
-}
-
-.totals-table td {
-  padding: 3px 6px;
-  border: 1px solid #999;
-}
-
-.totals-table .label {
-  font-weight: 600;
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.totals-table .value {
-  text-align: right;
-  font-weight: 600;
-}
-
-.grand-total td {
-  background: #374151 !important;
-  color: #fff !important;
-  font-size: 12px;
-  font-weight: bold;
-  padding: 5px 6px;
-}
-
-.receipt-footer {
+.r-col-num {
+  width: 18px;
   text-align: center;
-  font-size: 9px;
-  color: #666;
-  padding-top: 6px;
+  flex-shrink: 0;
+}
+.r-col-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 4px;
+}
+.r-col-qty {
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.r-col-price {
+  width: 60px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.r-col-total {
+  width: 68px;
+  text-align: right;
+  flex-shrink: 0;
+  font-weight: 600;
 }
 
-.footer-thanks {
-  font-size: 11px;
+/* 58mm adjustments */
+.receipt-58 .r-col-price { width: 50px; }
+.receipt-58 .r-col-total { width: 56px; }
+.receipt-58 .r-col-qty { width: 28px; }
+
+/* Totals */
+.r-totals .r-row {
+  font-size: 0.92em;
+}
+
+/* Grand total */
+.r-grand-total {
+  text-align: center;
+  font-size: 1.2em;
   font-weight: bold;
-  margin-top: 4px;
+  padding: 4px 0;
+  letter-spacing: 0.3px;
+}
+
+/* Payments */
+.r-payments .r-row {
+  font-size: 0.92em;
+}
+
+/* Footer */
+.r-footer {
+  text-align: center;
+  font-size: 0.85em;
+  color: #555;
+  padding-top: 4px;
+}
+.r-thanks {
+  font-weight: bold;
+  font-size: 1em;
   color: #000;
+  margin-top: 4px;
+}
+.r-timestamp {
+  font-size: 0.8em;
+  margin-top: 4px;
+  color: #888;
 }
 </style>
