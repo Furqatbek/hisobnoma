@@ -67,7 +67,7 @@ function getPrintCSS(paperWidth) {
       font-size: ${paperWidth === '80mm' ? '12px' : '10px'};
       line-height: 1.35;
       width: ${paperWidth};
-      padding: 2.5mm;
+      padding: 4mm 5mm;
       color: #000;
       -webkit-print-color-adjust: exact;
     }
@@ -372,7 +372,7 @@ defineExpose({ printReceipt })
 .receipt-preview {
   font-family: 'Arial', sans-serif;
   line-height: 1.35;
-  padding: 10px;
+  padding: 16px 20px;
   background: #fff;
   color: #000;
   border: 1px solid #e5e7eb;
