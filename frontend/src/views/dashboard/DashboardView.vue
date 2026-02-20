@@ -33,8 +33,9 @@ const recentActivities = ref([])
 onMounted(async () => {
   try {
     const response = await dashboardApi.getStats()
-    stats.value = response.data
-    recentActivities.value = response.data.recentActivities || []
+    const data = response.data.data || response.data
+    stats.value = data
+    recentActivities.value = data.recentActivities || []
   } catch (error) {
     console.error('Failed to load dashboard stats:', error)
   } finally {
