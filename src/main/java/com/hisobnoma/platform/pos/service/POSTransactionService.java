@@ -117,6 +117,9 @@ public class POSTransactionService {
         // Generate transaction number
         String transactionNumber = generateTransactionNumber(tenantId);
 
+        Long userId = securityContextHelper.getCurrentUserId();
+        String userName = securityContextHelper.getCurrentUsername();
+
         POSTransaction transaction = POSTransaction.builder()
                 .tenantId(tenantId)
                 .transactionNumber(transactionNumber)
@@ -127,6 +130,8 @@ public class POSTransactionService {
                         (customer != null ? customer.getName() : null))
                 .customerPhone(request.getCustomerPhone() != null ? request.getCustomerPhone() :
                         (customer != null ? customer.getPhone() : null))
+                .cashierId(userId)
+                .cashierName(userName)
                 .transactionType(request.getTransactionType())
                 .status(TransactionStatus.PENDING)
                 .originalTransactionId(request.getOriginalTransactionId())

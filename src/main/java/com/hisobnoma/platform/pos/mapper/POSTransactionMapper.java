@@ -35,7 +35,6 @@ public interface POSTransactionMapper {
     @Mapping(source = "customer.id", target = "customerId")
     @Mapping(target = "balanceDue", expression = "java(transaction.getBalanceDue())")
     @Mapping(target = "lines", ignore = true)
-    @Mapping(target = "payments", ignore = true)
     POSTransactionDto toDtoWithoutDetails(POSTransaction transaction);
 
     @IterableMapping(qualifiedByName = "toDtoWithoutDetails")

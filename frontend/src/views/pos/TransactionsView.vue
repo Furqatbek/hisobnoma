@@ -131,6 +131,16 @@ function getPaymentLabel(type) {
   return labels[type] || type
 }
 
+function getPaymentBadgeClass(type) {
+  const classes = {
+    'CASH': 'inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700',
+    'CARD': 'inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700',
+    'CREDIT': 'inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700',
+    'MOBILE_PAYMENT': 'inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700'
+  }
+  return classes[type] || 'inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700'
+}
+
 function handleSearch() {
   pagination.value.page = 0
   fetchTransactions()
@@ -187,8 +197,10 @@ function handleSearch() {
               <th>Sana</th>
               <th>Kassir</th>
               <th>Mijoz</th>
+              <th>Kassa</th>
               <th>Mahsulotlar</th>
               <th class="text-right">Summa</th>
+              <th class="text-right">To'langan</th>
               <th>Holat</th>
               <th>To'lov turi</th>
               <th class="text-right">Amallar</th>
@@ -197,11 +209,19 @@ function handleSearch() {
           <tbody class="divide-y divide-gray-200">
             <tr v-for="tx in transactions" :key="tx.id">
               <td class="font-mono text-sm">{{ tx.transactionNumber || `#${tx.id}` }}</td>
-              <td class="text-sm text-gray-500">{{ formatDate(tx.createdAt) }}</td>
+              <td class="text-sm text-gray-500 whitespace-nowrap">{{ formatDate(tx.createdAt) }}</td>
               <td class="text-sm">{{ tx.cashierName || '-' }}</td>
               <td>{{ tx.customerName || 'Tashrif buyuruvchi' }}</td>
+              <td class="text-sm text-gray-500">{{ tx.terminalName || tx.terminalCode || '-' }}</td>
               <td>{{ tx.lineCount || 0 }} ta</td>
-              <td class="text-right font-medium">{{ formatCurrency(tx.totalAmount) }} so'm</td>
+              <td class="text-right font-medium whitespace-nowrap">{{ formatCurrency(tx.totalAmount) }}</td>
+              <td class="text-right whitespace-nowrap">
+                <span v-if="tx.balanceDue > 0" class="text-orange-600 font-medium">
+                  {{ formatCurrency(tx.paidAmount) }}
+                  <span class="text-xs block text-orange-500">qarz: {{ formatCurrency(tx.balanceDue) }}</span>
+                </span>
+                <span v-else class="text-green-600">{{ formatCurrency(tx.paidAmount) }}</span>
+              </td>
               <td>
                 <span :class="['badge', getStatusClass(tx.status)]">
                   {{ getStatusLabel(tx.status) }}
@@ -209,12 +229,21 @@ function handleSearch() {
               </td>
               <td class="text-sm">
                 <span v-if="tx.payments?.length === 1">
-                  {{ getPaymentLabel(tx.payments[0]?.paymentType) }}
+                  <span :class="getPaymentBadgeClass(tx.payments[0]?.paymentType)">
+                    {{ getPaymentLabel(tx.payments[0]?.paymentType) }}
+                  </span>
                 </span>
-                <span v-else-if="tx.payments?.length > 1">
-                  Aralash ({{ tx.payments.length }})
+                <span v-else-if="tx.payments?.length > 1" class="flex flex-wrap gap-1">
+                  <span
+                    v-for="p in tx.payments"
+                    :key="p.id"
+                    :class="getPaymentBadgeClass(p.paymentType)"
+                    class="text-xs"
+                  >
+                    {{ getPaymentLabel(p.paymentType) }}
+                  </span>
                 </span>
-                <span v-else>-</span>
+                <span v-else class="text-gray-400">-</span>
               </td>
               <td class="text-right space-x-1">
                 <button
