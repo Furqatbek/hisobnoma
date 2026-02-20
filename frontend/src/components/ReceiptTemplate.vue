@@ -83,91 +83,97 @@ function printReceipt() {
             box-sizing: border-box;
           }
           body {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
+            font-family: 'Arial', 'Helvetica Neue', sans-serif;
+            font-size: 11px;
             line-height: 1.3;
             width: ${paperWidth};
-            padding: 4mm;
+            padding: 3mm;
             color: #000;
           }
           .receipt-header {
             text-align: center;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
           }
           .brand-name {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 4px;
-          }
-          .header-info {
-            font-size: 10px;
-          }
-          .receipt-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 10px;
-            margin-bottom: 8px;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 8px;
-          }
-          .receipt-items {
-            border-bottom: 1px dashed #000;
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-          }
-          .item-row {
-            margin-bottom: 4px;
-          }
-          .item-name {
-            font-weight: bold;
-          }
-          .item-details {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11px;
-          }
-          .totals {
-            border-bottom: 1px dashed #000;
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-          }
-          .total-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 2px;
-          }
-          .grand-total {
             font-size: 14px;
             font-weight: bold;
-            border-top: 1px solid #000;
-            padding-top: 4px;
-            margin-top: 4px;
+            margin-bottom: 2px;
           }
-          .payments {
-            margin-bottom: 8px;
-            font-size: 11px;
+          .header-info {
+            font-size: 9px;
           }
-          .payment-row {
-            display: flex;
-            justify-content: space-between;
+          .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 6px;
+            font-size: 10px;
+          }
+          .meta-table td {
+            padding: 2px 4px;
+            border: 1px solid #000;
+          }
+          .meta-table .label {
+            font-weight: bold;
+            background: #f0f0f0;
+            width: 35%;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 6px;
+            font-size: 10px;
+          }
+          .items-table th {
+            padding: 3px 4px;
+            border: 1px solid #000;
+            background: #000;
+            color: #fff;
+            font-weight: bold;
+            text-align: center;
+            font-size: 9px;
+          }
+          .items-table td {
+            padding: 2px 4px;
+            border: 1px solid #000;
+          }
+          .items-table .num { text-align: center; }
+          .items-table .qty { text-align: center; }
+          .items-table .price { text-align: right; }
+          .items-table .total { text-align: right; font-weight: bold; }
+          .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 6px;
+            font-size: 10px;
+          }
+          .totals-table td {
+            padding: 2px 4px;
+            border: 1px solid #000;
+          }
+          .totals-table .label {
+            font-weight: bold;
+            background: #f0f0f0;
+          }
+          .totals-table .value {
+            text-align: right;
+            font-weight: bold;
+          }
+          .grand-total td {
+            background: #000 !important;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 4px;
           }
           .receipt-footer {
             text-align: center;
-            font-size: 10px;
-            padding-top: 8px;
+            font-size: 9px;
+            margin-top: 6px;
           }
           .footer-thanks {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
-            margin-top: 8px;
-          }
-          .customer-info {
-            font-size: 10px;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px dashed #000;
+            margin-top: 4px;
           }
           @media print {
             body {
@@ -206,76 +212,91 @@ defineExpose({ printReceipt })
     </div>
 
     <!-- Transaction Meta -->
-    <div class="receipt-meta">
-      <div>
-        <div><strong>Chek №:</strong> {{ transaction.transactionNumber || transaction.orderNumber || `#${transaction.id}` }}</div>
-        <div><strong>Sana:</strong> {{ formatDate(transaction.createdAt || transaction.orderDate) }}</div>
-      </div>
-      <div style="text-align: right;">
-        <div v-if="transaction.terminalName">{{ transaction.terminalName }}</div>
-        <div v-if="transaction.cashierName">Kassir: {{ transaction.cashierName }}</div>
-      </div>
-    </div>
+    <table class="meta-table">
+      <tr>
+        <td class="label">Chek №</td>
+        <td>{{ transaction.transactionNumber || transaction.orderNumber || `#${transaction.id}` }}</td>
+      </tr>
+      <tr>
+        <td class="label">Sana</td>
+        <td>{{ formatDate(transaction.createdAt || transaction.orderDate) }}</td>
+      </tr>
+      <tr v-if="transaction.terminalName">
+        <td class="label">Kassa</td>
+        <td>{{ transaction.terminalName }}</td>
+      </tr>
+      <tr v-if="transaction.cashierName">
+        <td class="label">Kassir</td>
+        <td>{{ transaction.cashierName }}</td>
+      </tr>
+      <tr v-if="transaction.customerName">
+        <td class="label">Mijoz</td>
+        <td>
+          {{ transaction.customerName }}
+          <span v-if="transaction.customerPhone" style="font-size: 9px; color: #666;"> ({{ transaction.customerPhone }})</span>
+        </td>
+      </tr>
+    </table>
 
-    <!-- Customer Info -->
-    <div v-if="transaction.customerName" class="customer-info">
-      <div><strong>Mijoz:</strong> {{ transaction.customerName }}</div>
-      <div v-if="transaction.customerPhone">Tel: {{ transaction.customerPhone }}</div>
-    </div>
-
-    <!-- Items -->
-    <div class="receipt-items">
-      <div class="item-row" v-for="(item, index) in transaction.lines" :key="index">
-        <div class="item-name">{{ item.productName }}</div>
-        <div class="item-details">
-          <span>{{ item.quantity }} x {{ formatCurrency(item.unitPrice) }}</span>
-          <span>{{ formatCurrency(item.lineTotal) }} so'm</span>
-        </div>
-      </div>
-    </div>
+    <!-- Items Table -->
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th style="width: 24px;">№</th>
+          <th>Mahsulot</th>
+          <th style="width: 36px;">Soni</th>
+          <th style="width: 56px;">Narx</th>
+          <th style="width: 64px;">Summa</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(item, index) in transaction.lines" :key="index">
+          <td class="num">{{ index + 1 }}</td>
+          <td>{{ item.productName }}</td>
+          <td class="qty">{{ item.quantity }}</td>
+          <td class="price">{{ formatCurrency(item.unitPrice) }}</td>
+          <td class="total">{{ formatCurrency(item.lineTotal) }}</td>
+        </tr>
+      </tbody>
+    </table>
 
     <!-- Totals -->
-    <div class="totals">
-      <div class="total-row">
-        <span>Jami mahsulotlar:</span>
-        <span>{{ transaction.lineCount || transaction.lines?.length || 0 }} ta</span>
-      </div>
-      <div class="total-row" v-if="transaction.subtotal">
-        <span>Oraliq summa:</span>
-        <span>{{ formatCurrency(transaction.subtotal) }} so'm</span>
-      </div>
-      <div class="total-row" v-if="transaction.discountAmount > 0">
-        <span>Chegirma:</span>
-        <span>-{{ formatCurrency(transaction.discountAmount) }} so'm</span>
-      </div>
-      <div class="total-row" v-if="transaction.taxAmount > 0">
-        <span>Soliq:</span>
-        <span>{{ formatCurrency(transaction.taxAmount) }} so'm</span>
-      </div>
-      <div class="total-row grand-total">
-        <span>JAMI:</span>
-        <span>{{ formatCurrency(transaction.totalAmount || transaction.total) }} so'm</span>
-      </div>
-    </div>
+    <table class="totals-table">
+      <tr v-if="transaction.subtotal && transaction.subtotal !== transaction.totalAmount">
+        <td class="label">Oraliq summa</td>
+        <td class="value">{{ formatCurrency(transaction.subtotal) }}</td>
+      </tr>
+      <tr v-if="transaction.discountAmount > 0">
+        <td class="label">Chegirma</td>
+        <td class="value" style="color: #dc2626;">-{{ formatCurrency(transaction.discountAmount) }}</td>
+      </tr>
+      <tr v-if="transaction.taxAmount > 0">
+        <td class="label">Soliq</td>
+        <td class="value">{{ formatCurrency(transaction.taxAmount) }}</td>
+      </tr>
+      <tr class="grand-total">
+        <td>JAMI</td>
+        <td style="text-align: right;">{{ formatCurrency(transaction.totalAmount || transaction.total) }} so'm</td>
+      </tr>
+    </table>
 
     <!-- Payments -->
-    <div class="payments" v-if="transaction.payments?.length">
-      <div><strong>To'lov:</strong></div>
-      <div class="payment-row" v-for="(payment, index) in transaction.payments" :key="index">
-        <span>{{ getPaymentLabel(payment.paymentType || payment.type) }}:</span>
-        <span>{{ formatCurrency(payment.amount) }} so'm</span>
-      </div>
-      <div class="payment-row" v-if="transaction.changeAmount > 0">
-        <span>Qaytim:</span>
-        <span>{{ formatCurrency(transaction.changeAmount) }} so'm</span>
-      </div>
-    </div>
+    <table v-if="transaction.payments?.length" class="totals-table">
+      <tr v-for="(payment, index) in transaction.payments" :key="index">
+        <td class="label">{{ getPaymentLabel(payment.paymentType || payment.type) }}</td>
+        <td class="value">{{ formatCurrency(payment.amount) }} so'm</td>
+      </tr>
+      <tr v-if="transaction.changeAmount > 0">
+        <td class="label">Qaytim</td>
+        <td class="value">{{ formatCurrency(transaction.changeAmount) }} so'm</td>
+      </tr>
+    </table>
 
     <!-- Footer -->
     <div class="receipt-footer">
       <div v-if="config.website">{{ config.website }}</div>
       <div class="footer-thanks">{{ config.footerText }}</div>
-      <div style="margin-top: 8px; font-size: 9px;">
+      <div style="margin-top: 4px; font-size: 8px;">
         {{ formatDate(new Date().toISOString()) }}
       </div>
     </div>
@@ -289,114 +310,120 @@ defineExpose({ printReceipt })
 
 <style scoped>
 .receipt-content {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  line-height: 1.4;
+  font-family: 'Arial', 'Helvetica Neue', sans-serif;
+  font-size: 11px;
+  line-height: 1.3;
   max-width: 300px;
-  padding: 16px;
+  padding: 12px;
   background: white;
   color: #000;
 }
 
 .receipt-header {
   text-align: center;
-  border-bottom: 1px dashed #ccc;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-}
-
-.brand-name {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.header-info {
-  font-size: 11px;
-  color: #333;
-}
-
-.receipt-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  margin-bottom: 12px;
-  border-bottom: 1px dashed #ccc;
-  padding-bottom: 12px;
-}
-
-.customer-info {
-  font-size: 11px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px dashed #ccc;
-}
-
-.receipt-items {
-  border-bottom: 1px dashed #ccc;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-}
-
-.item-row {
   margin-bottom: 8px;
 }
 
-.item-name {
+.brand-name {
+  font-size: 15px;
   font-weight: bold;
-  font-size: 11px;
-}
-
-.item-details {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: #333;
-}
-
-.totals {
-  border-bottom: 1px dashed #ccc;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-}
-
-.total-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 4px;
-  font-size: 11px;
-}
-
-.grand-total {
-  font-size: 14px;
-  font-weight: bold;
-  border-top: 1px solid #000;
-  padding-top: 8px;
-  margin-top: 8px;
-}
-
-.payments {
-  margin-bottom: 12px;
-  font-size: 11px;
-}
-
-.payment-row {
-  display: flex;
-  justify-content: space-between;
   margin-bottom: 2px;
+}
+
+.header-info {
+  font-size: 10px;
+  color: #444;
+}
+
+.meta-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-size: 10px;
+}
+
+.meta-table td {
+  padding: 3px 6px;
+  border: 1px solid #999;
+}
+
+.meta-table .label {
+  font-weight: bold;
+  background: #f3f4f6;
+  width: 35%;
+  color: #374151;
+}
+
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-size: 10px;
+}
+
+.items-table th {
+  padding: 4px 5px;
+  border: 1px solid #374151;
+  background: #374151;
+  color: #fff;
+  font-weight: 600;
+  text-align: center;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.items-table td {
+  padding: 3px 5px;
+  border: 1px solid #999;
+}
+
+.items-table .num { text-align: center; color: #666; }
+.items-table .qty { text-align: center; }
+.items-table .price { text-align: right; }
+.items-table .total { text-align: right; font-weight: 600; }
+
+.totals-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-size: 10px;
+}
+
+.totals-table td {
+  padding: 3px 6px;
+  border: 1px solid #999;
+}
+
+.totals-table .label {
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.totals-table .value {
+  text-align: right;
+  font-weight: 600;
+}
+
+.grand-total td {
+  background: #374151 !important;
+  color: #fff !important;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 5px 6px;
 }
 
 .receipt-footer {
   text-align: center;
-  font-size: 10px;
-  color: #333;
-  padding-top: 8px;
+  font-size: 9px;
+  color: #666;
+  padding-top: 6px;
 }
 
 .footer-thanks {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
-  margin-top: 8px;
+  margin-top: 4px;
   color: #000;
 }
 </style>
