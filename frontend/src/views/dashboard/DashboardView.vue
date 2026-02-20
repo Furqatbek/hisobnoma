@@ -278,6 +278,18 @@ function formatNumber(value) {
         </div>
       </div>
 
+      <!-- Currency rates informer -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="text-lg font-medium text-gray-900">Valyuta kurslari (CBU)</h3>
+        </div>
+        <div class="card-body flex justify-center">
+          <a href="https://cbu.uz/" target="_blank" title="O'zbekiston Respublikasi Markaziy banki">
+            <img src="https://cbu.uz/uz/informer/?txtclr=212121&brdclr=FFC700&bgclr=FFE27D&r_choose=USD_EUR_RUB" alt="CBU valyuta kurslari" />
+          </a>
+        </div>
+      </div>
+
       <!-- Quick actions -->
       <div class="card">
         <div class="card-header">
