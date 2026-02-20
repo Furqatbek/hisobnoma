@@ -1,7 +1,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { arReportsApi } from '@/services/api'
-import { MagnifyingGlassIcon, ExclamationTriangleIcon, PhoneIcon, XMarkIcon, EyeIcon } from '@heroicons/vue/24/outline'
+import { useReceiptStore } from '@/stores/receipt'
+import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon } from '@heroicons/vue/24/outline'
+
+const receiptStore = useReceiptStore()
+const brandConfig = computed(() => receiptStore.config)
 
 const loading = ref(true)
 const search = ref('')
@@ -96,13 +100,148 @@ function formatDate(dateString) {
   if (!dateString) return '-'
   return new Date(dateString).toLocaleDateString('uz-UZ')
 }
+
+function printDebtors() {
+  const list = debtors.value
+  if (!list.length) return
+
+  const rows = list.map((c, i) => {
+    const aging = getAgingForCustomer(c.customerId)
+    const status = c.onCreditHold ? 'To\'xtatilgan' : c.overCreditLimit ? 'Limitidan oshgan' : 'Faol'
+    return `
+      <tr>
+        <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: center;">${i + 1}</td>
+        <td style="padding: 6px 10px; border: 1px solid #d1d5db;">
+          <strong>${c.customerName || ''}</strong>
+          ${c.customerCode ? '<br><span style="color: #6b7280; font-size: 11px;">' + c.customerCode + '</span>' : ''}
+        </td>
+        <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right; font-weight: 600; color: #dc2626;">${formatCurrency(c.netBalance)}</td>
+        <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right;">${c.creditLimit ? formatCurrency(c.creditLimit) : '-'}</td>
+        <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right;">${aging ? formatCurrency(aging.currentAmount) : '-'}</td>
+        <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right; color: ${aging && aging.days1To30 > 0 ? '#ca8a04' : '#111827'};">${aging ? formatCurrency(aging.days1To30) : '-'}</td>
+        <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right; color: ${aging && aging.days31To60 > 0 ? '#ea580c' : '#111827'};">${aging ? formatCurrency(aging.days31To60) : '-'}</td>
+        <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right; color: ${aging && aging.over90Days > 0 || aging && aging.days61To90 > 0 ? '#dc2626' : '#111827'};">${aging ? formatCurrency((aging.days61To90 || 0) + (aging.over90Days || 0)) : '-'}</td>
+        <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: center; font-size: 11px;">${status}</td>
+        <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: center; font-size: 11px;">${formatDate(c.lastInvoiceDate)}</td>
+      </tr>`
+  }).join('')
+
+  const agingTotals = agingReport.value || {}
+  const today = new Date().toLocaleDateString('uz-UZ')
+
+  const printWindow = window.open('', '_blank', 'width=900,height=700')
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Qarzdorlar ro'yxati</title>
+      <style>
+        @page { size: A4 landscape; margin: 12mm 15mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; font-size: 12px; color: #111827; line-height: 1.4; }
+        @media print { body { width: 100%; } }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 8px 10px; background: #111827; color: white; font-weight: 600; font-size: 11px; text-align: left; }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 16px; border-bottom: 3px solid #111827; margin-bottom: 16px;">
+        <div>
+          <div style="font-size: 20px; font-weight: bold;">${brandConfig.value.brandName || ''}</div>
+          ${brandConfig.value.address ? '<div style="color: #6b7280; font-size: 12px;">' + brandConfig.value.address + '</div>' : ''}
+          ${brandConfig.value.phone ? '<div style="color: #6b7280; font-size: 12px;">Tel: ' + brandConfig.value.phone + '</div>' : ''}
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 22px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Qarzdorlar ro'yxati</div>
+          <div style="color: #6b7280; margin-top: 4px;">Sana: ${today}</div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div style="display: flex; gap: 24px; margin-bottom: 16px; font-size: 13px;">
+        <div><strong>Jami qarzdorlar:</strong> ${summary.value.count} ta</div>
+        <div><strong>Jami qarz:</strong> <span style="color: #dc2626;">${formatCurrency(summary.value.totalDebt)} so'm</span></div>
+        <div><strong>Limitidan oshgan:</strong> ${summary.value.overLimit}</div>
+        <div><strong>Kredit to'xtatilgan:</strong> ${summary.value.onHold}</div>
+      </div>
+
+      <!-- Table -->
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align: center; width: 35px;">№</th>
+            <th>Mijoz</th>
+            <th style="text-align: right;">Qarz summasi</th>
+            <th style="text-align: right;">Kredit limiti</th>
+            <th style="text-align: right;">Joriy</th>
+            <th style="text-align: right;">1-30 kun</th>
+            <th style="text-align: right;">31-60 kun</th>
+            <th style="text-align: right;">60+ kun</th>
+            <th style="text-align: center;">Holat</th>
+            <th style="text-align: center;">Oxirgi faktura</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+        <tfoot>
+          <tr style="background: #f3f4f6; font-weight: bold;">
+            <td colspan="2" style="padding: 8px 10px; border: 1px solid #d1d5db;">JAMI</td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right; color: #dc2626;">${formatCurrency(summary.value.totalDebt)} so'm</td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db;"></td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right;">${formatCurrency(agingTotals.totalCurrent)}</td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right;">${formatCurrency(agingTotals.total1To30Days)}</td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right;">${formatCurrency(agingTotals.total31To60Days)}</td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right;">${formatCurrency(((agingTotals.total61To90Days || 0) + (agingTotals.totalOver90Days || 0)))}</td>
+            <td colspan="2" style="padding: 8px 10px; border: 1px solid #d1d5db;"></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- Footer -->
+      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+        <div style="width: 40%;">
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">Tuzuvchi:</div>
+          <div style="border-bottom: 1px solid #111827; min-height: 30px;"></div>
+        </div>
+        <div style="width: 40%;">
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">Tasdiqladi:</div>
+          <div style="border-bottom: 1px solid #111827; min-height: 30px;"></div>
+        </div>
+      </div>
+      <div style="margin-top: 24px; text-align: center; font-size: 10px; color: #9ca3af;">
+        Chop etilgan: ${new Date().toLocaleString('uz-UZ')}
+      </div>
+    </body>
+    </html>
+  `)
+
+  printWindow.document.close()
+  printWindow.focus()
+  setTimeout(() => {
+    printWindow.print()
+    printWindow.close()
+  }, 250)
+}
 </script>
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900">Qarzdorlar</h1>
-      <p class="mt-1 text-sm text-gray-500">Nasiyaga olgan mijozlar ro'yxati</p>
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Qarzdorlar</h1>
+        <p class="mt-1 text-sm text-gray-500">Nasiyaga olgan mijozlar ro'yxati</p>
+      </div>
+      <button
+        @click="printDebtors"
+        :disabled="loading || debtors.length === 0"
+        class="btn-primary flex items-center gap-2"
+      >
+        <PrinterIcon class="h-5 w-5" />
+        Chop etish
+      </button>
     </div>
 
     <!-- Summary Cards -->
