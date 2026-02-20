@@ -47,7 +47,8 @@ public class Permission extends BaseEntity {
         ADMIN,
         REPORTS,
         WEB,
-        MOBILE
+        MOBILE,
+        HR
     }
 
     public enum Action {
