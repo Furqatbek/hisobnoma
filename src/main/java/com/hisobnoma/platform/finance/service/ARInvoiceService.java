@@ -383,6 +383,7 @@ public class ARInvoiceService {
         }
 
         // Calculate total credit amount from payments
+        // Note: payments collection was already initialized in the calling transaction
         BigDecimal creditAmount = transaction.getPayments().stream()
                 .filter(p -> p.getPaymentType() == POSPaymentType.CREDIT)
                 .filter(p -> p.getStatus() == POSPaymentStatus.APPROVED)
@@ -393,8 +394,12 @@ public class ARInvoiceService {
             throw new BusinessException("No credit payment found in transaction");
         }
 
-        Customer customer = transaction.getCustomer();
         Long tenantId = transaction.getTenantId();
+
+        // Reload customer in this new transaction to avoid LazyInitializationException
+        // (the customer proxy was loaded in the caller's now-suspended session)
+        Customer customer = customerRepository.findByIdAndTenantId(transaction.getCustomer().getId(), tenantId)
+                .orElseThrow(() -> new BusinessException("Customer not found for credit sale"));
 
         // Check credit limit
         if (!customerService.canBeInvoiced(customer.getId(), creditAmount)) {
