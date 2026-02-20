@@ -91,7 +91,20 @@ export const productsApi = {
   update: (id, data) => api.put(`/inventory/products/${id}`, data),
   delete: (id) => api.delete(`/inventory/products/${id}`),
   search: (query) => api.get('/inventory/products/search', { params: { q: query } }),
-  getByBarcode: (barcode) => api.get(`/inventory/products/barcode/${barcode}`)
+  getByBarcode: (barcode) => api.get(`/inventory/products/barcode/${barcode}`),
+  // Image endpoints
+  getImages: (id) => api.get(`/inventory/products/${id}/images`),
+  uploadImage: (id, file, altText, title) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (altText) formData.append('altText', altText)
+    if (title) formData.append('title', title)
+    return api.post(`/inventory/products/${id}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  deleteImage: (id, imageId) => api.delete(`/inventory/products/${id}/images/${imageId}`),
+  setPrimaryImage: (id, imageId) => api.put(`/inventory/products/${id}/images/${imageId}/primary`)
 }
 
 // Categories API - Backend: /api/v1/inventory/categories

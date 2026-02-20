@@ -2,7 +2,8 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { productsApi, categoriesApi, brandsApi, uomApi } from '@/services/api'
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, PhotoIcon, TrashIcon, StarIcon } from '@heroicons/vue/24/outline'
+import { StarIcon as StarIconSolid } from '@heroicons/vue/24/solid'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,6 +15,12 @@ const saving = ref(false)
 const categories = ref([])
 const brands = ref([])
 const uoms = ref([])
+
+// Image upload state
+const productImages = ref([])
+const uploading = ref(false)
+const uploadError = ref('')
+const fileInput = ref(null)
 
 const form = reactive({
   sku: '',
@@ -40,6 +47,65 @@ const form = reactive({
 
 const errors = reactive({})
 
+async function loadImages() {
+  if (!isEdit.value) return
+  try {
+    const res = await productsApi.getImages(route.params.id)
+    productImages.value = res.data.data || res.data || []
+  } catch (error) {
+    console.error('Failed to load images:', error)
+  }
+}
+
+async function handleImageUpload(event) {
+  const files = event.target.files
+  if (!files?.length) return
+
+  uploading.value = true
+  uploadError.value = ''
+
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) {
+      uploadError.value = 'Faqat rasm fayllarini yuklash mumkin'
+      continue
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      uploadError.value = 'Fayl hajmi 10MB dan oshmasligi kerak'
+      continue
+    }
+
+    try {
+      await productsApi.uploadImage(route.params.id, file)
+    } catch (error) {
+      uploadError.value = error.response?.data?.message || 'Rasmni yuklashda xatolik yuz berdi'
+    }
+  }
+
+  await loadImages()
+  uploading.value = false
+
+  // Reset file input
+  if (fileInput.value) fileInput.value.value = ''
+}
+
+async function handleDeleteImage(imageId) {
+  try {
+    await productsApi.deleteImage(route.params.id, imageId)
+    await loadImages()
+  } catch (error) {
+    console.error('Failed to delete image:', error)
+  }
+}
+
+async function handleSetPrimary(imageId) {
+  try {
+    await productsApi.setPrimaryImage(route.params.id, imageId)
+    await loadImages()
+  } catch (error) {
+    console.error('Failed to set primary image:', error)
+  }
+}
+
 onMounted(async () => {
   loading.value = true
   try {
@@ -61,6 +127,7 @@ onMounted(async () => {
       form.categoryId = productData.category?.id || productData.categoryId
       form.brandId = productData.brand?.id || productData.brandId
       form.baseUomId = productData.baseUom?.id || productData.baseUomId
+      await loadImages()
     }
   } catch (error) {
     console.error('Failed to load data:', error)
@@ -157,9 +224,75 @@ async function handleSubmit() {
             <textarea v-model="form.description" rows="3" class="input"></textarea>
           </div>
 
+          <!-- Product Images -->
           <div class="md:col-span-2">
-            <label class="label">Image URL</label>
-            <input v-model="form.primaryImageUrl" type="url" class="input" placeholder="https://" />
+            <label class="label">Rasmlar</label>
+
+            <!-- Edit mode: full image management -->
+            <div v-if="isEdit" class="space-y-3">
+              <!-- Image gallery -->
+              <div v-if="productImages.length" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                <div
+                  v-for="img in productImages"
+                  :key="img.id"
+                  class="relative group rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
+                >
+                  <img :src="img.imageUrl" :alt="img.altText || 'Product image'" class="w-full h-28 object-cover" />
+                  <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      @click="handleSetPrimary(img.id)"
+                      class="p-1.5 bg-white rounded-full hover:bg-yellow-50 transition-colors"
+                      :title="img.primary ? 'Asosiy rasm' : 'Asosiy qilish'"
+                    >
+                      <StarIconSolid v-if="img.primary" class="h-4 w-4 text-yellow-500" />
+                      <StarIcon v-else class="h-4 w-4 text-gray-600" />
+                    </button>
+                    <button
+                      type="button"
+                      @click="handleDeleteImage(img.id)"
+                      class="p-1.5 bg-white rounded-full hover:bg-red-50 transition-colors"
+                      title="O'chirish"
+                    >
+                      <TrashIcon class="h-4 w-4 text-red-600" />
+                    </button>
+                  </div>
+                  <div v-if="img.primary" class="absolute top-1 left-1">
+                    <span class="bg-yellow-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded">Asosiy</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Upload area -->
+              <label
+                class="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-400 hover:bg-primary-50/50 transition-colors"
+                :class="{ 'opacity-50 pointer-events-none': uploading }"
+              >
+                <div class="flex flex-col items-center">
+                  <PhotoIcon class="h-8 w-8 text-gray-400" />
+                  <span class="mt-1 text-sm text-gray-500">
+                    {{ uploading ? 'Yuklanmoqda...' : 'Rasm yuklash uchun bosing' }}
+                  </span>
+                  <span class="text-xs text-gray-400 mt-0.5">PNG, JPG, max 10MB</span>
+                </div>
+                <input
+                  ref="fileInput"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  class="hidden"
+                  @change="handleImageUpload"
+                />
+              </label>
+
+              <p v-if="uploadError" class="text-sm text-red-600">{{ uploadError }}</p>
+            </div>
+
+            <!-- Create mode: hint -->
+            <div v-else class="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+              <PhotoIcon class="h-5 w-5 text-gray-400 flex-shrink-0" />
+              <span class="text-sm text-gray-500">Rasmlarni mahsulot yaratilgandan keyin qo'shish mumkin</span>
+            </div>
           </div>
 
           <div>
