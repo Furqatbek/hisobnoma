@@ -402,3 +402,12 @@ export const salaryApi = {
   markPaid: (id) => api.put(`/hr/salary/${id}/pay`),
   cancel: (id) => api.put(`/hr/salary/${id}/cancel`)
 }
+
+// HR Salary Advances API - Backend: /api/v1/hr/advances
+export const advancesApi = {
+  getByPeriod: (year, month) => api.get('/hr/advances/period', { params: { year, month } }),
+  getByEmployee: (employeeId) => api.get(`/hr/advances/employee/${employeeId}`),
+  getUndeductedTotal: (employeeId, year, month) => api.get(`/hr/advances/employee/${employeeId}/total`, { params: { year, month } }),
+  create: (data) => api.post('/hr/advances', data),
+  cancel: (id) => api.put(`/hr/advances/${id}/cancel`)
+}

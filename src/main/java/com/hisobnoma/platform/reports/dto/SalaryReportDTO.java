@@ -37,6 +37,8 @@ public class SalaryReportDTO {
         private BigDecimal totalBonus;
         private BigDecimal totalDeductions;
         private BigDecimal totalNet;
+        private BigDecimal totalAdvances;
+        private BigDecimal totalCashPaid;
         private int totalEmployees;
         private int paidCount;
         private int pendingCount;
@@ -57,6 +59,8 @@ public class SalaryReportDTO {
         private BigDecimal bonusAmount;
         private BigDecimal deductionAmount;
         private BigDecimal netAmount;
+        private BigDecimal advanceAmount;
+        private BigDecimal payAmount;
         private String status;
         private LocalDate paidDate;
         private Long glJournalEntryId;

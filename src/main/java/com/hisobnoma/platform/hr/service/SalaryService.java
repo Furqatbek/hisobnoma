@@ -7,8 +7,10 @@ import com.hisobnoma.platform.common.exception.NotFoundException;
 import com.hisobnoma.platform.hr.dto.CreateSalaryRecordRequest;
 import com.hisobnoma.platform.hr.dto.SalaryRecordDto;
 import com.hisobnoma.platform.hr.entity.Employee;
+import com.hisobnoma.platform.hr.entity.SalaryAdvance;
 import com.hisobnoma.platform.hr.entity.SalaryRecord;
 import com.hisobnoma.platform.hr.repository.EmployeeRepository;
+import com.hisobnoma.platform.hr.repository.SalaryAdvanceRepository;
 import com.hisobnoma.platform.hr.repository.SalaryRecordRepository;
 import com.hisobnoma.platform.finance.service.GLIntegrationService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ public class SalaryService {
 
     private final SalaryRecordRepository salaryRecordRepository;
     private final EmployeeRepository employeeRepository;
+    private final SalaryAdvanceRepository advanceRepository;
     private final SecurityContextHelper securityContextHelper;
     private final GLIntegrationService glIntegrationService;
 
@@ -111,22 +114,46 @@ public class SalaryService {
         record.setStatus(SalaryRecord.SalaryStatus.PAID);
         record.setPaidDate(LocalDate.now());
 
-        // Post salary payment to General Ledger
+        // Calculate advance deduction
+        BigDecimal advanceTotal = advanceRepository.sumGivenByEmployeeAndPeriod(
+                tenantId, record.getEmployee().getId(), record.getPeriodYear(), record.getPeriodMonth());
+        BigDecimal netAmount = record.getNetAmount();
+        BigDecimal cashToPay = netAmount.subtract(advanceTotal).max(BigDecimal.ZERO);
+
+        record.setAdvanceAmount(advanceTotal);
+        record.setPayAmount(cashToPay);
+
+        // Post salary payment to General Ledger (with advance split)
         try {
             Long journalEntryId = glIntegrationService.postSalaryPayment(
                     record.getId(),
                     record.getEmployee().getFullName(),
-                    record.getNetAmount(),
+                    netAmount,
+                    advanceTotal,
+                    cashToPay,
                     record.getPeriodYear(),
                     record.getPeriodMonth(),
                     record.getPaidDate()
             );
             record.setGlJournalEntryId(journalEntryId);
-            log.info("Salary payment posted to GL: salaryRecordId={}, journalEntryId={}", id, journalEntryId);
+            log.info("Salary payment posted to GL: salaryRecordId={}, journalEntryId={}, advance={}, cash={}",
+                    id, journalEntryId, advanceTotal, cashToPay);
         } catch (Exception e) {
             log.error("Failed to post salary payment to GL for salaryRecordId={}: {}", id, e.getMessage());
             throw new BusinessException("Salary payment failed: could not record in finance system - " + e.getMessage());
         }
+
+        // Mark all GIVEN advances for this employee/period as DEDUCTED
+        List<SalaryAdvance> givenAdvances = advanceRepository
+                .findByTenantIdAndEmployeeIdAndPeriodYearAndPeriodMonthAndStatus(
+                        tenantId, record.getEmployee().getId(),
+                        record.getPeriodYear(), record.getPeriodMonth(),
+                        SalaryAdvance.AdvanceStatus.GIVEN);
+        for (SalaryAdvance advance : givenAdvances) {
+            advance.setStatus(SalaryAdvance.AdvanceStatus.DEDUCTED);
+            advance.setSalaryRecordId(record.getId());
+        }
+        advanceRepository.saveAll(givenAdvances);
 
         return toDto(salaryRecordRepository.save(record));
     }
@@ -157,6 +184,8 @@ public class SalaryService {
                 .bonusAmount(s.getBonusAmount())
                 .deductionAmount(s.getDeductionAmount())
                 .netAmount(s.getNetAmount())
+                .advanceAmount(s.getAdvanceAmount())
+                .payAmount(s.getPayAmount())
                 .status(s.getStatus().name())
                 .paidDate(s.getPaidDate())
                 .glJournalEntryId(s.getGlJournalEntryId())

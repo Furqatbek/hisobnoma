@@ -49,6 +49,12 @@ public class SalaryRecord extends TenantAwareEntity {
 
     private LocalDate paidDate;
 
+    @Column(name = "advance_amount", precision = 15, scale = 2)
+    private BigDecimal advanceAmount;
+
+    @Column(name = "pay_amount", precision = 15, scale = 2)
+    private BigDecimal payAmount;
+
     @Column(name = "gl_journal_entry_id")
     private Long glJournalEntryId;
 

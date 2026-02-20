@@ -35,6 +35,8 @@ public class SalaryReportService {
         BigDecimal totalBonus = BigDecimal.ZERO;
         BigDecimal totalDeductions = BigDecimal.ZERO;
         BigDecimal totalNet = BigDecimal.ZERO;
+        BigDecimal totalAdvances = BigDecimal.ZERO;
+        BigDecimal totalCashPaid = BigDecimal.ZERO;
         int paidCount = 0;
         int pendingCount = 0;
         int cancelledCount = 0;
@@ -52,6 +54,11 @@ public class SalaryReportService {
             totalBonus = totalBonus.add(bonus);
             totalDeductions = totalDeductions.add(deduction);
             totalNet = totalNet.add(net);
+
+            BigDecimal advance = record.getAdvanceAmount() != null ? record.getAdvanceAmount() : BigDecimal.ZERO;
+            BigDecimal cashPay = record.getPayAmount() != null ? record.getPayAmount() : BigDecimal.ZERO;
+            totalAdvances = totalAdvances.add(advance);
+            totalCashPaid = totalCashPaid.add(cashPay);
 
             switch (record.getStatus()) {
                 case PAID -> paidCount++;
@@ -76,6 +83,8 @@ public class SalaryReportService {
                     .bonusAmount(bonus)
                     .deductionAmount(deduction)
                     .netAmount(net)
+                    .advanceAmount(advance)
+                    .payAmount(cashPay)
                     .status(record.getStatus().name())
                     .paidDate(record.getPaidDate())
                     .glJournalEntryId(record.getGlJournalEntryId())
@@ -121,6 +130,8 @@ public class SalaryReportService {
                         .totalBonus(totalBonus)
                         .totalDeductions(totalDeductions)
                         .totalNet(totalNet)
+                        .totalAdvances(totalAdvances)
+                        .totalCashPaid(totalCashPaid)
                         .totalEmployees(employees.size())
                         .paidCount(paidCount)
                         .pendingCount(pendingCount)

@@ -12,21 +12,17 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SalaryRecordDto {
+public class SalaryAdvanceDto {
     private Long id;
     private Long employeeId;
     private String employeeName;
     private String employeeCode;
+    private BigDecimal amount;
+    private LocalDate advanceDate;
     private Integer periodYear;
     private Integer periodMonth;
-    private BigDecimal baseAmount;
-    private BigDecimal bonusAmount;
-    private BigDecimal deductionAmount;
-    private BigDecimal netAmount;
-    private BigDecimal advanceAmount;
-    private BigDecimal payAmount;
     private String status;
-    private LocalDate paidDate;
+    private Long salaryRecordId;
     private Long glJournalEntryId;
     private String notes;
 }

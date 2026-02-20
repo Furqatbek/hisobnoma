@@ -42,6 +42,7 @@ public class GLIntegrationService {
     private static final String PURCHASE_EXPENSE = "5200";   // Expense: Purchases
     private static final String SALES_DISCOUNTS_ACCOUNT = "4200"; // Contra-Revenue: Sales Discounts
     private static final String SALARY_EXPENSE_ACCOUNT = "6100"; // Expense: Salary and Wages
+    private static final String SALARY_ADVANCE_ACCOUNT = "1400"; // Asset: Employee Salary Advances
 
     /**
      * Posts an inventory movement to the general ledger.
@@ -346,53 +347,114 @@ public class GLIntegrationService {
     // ============ Salary Payment Integration ============
 
     /**
+     * Posts a salary advance (avans) to the general ledger.
+     * Creates: DR Salary Advance (asset 1400), CR Cash (1100).
+     */
+    @Transactional
+    public Long postSalaryAdvance(
+            Long advanceId,
+            String employeeName,
+            BigDecimal amount,
+            Integer periodYear,
+            Integer periodMonth,
+            LocalDate advanceDate
+    ) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        String period = periodYear + "/" + String.format("%02d", periodMonth);
+
+        List<CreateJournalLineRequest> lines = new ArrayList<>();
+
+        Long advanceAccountId = resolveAccountId(SALARY_ADVANCE_ACCOUNT, tenantId);
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(advanceAccountId)
+                .debitAmount(amount)
+                .creditAmount(BigDecimal.ZERO)
+                .description("Avans: " + employeeName + " (" + period + ")")
+                .build());
+
+        Long cashAccountId = resolveAccountId(CASH_ACCOUNT, tenantId);
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(cashAccountId)
+                .debitAmount(BigDecimal.ZERO)
+                .creditAmount(amount)
+                .description("Avans to'lovi: " + employeeName)
+                .build());
+
+        String referenceNumber = "ADV-" + periodYear + String.format("%02d", periodMonth) + "-" + advanceId;
+
+        CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
+                .entryDate(advanceDate)
+                .description("Avans: " + employeeName + " - " + period)
+                .source(JournalSource.SALARY_PAYMENT)
+                .referenceType("SALARY_ADVANCE")
+                .referenceId(advanceId)
+                .referenceNumber(referenceNumber)
+                .lines(lines)
+                .build();
+
+        log.info("Posting salary advance to GL: {} - {} - {}", referenceNumber, employeeName, amount);
+        JournalEntry entry = journalEntryService.createAndPostEntry(request, tenantId);
+        return entry.getId();
+    }
+
+    /**
      * Posts a salary payment to the general ledger.
-     * Creates a journal entry: Debit Salary Expense, Credit Cash.
-     *
-     * @param salaryRecordId The salary record ID
-     * @param employeeName The employee full name
-     * @param netAmount The net salary amount paid
-     * @param periodYear The salary period year
-     * @param periodMonth The salary period month
-     * @param paymentDate The date of payment
-     * @return The ID of the created journal entry
+     * If advances were given, splits the entry:
+     *   DR Salary Expense (full net), CR Salary Advance (advance portion), CR Cash (remainder).
+     * If no advances: DR Salary Expense, CR Cash.
      */
     @Transactional
     public Long postSalaryPayment(
             Long salaryRecordId,
             String employeeName,
             BigDecimal netAmount,
+            BigDecimal advanceAmount,
+            BigDecimal cashPayAmount,
             Integer periodYear,
             Integer periodMonth,
             LocalDate paymentDate
     ) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
+        String period = periodYear + "/" + String.format("%02d", periodMonth);
 
         List<CreateJournalLineRequest> lines = new ArrayList<>();
 
-        // Debit Salary Expense
+        // Debit Salary Expense for full net amount
         Long salaryExpenseAccountId = resolveAccountId(SALARY_EXPENSE_ACCOUNT, tenantId);
         lines.add(CreateJournalLineRequest.builder()
                 .accountId(salaryExpenseAccountId)
                 .debitAmount(netAmount)
                 .creditAmount(BigDecimal.ZERO)
-                .description("Ish haqi: " + employeeName + " (" + periodYear + "/" + String.format("%02d", periodMonth) + ")")
+                .description("Ish haqi: " + employeeName + " (" + period + ")")
                 .build());
 
-        // Credit Cash
-        Long cashAccountId = resolveAccountId(CASH_ACCOUNT, tenantId);
-        lines.add(CreateJournalLineRequest.builder()
-                .accountId(cashAccountId)
-                .debitAmount(BigDecimal.ZERO)
-                .creditAmount(netAmount)
-                .description("Ish haqi to'lovi: " + employeeName)
-                .build());
+        // Credit Salary Advance (clear the advance asset) if there were advances
+        if (advanceAmount != null && advanceAmount.compareTo(BigDecimal.ZERO) > 0) {
+            Long advanceAccountId = resolveAccountId(SALARY_ADVANCE_ACCOUNT, tenantId);
+            lines.add(CreateJournalLineRequest.builder()
+                    .accountId(advanceAccountId)
+                    .debitAmount(BigDecimal.ZERO)
+                    .creditAmount(advanceAmount)
+                    .description("Avans hisobdan chiqarish: " + employeeName)
+                    .build());
+        }
+
+        // Credit Cash for the remainder paid now
+        if (cashPayAmount.compareTo(BigDecimal.ZERO) > 0) {
+            Long cashAccountId = resolveAccountId(CASH_ACCOUNT, tenantId);
+            lines.add(CreateJournalLineRequest.builder()
+                    .accountId(cashAccountId)
+                    .debitAmount(BigDecimal.ZERO)
+                    .creditAmount(cashPayAmount)
+                    .description("Ish haqi to'lovi: " + employeeName)
+                    .build());
+        }
 
         String referenceNumber = "SAL-" + periodYear + String.format("%02d", periodMonth) + "-" + salaryRecordId;
 
         CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
                 .entryDate(paymentDate)
-                .description("Ish haqi to'lovi: " + employeeName + " - " + periodYear + "/" + String.format("%02d", periodMonth))
+                .description("Ish haqi to'lovi: " + employeeName + " - " + period)
                 .source(JournalSource.SALARY_PAYMENT)
                 .referenceType("SALARY_PAYMENT")
                 .referenceId(salaryRecordId)
@@ -400,7 +462,7 @@ public class GLIntegrationService {
                 .lines(lines)
                 .build();
 
-        log.info("Posting salary payment to GL: {} - {} - {}", referenceNumber, employeeName, netAmount);
+        log.info("Posting salary payment to GL: {} - {} net={} advance={} cash={}", referenceNumber, employeeName, netAmount, advanceAmount, cashPayAmount);
         JournalEntry entry = journalEntryService.createAndPostEntry(request, tenantId);
         return entry.getId();
     }
