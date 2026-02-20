@@ -119,7 +119,7 @@ public class PurchaseOrderService {
         UnitOfMeasure uom = unitOfMeasureRepository.findByIdAndTenantId(request.getUomId(), tenantId)
                 .orElseThrow(() -> new NotFoundException("Unit of Measure not found with id: " + request.getUomId()));
 
-        return PurchaseOrderLine.builder()
+        PurchaseOrderLine line = PurchaseOrderLine.builder()
                 .product(product)
                 .lineNumber(lineNumber)
                 .description(request.getDescription())
@@ -132,6 +132,9 @@ public class PurchaseOrderService {
                 .expectedDate(request.getExpectedDate())
                 .tenantId(tenantId)
                 .build();
+
+        line.calculateLineTotal();
+        return line;
     }
 
     @Transactional
