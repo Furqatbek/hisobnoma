@@ -49,6 +49,9 @@ public class SalaryRecord extends TenantAwareEntity {
 
     private LocalDate paidDate;
 
+    @Column(name = "gl_journal_entry_id")
+    private Long glJournalEntryId;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 

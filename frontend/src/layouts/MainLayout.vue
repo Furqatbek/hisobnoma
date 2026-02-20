@@ -106,7 +106,8 @@ const navigation = computed(() => [
     children: [
       { name: 'Sales Report', href: '/reports/sales', icon: CurrencyDollarIcon },
       { name: 'Inventory Report', href: '/reports/inventory', icon: ClipboardDocumentListIcon },
-      { name: 'Financial Report', href: '/reports/financial', icon: DocumentTextIcon }
+      { name: 'Financial Report', href: '/reports/financial', icon: DocumentTextIcon },
+      { name: 'Ish haqi hisoboti', href: '/reports/salary', icon: BanknotesIcon }
     ]
   },
   {

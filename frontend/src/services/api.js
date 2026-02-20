@@ -286,6 +286,9 @@ export const reportsApi = {
   getAPAgingReport: (data) => api.post('/reports/financial/ap-aging', data),
   exportAPAgingReport: (data) => api.post('/reports/financial/ap-aging/export', data, { responseType: 'blob' }),
 
+  // HR / Salary Reports
+  getSalaryReport: (year, month) => api.get('/reports/hr/salary', { params: { year, month } }),
+
   // Report definitions & schedules
   getDefinitions: (params) => api.get('/reports/definitions', { params }),
   getSchedules: (params) => api.get('/reports/schedules', { params }),

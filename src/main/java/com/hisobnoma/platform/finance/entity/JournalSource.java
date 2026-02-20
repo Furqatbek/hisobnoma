@@ -50,6 +50,11 @@ public enum JournalSource {
     YEAR_END_CLOSING,
 
     /**
+     * Entry from HR salary payment
+     */
+    SALARY_PAYMENT,
+
+    /**
      * System generated entry
      */
     SYSTEM

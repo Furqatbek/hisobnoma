@@ -26,4 +26,8 @@ public interface SalaryRecordRepository extends JpaRepository<SalaryRecord, Long
     @Query("SELECT COALESCE(SUM(s.netAmount), 0) FROM SalaryRecord s " +
            "WHERE s.tenantId = :tenantId AND s.periodYear = :year AND s.periodMonth = :month AND s.status = 'PAID'")
     BigDecimal sumPaidByPeriod(Long tenantId, Integer year, Integer month);
+
+    @Query("SELECT s FROM SalaryRecord s JOIN FETCH s.employee e LEFT JOIN FETCH e.department LEFT JOIN FETCH e.position " +
+           "WHERE s.tenantId = :tenantId AND s.periodYear = :year AND s.periodMonth = :month ORDER BY e.lastName, e.firstName")
+    List<SalaryRecord> findByPeriodWithEmployee(Long tenantId, Integer year, Integer month);
 }

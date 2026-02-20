@@ -40,6 +40,7 @@ public class ReportController {
     private final InventoryReportService inventoryReportService;
     private final SalesReportService salesReportService;
     private final FinancialReportService financialReportService;
+    private final SalaryReportService salaryReportService;
     private final ReportExportService exportService;
 
     // ==================== Report Definitions ====================
@@ -203,6 +204,17 @@ public class ReportController {
         AgingReportDTO report = financialReportService.generateAPAgingReport(request);
         byte[] data = exportService.exportReport(report, format, "AP_AGING");
         return buildExportResponse(data, format, "ap-aging");
+    }
+
+    // ==================== HR / Salary Reports ====================
+
+    @GetMapping("/hr/salary")
+    @PreAuthorize("hasAuthority('REPORT_FINANCIAL_VIEW') or hasAuthority('HR_SALARY_READ')")
+    @Operation(summary = "Generate Salary Report", description = "Generate salary report for a given period")
+    public ResponseEntity<ApiResponse<SalaryReportDTO>> generateSalaryReport(
+            @RequestParam Integer year, @RequestParam Integer month) {
+        SalaryReportDTO report = salaryReportService.generateSalaryReport(year, month);
+        return ResponseEntity.ok(ApiResponse.success(report));
     }
 
     // ==================== Report Schedules ====================

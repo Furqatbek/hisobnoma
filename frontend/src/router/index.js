@@ -184,6 +184,11 @@ const routes = [
             path: 'financial',
             name: 'financial-report',
             component: () => import('@/views/reports/FinancialReportView.vue')
+          },
+          {
+            path: 'salary',
+            name: 'salary-report',
+            component: () => import('@/views/reports/SalaryReportView.vue')
           }
         ]
       },

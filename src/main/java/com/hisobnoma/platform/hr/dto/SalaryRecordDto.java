@@ -25,5 +25,6 @@ public class SalaryRecordDto {
     private BigDecimal netAmount;
     private String status;
     private LocalDate paidDate;
+    private Long glJournalEntryId;
     private String notes;
 }

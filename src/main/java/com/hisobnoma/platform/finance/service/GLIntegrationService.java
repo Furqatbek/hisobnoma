@@ -41,6 +41,7 @@ public class GLIntegrationService {
     private static final String ACCOUNTS_PAYABLE = "2100";   // Liability: Accounts Payable
     private static final String PURCHASE_EXPENSE = "5200";   // Expense: Purchases
     private static final String SALES_DISCOUNTS_ACCOUNT = "4200"; // Contra-Revenue: Sales Discounts
+    private static final String SALARY_EXPENSE_ACCOUNT = "6100"; // Expense: Salary and Wages
 
     /**
      * Posts an inventory movement to the general ledger.
@@ -340,6 +341,68 @@ public class GLIntegrationService {
         Optional<Account> account = accountRepository.findByCodeAndTenantId(accountCode, tenantId);
         return account.map(Account::getId)
                 .orElseThrow(() -> new BusinessException("Account not found with code: " + accountCode));
+    }
+
+    // ============ Salary Payment Integration ============
+
+    /**
+     * Posts a salary payment to the general ledger.
+     * Creates a journal entry: Debit Salary Expense, Credit Cash.
+     *
+     * @param salaryRecordId The salary record ID
+     * @param employeeName The employee full name
+     * @param netAmount The net salary amount paid
+     * @param periodYear The salary period year
+     * @param periodMonth The salary period month
+     * @param paymentDate The date of payment
+     * @return The ID of the created journal entry
+     */
+    @Transactional
+    public Long postSalaryPayment(
+            Long salaryRecordId,
+            String employeeName,
+            BigDecimal netAmount,
+            Integer periodYear,
+            Integer periodMonth,
+            LocalDate paymentDate
+    ) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+
+        List<CreateJournalLineRequest> lines = new ArrayList<>();
+
+        // Debit Salary Expense
+        Long salaryExpenseAccountId = resolveAccountId(SALARY_EXPENSE_ACCOUNT, tenantId);
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(salaryExpenseAccountId)
+                .debitAmount(netAmount)
+                .creditAmount(BigDecimal.ZERO)
+                .description("Ish haqi: " + employeeName + " (" + periodYear + "/" + String.format("%02d", periodMonth) + ")")
+                .build());
+
+        // Credit Cash
+        Long cashAccountId = resolveAccountId(CASH_ACCOUNT, tenantId);
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(cashAccountId)
+                .debitAmount(BigDecimal.ZERO)
+                .creditAmount(netAmount)
+                .description("Ish haqi to'lovi: " + employeeName)
+                .build());
+
+        String referenceNumber = "SAL-" + periodYear + String.format("%02d", periodMonth) + "-" + salaryRecordId;
+
+        CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
+                .entryDate(paymentDate)
+                .description("Ish haqi to'lovi: " + employeeName + " - " + periodYear + "/" + String.format("%02d", periodMonth))
+                .source(JournalSource.SALARY_PAYMENT)
+                .referenceType("SALARY_PAYMENT")
+                .referenceId(salaryRecordId)
+                .referenceNumber(referenceNumber)
+                .lines(lines)
+                .build();
+
+        log.info("Posting salary payment to GL: {} - {} - {}", referenceNumber, employeeName, netAmount);
+        JournalEntry entry = journalEntryService.createAndPostEntry(request, tenantId);
+        return entry.getId();
     }
 
     // ============ AP Invoice Integration ============

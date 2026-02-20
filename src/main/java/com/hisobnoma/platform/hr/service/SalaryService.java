@@ -10,7 +10,9 @@ import com.hisobnoma.platform.hr.entity.Employee;
 import com.hisobnoma.platform.hr.entity.SalaryRecord;
 import com.hisobnoma.platform.hr.repository.EmployeeRepository;
 import com.hisobnoma.platform.hr.repository.SalaryRecordRepository;
+import com.hisobnoma.platform.finance.service.GLIntegrationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,11 +25,13 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SalaryService {
 
     private final SalaryRecordRepository salaryRecordRepository;
     private final EmployeeRepository employeeRepository;
     private final SecurityContextHelper securityContextHelper;
+    private final GLIntegrationService glIntegrationService;
 
     @Transactional(readOnly = true)
     public PageResponse<SalaryRecordDto> getAll(Pageable pageable) {
@@ -107,6 +111,23 @@ public class SalaryService {
         record.setStatus(SalaryRecord.SalaryStatus.PAID);
         record.setPaidDate(LocalDate.now());
 
+        // Post salary payment to General Ledger
+        try {
+            Long journalEntryId = glIntegrationService.postSalaryPayment(
+                    record.getId(),
+                    record.getEmployee().getFullName(),
+                    record.getNetAmount(),
+                    record.getPeriodYear(),
+                    record.getPeriodMonth(),
+                    record.getPaidDate()
+            );
+            record.setGlJournalEntryId(journalEntryId);
+            log.info("Salary payment posted to GL: salaryRecordId={}, journalEntryId={}", id, journalEntryId);
+        } catch (Exception e) {
+            log.error("Failed to post salary payment to GL for salaryRecordId={}: {}", id, e.getMessage());
+            throw new BusinessException("Salary payment failed: could not record in finance system - " + e.getMessage());
+        }
+
         return toDto(salaryRecordRepository.save(record));
     }
 
@@ -138,6 +159,7 @@ public class SalaryService {
                 .netAmount(s.getNetAmount())
                 .status(s.getStatus().name())
                 .paidDate(s.getPaidDate())
+                .glJournalEntryId(s.getGlJournalEntryId())
                 .notes(s.getNotes())
                 .build();
     }
