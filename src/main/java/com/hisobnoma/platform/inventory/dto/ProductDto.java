@@ -63,6 +63,7 @@ public class ProductDto {
     private String taxCode;
     private String notes;
     private String tags;
+    private String link;
 
     private BigDecimal margin;
     private BigDecimal markup;

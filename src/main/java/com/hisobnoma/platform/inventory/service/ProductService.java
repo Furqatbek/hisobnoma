@@ -286,6 +286,7 @@ public class ProductService {
         if (request.getTaxCode() != null) product.setTaxCode(request.getTaxCode());
         if (request.getNotes() != null) product.setNotes(request.getNotes());
         if (request.getTags() != null) product.setTags(request.getTags());
+        if (request.getLink() != null) product.setLink(request.getLink());
 
         product = productRepository.save(product);
         log.info("Updated product: {}", product.getId());

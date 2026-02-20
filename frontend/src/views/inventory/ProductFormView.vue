@@ -20,6 +20,7 @@ const form = reactive({
   barcode: '',
   name: '',
   description: '',
+  link: '',
   categoryId: null,
   brandId: null,
   baseUomId: null,
@@ -154,6 +155,11 @@ async function handleSubmit() {
           <div class="md:col-span-2">
             <label class="label">Description</label>
             <textarea v-model="form.description" rows="3" class="input"></textarea>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="label">Link</label>
+            <input v-model="form.link" type="url" class="input" placeholder="https://" />
           </div>
 
           <div>
