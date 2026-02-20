@@ -58,6 +58,8 @@ services:
       REDIS_PORT: 6379
     ports:
       - "8080:8080"
+    volumes:
+      - uploads_data:/app/uploads
     networks:
       - hisobnoma-network
 
@@ -77,6 +79,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:
 
 networks:
   hisobnoma-network:

@@ -34,6 +34,7 @@ services:
     volumes:
       - app_logs:/app/logs
       - app_data:/app/data
+      - uploads_data:/app/uploads
     networks:
       - hisobnoma-network
     deploy:
@@ -237,6 +238,8 @@ volumes:
     name: hisobnoma_grafana_data
   alertmanager_data:
     name: hisobnoma_alertmanager_data
+  uploads_data:
+    name: hisobnoma_uploads_data
   loki_data:
     name: hisobnoma_loki_data
 
