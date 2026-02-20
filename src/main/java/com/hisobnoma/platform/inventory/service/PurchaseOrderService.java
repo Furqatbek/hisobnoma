@@ -39,11 +39,19 @@ public class PurchaseOrderService {
         return PageResponse.of(page.map(purchaseOrderMapper::toDto));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PurchaseOrderDto getPurchaseOrder(Long id) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         PurchaseOrder po = purchaseOrderRepository.findByIdWithLinesAndTenantId(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Purchase Order not found with id: " + id));
+
+        // Recalculate header totals from line totals (fixes POs created before line total fix)
+        java.math.BigDecimal oldSubtotal = po.getSubtotal();
+        po.recalculateTotals();
+        if (oldSubtotal == null || oldSubtotal.compareTo(po.getSubtotal()) != 0) {
+            purchaseOrderRepository.save(po);
+        }
+
         PurchaseOrderDto dto = purchaseOrderMapper.toDto(po);
         dto.setLines(purchaseOrderMapper.toLineDtoList(po.getLines()));
         return dto;

@@ -53,6 +53,7 @@ function formatCurrency(value) {
 }
 
 function formatDate(date) {
+  if (!date) return '-'
   return new Date(date).toLocaleDateString()
 }
 
@@ -77,7 +78,7 @@ function getStatusClass(status) {
         </button>
         <div>
           <h1 class="text-2xl font-bold text-gray-900">
-            Purchase Order {{ order?.orderNumber || `#${route.params.id}` }}
+            Purchase Order {{ order?.poNumber || `#${route.params.id}` }}
           </h1>
           <p v-if="order" class="text-sm text-gray-500">Created {{ formatDate(order.createdAt) }}</p>
         </div>
@@ -85,7 +86,7 @@ function getStatusClass(status) {
 
       <div v-if="order" class="flex space-x-3">
         <button
-          v-if="order.status === 'PENDING'"
+          v-if="order.status === 'DRAFT'"
           @click="approveOrder"
           class="btn-success"
         >
@@ -117,7 +118,7 @@ function getStatusClass(status) {
 
     <template v-else-if="order">
       <!-- Order Info -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div class="card">
           <div class="card-body">
             <p class="text-sm text-gray-500">Status</p>
@@ -126,14 +127,46 @@ function getStatusClass(status) {
         </div>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Supplier</p>
-            <p class="font-medium mt-1">{{ order.supplier?.name || '-' }}</p>
+            <p class="text-sm text-gray-500">Vendor</p>
+            <p class="font-medium mt-1">{{ order.vendorName || '-' }}</p>
+            <p class="text-xs text-gray-400">{{ order.vendorCode }}</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <p class="text-sm text-gray-500">Location</p>
+            <p class="font-medium mt-1">{{ order.locationName || '-' }}</p>
+            <p class="text-xs text-gray-400">{{ order.locationCode }}</p>
           </div>
         </div>
         <div class="card">
           <div class="card-body">
             <p class="text-sm text-gray-500">Total Amount</p>
-            <p class="text-2xl font-bold text-primary-600 mt-1">{{ formatCurrency(order.totalAmount) }}</p>
+            <p class="text-2xl font-bold text-primary-600 mt-1">{{ formatCurrency(order.totalAmount) }} {{ order.currency }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Details -->
+      <div class="card">
+        <div class="card-body">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <p class="text-gray-500">Order Date</p>
+              <p class="font-medium">{{ formatDate(order.orderDate) }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500">Expected Date</p>
+              <p class="font-medium">{{ formatDate(order.expectedDate) }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500">Payment Terms</p>
+              <p class="font-medium">{{ order.paymentTerms || '-' }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500">Currency</p>
+              <p class="font-medium">{{ order.currency }}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -147,24 +180,77 @@ function getStatusClass(status) {
           <table class="table">
             <thead>
               <tr>
+                <th>#</th>
                 <th>Product</th>
+                <th>UOM</th>
                 <th class="text-right">Quantity</th>
+                <th class="text-right">Received</th>
+                <th class="text-right">Pending</th>
                 <th class="text-right">Unit Price</th>
-                <th class="text-right">Subtotal</th>
+                <th class="text-right">Line Total</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
-              <tr v-for="item in order.items" :key="item.id">
+              <tr v-for="line in order.lines" :key="line.id">
+                <td class="text-gray-500">{{ line.lineNumber }}</td>
                 <td>
-                  <div class="font-medium">{{ item.product?.name || item.productName }}</div>
-                  <div class="text-sm text-gray-500">{{ item.product?.sku || item.sku }}</div>
+                  <div class="font-medium">{{ line.productName }}</div>
+                  <div class="text-sm text-gray-500">{{ line.productSku }}</div>
                 </td>
-                <td class="text-right">{{ item.quantity }}</td>
-                <td class="text-right">{{ formatCurrency(item.unitPrice) }}</td>
-                <td class="text-right font-medium">{{ formatCurrency(item.quantity * item.unitPrice) }}</td>
+                <td>{{ line.uomName }}</td>
+                <td class="text-right">{{ line.quantity }}</td>
+                <td class="text-right">{{ line.receivedQuantity }}</td>
+                <td class="text-right">{{ line.pendingQuantity }}</td>
+                <td class="text-right">{{ formatCurrency(line.unitPrice) }}</td>
+                <td class="text-right font-medium">{{ formatCurrency(line.lineTotal) }}</td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Totals -->
+        <div class="card-body border-t">
+          <div class="flex justify-end">
+            <div class="w-64 space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-gray-500">Subtotal</span>
+                <span class="font-medium">{{ formatCurrency(order.subtotal) }}</span>
+              </div>
+              <div v-if="order.discountAmount > 0" class="flex justify-between text-red-600">
+                <span>Discount</span>
+                <span>-{{ formatCurrency(order.discountAmount) }}</span>
+              </div>
+              <div v-if="order.taxAmount > 0" class="flex justify-between">
+                <span class="text-gray-500">Tax</span>
+                <span>{{ formatCurrency(order.taxAmount) }}</span>
+              </div>
+              <div v-if="order.shippingAmount > 0" class="flex justify-between">
+                <span class="text-gray-500">Shipping</span>
+                <span>{{ formatCurrency(order.shippingAmount) }}</span>
+              </div>
+              <div class="flex justify-between pt-2 border-t font-bold text-base">
+                <span>Total</span>
+                <span>{{ formatCurrency(order.totalAmount) }} {{ order.currency }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div v-if="order.notes || order.internalNotes" class="card">
+        <div class="card-header">
+          <h3 class="text-lg font-medium">Notes</h3>
+        </div>
+        <div class="card-body space-y-3">
+          <div v-if="order.notes">
+            <p class="text-sm text-gray-500">Notes</p>
+            <p class="mt-1">{{ order.notes }}</p>
+          </div>
+          <div v-if="order.internalNotes">
+            <p class="text-sm text-gray-500">Internal Notes</p>
+            <p class="mt-1">{{ order.internalNotes }}</p>
+          </div>
         </div>
       </div>
     </template>
