@@ -280,6 +280,8 @@ export const reportsApi = {
   // Financial Reports
   getTrialBalance: (data) => api.post('/reports/financial/trial-balance', data),
   exportTrialBalance: (data) => api.post('/reports/financial/trial-balance/export', data, { responseType: 'blob' }),
+  getIncomeStatement: (data) => api.post('/reports/financial/income-statement', data),
+  exportIncomeStatement: (data) => api.post('/reports/financial/income-statement/export', data, { responseType: 'blob' }),
   getARAgingReport: (data) => api.post('/reports/financial/ar-aging', data),
   exportARAgingReport: (data) => api.post('/reports/financial/ar-aging/export', data, { responseType: 'blob' }),
   getAPAgingReport: (data) => api.post('/reports/financial/ap-aging', data),
@@ -337,6 +339,17 @@ export const rolesApi = {
   delete: (id) => api.delete(`/roles/${id}`),
   assignPermissions: (id, permissionCodes) => api.put(`/roles/${id}/permissions`, permissionCodes),
   getAllPermissions: () => api.get('/roles/permissions')
+}
+
+// Journal Entries API - Backend: /api/v1/finance/journal-entries
+export const journalEntriesApi = {
+  getAll: (params) => api.get('/finance/journal-entries', { params }),
+  getById: (id) => api.get(`/finance/journal-entries/${id}`),
+  getWithLines: (id) => api.get(`/finance/journal-entries/${id}/lines`),
+  getBySource: (source, params) => api.get(`/finance/journal-entries/source/${source}`, { params }),
+  getByStatus: (status, params) => api.get(`/finance/journal-entries/status/${status}`, { params }),
+  getByDateRange: (startDate, endDate) => api.get('/finance/journal-entries/date-range', { params: { startDate, endDate } }),
+  search: (q, params) => api.get('/finance/journal-entries/search', { params: { q, ...params } })
 }
 
 // AP Invoices (Expenses) API - Backend: /api/v1/ap/invoices

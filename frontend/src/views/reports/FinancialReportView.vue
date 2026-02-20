@@ -1,10 +1,11 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { reportsApi } from '@/services/api'
 import { ArrowDownTrayIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
 
 const loading = ref(true)
 const trialBalance = ref(null)
+const incomeStatement = ref(null)
 const arAging = ref(null)
 const apAging = ref(null)
 
@@ -16,12 +17,14 @@ const filters = reactive({
 async function fetchReport() {
   loading.value = true
   try {
-    const [tbRes, arRes, apRes] = await Promise.all([
+    const [tbRes, isRes, arRes, apRes] = await Promise.all([
       reportsApi.getTrialBalance({ startDate: filters.startDate, endDate: filters.endDate }),
+      reportsApi.getIncomeStatement({ startDate: filters.startDate, endDate: filters.endDate }),
       reportsApi.getARAgingReport({ startDate: filters.startDate, endDate: filters.endDate }).catch(() => null),
       reportsApi.getAPAgingReport({ startDate: filters.startDate, endDate: filters.endDate }).catch(() => null)
     ])
     trialBalance.value = tbRes.data.data || tbRes.data
+    incomeStatement.value = isRes.data.data || isRes.data
     arAging.value = arRes?.data?.data || arRes?.data || null
     apAging.value = apRes?.data?.data || apRes?.data || null
   } catch (error) {
@@ -32,41 +35,6 @@ async function fetchReport() {
 }
 
 onMounted(fetchReport)
-
-// Derive P&L figures from trial balance account types
-const summary = computed(() => {
-  if (!trialBalance.value?.accounts) return null
-  const accounts = trialBalance.value.accounts.filter(a => !a.isHeader)
-
-  let revenue = 0
-  let expenses = 0
-  let assets = 0
-  let liabilities = 0
-
-  for (const acc of accounts) {
-    const type = acc.accountType?.toUpperCase()
-    const credit = Number(acc.creditBalance) || 0
-    const debit = Number(acc.debitBalance) || 0
-
-    if (type === 'REVENUE' || type === 'INCOME') {
-      revenue += credit - debit
-    } else if (type === 'EXPENSE' || type === 'COST_OF_GOODS_SOLD' || type === 'COGS') {
-      expenses += debit - credit
-    } else if (type === 'ASSET') {
-      assets += debit - credit
-    } else if (type === 'LIABILITY' || type === 'EQUITY') {
-      liabilities += credit - debit
-    }
-  }
-
-  return {
-    revenue,
-    expenses,
-    netProfit: revenue - expenses,
-    assets,
-    liabilities
-  }
-})
 
 async function exportReport() {
   try {
@@ -125,14 +93,14 @@ function formatCurrency(value) {
     </div>
 
     <template v-else-if="trialBalance">
-      <!-- P&L Summary Cards derived from trial balance -->
-      <div v-if="summary" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- P&L Summary Cards from Income Statement -->
+      <div v-if="incomeStatement?.summary" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="card">
           <div class="card-body">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500">Daromad</p>
-                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(summary.revenue) }}</p>
+                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(incomeStatement.summary.totalRevenue) }}</p>
               </div>
               <ArrowTrendingUpIcon class="h-8 w-8 text-green-400" />
             </div>
@@ -143,7 +111,7 @@ function formatCurrency(value) {
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500">Xarajatlar</p>
-                <p class="text-2xl font-bold text-red-600">{{ formatCurrency(summary.expenses) }}</p>
+                <p class="text-2xl font-bold text-red-600">{{ formatCurrency(incomeStatement.summary.totalExpenses) }}</p>
               </div>
               <ArrowTrendingDownIcon class="h-8 w-8 text-red-400" />
             </div>
@@ -154,13 +122,13 @@ function formatCurrency(value) {
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500">Sof foyda</p>
-                <p class="text-2xl font-bold" :class="summary.netProfit >= 0 ? 'text-primary-600' : 'text-red-600'">
-                  {{ formatCurrency(summary.netProfit) }}
+                <p class="text-2xl font-bold" :class="incomeStatement.summary.netIncome >= 0 ? 'text-primary-600' : 'text-red-600'">
+                  {{ formatCurrency(incomeStatement.summary.netIncome) }}
                 </p>
               </div>
             </div>
-            <p v-if="summary.revenue > 0" class="text-sm text-gray-500 mt-2">
-              Margina: {{ ((summary.netProfit / summary.revenue) * 100).toFixed(1) }}%
+            <p v-if="incomeStatement.summary.totalRevenue > 0" class="text-sm text-gray-500 mt-2">
+              Margina: {{ ((incomeStatement.summary.netIncome / incomeStatement.summary.totalRevenue) * 100).toFixed(1) }}%
             </p>
           </div>
         </div>
@@ -180,6 +148,73 @@ function formatCurrency(value) {
               Farq: {{ formatCurrency(trialBalance.totals.difference) }}
             </p>
           </div>
+        </div>
+      </div>
+
+      <!-- Income Statement Breakdown -->
+      <div v-if="incomeStatement" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Revenue breakdown -->
+        <div class="card">
+          <div class="card-header bg-green-50">
+            <h3 class="text-lg font-medium text-green-800">Daromadlar</h3>
+          </div>
+          <div v-if="incomeStatement.revenueItems?.length" class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Kod</th>
+                  <th>Hisob nomi</th>
+                  <th class="text-right">Summa</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="item in incomeStatement.revenueItems" :key="item.accountId">
+                  <td class="font-mono text-sm">{{ item.accountCode }}</td>
+                  <td class="font-medium">{{ item.accountName }}</td>
+                  <td class="text-right font-medium text-green-600">{{ formatCurrency(item.amount) }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="border-t-2 border-gray-300">
+                <tr class="font-bold">
+                  <td colspan="2">Jami daromad</td>
+                  <td class="text-right text-green-600">{{ formatCurrency(incomeStatement.summary.totalRevenue) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div v-else class="card-body text-center text-gray-500">Daromad yo'q</div>
+        </div>
+
+        <!-- Expense breakdown -->
+        <div class="card">
+          <div class="card-header bg-red-50">
+            <h3 class="text-lg font-medium text-red-800">Xarajatlar</h3>
+          </div>
+          <div v-if="incomeStatement.expenseItems?.length" class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Kod</th>
+                  <th>Hisob nomi</th>
+                  <th class="text-right">Summa</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="item in incomeStatement.expenseItems" :key="item.accountId">
+                  <td class="font-mono text-sm">{{ item.accountCode }}</td>
+                  <td class="font-medium">{{ item.accountName }}</td>
+                  <td class="text-right font-medium text-red-600">{{ formatCurrency(item.amount) }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="border-t-2 border-gray-300">
+                <tr class="font-bold">
+                  <td colspan="2">Jami xarajat</td>
+                  <td class="text-right text-red-600">{{ formatCurrency(incomeStatement.summary.totalExpenses) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div v-else class="card-body text-center text-gray-500">Xarajat yo'q</div>
         </div>
       </div>
 
