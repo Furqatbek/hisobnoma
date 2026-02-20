@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/services/api'
+import { getAccessToken, setTokens, clearTokens, setRememberMe } from '@/services/tokenStorage'
 import router from '@/router'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -33,11 +34,13 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
+      // Set storage mode before saving tokens
+      setRememberMe(credentials.rememberMe)
+
       const response = await authApi.login(credentials)
       const { accessToken, refreshToken, user: userData } = response.data.data
 
-      localStorage.setItem('accessToken', accessToken)
-      localStorage.setItem('refreshToken', refreshToken)
+      setTokens(accessToken, refreshToken)
       user.value = userData
 
       router.push('/dashboard')
@@ -56,15 +59,14 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (err) {
       console.error('Logout error:', err)
     } finally {
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
+      clearTokens()
       user.value = null
       router.push('/login')
     }
   }
 
   async function fetchUser() {
-    const token = localStorage.getItem('accessToken')
+    const token = getAccessToken()
     if (!token) return
 
     loading.value = true
@@ -73,8 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = response.data.data
     } catch (err) {
       console.error('Failed to fetch user:', err)
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
+      clearTokens()
       user.value = null
     } finally {
       loading.value = false
@@ -82,7 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function initializeAuth() {
-    const token = localStorage.getItem('accessToken')
+    const token = getAccessToken()
     if (token) {
       await fetchUser()
     }

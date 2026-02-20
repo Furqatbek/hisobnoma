@@ -8,7 +8,8 @@ const authStore = useAuthStore()
 
 const form = reactive({
   username: '',
-  password: ''
+  password: '',
+  rememberMe: false
 })
 
 const showPassword = ref(false)
@@ -45,7 +46,8 @@ async function handleSubmit() {
 
   const result = await authStore.login({
     username: form.username,
-    password: form.password
+    password: form.password,
+    rememberMe: form.rememberMe
   })
 
   if (!result.success) {
@@ -123,6 +125,7 @@ async function handleSubmit() {
           <div class="flex items-center">
             <input
               id="remember"
+              v-model="form.rememberMe"
               type="checkbox"
               class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             />

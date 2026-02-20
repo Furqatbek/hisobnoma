@@ -77,9 +77,9 @@ public class AuthService {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
 
             String accessToken = tokenProvider.generateAccessToken(userPrincipal);
-            String refreshToken = createRefreshToken(user, ipAddress, deviceInfo);
+            String refreshToken = createRefreshToken(user, ipAddress, deviceInfo, request.isRememberMe());
 
-            return buildAuthResponse(accessToken, refreshToken, user, userPrincipal);
+            return buildAuthResponse(accessToken, refreshToken, user, userPrincipal, request.isRememberMe());
 
         } catch (BadCredentialsException e) {
             handleFailedLogin(user);
@@ -103,12 +103,13 @@ public class AuthService {
         UserPrincipal userPrincipal = UserPrincipal.create(user);
         String newAccessToken = tokenProvider.generateAccessToken(userPrincipal);
 
-        // Rotate refresh token
+        // Rotate refresh token - preserve the original expiry duration
+        boolean wasRemembered = refreshToken.isRemembered();
         refreshToken.revoke();
         refreshTokenRepository.save(refreshToken);
-        String newRefreshToken = createRefreshToken(user, refreshToken.getIpAddress(), refreshToken.getDeviceInfo());
+        String newRefreshToken = createRefreshToken(user, refreshToken.getIpAddress(), refreshToken.getDeviceInfo(), wasRemembered);
 
-        return buildAuthResponse(newAccessToken, newRefreshToken, user, userPrincipal);
+        return buildAuthResponse(newAccessToken, newRefreshToken, user, userPrincipal, wasRemembered);
     }
 
     @Transactional
@@ -225,12 +226,16 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    private String createRefreshToken(User user, String ipAddress, String deviceInfo) {
+    private String createRefreshToken(User user, String ipAddress, String deviceInfo, boolean rememberMe) {
         String token = UUID.randomUUID().toString();
+        long expiryMs = rememberMe
+                ? tokenProvider.getRefreshTokenExpiration() * 4  // 28 days when remembered
+                : tokenProvider.getRefreshTokenExpiration();      // 7 days default
         RefreshToken refreshToken = RefreshToken.builder()
                 .token(token)
                 .user(user)
-                .expiresAt(Instant.now().plusMillis(tokenProvider.getRefreshTokenExpiration()))
+                .expiresAt(Instant.now().plusMillis(expiryMs))
+                .remembered(rememberMe)
                 .ipAddress(ipAddress)
                 .deviceInfo(deviceInfo)
                 .build();
@@ -240,12 +245,13 @@ public class AuthService {
     }
 
     private AuthResponse buildAuthResponse(String accessToken, String refreshToken,
-                                           User user, UserPrincipal userPrincipal) {
+                                           User user, UserPrincipal userPrincipal, boolean rememberMe) {
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(tokenProvider.getAccessTokenExpiration() / 1000)
+                .rememberMe(rememberMe)
                 .user(buildUserInfo(user, userPrincipal))
                 .build();
     }

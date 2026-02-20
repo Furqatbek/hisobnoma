@@ -17,6 +17,7 @@ public class AuthResponse {
     private String refreshToken;
     private String tokenType;
     private long expiresIn;
+    private boolean rememberMe;
     private UserInfo user;
 
     @Data

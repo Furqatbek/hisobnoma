@@ -1,5 +1,6 @@
 import axios from 'axios'
 import router from '@/router'
+import { getAccessToken, getRefreshToken, setTokens, clearTokens } from '@/services/tokenStorage'
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -12,7 +13,7 @@ const api = axios.create({
 // Request interceptor - add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken')
+    const token = getAccessToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -31,7 +32,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
-      const refreshToken = localStorage.getItem('refreshToken')
+      const refreshToken = getRefreshToken()
       if (refreshToken) {
         try {
           const response = await axios.post('/api/v1/auth/refresh', {
@@ -40,15 +41,13 @@ api.interceptors.response.use(
 
           const { accessToken, refreshToken: newRefreshToken } = response.data.data
 
-          localStorage.setItem('accessToken', accessToken)
-          localStorage.setItem('refreshToken', newRefreshToken)
+          setTokens(accessToken, newRefreshToken)
 
           originalRequest.headers.Authorization = `Bearer ${accessToken}`
           return api(originalRequest)
         } catch (refreshError) {
           // Refresh failed - logout
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
+          clearTokens()
           router.push('/login')
           return Promise.reject(refreshError)
         }

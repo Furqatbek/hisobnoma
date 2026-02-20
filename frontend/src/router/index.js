@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { getAccessToken } from '@/services/tokenStorage'
 
 // Layouts
 import MainLayout from '@/layouts/MainLayout.vue'
@@ -350,7 +351,7 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
   // Wait for auth to initialize
-  if (!authStore.isAuthenticated && localStorage.getItem('accessToken')) {
+  if (!authStore.isAuthenticated && getAccessToken()) {
     await authStore.initializeAuth()
   }
 

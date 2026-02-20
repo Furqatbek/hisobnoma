@@ -36,6 +36,10 @@ public class RefreshToken extends BaseEntity {
 
     private String ipAddress;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean remembered = false;
+
     public boolean isExpired() {
         return Instant.now().isAfter(expiresAt);
     }
