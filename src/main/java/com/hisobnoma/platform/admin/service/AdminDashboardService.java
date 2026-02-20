@@ -5,6 +5,13 @@ import com.hisobnoma.platform.admin.entity.AuditLog;
 import com.hisobnoma.platform.admin.repository.AuditLogRepository;
 import com.hisobnoma.platform.auth.repository.UserRepository;
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
+import com.hisobnoma.platform.finance.repository.APInvoiceRepository;
+import com.hisobnoma.platform.finance.repository.ARInvoiceRepository;
+import com.hisobnoma.platform.finance.repository.BankAccountRepository;
+import com.hisobnoma.platform.inventory.repository.ProductRepository;
+import com.hisobnoma.platform.inventory.repository.PurchaseOrderRepository;
+import com.hisobnoma.platform.inventory.repository.StockRepository;
+import com.hisobnoma.platform.pos.repository.POSTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +34,13 @@ public class AdminDashboardService {
     private final UserRepository userRepository;
     private final AuditLogRepository auditLogRepository;
     private final SecurityContextHelper securityContextHelper;
+    private final POSTransactionRepository posTransactionRepository;
+    private final ProductRepository productRepository;
+    private final StockRepository stockRepository;
+    private final PurchaseOrderRepository purchaseOrderRepository;
+    private final ARInvoiceRepository arInvoiceRepository;
+    private final APInvoiceRepository apInvoiceRepository;
+    private final BankAccountRepository bankAccountRepository;
 
     @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
@@ -37,6 +51,10 @@ public class AdminDashboardService {
         Instant startOfWeek = LocalDate.now().minusDays(7).atStartOfDay(ZoneId.systemDefault()).toInstant();
         Instant startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
 
+        LocalDate today = LocalDate.now();
+        LocalDate weekAgo = today.minusDays(7);
+        LocalDate monthStart = today.withDayOfMonth(1);
+
         return DashboardStatsDTO.builder()
                 // User statistics
                 .totalUsers(getUserCount(tenantId))
@@ -44,6 +62,32 @@ public class AdminDashboardService {
                 .newUsersToday(getNewUserCount(tenantId, startOfToday))
                 .newUsersThisWeek(getNewUserCount(tenantId, startOfWeek))
                 .newUsersThisMonth(getNewUserCount(tenantId, startOfMonth))
+
+                // Sales statistics
+                .totalSalesToday(getSalesTotal(tenantId, startOfToday, now))
+                .totalSalesThisWeek(getSalesTotal(tenantId, startOfWeek, now))
+                .totalSalesThisMonth(getSalesTotal(tenantId, startOfMonth, now))
+                .salesCountToday(getSalesCount(tenantId, startOfToday, now))
+                .salesCountThisWeek(getSalesCount(tenantId, startOfWeek, now))
+                .salesCountThisMonth(getSalesCount(tenantId, startOfMonth, now))
+
+                // Purchase statistics
+                .totalPurchasesToday(getPurchaseTotal(tenantId, today, today))
+                .totalPurchasesThisWeek(getPurchaseTotal(tenantId, weekAgo, today))
+                .totalPurchasesThisMonth(getPurchaseTotal(tenantId, monthStart, today))
+
+                // Inventory statistics
+                .totalProducts(getProductCount(tenantId))
+                .activeProducts(getActiveProductCount(tenantId))
+                .lowStockProducts(getLowStockCount(tenantId))
+                .outOfStockProducts(getOutOfStockCount(tenantId))
+                .totalInventoryValue(getInventoryValue(tenantId))
+
+                // Finance statistics
+                .totalReceivables(getReceivables(tenantId))
+                .totalPayables(getPayables(tenantId))
+                .cashBalance(getCashBalance(tenantId))
+                .bankBalance(getBankBalance(tenantId))
 
                 // Activity statistics
                 .totalAuditLogsToday(getAuditLogCount(tenantId, startOfToday))
@@ -54,28 +98,10 @@ public class AdminDashboardService {
                 // Recent activities
                 .recentActivities(getRecentActivities(tenantId))
 
-                // Placeholder values for sales/purchase/inventory (to be integrated with other modules)
-                .totalSalesToday(BigDecimal.ZERO)
-                .totalSalesThisWeek(BigDecimal.ZERO)
-                .totalSalesThisMonth(BigDecimal.ZERO)
-                .salesCountToday(0L)
-                .salesCountThisWeek(0L)
-                .salesCountThisMonth(0L)
-                .totalPurchasesToday(BigDecimal.ZERO)
-                .totalPurchasesThisWeek(BigDecimal.ZERO)
-                .totalPurchasesThisMonth(BigDecimal.ZERO)
-                .totalProducts(0L)
-                .activeProducts(0L)
-                .lowStockProducts(0L)
-                .outOfStockProducts(0L)
-                .totalInventoryValue(BigDecimal.ZERO)
-                .totalReceivables(BigDecimal.ZERO)
-                .totalPayables(BigDecimal.ZERO)
-                .cashBalance(BigDecimal.ZERO)
-                .bankBalance(BigDecimal.ZERO)
-
                 .build();
     }
+
+    // ---- User stats ----
 
     private Long getUserCount(Long tenantId) {
         try {
@@ -103,6 +129,134 @@ public class AdminDashboardService {
             return 0L;
         }
     }
+
+    // ---- Sales stats ----
+
+    private BigDecimal getSalesTotal(Long tenantId, Instant startDate, Instant endDate) {
+        try {
+            BigDecimal total = posTransactionRepository.sumCompletedSalesByDateRange(tenantId, startDate, endDate);
+            return total != null ? total : BigDecimal.ZERO;
+        } catch (Exception e) {
+            log.warn("Failed to get sales total: {}", e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private Long getSalesCount(Long tenantId, Instant startDate, Instant endDate) {
+        try {
+            Integer count = posTransactionRepository.countCompletedSalesByDateRange(tenantId, startDate, endDate);
+            return count != null ? count.longValue() : 0L;
+        } catch (Exception e) {
+            log.warn("Failed to get sales count: {}", e.getMessage());
+            return 0L;
+        }
+    }
+
+    // ---- Purchase stats ----
+
+    private BigDecimal getPurchaseTotal(Long tenantId, LocalDate startDate, LocalDate endDate) {
+        try {
+            BigDecimal total = purchaseOrderRepository.sumTotalByDateRange(tenantId, startDate, endDate);
+            return total != null ? total : BigDecimal.ZERO;
+        } catch (Exception e) {
+            log.warn("Failed to get purchase total: {}", e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
+    // ---- Inventory stats ----
+
+    private Long getProductCount(Long tenantId) {
+        try {
+            return productRepository.countByTenantId(tenantId);
+        } catch (Exception e) {
+            log.warn("Failed to get product count: {}", e.getMessage());
+            return 0L;
+        }
+    }
+
+    private Long getActiveProductCount(Long tenantId) {
+        try {
+            return productRepository.countActiveByTenantId(tenantId);
+        } catch (Exception e) {
+            log.warn("Failed to get active product count: {}", e.getMessage());
+            return 0L;
+        }
+    }
+
+    private Long getLowStockCount(Long tenantId) {
+        try {
+            Integer count = stockRepository.countLowStockProducts(tenantId);
+            return count != null ? count.longValue() : 0L;
+        } catch (Exception e) {
+            log.warn("Failed to get low stock count: {}", e.getMessage());
+            return 0L;
+        }
+    }
+
+    private Long getOutOfStockCount(Long tenantId) {
+        try {
+            Integer count = stockRepository.countOutOfStockProducts(tenantId);
+            return count != null ? count.longValue() : 0L;
+        } catch (Exception e) {
+            log.warn("Failed to get out of stock count: {}", e.getMessage());
+            return 0L;
+        }
+    }
+
+    private BigDecimal getInventoryValue(Long tenantId) {
+        try {
+            BigDecimal value = stockRepository.calculateTotalInventoryValue(tenantId);
+            return value != null ? value : BigDecimal.ZERO;
+        } catch (Exception e) {
+            log.warn("Failed to get inventory value: {}", e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
+    // ---- Finance stats ----
+
+    private BigDecimal getReceivables(Long tenantId) {
+        try {
+            BigDecimal total = arInvoiceRepository.sumOutstandingBalance(tenantId);
+            return total != null ? total : BigDecimal.ZERO;
+        } catch (Exception e) {
+            log.warn("Failed to get receivables: {}", e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private BigDecimal getPayables(Long tenantId) {
+        try {
+            BigDecimal total = apInvoiceRepository.sumOutstandingBalance(tenantId);
+            return total != null ? total : BigDecimal.ZERO;
+        } catch (Exception e) {
+            log.warn("Failed to get payables: {}", e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private BigDecimal getCashBalance(Long tenantId) {
+        try {
+            BigDecimal total = bankAccountRepository.sumCashBalance(tenantId);
+            return total != null ? total : BigDecimal.ZERO;
+        } catch (Exception e) {
+            log.warn("Failed to get cash balance: {}", e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private BigDecimal getBankBalance(Long tenantId) {
+        try {
+            BigDecimal total = bankAccountRepository.sumBankBalance(tenantId);
+            return total != null ? total : BigDecimal.ZERO;
+        } catch (Exception e) {
+            log.warn("Failed to get bank balance: {}", e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
+    // ---- Activity stats ----
 
     private Long getAuditLogCount(Long tenantId, Instant since) {
         try {
@@ -171,13 +325,13 @@ public class AdminDashboardService {
         try {
             List<AuditLog> logs = auditLogRepository.findByTenantId(tenantId, PageRequest.of(0, 20)).getContent();
             List<DashboardStatsDTO.RecentActivityDTO> activities = new ArrayList<>();
-            for (AuditLog log : logs) {
+            for (AuditLog auditLog : logs) {
                 activities.add(DashboardStatsDTO.RecentActivityDTO.builder()
-                        .description(log.getDescription())
-                        .action(log.getAction().name())
-                        .entityType(log.getEntityType())
-                        .username(log.getUsername())
-                        .timestamp(log.getActionTimestamp().toString())
+                        .description(auditLog.getDescription())
+                        .action(auditLog.getAction().name())
+                        .entityType(auditLog.getEntityType())
+                        .username(auditLog.getUsername())
+                        .timestamp(auditLog.getActionTimestamp().toString())
                         .build());
             }
             return activities;

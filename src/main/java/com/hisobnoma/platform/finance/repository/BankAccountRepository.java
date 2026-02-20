@@ -56,4 +56,10 @@ public interface BankAccountRepository extends JpaRepository<BankAccount, Long> 
     // Mobile module method
     @Query("SELECT COALESCE(SUM(ba.currentBalance), 0) FROM BankAccount ba WHERE ba.tenantId = :tenantId AND ba.active = true")
     java.math.BigDecimal sumTotalBalance(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT COALESCE(SUM(ba.currentBalance), 0) FROM BankAccount ba WHERE ba.tenantId = :tenantId AND ba.active = true AND ba.accountType IN ('CASH', 'PETTY_CASH')")
+    java.math.BigDecimal sumCashBalance(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT COALESCE(SUM(ba.currentBalance), 0) FROM BankAccount ba WHERE ba.tenantId = :tenantId AND ba.active = true AND ba.accountType NOT IN ('CASH', 'PETTY_CASH')")
+    java.math.BigDecimal sumBankBalance(@Param("tenantId") Long tenantId);
 }

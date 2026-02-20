@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -60,4 +61,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
     String findMaxPoNumberByTenantId(@Param("tenantId") Long tenantId);
 
     boolean existsByPoNumber(String poNumber);
+
+    @Query("SELECT COALESCE(SUM(po.totalAmount), 0) FROM PurchaseOrder po WHERE (po.tenantId = :tenantId OR po.tenantId IS NULL) " +
+           "AND po.status NOT IN ('DRAFT', 'CANCELLED') AND po.orderDate BETWEEN :startDate AND :endDate")
+    BigDecimal sumTotalByDateRange(@Param("tenantId") Long tenantId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }
