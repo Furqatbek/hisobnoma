@@ -30,8 +30,8 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 # Copy the built jar
 COPY --from=builder /app/target/*.jar app.jar
 
-# Set ownership
-RUN chown -R appuser:appgroup /app
+# Create uploads directory and set ownership
+RUN mkdir -p /app/uploads && chown -R appuser:appgroup /app
 
 # Switch to non-root user
 USER appuser

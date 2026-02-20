@@ -40,7 +40,7 @@ RUN apk add --no-cache \
     dumb-init && \
     addgroup -S hisobnoma && \
     adduser -S -G hisobnoma hisobnoma && \
-    mkdir -p /app/logs /app/config /app/data && \
+    mkdir -p /app/logs /app/config /app/data /app/uploads && \
     chown -R hisobnoma:hisobnoma /app
 
 WORKDIR /app

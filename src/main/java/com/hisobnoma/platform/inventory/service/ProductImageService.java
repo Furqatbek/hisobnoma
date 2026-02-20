@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.annotation.PostConstruct;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,6 +47,17 @@ public class ProductImageService {
 
     @Value("${app.upload.max-images-per-product:10}")
     private int maxImagesPerProduct;
+
+    @PostConstruct
+    public void init() {
+        try {
+            Path uploadDir = Paths.get(storagePath).toAbsolutePath();
+            Files.createDirectories(uploadDir);
+            log.info("Upload directory ready: {}", uploadDir);
+        } catch (IOException e) {
+            log.error("Failed to create upload directory '{}': {}", storagePath, e.getMessage());
+        }
+    }
 
     /**
      * Upload an image for a product.
