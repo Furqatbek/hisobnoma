@@ -212,6 +212,13 @@ export const arReportsApi = {
   getCustomerBalance: (customerId) => api.get(`/finance/ar-reports/customer-balance/${customerId}`)
 }
 
+// AR Invoices API - Backend: /api/v1/finance/ar-invoices
+export const arInvoicesApi = {
+  getUnpaidByCustomer: (customerId) => api.get(`/finance/ar-invoices/customer/${customerId}/unpaid`),
+  getByCustomer: (customerId, params) => api.get(`/finance/ar-invoices/customer/${customerId}`, { params }),
+  getById: (id) => api.get(`/finance/ar-invoices/${id}`)
+}
+
 // Suppliers/Vendors API - Backend: /api/v1/inventory/vendors
 export const suppliersApi = {
   getAll: (params) => api.get('/inventory/vendors', { params }),

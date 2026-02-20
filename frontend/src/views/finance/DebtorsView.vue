@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { arReportsApi } from '@/services/api'
+import { arReportsApi, arInvoicesApi } from '@/services/api'
 import { useReceiptStore } from '@/stores/receipt'
 import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon } from '@heroicons/vue/24/outline'
 
@@ -17,6 +17,9 @@ const agingReport = ref(null)
 const showDetailModal = ref(false)
 const selectedCustomer = ref(null)
 const selectedAging = ref(null)
+const unpaidInvoices = ref([])
+const loadingInvoices = ref(false)
+const expandedInvoice = ref(null)
 
 async function fetchData() {
   loading.value = true
@@ -77,16 +80,55 @@ function getAgingForCustomer(customerId) {
   return agingReport.value.customerAgingList.find(a => a.customerId === customerId)
 }
 
-function viewCustomer(customer) {
+async function viewCustomer(customer) {
   selectedCustomer.value = customer
   selectedAging.value = getAgingForCustomer(customer.customerId)
+  unpaidInvoices.value = []
+  expandedInvoice.value = null
   showDetailModal.value = true
+
+  loadingInvoices.value = true
+  try {
+    const res = await arInvoicesApi.getUnpaidByCustomer(customer.customerId)
+    unpaidInvoices.value = res.data.data || res.data || []
+  } catch (error) {
+    console.error('Fakturalarni yuklashda xatolik:', error)
+  } finally {
+    loadingInvoices.value = false
+  }
+}
+
+function toggleInvoice(invoiceId) {
+  expandedInvoice.value = expandedInvoice.value === invoiceId ? null : invoiceId
 }
 
 function closeModal() {
   showDetailModal.value = false
   selectedCustomer.value = null
   selectedAging.value = null
+  unpaidInvoices.value = []
+  expandedInvoice.value = null
+}
+
+function getStatusLabel(status) {
+  const labels = {
+    'PENDING': 'Kutilmoqda',
+    'SENT': 'Yuborilgan',
+    'PARTIAL': 'Qisman',
+    'OVERDUE': 'Muddati o\'tgan',
+    'DRAFT': 'Qoralama',
+    'DISPUTED': 'Bahsli'
+  }
+  return labels[status] || status
+}
+
+function getStatusClass(status) {
+  switch (status) {
+    case 'OVERDUE': return 'badge-danger'
+    case 'PARTIAL': return 'badge-warning'
+    case 'SENT': case 'PENDING': return 'badge-info'
+    default: return 'badge-info'
+  }
 }
 
 function formatCurrency(value) {
@@ -462,6 +504,87 @@ function printDebtors() {
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- Unpaid Invoices -->
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-3">To'lanmagan fakturalar</h3>
+
+            <div v-if="loadingInvoices" class="flex items-center justify-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+
+            <div v-else-if="unpaidInvoices.length === 0" class="text-center py-6 bg-gray-50 rounded-lg">
+              <p class="text-gray-500 text-sm">To'lanmagan fakturalar topilmadi</p>
+            </div>
+
+            <div v-else class="space-y-3">
+              <div
+                v-for="invoice in unpaidInvoices"
+                :key="invoice.id"
+                class="border border-gray-200 rounded-lg overflow-hidden"
+              >
+                <!-- Invoice header (clickable) -->
+                <div
+                  @click="toggleInvoice(invoice.id)"
+                  class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                >
+                  <div class="flex items-center gap-3">
+                    <div>
+                      <p class="font-medium text-sm">{{ invoice.invoiceNumber }}</p>
+                      <p class="text-xs text-gray-500">{{ formatDate(invoice.invoiceDate) }}</p>
+                    </div>
+                    <span :class="['badge text-xs', getStatusClass(invoice.status)]">
+                      {{ getStatusLabel(invoice.status) }}
+                    </span>
+                    <span v-if="invoice.overdue" class="text-xs text-red-600 font-medium">
+                      {{ invoice.daysOverdue }} kun kechikkan
+                    </span>
+                  </div>
+                  <div class="text-right">
+                    <p class="font-semibold text-red-600 text-sm">{{ formatCurrency(invoice.balanceDue) }} so'm</p>
+                    <p class="text-xs text-gray-500">Jami: {{ formatCurrency(invoice.totalAmount) }} so'm</p>
+                  </div>
+                </div>
+
+                <!-- Invoice line items (expandable) -->
+                <div v-if="expandedInvoice === invoice.id" class="border-t border-gray-200 bg-gray-50">
+                  <!-- Payment info -->
+                  <div class="px-4 py-2 flex gap-4 text-xs text-gray-500 border-b border-gray-100">
+                    <span>To'lov muddati: <strong>{{ formatDate(invoice.dueDate) }}</strong></span>
+                    <span v-if="invoice.paidAmount > 0">To'langan: <strong>{{ formatCurrency(invoice.paidAmount) }} so'm</strong></span>
+                    <span v-if="invoice.posTransactionNumber">Tranzaksiya: <strong>{{ invoice.posTransactionNumber }}</strong></span>
+                  </div>
+
+                  <!-- Items table -->
+                  <table v-if="invoice.lines?.length" class="w-full text-sm">
+                    <thead>
+                      <tr class="text-xs text-gray-500 border-b border-gray-200">
+                        <th class="px-4 py-2 text-left font-medium">Mahsulot</th>
+                        <th class="px-4 py-2 text-right font-medium">Soni</th>
+                        <th class="px-4 py-2 text-right font-medium">Narxi</th>
+                        <th class="px-4 py-2 text-right font-medium">Jami</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                      <tr v-for="line in invoice.lines" :key="line.id">
+                        <td class="px-4 py-2">
+                          <p class="font-medium">{{ line.productName || line.description }}</p>
+                          <p v-if="line.productSku" class="text-xs text-gray-400">{{ line.productSku }}</p>
+                        </td>
+                        <td class="px-4 py-2 text-right">{{ line.quantity }}{{ line.unitOfMeasure ? ' ' + line.unitOfMeasure : '' }}</td>
+                        <td class="px-4 py-2 text-right">{{ formatCurrency(line.unitPrice) }}</td>
+                        <td class="px-4 py-2 text-right font-medium">{{ formatCurrency(line.lineTotal) }} so'm</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div v-else class="px-4 py-3 text-sm text-gray-500">
+                    Mahsulot tafsilotlari mavjud emas
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
