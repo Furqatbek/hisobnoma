@@ -16,10 +16,10 @@ const props = defineProps({
 
 const receiptStore = useReceiptStore()
 const config = computed(() => receiptStore.config)
+const receiptRef = ref(null)
 const invoiceA4Ref = ref(null)
 
 const is80 = computed(() => config.value.paperWidth === '80')
-const charWidth = computed(() => is80.value ? 42 : 32)
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ', {
@@ -51,6 +51,178 @@ function getPaymentLabel(type) {
   return paymentTypeLabels[type] || type
 }
 
+function getPrintCSS(paperWidth) {
+  return `
+    @page {
+      size: ${paperWidth} auto;
+      margin: 0;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Arial', sans-serif;
+      font-size: ${paperWidth === '80mm' ? '12px' : '10px'};
+      line-height: 1.35;
+      width: ${paperWidth};
+      padding: 2.5mm;
+      color: #000;
+      -webkit-print-color-adjust: exact;
+    }
+
+    /* Header */
+    .rc-header {
+      text-align: center;
+      padding-bottom: 6px;
+      border-bottom: 1px dashed #000;
+      margin-bottom: 6px;
+    }
+    .rc-brand {
+      font-size: ${paperWidth === '80mm' ? '16px' : '13px'};
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+    .rc-header-line {
+      font-size: ${paperWidth === '80mm' ? '10px' : '9px'};
+      line-height: 1.4;
+    }
+
+    /* Meta info */
+    .rc-meta {
+      padding-bottom: 6px;
+      border-bottom: 1.5px solid #000;
+      margin-bottom: 6px;
+    }
+    .rc-meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: ${paperWidth === '80mm' ? '11px' : '9.5px'};
+      padding: 1px 0;
+    }
+    .rc-meta-label {
+      font-weight: 600;
+    }
+    .rc-meta-value {
+      text-align: right;
+    }
+
+    /* Items table */
+    .rc-items {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 6px;
+    }
+    .rc-items thead th {
+      font-size: ${paperWidth === '80mm' ? '10px' : '8.5px'};
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 2px;
+      border-bottom: 1.5px solid #000;
+      border-top: 1.5px solid #000;
+    }
+    .rc-items th.col-num { text-align: center; width: 20px; }
+    .rc-items th.col-name { text-align: left; }
+    .rc-items th.col-qty { text-align: center; width: ${paperWidth === '80mm' ? '36px' : '28px'}; }
+    .rc-items th.col-price { text-align: right; width: ${paperWidth === '80mm' ? '70px' : '52px'}; }
+    .rc-items th.col-total { text-align: right; width: ${paperWidth === '80mm' ? '76px' : '58px'}; }
+
+    .rc-items tbody td {
+      font-size: ${paperWidth === '80mm' ? '11px' : '9.5px'};
+      padding: 3px 2px;
+      vertical-align: top;
+      border-bottom: 1px dotted #ccc;
+    }
+    .rc-items td.col-num { text-align: center; }
+    .rc-items td.col-name {
+      text-align: left;
+      word-break: break-word;
+    }
+    .rc-items td.col-qty { text-align: center; }
+    .rc-items td.col-price { text-align: right; white-space: nowrap; }
+    .rc-items td.col-total { text-align: right; font-weight: 700; white-space: nowrap; }
+
+    .rc-items tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Totals */
+    .rc-totals {
+      border-top: 1px dashed #000;
+      padding-top: 4px;
+      margin-bottom: 4px;
+    }
+    .rc-total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: ${paperWidth === '80mm' ? '11px' : '9.5px'};
+      padding: 1.5px 0;
+    }
+    .rc-total-row .label {
+      font-weight: 600;
+    }
+    .rc-total-row .value {
+      font-weight: 600;
+      text-align: right;
+    }
+
+    /* Grand total */
+    .rc-grand {
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
+      padding: 5px 0;
+      margin: 4px 0;
+      text-align: center;
+    }
+    .rc-grand-label {
+      font-size: ${paperWidth === '80mm' ? '11px' : '9.5px'};
+      font-weight: 600;
+    }
+    .rc-grand-amount {
+      font-size: ${paperWidth === '80mm' ? '18px' : '14px'};
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    /* Payments */
+    .rc-payments {
+      padding: 4px 0;
+      border-bottom: 1px dashed #000;
+      margin-bottom: 6px;
+    }
+    .rc-pay-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: ${paperWidth === '80mm' ? '11px' : '9.5px'};
+      padding: 1.5px 0;
+    }
+
+    /* Footer */
+    .rc-footer {
+      text-align: center;
+      padding-top: 6px;
+    }
+    .rc-footer-site {
+      font-size: ${paperWidth === '80mm' ? '10px' : '9px'};
+    }
+    .rc-footer-thanks {
+      font-size: ${paperWidth === '80mm' ? '12px' : '10px'};
+      font-weight: 700;
+      margin: 4px 0;
+    }
+    .rc-footer-time {
+      font-size: ${paperWidth === '80mm' ? '9px' : '8px'};
+      color: #555;
+    }
+
+    @media print {
+      body { width: ${paperWidth}; }
+    }
+  `
+}
+
 function printReceipt() {
   if (config.value.paperWidth === 'A4') {
     if (invoiceA4Ref.value) {
@@ -59,169 +231,18 @@ function printReceipt() {
     return
   }
 
-  const t = props.transaction
-  const w = charWidth.value
-  const pw = is80.value ? '80mm' : '58mm'
-  const dash = '─'.repeat(w)
-  const dblDash = '═'.repeat(w)
-
-  function center(text) {
-    const pad = Math.max(0, Math.floor((w - text.length) / 2))
-    return ' '.repeat(pad) + text
-  }
-
-  function row(label, value) {
-    const dots = w - label.length - value.length - 1
-    if (dots < 1) return label + ' ' + value
-    return label + ' ' + '.'.repeat(dots) + value
-  }
-
-  function rightAlign(text) {
-    const pad = Math.max(0, w - text.length)
-    return ' '.repeat(pad) + text
-  }
-
-  let lines = []
-
-  // Header
-  lines.push(center(config.value.brandName.toUpperCase()))
-  if (config.value.address) lines.push(center(config.value.address))
-  if (config.value.phone) lines.push(center('Tel: ' + config.value.phone))
-  if (config.value.taxId) lines.push(center('STIR: ' + config.value.taxId))
-  lines.push(dash)
-
-  // Transaction meta
-  const txNum = t.transactionNumber || t.orderNumber || `#${t.id}`
-  lines.push(row('Chek', txNum))
-  lines.push(row('Sana', formatDate(t.createdAt || t.orderDate)))
-  if (t.terminalName) lines.push(row('Kassa', t.terminalName))
-  if (t.cashierName) lines.push(row('Kassir', t.cashierName))
-  if (t.customerName) {
-    let custLine = t.customerName
-    if (t.customerPhone) custLine += ' (' + t.customerPhone + ')'
-    lines.push(row('Mijoz', custLine))
-  }
-  lines.push(dblDash)
-
-  // Items header
-  if (is80.value) {
-    // 80mm: №  Mahsulot          Soni   Narx     Summa
-    lines.push(
-      '#  ' +
-      'Mahsulot'.padEnd(16) +
-      'Soni'.padStart(5) +
-      'Narx'.padStart(9) +
-      'Summa'.padStart(10)
-    )
-  } else {
-    lines.push(
-      '#  ' +
-      'Mahsulot'.padEnd(10) +
-      'Son'.padStart(4) +
-      'Narx'.padStart(7) +
-      'Summa'.padStart(9)
-    )
-  }
-  lines.push(dash)
-
-  // Items
-  const items = t.lines || []
-  items.forEach((item, i) => {
-    const num = String(i + 1).padEnd(3)
-    const qty = String(item.quantity)
-    const price = formatCurrency(item.unitPrice)
-    const total = formatCurrency(item.lineTotal)
-
-    if (is80.value) {
-      const nameWidth = 16
-      const name = item.productName.length > nameWidth
-        ? item.productName.substring(0, nameWidth - 1) + '…'
-        : item.productName.padEnd(nameWidth)
-      lines.push(
-        num + name + qty.padStart(5) + price.padStart(9) + total.padStart(10)
-      )
-    } else {
-      const nameWidth = 10
-      const name = item.productName.length > nameWidth
-        ? item.productName.substring(0, nameWidth - 1) + '…'
-        : item.productName.padEnd(nameWidth)
-      lines.push(
-        num + name + qty.padStart(4) + price.padStart(7) + total.padStart(9)
-      )
-    }
-
-    // If name was truncated, show full name on next line
-    const maxNameWidth = is80.value ? 16 : 10
-    if (item.productName.length > maxNameWidth) {
-      lines.push('   ' + item.productName)
-    }
-  })
-  lines.push(dash)
-
-  // Totals
-  if (t.subtotal && t.subtotal !== t.totalAmount) {
-    lines.push(row('Oraliq summa', formatCurrency(t.subtotal)))
-  }
-  if (t.discountAmount > 0) {
-    lines.push(row('Chegirma', '-' + formatCurrency(t.discountAmount)))
-  }
-  if (t.taxAmount > 0) {
-    lines.push(row('Soliq', formatCurrency(t.taxAmount)))
-  }
-  lines.push(dblDash)
-  const totalStr = formatCurrency(t.totalAmount || t.total) + " so'm"
-  lines.push(center('JAMI: ' + totalStr))
-  lines.push(dblDash)
-
-  // Payments
-  if (t.payments?.length) {
-    t.payments.forEach(p => {
-      const label = getPaymentLabel(p.paymentType || p.type)
-      lines.push(row(label, formatCurrency(p.amount) + " so'm"))
-    })
-    if (t.changeAmount > 0) {
-      lines.push(row('Qaytim', formatCurrency(t.changeAmount) + " so'm"))
-    }
-    lines.push(dash)
-  }
-
-  // Footer
-  lines.push('')
-  if (config.value.website) lines.push(center(config.value.website))
-  lines.push(center(config.value.footerText))
-  lines.push('')
-  lines.push(center(formatDate(new Date().toISOString())))
-  lines.push('')
-
-  const content = lines.join('\n')
+  const printContent = receiptRef.value.innerHTML
+  const paperWidth = is80.value ? '80mm' : '58mm'
 
   const printWindow = window.open('', '_blank', 'width=400,height=600')
   printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Chek</title>
-<style>
-@page {
-  size: ${pw} auto;
-  margin: 0;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: 'Courier New', 'Consolas', monospace;
-  font-size: ${is80.value ? '12px' : '11px'};
-  line-height: 1.4;
-  width: ${pw};
-  padding: 2mm;
-  color: #000;
-  white-space: pre;
-}
-@media print {
-  body { width: ${pw}; }
-}
-</style>
+  <meta charset="UTF-8">
+  <title>Chek</title>
+  <style>${getPrintCSS(paperWidth)}</style>
 </head>
-<body>${content}</body>
+<body>${printContent}</body>
 </html>`)
 
   printWindow.document.close()
@@ -236,109 +257,107 @@ defineExpose({ printReceipt })
 </script>
 
 <template>
-  <!-- On-screen preview -->
   <div
+    ref="receiptRef"
     class="receipt-preview"
     :class="is80 ? 'receipt-80' : 'receipt-58'"
   >
     <!-- Header -->
-    <div class="r-header">
-      <div class="r-brand">{{ config.brandName }}</div>
-      <div class="r-info" v-if="config.address">{{ config.address }}</div>
-      <div class="r-info" v-if="config.phone">Tel: {{ config.phone }}</div>
-      <div class="r-info" v-if="config.taxId">STIR: {{ config.taxId }}</div>
+    <div class="rc-header">
+      <div class="rc-brand">{{ config.brandName }}</div>
+      <div class="rc-header-line" v-if="config.address">{{ config.address }}</div>
+      <div class="rc-header-line" v-if="config.phone">Tel: {{ config.phone }}</div>
+      <div class="rc-header-line" v-if="config.taxId">STIR: {{ config.taxId }}</div>
     </div>
 
-    <div class="r-sep"></div>
-
-    <!-- Transaction meta -->
-    <div class="r-meta">
-      <div class="r-row">
-        <span>Chek</span>
-        <span>{{ transaction.transactionNumber || transaction.orderNumber || `#${transaction.id}` }}</span>
+    <!-- Transaction Meta -->
+    <div class="rc-meta">
+      <div class="rc-meta-row">
+        <span class="rc-meta-label">Chek №:</span>
+        <span class="rc-meta-value">{{ transaction.transactionNumber || transaction.orderNumber || `#${transaction.id}` }}</span>
       </div>
-      <div class="r-row">
-        <span>Sana</span>
-        <span>{{ formatDate(transaction.createdAt || transaction.orderDate) }}</span>
+      <div class="rc-meta-row">
+        <span class="rc-meta-label">Sana:</span>
+        <span class="rc-meta-value">{{ formatDate(transaction.createdAt || transaction.orderDate) }}</span>
       </div>
-      <div class="r-row" v-if="transaction.terminalName">
-        <span>Kassa</span>
-        <span>{{ transaction.terminalName }}</span>
+      <div class="rc-meta-row" v-if="transaction.terminalName">
+        <span class="rc-meta-label">Kassa:</span>
+        <span class="rc-meta-value">{{ transaction.terminalName }}</span>
       </div>
-      <div class="r-row" v-if="transaction.cashierName">
-        <span>Kassir</span>
-        <span>{{ transaction.cashierName }}</span>
+      <div class="rc-meta-row" v-if="transaction.cashierName">
+        <span class="rc-meta-label">Kassir:</span>
+        <span class="rc-meta-value">{{ transaction.cashierName }}</span>
       </div>
-      <div class="r-row" v-if="transaction.customerName">
-        <span>Mijoz</span>
-        <span>{{ transaction.customerName }}</span>
-      </div>
-    </div>
-
-    <div class="r-sep-bold"></div>
-
-    <!-- Items -->
-    <div class="r-items-header">
-      <span class="r-col-num">#</span>
-      <span class="r-col-name">Mahsulot</span>
-      <span class="r-col-qty">Soni</span>
-      <span class="r-col-price">Narx</span>
-      <span class="r-col-total">Summa</span>
-    </div>
-    <div class="r-sep"></div>
-
-    <div class="r-items">
-      <div v-for="(item, index) in transaction.lines" :key="index" class="r-item">
-        <span class="r-col-num">{{ index + 1 }}</span>
-        <span class="r-col-name">{{ item.productName }}</span>
-        <span class="r-col-qty">{{ item.quantity }}</span>
-        <span class="r-col-price">{{ formatCurrency(item.unitPrice) }}</span>
-        <span class="r-col-total">{{ formatCurrency(item.lineTotal) }}</span>
+      <div class="rc-meta-row" v-if="transaction.customerName">
+        <span class="rc-meta-label">Mijoz:</span>
+        <span class="rc-meta-value">
+          {{ transaction.customerName }}
+          <span v-if="transaction.customerPhone" style="font-size: 9px;"> ({{ transaction.customerPhone }})</span>
+        </span>
       </div>
     </div>
 
-    <div class="r-sep"></div>
+    <!-- Items Table -->
+    <table class="rc-items">
+      <thead>
+        <tr>
+          <th class="col-num">№</th>
+          <th class="col-name">Mahsulot</th>
+          <th class="col-qty">Soni</th>
+          <th class="col-price">Narx</th>
+          <th class="col-total">Summa</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(item, index) in transaction.lines" :key="index">
+          <td class="col-num">{{ index + 1 }}</td>
+          <td class="col-name">{{ item.productName }}</td>
+          <td class="col-qty">{{ item.quantity }}</td>
+          <td class="col-price">{{ formatCurrency(item.unitPrice) }}</td>
+          <td class="col-total">{{ formatCurrency(item.lineTotal) }}</td>
+        </tr>
+      </tbody>
+    </table>
 
     <!-- Totals -->
-    <div class="r-totals">
-      <div class="r-row" v-if="transaction.subtotal && transaction.subtotal !== transaction.totalAmount">
-        <span>Oraliq summa</span>
-        <span>{{ formatCurrency(transaction.subtotal) }}</span>
+    <div class="rc-totals" v-if="(transaction.subtotal && transaction.subtotal !== transaction.totalAmount) || transaction.discountAmount > 0 || transaction.taxAmount > 0">
+      <div class="rc-total-row" v-if="transaction.subtotal && transaction.subtotal !== transaction.totalAmount">
+        <span class="label">Oraliq summa:</span>
+        <span class="value">{{ formatCurrency(transaction.subtotal) }}</span>
       </div>
-      <div class="r-row" v-if="transaction.discountAmount > 0">
-        <span>Chegirma</span>
-        <span>-{{ formatCurrency(transaction.discountAmount) }}</span>
+      <div class="rc-total-row" v-if="transaction.discountAmount > 0">
+        <span class="label">Chegirma:</span>
+        <span class="value">-{{ formatCurrency(transaction.discountAmount) }}</span>
       </div>
-      <div class="r-row" v-if="transaction.taxAmount > 0">
-        <span>Soliq</span>
-        <span>{{ formatCurrency(transaction.taxAmount) }}</span>
+      <div class="rc-total-row" v-if="transaction.taxAmount > 0">
+        <span class="label">Soliq:</span>
+        <span class="value">{{ formatCurrency(transaction.taxAmount) }}</span>
       </div>
     </div>
 
-    <div class="r-sep-bold"></div>
-    <div class="r-grand-total">
-      JAMI: {{ formatCurrency(transaction.totalAmount || transaction.total) }} so'm
+    <!-- Grand Total -->
+    <div class="rc-grand">
+      <div class="rc-grand-label">JAMI</div>
+      <div class="rc-grand-amount">{{ formatCurrency(transaction.totalAmount || transaction.total) }} so'm</div>
     </div>
-    <div class="r-sep-bold"></div>
 
     <!-- Payments -->
-    <div v-if="transaction.payments?.length" class="r-payments">
-      <div class="r-row" v-for="(payment, index) in transaction.payments" :key="index">
-        <span>{{ getPaymentLabel(payment.paymentType || payment.type) }}</span>
+    <div v-if="transaction.payments?.length" class="rc-payments">
+      <div class="rc-pay-row" v-for="(payment, index) in transaction.payments" :key="index">
+        <span>{{ getPaymentLabel(payment.paymentType || payment.type) }}:</span>
         <span>{{ formatCurrency(payment.amount) }} so'm</span>
       </div>
-      <div class="r-row" v-if="transaction.changeAmount > 0">
-        <span>Qaytim</span>
+      <div class="rc-pay-row" v-if="transaction.changeAmount > 0">
+        <span>Qaytim:</span>
         <span>{{ formatCurrency(transaction.changeAmount) }} so'm</span>
       </div>
-      <div class="r-sep"></div>
     </div>
 
     <!-- Footer -->
-    <div class="r-footer">
-      <div v-if="config.website">{{ config.website }}</div>
-      <div class="r-thanks">{{ config.footerText }}</div>
-      <div class="r-timestamp">{{ formatDate(new Date().toISOString()) }}</div>
+    <div class="rc-footer">
+      <div class="rc-footer-site" v-if="config.website">{{ config.website }}</div>
+      <div class="rc-footer-thanks">{{ config.footerText }}</div>
+      <div class="rc-footer-time">{{ formatDate(new Date().toISOString()) }}</div>
     </div>
   </div>
 
@@ -349,143 +368,210 @@ defineExpose({ printReceipt })
 </template>
 
 <style scoped>
+/* ── Preview container ── */
 .receipt-preview {
-  font-family: 'Courier New', 'Consolas', monospace;
-  line-height: 1.4;
-  padding: 12px;
+  font-family: 'Arial', sans-serif;
+  line-height: 1.35;
+  padding: 10px;
   background: #fff;
   color: #000;
   border: 1px solid #e5e7eb;
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 .receipt-80 {
-  width: 302px; /* ~80mm at 96dpi */
+  width: 302px;
   font-size: 12px;
 }
 .receipt-58 {
-  width: 220px; /* ~58mm at 96dpi */
-  font-size: 10.5px;
+  width: 220px;
+  font-size: 10px;
 }
 
-/* Header */
-.r-header {
+/* ── Header ── */
+.rc-header {
   text-align: center;
-  margin-bottom: 4px;
-}
-.r-brand {
-  font-size: 1.3em;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-}
-.r-info {
-  font-size: 0.85em;
-  color: #555;
-}
-
-/* Separators */
-.r-sep {
+  padding-bottom: 6px;
   border-bottom: 1px dashed #000;
-  margin: 6px 0;
+  margin-bottom: 6px;
 }
-.r-sep-bold {
-  border-bottom: 2px solid #000;
-  margin: 6px 0;
-}
-
-/* Meta rows */
-.r-meta {
+.rc-brand {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   margin-bottom: 2px;
 }
-.r-row {
+.receipt-58 .rc-brand {
+  font-size: 13px;
+}
+.rc-header-line {
+  font-size: 10px;
+  line-height: 1.4;
+  color: #333;
+}
+.receipt-58 .rc-header-line {
+  font-size: 9px;
+}
+
+/* ── Meta ── */
+.rc-meta {
+  padding-bottom: 6px;
+  border-bottom: 1.5px solid #000;
+  margin-bottom: 6px;
+}
+.rc-meta-row {
   display: flex;
   justify-content: space-between;
+  font-size: 11px;
   padding: 1px 0;
-  font-size: 0.92em;
 }
-
-/* Items */
-.r-items-header {
-  display: flex;
-  font-weight: bold;
-  font-size: 0.85em;
-  text-transform: uppercase;
-  padding: 2px 0;
+.receipt-58 .rc-meta-row {
+  font-size: 9.5px;
 }
-.r-items .r-item {
-  display: flex;
-  padding: 2px 0;
-  font-size: 0.92em;
-}
-.r-col-num {
-  width: 18px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.r-col-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding-right: 4px;
-}
-.r-col-qty {
-  width: 32px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.r-col-price {
-  width: 60px;
-  text-align: right;
-  flex-shrink: 0;
-}
-.r-col-total {
-  width: 68px;
-  text-align: right;
-  flex-shrink: 0;
+.rc-meta-label {
   font-weight: 600;
 }
-
-/* 58mm adjustments */
-.receipt-58 .r-col-price { width: 50px; }
-.receipt-58 .r-col-total { width: 56px; }
-.receipt-58 .r-col-qty { width: 28px; }
-
-/* Totals */
-.r-totals .r-row {
-  font-size: 0.92em;
+.rc-meta-value {
+  text-align: right;
 }
 
-/* Grand total */
-.r-grand-total {
-  text-align: center;
-  font-size: 1.2em;
-  font-weight: bold;
-  padding: 4px 0;
-  letter-spacing: 0.3px;
+/* ── Items table ── */
+.rc-items {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 6px;
+}
+.rc-items thead th {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 2px;
+  border-bottom: 1.5px solid #000;
+  border-top: 1.5px solid #000;
+}
+.receipt-58 .rc-items thead th {
+  font-size: 8.5px;
+}
+.rc-items th.col-num { text-align: center; width: 20px; }
+.rc-items th.col-name { text-align: left; }
+.rc-items th.col-qty { text-align: center; width: 36px; }
+.rc-items th.col-price { text-align: right; width: 70px; }
+.rc-items th.col-total { text-align: right; width: 76px; }
+
+.receipt-58 .rc-items th.col-qty { width: 28px; }
+.receipt-58 .rc-items th.col-price { width: 52px; }
+.receipt-58 .rc-items th.col-total { width: 58px; }
+
+.rc-items tbody td {
+  font-size: 11px;
+  padding: 3px 2px;
+  vertical-align: top;
+  border-bottom: 1px dotted #ccc;
+}
+.receipt-58 .rc-items tbody td {
+  font-size: 9.5px;
+}
+.rc-items td.col-num { text-align: center; }
+.rc-items td.col-name {
+  text-align: left;
+  word-break: break-word;
+}
+.rc-items td.col-qty { text-align: center; }
+.rc-items td.col-price { text-align: right; white-space: nowrap; }
+.rc-items td.col-total { text-align: right; font-weight: 700; white-space: nowrap; }
+
+.rc-items tbody tr:last-child td {
+  border-bottom: none;
 }
 
-/* Payments */
-.r-payments .r-row {
-  font-size: 0.92em;
-}
-
-/* Footer */
-.r-footer {
-  text-align: center;
-  font-size: 0.85em;
-  color: #555;
+/* ── Totals ── */
+.rc-totals {
+  border-top: 1px dashed #000;
   padding-top: 4px;
+  margin-bottom: 4px;
 }
-.r-thanks {
-  font-weight: bold;
-  font-size: 1em;
-  color: #000;
-  margin-top: 4px;
+.rc-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  padding: 1.5px 0;
 }
-.r-timestamp {
-  font-size: 0.8em;
-  margin-top: 4px;
-  color: #888;
+.receipt-58 .rc-total-row {
+  font-size: 9.5px;
+}
+.rc-total-row .label {
+  font-weight: 600;
+}
+.rc-total-row .value {
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ── Grand total ── */
+.rc-grand {
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+  padding: 5px 0;
+  margin: 4px 0;
+  text-align: center;
+}
+.rc-grand-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+.receipt-58 .rc-grand-label {
+  font-size: 9.5px;
+}
+.rc-grand-amount {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.receipt-58 .rc-grand-amount {
+  font-size: 14px;
+}
+
+/* ── Payments ── */
+.rc-payments {
+  padding: 4px 0;
+  border-bottom: 1px dashed #000;
+  margin-bottom: 6px;
+}
+.rc-pay-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  padding: 1.5px 0;
+}
+.receipt-58 .rc-pay-row {
+  font-size: 9.5px;
+}
+
+/* ── Footer ── */
+.rc-footer {
+  text-align: center;
+  padding-top: 6px;
+}
+.rc-footer-site {
+  font-size: 10px;
+  color: #333;
+}
+.receipt-58 .rc-footer-site {
+  font-size: 9px;
+}
+.rc-footer-thanks {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 4px 0;
+}
+.receipt-58 .rc-footer-thanks {
+  font-size: 10px;
+}
+.rc-footer-time {
+  font-size: 9px;
+  color: #777;
+}
+.receipt-58 .rc-footer-time {
+  font-size: 8px;
 }
 </style>
