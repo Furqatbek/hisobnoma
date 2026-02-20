@@ -110,15 +110,15 @@ CREATE INDEX idx_salary_records_employee ON salary_records(employee_id);
 CREATE INDEX idx_salary_records_period ON salary_records(tenant_id, period_year, period_month);
 
 -- HR Permissions
-INSERT INTO permissions (code, name, description, module, created_at) VALUES
-    ('HR_DEPARTMENT_READ', 'View Departments', 'Can view departments', 'HR', NOW()),
-    ('HR_DEPARTMENT_WRITE', 'Manage Departments', 'Can create and edit departments', 'HR', NOW()),
-    ('HR_POSITION_READ', 'View Positions', 'Can view positions', 'HR', NOW()),
-    ('HR_POSITION_WRITE', 'Manage Positions', 'Can create and edit positions', 'HR', NOW()),
-    ('HR_EMPLOYEE_READ', 'View Employees', 'Can view employees', 'HR', NOW()),
-    ('HR_EMPLOYEE_WRITE', 'Manage Employees', 'Can create and edit employees', 'HR', NOW()),
-    ('HR_SALARY_READ', 'View Salary', 'Can view salary records', 'HR', NOW()),
-    ('HR_SALARY_WRITE', 'Manage Salary', 'Can create and manage salary payments', 'HR', NOW())
+INSERT INTO permissions (name, code, description, module, action) VALUES
+    ('View Departments', 'HR_DEPARTMENT_READ', 'Can view departments', 'HR', 'READ'),
+    ('Manage Departments', 'HR_DEPARTMENT_WRITE', 'Can create and edit departments', 'HR', 'MANAGE'),
+    ('View Positions', 'HR_POSITION_READ', 'Can view positions', 'HR', 'READ'),
+    ('Manage Positions', 'HR_POSITION_WRITE', 'Can create and edit positions', 'HR', 'MANAGE'),
+    ('View Employees', 'HR_EMPLOYEE_READ', 'Can view employees', 'HR', 'READ'),
+    ('Manage Employees', 'HR_EMPLOYEE_WRITE', 'Can create and edit employees', 'HR', 'MANAGE'),
+    ('View Salary', 'HR_SALARY_READ', 'Can view salary records', 'HR', 'READ'),
+    ('Manage Salary', 'HR_SALARY_WRITE', 'Can create and manage salary payments', 'HR', 'MANAGE')
 ON CONFLICT (code) DO NOTHING;
 
 -- Give SUPER_ADMIN and ADMIN all HR permissions
