@@ -20,7 +20,7 @@ const form = reactive({
   barcode: '',
   name: '',
   description: '',
-  link: '',
+  primaryImageUrl: '',
   categoryId: null,
   brandId: null,
   baseUomId: null,
@@ -158,8 +158,8 @@ async function handleSubmit() {
           </div>
 
           <div class="md:col-span-2">
-            <label class="label">Link</label>
-            <input v-model="form.link" type="url" class="input" placeholder="https://" />
+            <label class="label">Image URL</label>
+            <input v-model="form.primaryImageUrl" type="url" class="input" placeholder="https://" />
           </div>
 
           <div>

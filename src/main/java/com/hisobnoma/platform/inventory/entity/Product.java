@@ -155,9 +155,6 @@ public class Product extends TenantAwareEntity {
     @Column(length = 500)
     private String tags;
 
-    @Column(length = 1000)
-    private String link;
-
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ProductVariant> variants = new ArrayList<>();

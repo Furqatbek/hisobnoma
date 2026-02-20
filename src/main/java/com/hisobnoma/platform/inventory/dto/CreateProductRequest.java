@@ -123,9 +123,6 @@ public class CreateProductRequest {
     @Size(max = 500, message = "Tags must not exceed 500 characters")
     private String tags;
 
-    @Size(max = 1000, message = "Link must not exceed 1000 characters")
-    private String link;
-
     private List<CreateVariantRequest> variants;
     private List<CreateAttributeRequest> attributes;
 
