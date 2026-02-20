@@ -5,6 +5,7 @@ import com.hisobnoma.platform.finance.entity.*;
 import com.hisobnoma.platform.finance.repository.*;
 import com.hisobnoma.platform.reports.dto.AgingReportDTO;
 import com.hisobnoma.platform.reports.dto.GenerateReportRequest;
+import com.hisobnoma.platform.reports.dto.IncomeStatementDTO;
 import com.hisobnoma.platform.reports.dto.TrialBalanceReportDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -119,6 +120,86 @@ public class FinancialReportService {
                         .totalCredits(totalCredits)
                         .isBalanced(isBalanced)
                         .difference(difference)
+                        .build())
+                .build();
+    }
+
+    /**
+     * Generate Income Statement (Profit & Loss / Daromad va Xarajatlar) Report.
+     * Shows all revenue and expense accounts with their balances for a date range.
+     */
+    public IncomeStatementDTO generateIncomeStatement(GenerateReportRequest request) {
+        Long tenantId = securityContextHelper.getRequiredTenantId();
+
+        LocalDate startDate = request.getStartDate() != null ? request.getStartDate() : LocalDate.now().withDayOfMonth(1);
+        LocalDate endDate = request.getEndDate() != null ? request.getEndDate() : LocalDate.now();
+
+        log.info("Generating Income Statement for tenant {} from {} to {}", tenantId, startDate, endDate);
+
+        List<Account> accounts = accountRepository.findAllActiveByTenantId(tenantId);
+        accounts.sort(Comparator.comparing(Account::getCode));
+
+        List<IncomeStatementDTO.LineItem> revenueItems = new ArrayList<>();
+        List<IncomeStatementDTO.LineItem> expenseItems = new ArrayList<>();
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        BigDecimal totalExpenses = BigDecimal.ZERO;
+
+        for (Account account : accounts) {
+            if (account.getAccountType() != AccountType.REVENUE && account.getAccountType() != AccountType.EXPENSE) {
+                continue;
+            }
+
+            // Calculate balance from posted journal lines in the date range
+            BigDecimal debit = journalLineRepository.sumDebitByAccountAndDateRange(
+                    account.getId(), tenantId, startDate, endDate);
+            BigDecimal credit = journalLineRepository.sumCreditByAccountAndDateRange(
+                    account.getId(), tenantId, startDate, endDate);
+
+            if (debit == null) debit = BigDecimal.ZERO;
+            if (credit == null) credit = BigDecimal.ZERO;
+
+            BigDecimal amount;
+            if (account.getAccountType() == AccountType.REVENUE) {
+                // Revenue normal balance is CREDIT: amount = credits - debits
+                amount = credit.subtract(debit);
+            } else {
+                // Expense normal balance is DEBIT: amount = debits - credits
+                amount = debit.subtract(credit);
+            }
+
+            if (amount.compareTo(BigDecimal.ZERO) == 0) {
+                continue;
+            }
+
+            IncomeStatementDTO.LineItem item = IncomeStatementDTO.LineItem.builder()
+                    .accountId(account.getId())
+                    .accountCode(account.getCode())
+                    .accountName(account.getName())
+                    .amount(amount)
+                    .build();
+
+            if (account.getAccountType() == AccountType.REVENUE) {
+                revenueItems.add(item);
+                totalRevenue = totalRevenue.add(amount);
+            } else {
+                expenseItems.add(item);
+                totalExpenses = totalExpenses.add(amount);
+            }
+        }
+
+        return IncomeStatementDTO.builder()
+                .metadata(IncomeStatementDTO.ReportMetadata.builder()
+                        .reportName("Daromad va Xarajatlar Hisoboti")
+                        .generatedAt(Instant.now())
+                        .startDate(startDate)
+                        .endDate(endDate)
+                        .build())
+                .revenueItems(revenueItems)
+                .expenseItems(expenseItems)
+                .summary(IncomeStatementDTO.Summary.builder()
+                        .totalRevenue(totalRevenue)
+                        .totalExpenses(totalExpenses)
+                        .netIncome(totalRevenue.subtract(totalExpenses))
                         .build())
                 .build();
     }

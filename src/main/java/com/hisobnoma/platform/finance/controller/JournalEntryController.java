@@ -3,6 +3,7 @@ package com.hisobnoma.platform.finance.controller;
 import com.hisobnoma.platform.common.dto.PageResponse;
 import com.hisobnoma.platform.finance.dto.CreateJournalEntryRequest;
 import com.hisobnoma.platform.finance.dto.JournalEntryDto;
+import com.hisobnoma.platform.finance.entity.JournalSource;
 import com.hisobnoma.platform.finance.entity.JournalStatus;
 import com.hisobnoma.platform.finance.service.JournalEntryService;
 import jakarta.validation.Valid;
@@ -39,6 +40,14 @@ public class JournalEntryController {
             @PathVariable JournalStatus status,
             @PageableDefault(sort = "entryDate", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(journalEntryService.getJournalEntriesByStatus(status, pageable));
+    }
+
+    @GetMapping("/source/{source}")
+    @PreAuthorize("hasAuthority('FINANCE_JE_VIEW')")
+    public ResponseEntity<PageResponse<JournalEntryDto>> getJournalEntriesBySource(
+            @PathVariable JournalSource source,
+            @PageableDefault(sort = "entryDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(journalEntryService.getJournalEntriesBySource(source, pageable));
     }
 
     @GetMapping("/date-range")

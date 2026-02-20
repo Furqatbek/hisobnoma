@@ -166,6 +166,26 @@ public class ReportController {
         return buildExportResponse(data, format, "trial-balance");
     }
 
+    @PostMapping("/financial/income-statement")
+    @PreAuthorize("hasAuthority('REPORT_FINANCIAL_VIEW')")
+    @Operation(summary = "Generate Income Statement", description = "Generate income statement (profit & loss) report showing revenue and expenses")
+    public ResponseEntity<ApiResponse<IncomeStatementDTO>> generateIncomeStatement(
+            @Valid @RequestBody GenerateReportRequest request) {
+        IncomeStatementDTO report = financialReportService.generateIncomeStatement(request);
+        return ResponseEntity.ok(ApiResponse.success(report));
+    }
+
+    @PostMapping("/financial/income-statement/export")
+    @PreAuthorize("hasAuthority('REPORT_FINANCIAL_VIEW')")
+    @Operation(summary = "Export Income Statement", description = "Generate and export income statement report")
+    public ResponseEntity<byte[]> exportIncomeStatement(
+            @Valid @RequestBody GenerateReportRequest request) throws IOException {
+        ExportFormat format = getExportFormat(request);
+        IncomeStatementDTO report = financialReportService.generateIncomeStatement(request);
+        byte[] data = exportService.exportReport(report, format, "INCOME_STATEMENT");
+        return buildExportResponse(data, format, "income-statement");
+    }
+
     @PostMapping("/financial/ar-aging")
     @PreAuthorize("hasAuthority('REPORT_FINANCIAL_VIEW')")
     @Operation(summary = "Generate AR Aging Report", description = "Generate accounts receivable aging report")

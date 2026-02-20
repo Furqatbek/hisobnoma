@@ -2,6 +2,7 @@ package com.hisobnoma.platform.reports.service;
 
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.hr.entity.SalaryRecord;
+import com.hisobnoma.platform.hr.repository.SalaryAdvanceRepository;
 import com.hisobnoma.platform.hr.repository.SalaryRecordRepository;
 import com.hisobnoma.platform.reports.dto.SalaryReportDTO;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class SalaryReportService {
 
     private final SecurityContextHelper securityContextHelper;
     private final SalaryRecordRepository salaryRecordRepository;
+    private final SalaryAdvanceRepository advanceRepository;
 
     public SalaryReportDTO generateSalaryReport(Integer year, Integer month) {
         Long tenantId = securityContextHelper.getRequiredTenantId();
@@ -55,8 +57,18 @@ public class SalaryReportService {
             totalDeductions = totalDeductions.add(deduction);
             totalNet = totalNet.add(net);
 
-            BigDecimal advance = record.getAdvanceAmount() != null ? record.getAdvanceAmount() : BigDecimal.ZERO;
-            BigDecimal cashPay = record.getPayAmount() != null ? record.getPayAmount() : BigDecimal.ZERO;
+            BigDecimal advance;
+            BigDecimal cashPay;
+
+            // For pending records, dynamically calculate advance deduction
+            if (record.getStatus() == SalaryRecord.SalaryStatus.PENDING) {
+                advance = advanceRepository.sumGivenByEmployeeAndPeriod(
+                        tenantId, record.getEmployee().getId(), record.getPeriodYear(), record.getPeriodMonth());
+                cashPay = net.subtract(advance).max(BigDecimal.ZERO);
+            } else {
+                advance = record.getAdvanceAmount() != null ? record.getAdvanceAmount() : BigDecimal.ZERO;
+                cashPay = record.getPayAmount() != null ? record.getPayAmount() : BigDecimal.ZERO;
+            }
             totalAdvances = totalAdvances.add(advance);
             totalCashPaid = totalCashPaid.add(cashPay);
 

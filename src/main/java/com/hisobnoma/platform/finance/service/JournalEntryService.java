@@ -53,6 +53,13 @@ public class JournalEntryService {
     }
 
     @Transactional(readOnly = true)
+    public PageResponse<JournalEntryDto> getJournalEntriesBySource(JournalSource source, Pageable pageable) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        Page<JournalEntry> page = journalEntryRepository.findBySourceAndTenantId(tenantId, source, pageable);
+        return PageResponse.of(page.map(journalEntryMapper::toDtoWithoutLines));
+    }
+
+    @Transactional(readOnly = true)
     public JournalEntryDto getJournalEntry(Long id) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         JournalEntry entry = journalEntryRepository.findByIdAndTenantId(id, tenantId)
