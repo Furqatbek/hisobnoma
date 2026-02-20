@@ -218,6 +218,42 @@ const routes = [
           }
         ]
       },
+      // HR
+      {
+        path: 'hr',
+        children: [
+          {
+            path: 'employees',
+            name: 'employees',
+            component: () => import('@/views/hr/EmployeesView.vue')
+          },
+          {
+            path: 'employees/new',
+            name: 'employee-create',
+            component: () => import('@/views/hr/EmployeeFormView.vue')
+          },
+          {
+            path: 'employees/:id/edit',
+            name: 'employee-edit',
+            component: () => import('@/views/hr/EmployeeFormView.vue')
+          },
+          {
+            path: 'departments',
+            name: 'departments',
+            component: () => import('@/views/hr/DepartmentsView.vue')
+          },
+          {
+            path: 'positions',
+            name: 'positions',
+            component: () => import('@/views/hr/PositionsView.vue')
+          },
+          {
+            path: 'salary',
+            name: 'salary',
+            component: () => import('@/views/hr/SalaryView.vue')
+          }
+        ]
+      },
       // Admin
       {
         path: 'admin',

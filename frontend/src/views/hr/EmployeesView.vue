@@ -1,0 +1,139 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import { employeesApi } from '@/services/api'
+import { PlusIcon, PencilSquareIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+
+const employees = ref([])
+const loading = ref(true)
+const searchQuery = ref('')
+
+async function loadEmployees() {
+  loading.value = true
+  try {
+    const response = await employeesApi.getAll({ size: 100 })
+    employees.value = response.data.content || response.data.data?.content || []
+  } catch (error) {
+    console.error('Failed to load employees:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleSearch() {
+  if (!searchQuery.value.trim()) {
+    await loadEmployees()
+    return
+  }
+  loading.value = true
+  try {
+    const response = await employeesApi.search(searchQuery.value, { size: 100 })
+    employees.value = response.data.content || response.data.data?.content || []
+  } catch (error) {
+    console.error('Failed to search:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+function statusBadge(status) {
+  switch (status) {
+    case 'ACTIVE': return 'badge-success'
+    case 'ON_LEAVE': return 'badge-warning'
+    case 'TERMINATED': return 'badge-danger'
+    default: return 'badge-info'
+  }
+}
+
+function statusLabel(status) {
+  switch (status) {
+    case 'ACTIVE': return 'Faol'
+    case 'ON_LEAVE': return 'Ta\'tilda'
+    case 'TERMINATED': return 'Ishdan bo\'shagan'
+    default: return status
+  }
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('uz-UZ').format(value || 0)
+}
+
+onMounted(loadEmployees)
+</script>
+
+<template>
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Xodimlar</h1>
+        <p class="mt-1 text-sm text-gray-500">Xodimlar ro'yxati va boshqaruvi</p>
+      </div>
+      <RouterLink to="/hr/employees/new" class="btn-primary">
+        <PlusIcon class="h-5 w-5 mr-2" />
+        Yangi xodim
+      </RouterLink>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="flex gap-3 mb-4">
+          <div class="relative flex-1">
+            <MagnifyingGlassIcon class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            <input
+              v-model="searchQuery"
+              @keyup.enter="handleSearch"
+              type="text"
+              placeholder="Qidirish (ism, kod)..."
+              class="input pl-10"
+            />
+          </div>
+          <button @click="handleSearch" class="btn-secondary">Qidirish</button>
+        </div>
+
+        <div v-if="loading" class="flex items-center justify-center h-32">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+
+        <div v-else-if="employees.length === 0" class="text-center py-12 text-gray-500">
+          Xodimlar topilmadi
+        </div>
+
+        <div v-else class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Kod</th>
+                <th>F.I.O</th>
+                <th>Bo'lim</th>
+                <th>Lavozim</th>
+                <th>Telefon</th>
+                <th>Oylik</th>
+                <th>Holat</th>
+                <th>Amallar</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="emp in employees" :key="emp.id">
+                <td class="font-medium">{{ emp.employeeCode }}</td>
+                <td>{{ emp.fullName }}</td>
+                <td>{{ emp.departmentName || '-' }}</td>
+                <td>{{ emp.positionName || '-' }}</td>
+                <td>{{ emp.phone || '-' }}</td>
+                <td>{{ formatCurrency(emp.currentSalary) }}</td>
+                <td>
+                  <span :class="['badge', statusBadge(emp.status)]">
+                    {{ statusLabel(emp.status) }}
+                  </span>
+                </td>
+                <td>
+                  <RouterLink :to="`/hr/employees/${emp.id}/edit`" class="text-primary-600 hover:text-primary-800">
+                    <PencilSquareIcon class="h-5 w-5" />
+                  </RouterLink>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

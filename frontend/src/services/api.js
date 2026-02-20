@@ -358,3 +358,44 @@ export const expensesApi = {
   getVendorBalance: (vendorId) => api.get(`/ap/invoices/summary/vendor/${vendorId}/balance`),
   getOverdueBalance: () => api.get('/ap/invoices/summary/overdue-balance')
 }
+
+// HR Departments API - Backend: /api/v1/hr/departments
+export const departmentsApi = {
+  getAll: () => api.get('/hr/departments'),
+  getById: (id) => api.get(`/hr/departments/${id}`),
+  create: (data) => api.post('/hr/departments', data),
+  update: (id, data) => api.put(`/hr/departments/${id}`, data),
+  delete: (id) => api.delete(`/hr/departments/${id}`)
+}
+
+// HR Positions API - Backend: /api/v1/hr/positions
+export const positionsApi = {
+  getAll: () => api.get('/hr/positions'),
+  getById: (id) => api.get(`/hr/positions/${id}`),
+  create: (data) => api.post('/hr/positions', data),
+  update: (id, data) => api.put(`/hr/positions/${id}`, data),
+  delete: (id) => api.delete(`/hr/positions/${id}`)
+}
+
+// HR Employees API - Backend: /api/v1/hr/employees
+export const employeesApi = {
+  getAll: (params) => api.get('/hr/employees', { params }),
+  getActive: () => api.get('/hr/employees/active'),
+  getById: (id) => api.get(`/hr/employees/${id}`),
+  search: (query, params) => api.get('/hr/employees/search', { params: { q: query, ...params } }),
+  create: (data) => api.post('/hr/employees', data),
+  update: (id, data) => api.put(`/hr/employees/${id}`, data),
+  terminate: (id) => api.put(`/hr/employees/${id}/terminate`),
+  delete: (id) => api.delete(`/hr/employees/${id}`)
+}
+
+// HR Salary API - Backend: /api/v1/hr/salary
+export const salaryApi = {
+  getAll: (params) => api.get('/hr/salary', { params }),
+  getByPeriod: (year, month, params) => api.get('/hr/salary/period', { params: { year, month, ...params } }),
+  getByEmployee: (employeeId) => api.get(`/hr/salary/employee/${employeeId}`),
+  getById: (id) => api.get(`/hr/salary/${id}`),
+  create: (data) => api.post('/hr/salary', data),
+  markPaid: (id) => api.put(`/hr/salary/${id}/pay`),
+  cancel: (id) => api.put(`/hr/salary/${id}/cancel`)
+}

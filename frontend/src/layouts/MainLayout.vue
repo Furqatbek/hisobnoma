@@ -25,14 +25,15 @@ import {
   ComputerDesktopIcon,
   ClockIcon,
   KeyIcon,
-  BanknotesIcon
+  BanknotesIcon,
+  BriefcaseIcon
 } from '@heroicons/vue/24/outline'
 
 const authStore = useAuthStore()
 const route = useRoute()
 
 const sidebarOpen = ref(false)
-const expandedMenus = ref(['inventory', 'pos', 'purchases', 'finance', 'reports', 'admin'])
+const expandedMenus = ref(['inventory', 'pos', 'purchases', 'finance', 'hr', 'reports', 'admin'])
 
 const navigation = computed(() => [
   {
@@ -85,6 +86,17 @@ const navigation = computed(() => [
     children: [
       { name: 'Qarzdorlar', href: '/finance/debtors', icon: UsersIcon },
       { name: 'Xarajatlar', href: '/finance/expenses', icon: CurrencyDollarIcon }
+    ]
+  },
+  {
+    name: 'Xodimlar (HR)',
+    icon: BriefcaseIcon,
+    key: 'hr',
+    children: [
+      { name: 'Xodimlar', href: '/hr/employees', icon: UserGroupIcon },
+      { name: "Bo'limlar", href: '/hr/departments', icon: BuildingStorefrontIcon },
+      { name: 'Lavozimlar', href: '/hr/positions', icon: BriefcaseIcon },
+      { name: 'Ish haqi', href: '/hr/salary', icon: BanknotesIcon }
     ]
   },
   {
