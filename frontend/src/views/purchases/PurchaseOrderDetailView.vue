@@ -9,7 +9,7 @@ const router = useRouter()
 const order = ref(null)
 const loading = ref(true)
 
-onMounted(async () => {
+async function loadOrder() {
   try {
     const response = await purchaseOrdersApi.getById(route.params.id)
     order.value = response.data
@@ -18,12 +18,14 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadOrder)
 
 async function approveOrder() {
   try {
     await purchaseOrdersApi.approve(order.value.id)
-    order.value.status = 'APPROVED'
+    await loadOrder()
   } catch (error) {
     alert('Failed to approve order')
   }
@@ -33,7 +35,7 @@ async function cancelOrder() {
   if (!confirm('Cancel this order?')) return
   try {
     await purchaseOrdersApi.cancel(order.value.id)
-    order.value.status = 'CANCELLED'
+    await loadOrder()
   } catch (error) {
     alert('Failed to cancel order')
   }
@@ -41,8 +43,8 @@ async function cancelOrder() {
 
 async function receiveOrder() {
   try {
-    await purchaseOrdersApi.receive(order.value.id, {})
-    order.value.status = 'RECEIVED'
+    await purchaseOrdersApi.receive(order.value.id)
+    await loadOrder()
   } catch (error) {
     alert('Failed to receive order')
   }

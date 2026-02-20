@@ -81,6 +81,12 @@ public class PurchaseOrderController {
         return ResponseEntity.ok(purchaseOrderService.approvePurchaseOrder(id));
     }
 
+    @PutMapping("/{id}/receive")
+    @PreAuthorize("hasAuthority('INVENTORY_PO_UPDATE')")
+    public ResponseEntity<PurchaseOrderDto> receivePurchaseOrder(@PathVariable Long id) {
+        return ResponseEntity.ok(purchaseOrderService.receivePurchaseOrder(id));
+    }
+
     @PutMapping("/{id}/cancel")
     @PreAuthorize("hasAuthority('INVENTORY_PO_CANCEL')")
     public ResponseEntity<PurchaseOrderDto> cancelPurchaseOrder(

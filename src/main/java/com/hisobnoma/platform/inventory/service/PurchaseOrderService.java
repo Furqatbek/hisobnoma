@@ -14,9 +14,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -30,6 +32,7 @@ public class PurchaseOrderService {
     private final ProductRepository productRepository;
     private final UnitOfMeasureRepository unitOfMeasureRepository;
     private final PurchaseOrderMapper purchaseOrderMapper;
+    private final ReceivingService receivingService;
     private final SecurityContextHelper securityContextHelper;
 
     @Transactional(readOnly = true)
@@ -200,6 +203,58 @@ public class PurchaseOrderService {
         po.setStatus(POStatus.PENDING);
         po = purchaseOrderRepository.save(po);
         return purchaseOrderMapper.toDto(po);
+    }
+
+    @Transactional
+    public PurchaseOrderDto receivePurchaseOrder(Long id) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+
+        PurchaseOrder po = purchaseOrderRepository.findByIdWithLinesAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Purchase Order not found with id: " + id));
+
+        if (po.getStatus() != POStatus.APPROVED && po.getStatus() != POStatus.PARTIAL) {
+            throw new BusinessException("Only APPROVED or PARTIALLY RECEIVED purchase orders can be received");
+        }
+
+        // Build receiving lines from PO lines with pending quantities
+        List<CreateReceivingLineRequest> receivingLines = new ArrayList<>();
+        int lineNumber = 1;
+        for (PurchaseOrderLine poLine : po.getLines()) {
+            BigDecimal pending = poLine.getPendingQuantity();
+            if (pending.compareTo(BigDecimal.ZERO) > 0) {
+                receivingLines.add(CreateReceivingLineRequest.builder()
+                        .poLineId(poLine.getId())
+                        .productId(poLine.getProduct().getId())
+                        .expectedQuantity(pending)
+                        .receivedQuantity(pending)
+                        .rejectedQuantity(BigDecimal.ZERO)
+                        .uomId(poLine.getUom().getId())
+                        .unitCost(poLine.getUnitPrice())
+                        .taxPercent(poLine.getTaxPercent())
+                        .build());
+                lineNumber++;
+            }
+        }
+
+        if (receivingLines.isEmpty()) {
+            throw new BusinessException("No pending quantities to receive");
+        }
+
+        // Create receiving order from PO
+        CreateReceivingRequest receivingRequest = CreateReceivingRequest.builder()
+                .purchaseOrderId(po.getId())
+                .vendorId(po.getVendor().getId())
+                .locationId(po.getLocation().getId())
+                .receivingDate(LocalDate.now())
+                .currency(po.getCurrency())
+                .lines(receivingLines)
+                .build();
+
+        ReceivingOrderDto ro = receivingService.createReceivingOrder(receivingRequest);
+        // Confirm receiving (updates stock, PO status, creates AP invoice)
+        receivingService.confirmReceiving(ro.getId());
+
+        return getPurchaseOrder(id);
     }
 
     private String generatePoNumber(Long tenantId) {

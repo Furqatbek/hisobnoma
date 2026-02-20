@@ -250,7 +250,8 @@ export const purchaseOrdersApi = {
   create: (data) => api.post('/inventory/purchase-orders', data),
   submit: (id) => api.put(`/inventory/purchase-orders/${id}/submit`),
   approve: (id) => api.put(`/inventory/purchase-orders/${id}/approve`),
-  cancel: (id, reason) => api.put(`/inventory/purchase-orders/${id}/cancel`, { reason })
+  cancel: (id, reason) => api.put(`/inventory/purchase-orders/${id}/cancel`, { reason }),
+  receive: (id) => api.put(`/inventory/purchase-orders/${id}/receive`)
 }
 
 // Receiving API - Backend: /api/v1/inventory/receiving
