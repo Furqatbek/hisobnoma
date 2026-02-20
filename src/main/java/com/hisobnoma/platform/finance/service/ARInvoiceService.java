@@ -440,6 +440,9 @@ public class ARInvoiceService {
             ARInvoiceLine line = new ARInvoiceLine();
             line.setArInvoice(invoice);
             line.setItemId(txLine.getProduct() != null ? txLine.getProduct().getId() : null);
+            line.setProductId(txLine.getProduct() != null ? txLine.getProduct().getId() : null);
+            line.setProductSku(txLine.getProductCode());
+            line.setProductName(txLine.getProductName());
             line.setDescription(txLine.getProductName() + (txLine.getVariantName() != null ? " - " + txLine.getVariantName() : ""));
             line.setQuantity(txLine.getQuantity());
             line.setUnitPrice(txLine.getUnitPrice());
@@ -462,8 +465,13 @@ public class ARInvoiceService {
         invoice.setLines(lines);
         invoice = arInvoiceRepository.save(invoice);
 
-        // Post to GL
-        glIntegrationService.postARInvoice(invoice);
+        // Post to GL (non-critical - invoice is still valid without GL entry)
+        try {
+            glIntegrationService.postARInvoice(invoice);
+        } catch (Exception e) {
+            log.warn("Failed to post AR Invoice {} to GL: {}. Invoice created successfully, GL entry can be posted manually.",
+                    invoice.getInvoiceNumber(), e.getMessage());
+        }
 
         // Update customer balance
         customerService.updateCustomerBalance(customer.getId(), creditAmount);
