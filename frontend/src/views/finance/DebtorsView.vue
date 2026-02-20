@@ -143,6 +143,189 @@ function formatDate(dateString) {
   return new Date(dateString).toLocaleDateString('uz-UZ')
 }
 
+function printCustomerDebt() {
+  if (!selectedCustomer.value || !unpaidInvoices.value.length) return
+
+  const customer = selectedCustomer.value
+  const aging = selectedAging.value
+  const invoices = unpaidInvoices.value
+  const today = new Date().toLocaleDateString('uz-UZ')
+
+  // Build invoice rows with line items
+  let invoiceRows = ''
+  let lineCounter = 0
+  invoices.forEach((inv) => {
+    // Invoice header row
+    invoiceRows += `
+      <tr style="background: #f3f4f6;">
+        <td colspan="6" style="padding: 8px 10px; border: 1px solid #d1d5db; font-weight: 600;">
+          <span style="color: #111827;">Faktura: ${inv.invoiceNumber}</span>
+          <span style="margin-left: 16px; color: #6b7280; font-size: 11px;">Sana: ${formatDate(inv.invoiceDate)}</span>
+          <span style="margin-left: 16px; color: #6b7280; font-size: 11px;">Muddat: ${formatDate(inv.dueDate)}</span>
+          ${inv.overdue ? '<span style="margin-left: 16px; color: #dc2626; font-size: 11px; font-weight: 600;">' + inv.daysOverdue + ' kun kechikkan</span>' : ''}
+          <span style="float: right; color: #dc2626; font-weight: 700;">Qoldiq: ${formatCurrency(inv.balanceDue)} so'm</span>
+        </td>
+      </tr>`
+
+    if (inv.lines?.length) {
+      inv.lines.forEach((line) => {
+        lineCounter++
+        invoiceRows += `
+          <tr>
+            <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: center;">${lineCounter}</td>
+            <td style="padding: 6px 10px; border: 1px solid #d1d5db;">
+              ${line.productName || line.description || ''}
+              ${line.productSku ? '<br><span style="color: #6b7280; font-size: 10px;">' + line.productSku + '</span>' : ''}
+            </td>
+            <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: center;">${line.quantity || ''}${line.unitOfMeasure ? ' ' + line.unitOfMeasure : ''}</td>
+            <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right;">${formatCurrency(line.unitPrice)}</td>
+            <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right;">${line.discountAmount ? formatCurrency(line.discountAmount) : '-'}</td>
+            <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right; font-weight: 500;">${formatCurrency(line.lineTotal)}</td>
+          </tr>`
+      })
+    } else {
+      invoiceRows += `
+        <tr>
+          <td colspan="6" style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: center; color: #9ca3af; font-size: 11px;">
+            Mahsulot tafsilotlari mavjud emas
+          </td>
+        </tr>`
+    }
+  })
+
+  // Totals
+  const totalAmount = invoices.reduce((s, inv) => s + (inv.totalAmount || 0), 0)
+  const totalPaid = invoices.reduce((s, inv) => s + (inv.paidAmount || 0), 0)
+  const totalBalance = invoices.reduce((s, inv) => s + (inv.balanceDue || 0), 0)
+
+  const printWindow = window.open('', '_blank', 'width=900,height=700')
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Qarzdor: ${customer.customerName}</title>
+      <style>
+        @page { size: A4 portrait; margin: 12mm 15mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; font-size: 12px; color: #111827; line-height: 1.4; }
+        @media print { body { width: 100%; } }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 8px 10px; background: #111827; color: white; font-weight: 600; font-size: 11px; text-align: left; }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 16px; border-bottom: 3px solid #111827; margin-bottom: 16px;">
+        <div>
+          <div style="font-size: 20px; font-weight: bold;">${brandConfig.value.brandName || ''}</div>
+          ${brandConfig.value.address ? '<div style="color: #6b7280; font-size: 12px;">' + brandConfig.value.address + '</div>' : ''}
+          ${brandConfig.value.phone ? '<div style="color: #6b7280; font-size: 12px;">Tel: ' + brandConfig.value.phone + '</div>' : ''}
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Qarz tafsiloti</div>
+          <div style="color: #6b7280; margin-top: 4px;">Sana: ${today}</div>
+        </div>
+      </div>
+
+      <!-- Customer Info -->
+      <div style="display: flex; justify-content: space-between; margin-bottom: 16px; padding: 12px 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <div>
+          <div style="font-size: 16px; font-weight: bold;">${customer.customerName}</div>
+          ${customer.customerCode ? '<div style="color: #6b7280; font-size: 12px;">Kod: ' + customer.customerCode + '</div>' : ''}
+          ${customer.paymentTerms ? '<div style="color: #6b7280; font-size: 12px;">To\'lov muddati: ' + customer.paymentTerms + ' kun</div>' : ''}
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 12px; color: #6b7280;">Jami qarz:</div>
+          <div style="font-size: 20px; font-weight: bold; color: #dc2626;">${formatCurrency(customer.netBalance)} so'm</div>
+          ${customer.creditLimit ? '<div style="font-size: 11px; color: #6b7280;">Kredit limiti: ' + formatCurrency(customer.creditLimit) + ' so\'m</div>' : ''}
+        </div>
+      </div>
+
+      ${aging ? `
+      <!-- Aging -->
+      <div style="display: flex; gap: 8px; margin-bottom: 16px; font-size: 11px;">
+        <div style="flex: 1; padding: 8px; background: #f0fdf4; border-radius: 6px; text-align: center;">
+          <div style="color: #6b7280;">Joriy</div>
+          <div style="font-weight: 600; color: #15803d;">${formatCurrency(aging.currentAmount)}</div>
+        </div>
+        <div style="flex: 1; padding: 8px; background: #fefce8; border-radius: 6px; text-align: center;">
+          <div style="color: #6b7280;">1-30 kun</div>
+          <div style="font-weight: 600; color: #ca8a04;">${formatCurrency(aging.days1To30)}</div>
+        </div>
+        <div style="flex: 1; padding: 8px; background: #fff7ed; border-radius: 6px; text-align: center;">
+          <div style="color: #6b7280;">31-60 kun</div>
+          <div style="font-weight: 600; color: #ea580c;">${formatCurrency(aging.days31To60)}</div>
+        </div>
+        <div style="flex: 1; padding: 8px; background: #fef2f2; border-radius: 6px; text-align: center;">
+          <div style="color: #6b7280;">61-90 kun</div>
+          <div style="font-weight: 600; color: #dc2626;">${formatCurrency(aging.days61To90)}</div>
+        </div>
+        <div style="flex: 1; padding: 8px; background: #fef2f2; border-radius: 6px; text-align: center;">
+          <div style="color: #6b7280;">90+ kun</div>
+          <div style="font-weight: 600; color: #991b1b;">${formatCurrency(aging.over90Days)}</div>
+        </div>
+      </div>
+      ` : ''}
+
+      <!-- Invoices with Items -->
+      <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">To'lanmagan fakturalar va mahsulotlar</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align: center; width: 35px;">№</th>
+            <th>Mahsulot</th>
+            <th style="text-align: center; width: 80px;">Soni</th>
+            <th style="text-align: right; width: 100px;">Narxi</th>
+            <th style="text-align: right; width: 80px;">Chegirma</th>
+            <th style="text-align: right; width: 110px;">Jami</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${invoiceRows}
+        </tbody>
+        <tfoot>
+          <tr style="background: #f3f4f6; font-weight: bold;">
+            <td colspan="5" style="padding: 8px 10px; border: 1px solid #d1d5db;">Umumiy jami</td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right;">${formatCurrency(totalAmount)} so'm</td>
+          </tr>
+          <tr style="font-weight: bold;">
+            <td colspan="5" style="padding: 6px 10px; border: 1px solid #d1d5db; color: #15803d;">To'langan</td>
+            <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right; color: #15803d;">${formatCurrency(totalPaid)} so'm</td>
+          </tr>
+          <tr style="font-weight: bold; background: #fef2f2;">
+            <td colspan="5" style="padding: 8px 10px; border: 1px solid #d1d5db; color: #dc2626; font-size: 13px;">Qarz qoldig'i</td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right; color: #dc2626; font-size: 13px;">${formatCurrency(totalBalance)} so'm</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- Footer -->
+      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+        <div style="width: 40%;">
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">Tuzuvchi:</div>
+          <div style="border-bottom: 1px solid #111827; min-height: 30px;"></div>
+        </div>
+        <div style="width: 40%;">
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">Mijoz imzosi:</div>
+          <div style="border-bottom: 1px solid #111827; min-height: 30px;"></div>
+        </div>
+      </div>
+      <div style="margin-top: 24px; text-align: center; font-size: 10px; color: #9ca3af;">
+        Chop etilgan: ${new Date().toLocaleString('uz-UZ')}
+      </div>
+    </body>
+    </html>
+  `)
+
+  printWindow.document.close()
+  printWindow.focus()
+  setTimeout(() => {
+    printWindow.print()
+    printWindow.close()
+  }, 250)
+}
+
 function printDebtors() {
   const list = debtors.value
   if (!list.length) return
@@ -414,9 +597,19 @@ function printDebtors() {
             <h2 class="text-xl font-bold text-gray-900">{{ selectedCustomer.customerName }}</h2>
             <p class="text-sm text-gray-500">{{ selectedCustomer.customerCode }}</p>
           </div>
-          <button @click="closeModal" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-            <XMarkIcon class="h-6 w-6" />
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              @click="printCustomerDebt"
+              :disabled="loadingInvoices || unpaidInvoices.length === 0"
+              class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Qarz tafsilotini chop etish"
+            >
+              <PrinterIcon class="h-5 w-5" />
+            </button>
+            <button @click="closeModal" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+              <XMarkIcon class="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         <div class="p-6 space-y-6">
