@@ -205,6 +205,13 @@ export const customersApi = {
   search: (query) => api.get('/finance/customers/search', { params: { query } })
 }
 
+// AR Reports API - Backend: /api/v1/finance/ar-reports
+export const arReportsApi = {
+  getAgingReport: (asOfDate) => api.get('/finance/ar-reports/aging', { params: { asOfDate } }),
+  getCustomerBalanceReport: () => api.get('/finance/ar-reports/customer-balance'),
+  getCustomerBalance: (customerId) => api.get(`/finance/ar-reports/customer-balance/${customerId}`)
+}
+
 // Suppliers/Vendors API - Backend: /api/v1/inventory/vendors
 export const suppliersApi = {
   getAll: (params) => api.get('/inventory/vendors', { params }),

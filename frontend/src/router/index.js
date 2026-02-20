@@ -192,6 +192,11 @@ const routes = [
         path: 'finance',
         children: [
           {
+            path: 'debtors',
+            name: 'debtors',
+            component: () => import('@/views/finance/DebtorsView.vue')
+          },
+          {
             path: 'expenses',
             name: 'expenses',
             component: () => import('@/views/finance/ExpensesView.vue')
