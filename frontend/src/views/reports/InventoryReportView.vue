@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { reportsApi } from '@/services/api'
 import { ArrowDownTrayIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
 
@@ -11,7 +11,7 @@ async function fetchReport() {
   loading.value = true
   try {
     const response = await reportsApi.getStockOnHand({})
-    report.value = response.data.data
+    report.value = response.data.data || response.data
   } catch (error) {
     console.error('Failed to fetch report:', error)
   } finally {
@@ -21,15 +21,35 @@ async function fetchReport() {
 
 onMounted(fetchReport)
 
-function filteredProducts() {
-  if (!report.value?.products) return []
-  if (filter.value === 'low') return report.value.products.filter(p => p.status === 'LOW_STOCK')
-  if (filter.value === 'out') return report.value.products.filter(p => p.status === 'OUT_OF_STOCK')
-  return report.value.products
+const filteredItems = computed(() => {
+  if (!report.value?.items) return []
+  if (filter.value === 'low') return report.value.items.filter(p => p.stockStatus === 'LOW_STOCK')
+  if (filter.value === 'out') return report.value.items.filter(p => p.stockStatus === 'OUT_OF_STOCK')
+  return report.value.items
+})
+
+async function exportReport() {
+  try {
+    const response = await reportsApi.exportStockOnHand({ exportFormat: 'EXCEL' })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'inventory-report.xlsx')
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } catch (error) {
+    console.error('Export failed:', error)
+  }
 }
 
 function formatCurrency(value) {
-  return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0)
+  return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value || 0)
+}
+
+function formatQty(value) {
+  if (value == null) return '0'
+  return new Intl.NumberFormat('uz-UZ').format(value)
 }
 
 function getStatusClass(status) {
@@ -37,18 +57,24 @@ function getStatusClass(status) {
   if (status === 'LOW_STOCK') return 'badge-warning'
   return 'badge-success'
 }
+
+function getStatusLabel(status) {
+  if (status === 'OUT_OF_STOCK') return 'Tugagan'
+  if (status === 'LOW_STOCK') return 'Kam qolgan'
+  return 'Mavjud'
+}
 </script>
 
 <template>
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Inventory Report</h1>
-        <p class="mt-1 text-sm text-gray-500">Stock levels and valuation</p>
+        <h1 class="text-2xl font-bold text-gray-900">Ombor hisoboti</h1>
+        <p class="mt-1 text-sm text-gray-500">Zaxira darajasi va baholash</p>
       </div>
-      <button class="btn-secondary">
+      <button @click="exportReport" class="btn-secondary">
         <ArrowDownTrayIcon class="h-5 w-5 mr-2" />
-        Export
+        Eksport
       </button>
     </div>
 
@@ -64,8 +90,11 @@ function getStatusClass(status) {
           :class="['card cursor-pointer transition-all text-left', filter === 'all' ? 'ring-2 ring-primary-500' : '']"
         >
           <div class="card-body">
-            <p class="text-sm text-gray-500">Total Products</p>
-            <p class="text-2xl font-bold">{{ report.totalProducts || 0 }}</p>
+            <p class="text-sm text-gray-500">Jami mahsulotlar</p>
+            <p class="text-2xl font-bold">{{ report.summary?.totalSkus || 0 }}</p>
+            <p v-if="report.summary?.totalQuantity" class="text-xs text-gray-400 mt-1">
+              {{ formatQty(report.summary.totalQuantity) }} dona
+            </p>
           </div>
         </button>
         <button
@@ -73,8 +102,8 @@ function getStatusClass(status) {
           :class="['card cursor-pointer transition-all text-left', filter === 'low' ? 'ring-2 ring-yellow-500' : '']"
         >
           <div class="card-body">
-            <p class="text-sm text-gray-500">Low Stock</p>
-            <p class="text-2xl font-bold text-yellow-600">{{ report.lowStockCount || 0 }}</p>
+            <p class="text-sm text-gray-500">Kam qolgan</p>
+            <p class="text-2xl font-bold text-yellow-600">{{ report.summary?.lowStockCount || 0 }}</p>
           </div>
         </button>
         <button
@@ -82,14 +111,14 @@ function getStatusClass(status) {
           :class="['card cursor-pointer transition-all text-left', filter === 'out' ? 'ring-2 ring-red-500' : '']"
         >
           <div class="card-body">
-            <p class="text-sm text-gray-500">Out of Stock</p>
-            <p class="text-2xl font-bold text-red-600">{{ report.outOfStockCount || 0 }}</p>
+            <p class="text-sm text-gray-500">Tugagan</p>
+            <p class="text-2xl font-bold text-red-600">{{ report.summary?.outOfStockCount || 0 }}</p>
           </div>
         </button>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Total Value</p>
-            <p class="text-2xl font-bold text-primary-600">{{ formatCurrency(report.totalValue) }}</p>
+            <p class="text-sm text-gray-500">Umumiy qiymat</p>
+            <p class="text-2xl font-bold text-primary-600">{{ formatCurrency(report.summary?.totalValue) }}</p>
           </div>
         </div>
       </div>
@@ -98,44 +127,57 @@ function getStatusClass(status) {
       <div class="card">
         <div class="card-header">
           <h3 class="text-lg font-medium">
-            {{ filter === 'all' ? 'All Products' : filter === 'low' ? 'Low Stock Products' : 'Out of Stock Products' }}
+            {{ filter === 'all' ? 'Barcha mahsulotlar' : filter === 'low' ? 'Kam qolgan mahsulotlar' : 'Tugagan mahsulotlar' }}
           </h3>
         </div>
-        <div class="table-container">
+        <div v-if="filteredItems.length" class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Product</th>
+                <th>Mahsulot</th>
                 <th>SKU</th>
-                <th class="text-right">Stock</th>
-                <th class="text-right">Min Level</th>
-                <th class="text-right">Value</th>
-                <th>Status</th>
+                <th>Joylashuv</th>
+                <th class="text-right">Mavjud</th>
+                <th class="text-right">Band</th>
+                <th class="text-right">Erkin</th>
+                <th class="text-right">Min. daraja</th>
+                <th class="text-right">Qiymat</th>
+                <th>Holat</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
-              <tr v-for="product in filteredProducts()" :key="product.id">
+              <tr v-for="item in filteredItems" :key="item.productId">
                 <td>
                   <div class="flex items-center">
                     <ExclamationTriangleIcon
-                      v-if="product.status !== 'IN_STOCK'"
-                      class="h-5 w-5 text-yellow-500 mr-2"
+                      v-if="item.stockStatus !== 'IN_STOCK'"
+                      class="h-5 w-5 mr-2"
+                      :class="item.stockStatus === 'OUT_OF_STOCK' ? 'text-red-500' : 'text-yellow-500'"
                     />
-                    <span class="font-medium">{{ product.name }}</span>
+                    <div>
+                      <span class="font-medium">{{ item.productName }}</span>
+                      <span v-if="item.category" class="text-xs text-gray-400 block">{{ item.category }}</span>
+                    </div>
                   </div>
                 </td>
-                <td class="font-mono text-sm text-gray-500">{{ product.sku }}</td>
-                <td class="text-right font-medium">{{ product.quantity }}</td>
-                <td class="text-right text-gray-500">{{ product.minStockLevel }}</td>
-                <td class="text-right">{{ formatCurrency(product.value) }}</td>
+                <td class="font-mono text-sm text-gray-500">{{ item.sku }}</td>
+                <td class="text-sm text-gray-500">{{ item.location }}</td>
+                <td class="text-right font-medium">{{ formatQty(item.quantityOnHand) }}</td>
+                <td class="text-right text-gray-500">{{ formatQty(item.quantityReserved) }}</td>
+                <td class="text-right font-medium">{{ formatQty(item.quantityAvailable) }}</td>
+                <td class="text-right text-gray-500">{{ formatQty(item.reorderPoint) }}</td>
+                <td class="text-right">{{ formatCurrency(item.totalValue) }}</td>
                 <td>
-                  <span :class="['badge', getStatusClass(product.status)]">
-                    {{ product.status?.replace('_', ' ') }}
+                  <span :class="['badge', getStatusClass(item.stockStatus)]">
+                    {{ getStatusLabel(item.stockStatus) }}
                   </span>
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+        <div v-else class="card-body text-center text-gray-500">
+          Ma'lumot yo'q
         </div>
       </div>
     </template>
