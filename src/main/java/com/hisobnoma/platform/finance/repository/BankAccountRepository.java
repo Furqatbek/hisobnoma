@@ -57,9 +57,9 @@ public interface BankAccountRepository extends JpaRepository<BankAccount, Long> 
     @Query("SELECT COALESCE(SUM(ba.currentBalance), 0) FROM BankAccount ba WHERE ba.tenantId = :tenantId AND ba.active = true")
     java.math.BigDecimal sumTotalBalance(@Param("tenantId") Long tenantId);
 
-    @Query("SELECT COALESCE(SUM(ba.currentBalance), 0) FROM BankAccount ba WHERE ba.tenantId = :tenantId AND ba.active = true AND ba.accountType IN ('CASH', 'PETTY_CASH')")
-    java.math.BigDecimal sumCashBalance(@Param("tenantId") Long tenantId);
+    @Query("SELECT COALESCE(SUM(ba.currentBalance), 0) FROM BankAccount ba WHERE ba.tenantId = :tenantId AND ba.active = true AND ba.accountType IN :types")
+    java.math.BigDecimal sumBalanceByTypes(@Param("tenantId") Long tenantId, @Param("types") java.util.List<BankAccountType> types);
 
-    @Query("SELECT COALESCE(SUM(ba.currentBalance), 0) FROM BankAccount ba WHERE ba.tenantId = :tenantId AND ba.active = true AND ba.accountType NOT IN ('CASH', 'PETTY_CASH')")
-    java.math.BigDecimal sumBankBalance(@Param("tenantId") Long tenantId);
+    @Query("SELECT COALESCE(SUM(ba.currentBalance), 0) FROM BankAccount ba WHERE ba.tenantId = :tenantId AND ba.active = true AND ba.accountType NOT IN :excludedTypes")
+    java.math.BigDecimal sumBalanceExcludingTypes(@Param("tenantId") Long tenantId, @Param("excludedTypes") java.util.List<BankAccountType> excludedTypes);
 }

@@ -5,6 +5,9 @@ import com.hisobnoma.platform.admin.entity.AuditLog;
 import com.hisobnoma.platform.admin.repository.AuditLogRepository;
 import com.hisobnoma.platform.auth.repository.UserRepository;
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
+import com.hisobnoma.platform.finance.entity.APInvoiceStatus;
+import com.hisobnoma.platform.finance.entity.ARInvoiceStatus;
+import com.hisobnoma.platform.finance.entity.BankAccountType;
 import com.hisobnoma.platform.finance.repository.APInvoiceRepository;
 import com.hisobnoma.platform.finance.repository.ARInvoiceRepository;
 import com.hisobnoma.platform.finance.repository.BankAccountRepository;
@@ -209,7 +212,7 @@ public class AdminDashboardService {
             BigDecimal value = stockRepository.calculateTotalInventoryValue(tenantId);
             return value != null ? value : BigDecimal.ZERO;
         } catch (Exception e) {
-            log.warn("Failed to get inventory value: {}", e.getMessage());
+            log.error("Failed to get inventory value for tenant {}: {}", tenantId, e.getMessage(), e);
             return BigDecimal.ZERO;
         }
     }
@@ -218,40 +221,44 @@ public class AdminDashboardService {
 
     private BigDecimal getReceivables(Long tenantId) {
         try {
-            BigDecimal total = arInvoiceRepository.sumOutstandingBalance(tenantId);
+            List<ARInvoiceStatus> excludedStatuses = List.of(ARInvoiceStatus.CANCELLED, ARInvoiceStatus.PAID);
+            BigDecimal total = arInvoiceRepository.sumTotalBalanceDue(tenantId, excludedStatuses);
             return total != null ? total : BigDecimal.ZERO;
         } catch (Exception e) {
-            log.warn("Failed to get receivables: {}", e.getMessage());
+            log.error("Failed to get receivables for tenant {}: {}", tenantId, e.getMessage(), e);
             return BigDecimal.ZERO;
         }
     }
 
     private BigDecimal getPayables(Long tenantId) {
         try {
-            BigDecimal total = apInvoiceRepository.sumOutstandingBalance(tenantId);
+            List<APInvoiceStatus> excludedStatuses = List.of(APInvoiceStatus.CANCELLED, APInvoiceStatus.PAID);
+            BigDecimal total = apInvoiceRepository.sumTotalBalanceDue(tenantId, excludedStatuses);
             return total != null ? total : BigDecimal.ZERO;
         } catch (Exception e) {
-            log.warn("Failed to get payables: {}", e.getMessage());
+            log.error("Failed to get payables for tenant {}: {}", tenantId, e.getMessage(), e);
             return BigDecimal.ZERO;
         }
     }
 
     private BigDecimal getCashBalance(Long tenantId) {
         try {
-            BigDecimal total = bankAccountRepository.sumCashBalance(tenantId);
+            List<BankAccountType> cashTypes = List.of(BankAccountType.CASH, BankAccountType.PETTY_CASH);
+            BigDecimal total = bankAccountRepository.sumBalanceByTypes(tenantId, cashTypes);
             return total != null ? total : BigDecimal.ZERO;
         } catch (Exception e) {
-            log.warn("Failed to get cash balance: {}", e.getMessage());
+            log.error("Failed to get cash balance for tenant {}: {}", tenantId, e.getMessage(), e);
             return BigDecimal.ZERO;
         }
     }
 
     private BigDecimal getBankBalance(Long tenantId) {
         try {
-            BigDecimal total = bankAccountRepository.sumBankBalance(tenantId);
+            List<BankAccountType> cashTypes = List.of(BankAccountType.CASH, BankAccountType.PETTY_CASH);
+            BigDecimal total = bankAccountRepository.sumBalanceExcludingTypes(tenantId, cashTypes);
             return total != null ? total : BigDecimal.ZERO;
         } catch (Exception e) {
-            log.warn("Failed to get bank balance: {}", e.getMessage());
+            log.error("Failed to get bank balance for tenant {}: {}", tenantId, e.getMessage(), e);
             return BigDecimal.ZERO;
         }
     }

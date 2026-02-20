@@ -97,7 +97,8 @@ public class ARInvoiceService {
     @Transactional(readOnly = true)
     public List<ARInvoiceDto> getOverdueInvoices() {
         Long tenantId = securityContextHelper.getCurrentTenantId();
-        List<ARInvoice> invoices = arInvoiceRepository.findOverdueInvoices(tenantId, LocalDate.now());
+        List<ARInvoiceStatus> overdueStatuses = List.of(ARInvoiceStatus.PENDING, ARInvoiceStatus.SENT, ARInvoiceStatus.PARTIAL);
+        List<ARInvoice> invoices = arInvoiceRepository.findOverdueInvoices(tenantId, LocalDate.now(), overdueStatuses);
         return arInvoiceMapper.toDtoList(invoices);
     }
 

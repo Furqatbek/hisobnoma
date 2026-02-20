@@ -88,6 +88,7 @@ public interface APInvoiceRepository extends JpaRepository<APInvoice, Long> {
 
     // Mobile module method
     @Query("SELECT COALESCE(SUM(i.balanceDue), 0) FROM APInvoice i " +
-           "WHERE i.tenantId = :tenantId AND i.status NOT IN ('CANCELLED', 'PAID')")
-    BigDecimal sumOutstandingBalance(@Param("tenantId") Long tenantId);
+           "WHERE i.tenantId = :tenantId AND i.status NOT IN :excludedStatuses")
+    BigDecimal sumOutstandingBalance(@Param("tenantId") Long tenantId,
+                                     @Param("excludedStatuses") List<APInvoiceStatus> excludedStatuses);
 }

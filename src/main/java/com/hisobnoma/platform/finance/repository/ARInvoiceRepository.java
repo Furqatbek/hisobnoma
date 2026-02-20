@@ -41,9 +41,10 @@ public interface ARInvoiceRepository extends JpaRepository<ARInvoice, Long> {
                                          @Param("statuses") List<ARInvoiceStatus> statuses);
 
     @Query("SELECT i FROM ARInvoice i WHERE i.tenantId = :tenantId AND i.dueDate < :date " +
-           "AND i.status IN ('PENDING', 'SENT', 'PARTIAL') AND i.balanceDue > 0")
+           "AND i.status IN :statuses AND i.balanceDue > 0")
     List<ARInvoice> findOverdueInvoices(@Param("tenantId") Long tenantId,
-                                        @Param("date") LocalDate date);
+                                        @Param("date") LocalDate date,
+                                        @Param("statuses") List<ARInvoiceStatus> statuses);
 
     List<ARInvoice> findByTenantIdAndStatusIn(Long tenantId, List<ARInvoiceStatus> statuses);
 
@@ -94,6 +95,7 @@ public interface ARInvoiceRepository extends JpaRepository<ARInvoice, Long> {
 
     // Mobile module method
     @Query("SELECT COALESCE(SUM(i.balanceDue), 0) FROM ARInvoice i " +
-           "WHERE i.tenantId = :tenantId AND i.status NOT IN ('CANCELLED', 'PAID')")
-    BigDecimal sumOutstandingBalance(@Param("tenantId") Long tenantId);
+           "WHERE i.tenantId = :tenantId AND i.status NOT IN :excludedStatuses")
+    BigDecimal sumOutstandingBalance(@Param("tenantId") Long tenantId,
+                                     @Param("excludedStatuses") List<ARInvoiceStatus> excludedStatuses);
 }

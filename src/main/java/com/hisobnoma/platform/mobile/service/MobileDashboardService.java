@@ -1,6 +1,8 @@
 package com.hisobnoma.platform.mobile.service;
 
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
+import com.hisobnoma.platform.finance.entity.APInvoiceStatus;
+import com.hisobnoma.platform.finance.entity.ARInvoiceStatus;
 import com.hisobnoma.platform.finance.repository.*;
 import com.hisobnoma.platform.inventory.repository.ProductRepository;
 import com.hisobnoma.platform.inventory.repository.StockRepository;
@@ -194,8 +196,10 @@ public class MobileDashboardService {
     public FinancialSummaryDTO getFinancialSummary() {
         Long tenantId = securityContextHelper.getRequiredTenantId();
 
-        BigDecimal arOutstanding = arInvoiceRepository.sumOutstandingBalance(tenantId);
-        BigDecimal apOutstanding = apInvoiceRepository.sumOutstandingBalance(tenantId);
+        List<ARInvoiceStatus> arExcluded = List.of(ARInvoiceStatus.CANCELLED, ARInvoiceStatus.PAID);
+        List<APInvoiceStatus> apExcluded = List.of(APInvoiceStatus.CANCELLED, APInvoiceStatus.PAID);
+        BigDecimal arOutstanding = arInvoiceRepository.sumOutstandingBalance(tenantId, arExcluded);
+        BigDecimal apOutstanding = apInvoiceRepository.sumOutstandingBalance(tenantId, apExcluded);
         BigDecimal bankBalance = bankAccountRepository.sumTotalBalance(tenantId);
 
         arOutstanding = arOutstanding != null ? arOutstanding : BigDecimal.ZERO;
