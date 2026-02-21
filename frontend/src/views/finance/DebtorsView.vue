@@ -20,7 +20,9 @@ const showDetailModal = ref(false)
 const selectedCustomer = ref(null)
 const selectedAging = ref(null)
 const unpaidInvoices = ref([])
+const customerPayments = ref([])
 const loadingInvoices = ref(false)
+const loadingPayments = ref(false)
 const expandedInvoice = ref(null)
 
 async function fetchData() {
@@ -86,10 +88,12 @@ async function viewCustomer(customer) {
   selectedCustomer.value = customer
   selectedAging.value = getAgingForCustomer(customer.customerId)
   unpaidInvoices.value = []
+  customerPayments.value = []
   expandedInvoice.value = null
   showDetailModal.value = true
 
   loadingInvoices.value = true
+  loadingPayments.value = true
   try {
     const res = await arInvoicesApi.getUnpaidByCustomer(customer.customerId)
     unpaidInvoices.value = res.data.data || res.data || []
@@ -97,6 +101,15 @@ async function viewCustomer(customer) {
     console.error('Fakturalarni yuklashda xatolik:', error)
   } finally {
     loadingInvoices.value = false
+  }
+  try {
+    const res = await arPaymentsApi.getByCustomer(customer.customerId, { page: 0, size: 50, sort: 'createdAt,desc' })
+    const data = res.data.data || res.data
+    customerPayments.value = data.content || data || []
+  } catch (error) {
+    console.error('To\'lovlarni yuklashda xatolik:', error)
+  } finally {
+    loadingPayments.value = false
   }
 }
 
@@ -109,6 +122,7 @@ function closeModal() {
   selectedCustomer.value = null
   selectedAging.value = null
   unpaidInvoices.value = []
+  customerPayments.value = []
   expandedInvoice.value = null
 }
 
@@ -174,9 +188,14 @@ async function submitPayment() {
 
     showPaymentModal.value = false
 
-    // Refresh invoices and main data
-    const invoiceRes = await arInvoicesApi.getUnpaidByCustomer(selectedCustomer.value.customerId)
+    // Refresh invoices, payments and main data
+    const [invoiceRes, paymentRes] = await Promise.all([
+      arInvoicesApi.getUnpaidByCustomer(selectedCustomer.value.customerId),
+      arPaymentsApi.getByCustomer(selectedCustomer.value.customerId, { page: 0, size: 50, sort: 'createdAt,desc' })
+    ])
     unpaidInvoices.value = invoiceRes.data.data || invoiceRes.data || []
+    const payData = paymentRes.data.data || paymentRes.data
+    customerPayments.value = payData.content || payData || []
     await fetchData()
   } catch (e) {
     paymentError.value = e.response?.data?.message || 'To\'lovni qayd etishda xatolik'
@@ -216,6 +235,41 @@ function formatCurrency(value) {
 function formatDate(dateString) {
   if (!dateString) return '-'
   return new Date(dateString).toLocaleDateString('uz-UZ')
+}
+
+function getPaymentStatusLabel(status) {
+  const labels = {
+    'PENDING': 'Kutilmoqda',
+    'COMPLETED': 'Bajarildi',
+    'DEPOSITED': 'Depozitga qo\'yildi',
+    'CANCELLED': 'Bekor qilingan',
+    'REFUNDED': 'Qaytarilgan'
+  }
+  return labels[status] || status
+}
+
+function getPaymentStatusClass(status) {
+  switch (status) {
+    case 'COMPLETED': case 'DEPOSITED': return 'badge-success'
+    case 'PENDING': return 'badge-warning'
+    case 'CANCELLED': case 'REFUNDED': return 'badge-danger'
+    default: return 'badge-info'
+  }
+}
+
+function getMethodLabel(method) {
+  const labels = {
+    'CASH': 'Naqd pul',
+    'BANK_TRANSFER': 'Bank o\'tkazmasi',
+    'CREDIT_CARD': 'Kredit karta',
+    'DEBIT_CARD': 'Debet karta',
+    'MOBILE_PAYMENT': 'Mobil to\'lov',
+    'ONLINE_PAYMENT': 'Onlayn to\'lov',
+    'CHECK': 'Chek',
+    'STORE_CREDIT': 'Do\'kon krediti',
+    'OTHER': 'Boshqa'
+  }
+  return labels[method] || method
 }
 
 function printCustomerDebt() {
@@ -778,6 +832,63 @@ function printDebtors() {
                   <tr class="bg-gray-100">
                     <td class="px-4 py-2 font-semibold">Jami</td>
                     <td class="px-4 py-2 text-right font-bold">{{ formatCurrency(selectedAging.totalBalance) }} so'm</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Payment History -->
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-3">To'lov tarixi</h3>
+
+            <div v-if="loadingPayments" class="flex items-center justify-center py-6">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+
+            <div v-else-if="customerPayments.length === 0" class="text-center py-4 bg-gray-50 rounded-lg">
+              <p class="text-gray-500 text-sm">To'lovlar topilmadi</p>
+            </div>
+
+            <div v-else class="bg-gray-50 rounded-lg overflow-hidden">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="px-4 py-2 text-left text-gray-600">To'lov</th>
+                    <th class="px-4 py-2 text-left text-gray-600">Sana</th>
+                    <th class="px-4 py-2 text-left text-gray-600">Usul</th>
+                    <th class="px-4 py-2 text-left text-gray-600">Faktura</th>
+                    <th class="px-4 py-2 text-right text-gray-600">Summa</th>
+                    <th class="px-4 py-2 text-center text-gray-600">Holat</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr v-for="payment in customerPayments" :key="payment.id">
+                    <td class="px-4 py-2">
+                      <p class="font-medium">{{ payment.paymentNumber }}</p>
+                    </td>
+                    <td class="px-4 py-2 text-gray-500">
+                      {{ formatDate(payment.paymentDate) }}
+                    </td>
+                    <td class="px-4 py-2 text-gray-500">
+                      {{ getMethodLabel(payment.paymentMethod) }}
+                    </td>
+                    <td class="px-4 py-2">
+                      <div v-if="payment.allocations?.length">
+                        <p v-for="alloc in payment.allocations" :key="alloc.id" class="text-blue-600 text-xs">
+                          {{ alloc.invoiceNumber || `#${alloc.arInvoiceId}` }}
+                        </p>
+                      </div>
+                      <span v-else class="text-gray-400">-</span>
+                    </td>
+                    <td class="px-4 py-2 text-right font-semibold text-green-600">
+                      {{ formatCurrency(payment.paymentAmount) }} so'm
+                    </td>
+                    <td class="px-4 py-2 text-center">
+                      <span :class="['badge text-xs', getPaymentStatusClass(payment.status)]">
+                        {{ getPaymentStatusLabel(payment.status) }}
+                      </span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
