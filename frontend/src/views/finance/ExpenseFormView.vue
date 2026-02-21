@@ -70,25 +70,25 @@ async function fetchExpense() {
     const response = await expensesApi.getById(route.params.id)
     const expense = response.data.data || response.data
     form.value = {
-      vendorId: expense.vendorId || expense.vendor?.id || '',
+      vendorId: expense.vendorId || '',
       vendorInvoiceNumber: expense.vendorInvoiceNumber || '',
       invoiceDate: expense.invoiceDate || '',
       dueDate: expense.dueDate || '',
       description: expense.description || '',
       notes: expense.notes || '',
       currency: expense.currency || 'UZS',
-      discountAmount: expense.discountAmount || 0,
-      taxAmount: expense.taxAmount || 0,
-      shippingAmount: expense.shippingAmount || 0,
+      discountAmount: Number(expense.discountAmount) || 0,
+      taxAmount: Number(expense.taxAmount) || 0,
+      shippingAmount: Number(expense.shippingAmount) || 0,
       lines: expense.lines?.map(line => ({
         id: line.id,
         description: line.description || '',
         productId: line.productId || '',
-        quantity: line.quantity || 1,
+        quantity: Number(line.quantity) || 1,
         unitOfMeasure: line.unitOfMeasure || 'dona',
-        unitPrice: line.unitPrice || 0,
-        discountPercent: line.discountPercent || 0,
-        taxRate: line.taxRate || 0,
+        unitPrice: Number(line.unitPrice) || 0,
+        discountPercent: Number(line.discountPercent) || 0,
+        taxRate: Number(line.taxRate) || 0,
         notes: line.notes || ''
       })) || [{ description: '', quantity: 1, unitOfMeasure: 'dona', unitPrice: 0 }]
     }
@@ -232,7 +232,7 @@ function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
-  }).format(value || 0)
+  }).format(Number(value) || 0)
 }
 
 function getLineTotal(line) {

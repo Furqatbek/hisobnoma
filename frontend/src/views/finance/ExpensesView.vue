@@ -94,8 +94,8 @@ async function fetchSummary() {
       expensesApi.getTotalPayable(),
       expensesApi.getOverdueBalance()
     ])
-    totalPayable.value = payableRes.data.data || payableRes.data || 0
-    overdueBalance.value = overdueRes.data.data || overdueRes.data || 0
+    totalPayable.value = Number(payableRes.data.data ?? payableRes.data) || 0
+    overdueBalance.value = Number(overdueRes.data.data ?? overdueRes.data) || 0
   } catch (error) {
     console.error('Jami ma\'lumotlarni yuklashda xatolik:', error)
   }
@@ -113,7 +113,7 @@ async function fetchSalaryEntries() {
     salaryPagination.value.totalPages = data.page?.totalPages || data.totalPages || 1
     salaryPagination.value.totalElements = data.page?.totalElements || data.totalElements || salaryEntries.value.length
 
-    // Calculate total
+    // Calculate salary total
     salaryTotal.value = salaryEntries.value.reduce((sum, e) => sum + (Number(e.totalDebit) || 0), 0)
   } catch (error) {
     console.error('Ish haqi yozuvlarini yuklashda xatolik:', error)
@@ -127,7 +127,8 @@ async function showEntryDetail(entry) {
   selectedEntry.value = { ...entry, lines: [] }
   try {
     const response = await journalEntriesApi.getWithLines(entry.id)
-    selectedEntry.value = response.data.data || response.data
+    const data = response.data.data || response.data
+    selectedEntry.value = data
   } catch (error) {
     console.error('Yozuv tafsilotini yuklashda xatolik:', error)
   } finally {
@@ -154,7 +155,7 @@ function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
-  }).format(value || 0)
+  }).format(Number(value) || 0)
 }
 
 function formatDate(date) {
@@ -387,7 +388,7 @@ function isOverdue(expense) {
                     {{ expense.vendorInvoiceNumber }}
                   </div>
                 </td>
-                <td>{{ expense.vendor?.name || '-' }}</td>
+                <td>{{ expense.vendorName || '-' }}</td>
                 <td class="text-sm text-gray-500">{{ formatDate(expense.invoiceDate) }}</td>
                 <td :class="{ 'text-red-600 font-medium': isOverdue(expense) }">
                   {{ formatDate(expense.dueDate) }}
@@ -395,7 +396,7 @@ function isOverdue(expense) {
                 </td>
                 <td class="text-right font-medium">{{ formatCurrency(expense.totalAmount) }} so'm</td>
                 <td class="text-right">
-                  <span :class="expense.balanceDue > 0 ? 'text-red-600 font-medium' : 'text-green-600'">
+                  <span :class="Number(expense.balanceDue) > 0 ? 'text-red-600 font-medium' : 'text-green-600'">
                     {{ formatCurrency(expense.balanceDue) }} so'm
                   </span>
                 </td>
@@ -596,10 +597,10 @@ function isOverdue(expense) {
                   </td>
                   <td class="text-sm">{{ line.description }}</td>
                   <td class="text-right">
-                    <span v-if="line.debitAmount > 0" class="font-medium">{{ formatCurrency(line.debitAmount) }}</span>
+                    <span v-if="Number(line.debitAmount) > 0" class="font-medium">{{ formatCurrency(line.debitAmount) }}</span>
                   </td>
                   <td class="text-right">
-                    <span v-if="line.creditAmount > 0" class="font-medium">{{ formatCurrency(line.creditAmount) }}</span>
+                    <span v-if="Number(line.creditAmount) > 0" class="font-medium">{{ formatCurrency(line.creditAmount) }}</span>
                   </td>
                 </tr>
               </tbody>

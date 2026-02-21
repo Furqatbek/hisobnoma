@@ -116,7 +116,7 @@ function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
-  }).format(value || 0)
+  }).format(Number(value) || 0)
 }
 
 function formatDate(date) {
@@ -189,7 +189,7 @@ function canCancel() {
             Xarajat {{ expense?.invoiceNumber || `#${route.params.id}` }}
           </h1>
           <p v-if="expense" class="text-sm text-gray-500">
-            {{ expense.vendor?.name }} • {{ formatDate(expense.invoiceDate) }}
+            {{ expense.vendorName || '-' }} • {{ formatDate(expense.invoiceDate) }}
           </p>
         </div>
       </div>
@@ -294,7 +294,7 @@ function canCancel() {
         <div class="card">
           <div class="card-body">
             <p class="text-sm text-gray-500">Qoldiq</p>
-            <p :class="['text-xl font-bold', expense.balanceDue > 0 ? 'text-red-600' : 'text-green-600']">
+            <p :class="['text-xl font-bold', Number(expense.balanceDue) > 0 ? 'text-red-600' : 'text-green-600']">
               {{ formatCurrency(expense.balanceDue) }} so'm
             </p>
           </div>
@@ -313,7 +313,7 @@ function canCancel() {
               <dl class="grid grid-cols-2 gap-4">
                 <div>
                   <dt class="text-sm text-gray-500">Yetkazib beruvchi</dt>
-                  <dd class="font-medium">{{ expense.vendor?.name || '-' }}</dd>
+                  <dd class="font-medium">{{ expense.vendorName || '-' }}</dd>
                 </div>
                 <div>
                   <dt class="text-sm text-gray-500">Yetkazib beruvchi hisob-faktura №</dt>
@@ -354,8 +354,8 @@ function canCancel() {
                 <tbody class="divide-y divide-gray-200">
                   <tr v-for="line in expense.lines" :key="line.id">
                     <td>
-                      <div class="font-medium">{{ line.description }}</div>
-                      <div v-if="line.product" class="text-sm text-gray-500">{{ line.product.name }}</div>
+                      <div class="font-medium">{{ line.description || line.productName }}</div>
+                      <div v-if="line.productName && line.description" class="text-sm text-gray-500">{{ line.productName }}</div>
                     </td>
                     <td class="text-right">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
                     <td class="text-right">{{ formatCurrency(line.unitPrice) }}</td>
@@ -380,15 +380,15 @@ function canCancel() {
                 <span class="text-gray-500">Oraliq jami:</span>
                 <span>{{ formatCurrency(expense.subtotal) }} so'm</span>
               </div>
-              <div v-if="expense.taxAmount > 0" class="flex justify-between">
+              <div v-if="Number(expense.taxAmount) > 0" class="flex justify-between">
                 <span class="text-gray-500">Soliq:</span>
                 <span>{{ formatCurrency(expense.taxAmount) }} so'm</span>
               </div>
-              <div v-if="expense.shippingAmount > 0" class="flex justify-between">
+              <div v-if="Number(expense.shippingAmount) > 0" class="flex justify-between">
                 <span class="text-gray-500">Yetkazish:</span>
                 <span>{{ formatCurrency(expense.shippingAmount) }} so'm</span>
               </div>
-              <div v-if="expense.discountAmount > 0" class="flex justify-between text-green-600">
+              <div v-if="Number(expense.discountAmount) > 0" class="flex justify-between text-green-600">
                 <span>Chegirma:</span>
                 <span>-{{ formatCurrency(expense.discountAmount) }} so'm</span>
               </div>
