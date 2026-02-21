@@ -56,6 +56,9 @@ services:
       DB_PASSWORD: postgres
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      TELEGRAM_BOT_ENABLED: ${TELEGRAM_BOT_ENABLED:-false}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-hisobnoma_bot}
     ports:
       - "8080:8080"
     volumes:
