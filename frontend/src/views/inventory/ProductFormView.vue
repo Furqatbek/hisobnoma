@@ -1,8 +1,8 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { productsApi, categoriesApi, brandsApi, uomApi } from '@/services/api'
-import { ArrowLeftIcon, PhotoIcon, TrashIcon, StarIcon } from '@heroicons/vue/24/outline'
+import { productsApi, categoriesApi, brandsApi, uomApi, suppliersApi } from '@/services/api'
+import { ArrowLeftIcon, PhotoIcon, TrashIcon, StarIcon, PlusIcon, PencilIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/vue/24/solid'
 
 const route = useRoute()
@@ -21,6 +21,24 @@ const productImages = ref([])
 const uploading = ref(false)
 const uploadError = ref('')
 const fileInput = ref(null)
+
+// Vendor state
+const vendors = ref([])
+const productVendors = ref([])
+const showVendorModal = ref(false)
+const editingVendorLink = ref(null)
+const savingVendor = ref(false)
+const vendorForm = reactive({
+  vendorId: null,
+  vendorSku: '',
+  vendorProductName: '',
+  unitCost: null,
+  minOrderQuantity: null,
+  leadTimeDays: null,
+  preferred: false,
+  active: true,
+  notes: ''
+})
 
 const form = reactive({
   sku: '',
@@ -54,6 +72,16 @@ async function loadImages() {
     productImages.value = res.data.data || res.data || []
   } catch (error) {
     console.error('Failed to load images:', error)
+  }
+}
+
+async function loadProductVendors() {
+  if (!isEdit.value) return
+  try {
+    const res = await productsApi.getVendors(route.params.id)
+    productVendors.value = res.data.data || res.data || []
+  } catch (error) {
+    console.error('Failed to load product vendors:', error)
   }
 }
 
@@ -106,19 +134,99 @@ async function handleSetPrimary(imageId) {
   }
 }
 
+// Vendor modal functions
+function openAddVendorModal() {
+  editingVendorLink.value = null
+  Object.assign(vendorForm, {
+    vendorId: null,
+    vendorSku: '',
+    vendorProductName: '',
+    unitCost: null,
+    minOrderQuantity: null,
+    leadTimeDays: null,
+    preferred: false,
+    active: true,
+    notes: ''
+  })
+  showVendorModal.value = true
+}
+
+function openEditVendorModal(pv) {
+  editingVendorLink.value = pv
+  Object.assign(vendorForm, {
+    vendorId: pv.vendorId,
+    vendorSku: pv.vendorSku || '',
+    vendorProductName: pv.vendorProductName || '',
+    unitCost: pv.unitCost,
+    minOrderQuantity: pv.minOrderQuantity,
+    leadTimeDays: pv.leadTimeDays,
+    preferred: pv.preferred,
+    active: pv.active,
+    notes: pv.notes || ''
+  })
+  showVendorModal.value = true
+}
+
+async function handleSaveVendor() {
+  if (!vendorForm.vendorId) return
+
+  savingVendor.value = true
+  try {
+    if (editingVendorLink.value) {
+      await productsApi.updateVendor(route.params.id, editingVendorLink.value.id, vendorForm)
+    } else {
+      await productsApi.addVendor(route.params.id, vendorForm)
+    }
+    showVendorModal.value = false
+    await loadProductVendors()
+  } catch (error) {
+    console.error('Failed to save vendor:', error)
+    alert(error.response?.data?.message || 'Xatolik yuz berdi')
+  } finally {
+    savingVendor.value = false
+  }
+}
+
+async function handleRemoveVendor(pv) {
+  if (!confirm(`${pv.vendorName} ni o'chirmoqchimisiz?`)) return
+  try {
+    await productsApi.removeVendor(route.params.id, pv.id)
+    await loadProductVendors()
+  } catch (error) {
+    console.error('Failed to remove vendor:', error)
+  }
+}
+
+// Available vendors (not yet linked)
+const availableVendors = computed(() => {
+  if (editingVendorLink.value) return vendors.value
+  const linkedIds = new Set(productVendors.value.map(pv => pv.vendorId))
+  return vendors.value.filter(v => !linkedIds.has(v.id))
+})
+
+function formatCurrency(value) {
+  if (value == null) return '-'
+  return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value)
+}
+
 onMounted(async () => {
   loading.value = true
   try {
-    const [categoriesRes, brandsRes, uomsRes] = await Promise.all([
+    const promises = [
       categoriesApi.getAll(),
       brandsApi.getAll(),
-      uomApi.getAll()
-    ])
+      uomApi.getAll(),
+      suppliersApi.getAll({ size: 500 })
+    ]
+
+    const [categoriesRes, brandsRes, uomsRes, vendorsRes] = await Promise.all(promises)
 
     // Backend returns a list directly (not paginated)
     categories.value = categoriesRes.data.data || categoriesRes.data || []
     brands.value = brandsRes.data.data || brandsRes.data || []
     uoms.value = uomsRes.data.data || uomsRes.data || []
+    const vendorData = vendorsRes.data.data || vendorsRes.data || []
+    vendors.value = Array.isArray(vendorData) ? vendorData : vendorData.content || []
 
     if (isEdit.value) {
       const productRes = await productsApi.getById(route.params.id)
@@ -127,7 +235,7 @@ onMounted(async () => {
       form.categoryId = productData.category?.id || productData.categoryId
       form.brandId = productData.brand?.id || productData.brandId
       form.baseUomId = productData.baseUom?.id || productData.baseUomId
-      await loadImages()
+      await Promise.all([loadImages(), loadProductVendors()])
     }
   } catch (error) {
     console.error('Failed to load data:', error)
@@ -363,6 +471,95 @@ async function handleSubmit() {
         </div>
       </div>
 
+      <!-- Vendors/Suppliers -->
+      <div class="card">
+        <div class="card-header flex items-center justify-between">
+          <h3 class="text-lg font-medium">Yetkazib beruvchilar</h3>
+          <button
+            v-if="isEdit"
+            type="button"
+            @click="openAddVendorModal"
+            class="btn-primary text-sm flex items-center gap-1"
+          >
+            <PlusIcon class="h-4 w-4" />
+            Qo'shish
+          </button>
+        </div>
+        <div class="card-body">
+          <!-- Edit mode: vendor list -->
+          <div v-if="isEdit">
+            <div v-if="productVendors.length === 0" class="text-center py-6 text-gray-500 text-sm">
+              Yetkazib beruvchilar hali qo'shilmagan
+            </div>
+
+            <div v-else class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Yetkazib beruvchi</th>
+                    <th>Vendor SKU</th>
+                    <th class="text-right">Narxi</th>
+                    <th class="text-right">Min buyurtma</th>
+                    <th class="text-center">Yetkazish (kun)</th>
+                    <th class="text-center">Holat</th>
+                    <th class="text-right">Amallar</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr v-for="pv in productVendors" :key="pv.id">
+                    <td>
+                      <div class="flex items-center gap-2">
+                        <div>
+                          <p class="font-medium">{{ pv.vendorName }}</p>
+                          <p class="text-xs text-gray-500">{{ pv.vendorCode }}</p>
+                        </div>
+                        <span v-if="pv.preferred" class="bg-yellow-100 text-yellow-800 text-[10px] font-medium px-1.5 py-0.5 rounded">
+                          Asosiy
+                        </span>
+                      </div>
+                    </td>
+                    <td class="text-sm text-gray-500">{{ pv.vendorSku || '-' }}</td>
+                    <td class="text-right text-sm">{{ pv.unitCost != null ? formatCurrency(pv.unitCost) : '-' }}</td>
+                    <td class="text-right text-sm">{{ pv.minOrderQuantity != null ? formatCurrency(pv.minOrderQuantity) : '-' }}</td>
+                    <td class="text-center text-sm">{{ pv.leadTimeDays != null ? pv.leadTimeDays : '-' }}</td>
+                    <td class="text-center">
+                      <span :class="['badge text-xs', pv.active ? 'badge-info' : 'badge-danger']">
+                        {{ pv.active ? 'Faol' : 'Nofaol' }}
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <div class="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          @click="openEditVendorModal(pv)"
+                          class="p-1.5 text-gray-400 hover:text-primary-600 rounded hover:bg-gray-100"
+                          title="Tahrirlash"
+                        >
+                          <PencilIcon class="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          @click="handleRemoveVendor(pv)"
+                          class="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-gray-100"
+                          title="O'chirish"
+                        >
+                          <TrashIcon class="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Create mode: hint -->
+          <div v-else class="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+            <span class="text-sm text-gray-500">Yetkazib beruvchilarni mahsulot yaratilgandan keyin qo'shish mumkin</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Inventory -->
       <div class="card">
         <div class="card-header">
@@ -425,5 +622,95 @@ async function handleSubmit() {
         </button>
       </div>
     </form>
+
+    <!-- Vendor Modal -->
+    <div
+      v-if="showVendorModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click.self="showVendorModal = false"
+    >
+      <div class="bg-white rounded-xl shadow-xl max-w-lg w-full">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">
+            {{ editingVendorLink ? 'Yetkazib beruvchini tahrirlash' : 'Yetkazib beruvchi qo\'shish' }}
+          </h3>
+          <button @click="showVendorModal = false" class="p-1 text-gray-400 hover:text-gray-600 rounded">
+            <XMarkIcon class="h-5 w-5" />
+          </button>
+        </div>
+
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="label">Yetkazib beruvchi *</label>
+            <select
+              v-model="vendorForm.vendorId"
+              class="input"
+              :disabled="!!editingVendorLink"
+            >
+              <option :value="null">Tanlang...</option>
+              <option v-for="v in availableVendors" :key="v.id" :value="v.id">
+                {{ v.name }} ({{ v.code }})
+              </option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="label">Vendor SKU</label>
+              <input v-model="vendorForm.vendorSku" type="text" class="input" placeholder="Yetkazib beruvchi artikuli" />
+            </div>
+            <div>
+              <label class="label">Vendor nomi</label>
+              <input v-model="vendorForm.vendorProductName" type="text" class="input" placeholder="Vendordagi nomi" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="label">Narxi</label>
+              <input v-model.number="vendorForm.unitCost" type="number" step="0.01" min="0" class="input" />
+            </div>
+            <div>
+              <label class="label">Min buyurtma</label>
+              <input v-model.number="vendorForm.minOrderQuantity" type="number" step="1" min="0" class="input" />
+            </div>
+            <div>
+              <label class="label">Yetkazish (kun)</label>
+              <input v-model.number="vendorForm.leadTimeDays" type="number" min="0" class="input" />
+            </div>
+          </div>
+
+          <div>
+            <label class="label">Izoh</label>
+            <textarea v-model="vendorForm.notes" rows="2" class="input" placeholder="Qo'shimcha ma'lumot..."></textarea>
+          </div>
+
+          <div class="flex items-center gap-6">
+            <label class="flex items-center">
+              <input v-model="vendorForm.preferred" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
+              <span class="ml-2 text-sm text-gray-700">Asosiy yetkazib beruvchi</span>
+            </label>
+            <label class="flex items-center">
+              <input v-model="vendorForm.active" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
+              <span class="ml-2 text-sm text-gray-700">Faol</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
+          <button type="button" @click="showVendorModal = false" class="btn-secondary">
+            Bekor qilish
+          </button>
+          <button
+            type="button"
+            @click="handleSaveVendor"
+            :disabled="savingVendor || !vendorForm.vendorId"
+            class="btn-primary"
+          >
+            {{ savingVendor ? 'Saqlanmoqda...' : 'Saqlash' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

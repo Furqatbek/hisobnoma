@@ -103,7 +103,12 @@ export const productsApi = {
     })
   },
   deleteImage: (id, imageId) => api.delete(`/inventory/products/${id}/images/${imageId}`),
-  setPrimaryImage: (id, imageId) => api.put(`/inventory/products/${id}/images/${imageId}/primary`)
+  setPrimaryImage: (id, imageId) => api.put(`/inventory/products/${id}/images/${imageId}/primary`),
+  // Vendor endpoints
+  getVendors: (id) => api.get(`/inventory/products/${id}/vendors`),
+  addVendor: (id, data) => api.post(`/inventory/products/${id}/vendors`, data),
+  updateVendor: (id, linkId, data) => api.put(`/inventory/products/${id}/vendors/${linkId}`, data),
+  removeVendor: (id, linkId) => api.delete(`/inventory/products/${id}/vendors/${linkId}`)
 }
 
 // Categories API - Backend: /api/v1/inventory/categories

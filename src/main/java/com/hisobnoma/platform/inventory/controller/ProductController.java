@@ -6,6 +6,7 @@ import com.hisobnoma.platform.inventory.service.BarcodeService;
 import com.hisobnoma.platform.inventory.service.ProductImageService;
 import com.hisobnoma.platform.inventory.service.ProductImportService;
 import com.hisobnoma.platform.inventory.service.ProductService;
+import com.hisobnoma.platform.inventory.service.ProductVendorService;
 import com.hisobnoma.platform.inventory.service.SkuGeneratorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class ProductController {
     private final BarcodeService barcodeService;
     private final ProductImageService productImageService;
     private final ProductImportService productImportService;
+    private final ProductVendorService productVendorService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_READ')")
@@ -257,6 +259,41 @@ public class ProductController {
             @PathVariable Long id,
             @PathVariable Long variantId) {
         productService.deleteVariant(id, variantId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ==================== Vendor Endpoints ====================
+
+    @GetMapping("/{id}/vendors")
+    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_READ')")
+    public ResponseEntity<List<ProductVendorDto>> getProductVendors(@PathVariable Long id) {
+        return ResponseEntity.ok(productVendorService.getVendorsForProduct(id));
+    }
+
+    @PostMapping("/{id}/vendors")
+    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_UPDATE')")
+    public ResponseEntity<ProductVendorDto> addProductVendor(
+            @PathVariable Long id,
+            @Valid @RequestBody CreateProductVendorRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(productVendorService.addVendorToProduct(id, request));
+    }
+
+    @PutMapping("/{id}/vendors/{vendorLinkId}")
+    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_UPDATE')")
+    public ResponseEntity<ProductVendorDto> updateProductVendor(
+            @PathVariable Long id,
+            @PathVariable Long vendorLinkId,
+            @Valid @RequestBody CreateProductVendorRequest request) {
+        return ResponseEntity.ok(productVendorService.updateProductVendor(id, vendorLinkId, request));
+    }
+
+    @DeleteMapping("/{id}/vendors/{vendorLinkId}")
+    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_UPDATE')")
+    public ResponseEntity<Void> removeProductVendor(
+            @PathVariable Long id,
+            @PathVariable Long vendorLinkId) {
+        productVendorService.removeVendorFromProduct(id, vendorLinkId);
         return ResponseEntity.noContent().build();
     }
 
