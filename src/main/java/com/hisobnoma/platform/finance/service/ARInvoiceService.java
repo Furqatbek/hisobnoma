@@ -135,10 +135,12 @@ public class ARInvoiceService {
         if (request.getLines() != null && !request.getLines().isEmpty()) {
             List<ARInvoiceLine> lines = new ArrayList<>();
             BigDecimal totalAmount = BigDecimal.ZERO;
+            int lineNumber = 1;
 
             for (var lineRequest : request.getLines()) {
                 ARInvoiceLine line = new ARInvoiceLine();
                 line.setArInvoice(invoice);
+                line.setLineNumber(lineNumber++);
                 line.setItemId(lineRequest.getItemId());
                 line.setDescription(lineRequest.getDescription());
                 line.setQuantity(lineRequest.getQuantity());
@@ -199,10 +201,12 @@ public class ARInvoiceService {
 
             List<ARInvoiceLine> lines = new ArrayList<>();
             BigDecimal totalAmount = BigDecimal.ZERO;
+            int lineNumber = 1;
 
             for (var lineRequest : request.getLines()) {
                 ARInvoiceLine line = new ARInvoiceLine();
                 line.setArInvoice(invoice);
+                line.setLineNumber(lineNumber++);
                 line.setItemId(lineRequest.getItemId());
                 line.setDescription(lineRequest.getDescription());
                 line.setQuantity(lineRequest.getQuantity());
@@ -438,6 +442,7 @@ public class ARInvoiceService {
         List<ARInvoiceLine> lines = new ArrayList<>();
         BigDecimal transactionTotal = transaction.getTotalAmount();
         BigDecimal creditRatio = creditAmount.divide(transactionTotal, 6, RoundingMode.HALF_UP);
+        int lineNumber = 1;
 
         for (POSTransactionLine txLine : transaction.getLines()) {
             // Calculate proportional amount for this line based on credit ratio
@@ -445,6 +450,7 @@ public class ARInvoiceService {
 
             ARInvoiceLine line = new ARInvoiceLine();
             line.setArInvoice(invoice);
+            line.setLineNumber(lineNumber++);
             line.setItemId(txLine.getProduct() != null ? txLine.getProduct().getId() : null);
             line.setProductId(txLine.getProduct() != null ? txLine.getProduct().getId() : null);
             line.setProductSku(txLine.getProductCode());
