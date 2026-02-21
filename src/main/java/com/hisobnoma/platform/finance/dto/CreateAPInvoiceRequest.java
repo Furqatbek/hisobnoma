@@ -20,7 +20,6 @@ public class CreateAPInvoiceRequest {
     @Size(max = 100, message = "Vendor invoice number cannot exceed 100 characters")
     private String vendorInvoiceNumber;
 
-    @NotNull(message = "Vendor ID is required")
     private Long vendorId;
 
     @NotNull(message = "Invoice date is required")

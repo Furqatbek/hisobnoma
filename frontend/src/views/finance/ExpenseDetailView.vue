@@ -312,7 +312,7 @@ function canCancel() {
             <div class="card-body">
               <dl class="grid grid-cols-2 gap-4">
                 <div>
-                  <dt class="text-sm text-gray-500">Yetkazib beruvchi</dt>
+                  <dt class="text-sm text-gray-500">{{ expense.vendorId ? 'Yetkazib beruvchi' : 'Xarajat nomi' }}</dt>
                   <dd class="font-medium">{{ expense.vendorName || '-' }}</dd>
                 </div>
                 <div>

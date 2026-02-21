@@ -152,8 +152,8 @@ function onProductSelect(line, productId) {
 function validateForm() {
   errors.value = {}
 
-  if (!form.value.vendorId) {
-    errors.value.vendorId = 'Yetkazib beruvchi tanlanishi kerak'
+  if (!form.value.vendorId && !form.value.description?.trim()) {
+    errors.value.description = 'Yetkazib beruvchi yoki tavsif kiritilishi kerak'
   }
 
   if (!form.value.invoiceDate) {
@@ -182,7 +182,7 @@ async function saveExpense() {
   saving.value = true
   try {
     const data = {
-      vendorId: parseInt(form.value.vendorId),
+      vendorId: form.value.vendorId ? parseInt(form.value.vendorId) : null,
       vendorInvoiceNumber: form.value.vendorInvoiceNumber?.trim() || null,
       invoiceDate: form.value.invoiceDate,
       dueDate: form.value.dueDate,
@@ -294,20 +294,17 @@ onMounted(() => {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- Vendor -->
               <div>
-                <label class="label">
-                  Yetkazib beruvchi <span class="text-red-500">*</span>
-                </label>
+                <label class="label">Yetkazib beruvchi</label>
                 <select
                   v-model="form.vendorId"
                   class="input"
-                  :class="{ 'border-red-500': errors.vendorId }"
                 >
-                  <option value="">Tanlang...</option>
+                  <option value="">Tanlanmagan (mustaqil xarajat)</option>
                   <option v-for="vendor in vendors" :key="vendor.id" :value="vendor.id">
                     {{ vendor.name }}
                   </option>
                 </select>
-                <p v-if="errors.vendorId" class="text-sm text-red-500 mt-1">{{ errors.vendorId }}</p>
+                <p class="text-xs text-gray-400 mt-1">Ijara, kommunal va boshqa xarajatlar uchun bo'sh qoldiring</p>
               </div>
 
               <!-- Vendor Invoice Number -->
@@ -354,13 +351,18 @@ onMounted(() => {
 
             <!-- Description -->
             <div>
-              <label class="label">Tavsif</label>
+              <label class="label">
+                Tavsif
+                <span v-if="!form.vendorId" class="text-red-500">*</span>
+              </label>
               <textarea
                 v-model="form.description"
                 rows="2"
                 class="input"
-                placeholder="Xarajat haqida..."
+                :class="{ 'border-red-500': errors.description }"
+                :placeholder="!form.vendorId ? 'Masalan: Ijara to\'lovi, Kommunal xarajat...' : 'Xarajat haqida...'"
               ></textarea>
+              <p v-if="errors.description" class="text-sm text-red-500 mt-1">{{ errors.description }}</p>
             </div>
           </div>
         </div>

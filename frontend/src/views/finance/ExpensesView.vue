@@ -371,7 +371,7 @@ function isOverdue(expense) {
             <thead>
               <tr>
                 <th>Hisob-faktura №</th>
-                <th>Yetkazib beruvchi</th>
+                <th>Yetkazib beruvchi / Tavsif</th>
                 <th>Sana</th>
                 <th>Muddat</th>
                 <th class="text-right">Summa</th>

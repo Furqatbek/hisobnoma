@@ -103,26 +103,31 @@ public class APInvoiceService {
     public APInvoiceDto createInvoice(CreateAPInvoiceRequest request) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
-        // Validate vendor
-        Vendor vendor = vendorRepository.findByIdAndTenantId(request.getVendorId(), tenantId)
-                .orElseThrow(() -> new NotFoundException("Vendor not found with id: " + request.getVendorId()));
-
         // Create invoice
         APInvoice invoice = apInvoiceMapper.toEntity(request);
         invoice.setTenantId(tenantId);
         invoice.setInvoiceNumber(generateInvoiceNumber(tenantId));
-        invoice.setVendorName(vendor.getName());
         invoice.setStatus(APInvoiceStatus.DRAFT);
 
-        // Set default accounts if not provided
-        if (invoice.getExpenseAccountId() == null && vendor.getDefaultExpenseAccountId() != null) {
-            invoice.setExpenseAccountId(vendor.getDefaultExpenseAccountId());
-        }
+        // Validate and set vendor info (optional — allows vendor-less expenses like rent, utilities)
+        if (request.getVendorId() != null) {
+            Vendor vendor = vendorRepository.findByIdAndTenantId(request.getVendorId(), tenantId)
+                    .orElseThrow(() -> new NotFoundException("Vendor not found with id: " + request.getVendorId()));
+            invoice.setVendorName(vendor.getName());
 
-        // Set payment terms from vendor if not provided
-        if (invoice.getPaymentTerms() == null) {
-            invoice.setPaymentTerms(vendor.getPaymentTerms());
-            invoice.setPaymentTermsDays(vendor.getPaymentTermsDays());
+            // Set default accounts if not provided
+            if (invoice.getExpenseAccountId() == null && vendor.getDefaultExpenseAccountId() != null) {
+                invoice.setExpenseAccountId(vendor.getDefaultExpenseAccountId());
+            }
+
+            // Set payment terms from vendor if not provided
+            if (invoice.getPaymentTerms() == null) {
+                invoice.setPaymentTerms(vendor.getPaymentTerms());
+                invoice.setPaymentTermsDays(vendor.getPaymentTermsDays());
+            }
+        } else {
+            // For vendor-less expenses, use description as display name
+            invoice.setVendorName(request.getDescription());
         }
 
         // Handle PO and Receiving Order links
@@ -157,7 +162,7 @@ public class APInvoiceService {
         }
 
         invoice = apInvoiceRepository.save(invoice);
-        log.info("Created AP Invoice: {} for vendor: {}", invoice.getInvoiceNumber(), vendor.getName());
+        log.info("Created AP Invoice: {} for: {}", invoice.getInvoiceNumber(), invoice.getVendorName());
 
         return apInvoiceMapper.toDto(invoice);
     }
@@ -255,6 +260,16 @@ public class APInvoiceService {
         }
 
         apInvoiceMapper.updateEntity(request, invoice);
+
+        // Update vendor name
+        if (request.getVendorId() != null) {
+            Vendor vendor = vendorRepository.findByIdAndTenantId(request.getVendorId(), tenantId)
+                    .orElseThrow(() -> new NotFoundException("Vendor not found with id: " + request.getVendorId()));
+            invoice.setVendorName(vendor.getName());
+        } else {
+            invoice.setVendorId(null);
+            invoice.setVendorName(request.getDescription());
+        }
 
         // Update lines
         invoice.getLines().clear();

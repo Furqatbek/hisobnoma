@@ -37,7 +37,7 @@ public class APInvoice extends TenantAwareEntity {
     @Column(name = "vendor_invoice_number", length = 100)
     private String vendorInvoiceNumber;
 
-    @Column(name = "vendor_id", nullable = false)
+    @Column(name = "vendor_id")
     private Long vendorId;
 
     @Column(name = "vendor_name", length = 200)
