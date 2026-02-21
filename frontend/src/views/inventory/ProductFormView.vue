@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { productsApi, categoriesApi, brandsApi, uomApi, suppliersApi } from '@/services/api'
-import { ArrowLeftIcon, PhotoIcon, TrashIcon, StarIcon, PlusIcon, PencilIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, PhotoIcon, TrashIcon, StarIcon, PlusIcon, PencilIcon, XMarkIcon, ScaleIcon } from '@heroicons/vue/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/vue/24/solid'
 
 const route = useRoute()
@@ -204,6 +204,94 @@ const availableVendors = computed(() => {
   return vendors.value.filter(v => !linkedIds.has(v.id))
 })
 
+// ==================== Alternate UOM Management ====================
+const productAltUoms = ref([])
+const showAltUomModal = ref(false)
+const editingAltUom = ref(null)
+const savingAltUom = ref(false)
+const altUomForm = reactive({
+  uomId: null,
+  conversionFactor: null,
+  sellingPrice: null,
+  defaultSale: false,
+  active: true,
+  sortOrder: 0
+})
+
+async function loadProductAltUoms() {
+  if (!isEdit.value) return
+  try {
+    const res = await productsApi.getUoms(route.params.id)
+    productAltUoms.value = res.data.data || res.data || []
+  } catch (error) {
+    console.error('Failed to load product UOMs:', error)
+  }
+}
+
+function openAddAltUomModal() {
+  editingAltUom.value = null
+  Object.assign(altUomForm, {
+    uomId: null,
+    conversionFactor: null,
+    sellingPrice: null,
+    defaultSale: false,
+    active: true,
+    sortOrder: 0
+  })
+  showAltUomModal.value = true
+}
+
+function openEditAltUomModal(pu) {
+  editingAltUom.value = pu
+  Object.assign(altUomForm, {
+    uomId: pu.uomId,
+    conversionFactor: pu.conversionFactor,
+    sellingPrice: pu.sellingPrice,
+    defaultSale: pu.defaultSale,
+    active: pu.active,
+    sortOrder: pu.sortOrder || 0
+  })
+  showAltUomModal.value = true
+}
+
+async function handleSaveAltUom() {
+  if (!altUomForm.uomId || !altUomForm.conversionFactor) return
+
+  savingAltUom.value = true
+  try {
+    if (editingAltUom.value) {
+      await productsApi.updateUom(route.params.id, editingAltUom.value.id, altUomForm)
+    } else {
+      await productsApi.addUom(route.params.id, altUomForm)
+    }
+    showAltUomModal.value = false
+    await loadProductAltUoms()
+  } catch (error) {
+    console.error('Failed to save product UOM:', error)
+    alert(error.response?.data?.message || 'Xatolik yuz berdi')
+  } finally {
+    savingAltUom.value = false
+  }
+}
+
+async function handleRemoveAltUom(pu) {
+  if (!confirm(`${pu.uomName} ni o'chirmoqchimisiz?`)) return
+  try {
+    await productsApi.removeUom(route.params.id, pu.id)
+    await loadProductAltUoms()
+  } catch (error) {
+    console.error('Failed to remove product UOM:', error)
+  }
+}
+
+// Available UOMs for alternate (not the base UOM, not already linked)
+const availableAltUoms = computed(() => {
+  if (editingAltUom.value) return uoms.value
+  const linkedIds = new Set(productAltUoms.value.map(pu => pu.uomId))
+  linkedIds.add(form.baseUomId) // exclude base UOM
+  return uoms.value.filter(u => !linkedIds.has(u.id))
+})
+
 function formatCurrency(value) {
   if (value == null) return '-'
   return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value)
@@ -235,7 +323,7 @@ onMounted(async () => {
       form.categoryId = productData.category?.id || productData.categoryId
       form.brandId = productData.brand?.id || productData.brandId
       form.baseUomId = productData.baseUom?.id || productData.baseUomId
-      await Promise.all([loadImages(), loadProductVendors()])
+      await Promise.all([loadImages(), loadProductVendors(), loadProductAltUoms()])
     }
   } catch (error) {
     console.error('Failed to load data:', error)
@@ -563,6 +651,102 @@ async function handleSubmit() {
         </div>
       </div>
 
+      <!-- Alternate UOMs (Sale measurement units) -->
+      <div class="card">
+        <div class="card-header flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-medium">Sotish o'lchov birliklari</h3>
+            <p class="text-sm text-gray-500 mt-0.5">Mahsulotni turli o'lchov birliklarida sotish uchun</p>
+          </div>
+          <button
+            v-if="isEdit"
+            type="button"
+            @click="openAddAltUomModal"
+            class="btn-primary text-sm flex items-center gap-1"
+          >
+            <PlusIcon class="h-4 w-4" />
+            Qo'shish
+          </button>
+        </div>
+        <div class="card-body">
+          <!-- Edit mode: UOM list -->
+          <div v-if="isEdit">
+            <div v-if="productAltUoms.length === 0" class="text-center py-6 text-gray-500 text-sm">
+              Qo'shimcha o'lchov birliklari hali qo'shilmagan
+            </div>
+
+            <div v-else class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>O'lchov birligi</th>
+                    <th class="text-right">Koeffitsient</th>
+                    <th class="text-right">Narxi</th>
+                    <th class="text-center">Holat</th>
+                    <th class="text-right">Amallar</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr v-for="pu in productAltUoms" :key="pu.id">
+                    <td>
+                      <div class="flex items-center gap-2">
+                        <ScaleIcon class="h-4 w-4 text-gray-400" />
+                        <div>
+                          <p class="font-medium">{{ pu.uomName }} ({{ pu.uomCode }})</p>
+                          <p class="text-xs text-gray-500">1 {{ pu.uomCode }} = {{ pu.conversionFactor }} bazaviy</p>
+                        </div>
+                        <span v-if="pu.defaultSale" class="bg-blue-100 text-blue-800 text-[10px] font-medium px-1.5 py-0.5 rounded">
+                          Standart
+                        </span>
+                      </div>
+                    </td>
+                    <td class="text-right text-sm font-mono">{{ pu.conversionFactor }}</td>
+                    <td class="text-right text-sm">
+                      <div>
+                        <span class="font-medium">{{ formatCurrency(pu.effectiveSellingPrice) }}</span>
+                        <span v-if="pu.sellingPrice" class="text-xs text-gray-400 ml-1">(belgilangan)</span>
+                        <span v-else class="text-xs text-gray-400 ml-1">(hisoblangan)</span>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <span :class="['badge text-xs', pu.active ? 'badge-info' : 'badge-danger']">
+                        {{ pu.active ? 'Faol' : 'Nofaol' }}
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <div class="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          @click="openEditAltUomModal(pu)"
+                          class="p-1.5 text-gray-400 hover:text-primary-600 rounded hover:bg-gray-100"
+                          title="Tahrirlash"
+                        >
+                          <PencilIcon class="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          @click="handleRemoveAltUom(pu)"
+                          class="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-gray-100"
+                          title="O'chirish"
+                        >
+                          <TrashIcon class="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Create mode: hint -->
+          <div v-else class="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+            <ScaleIcon class="h-5 w-5 text-gray-400 flex-shrink-0" />
+            <span class="text-sm text-gray-500">O'lchov birliklarini mahsulot yaratilgandan keyin qo'shish mumkin</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Inventory -->
       <div class="card">
         <div class="card-header">
@@ -711,6 +895,92 @@ async function handleSubmit() {
             class="btn-primary"
           >
             {{ savingVendor ? 'Saqlanmoqda...' : 'Saqlash' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alternate UOM Modal -->
+    <div
+      v-if="showAltUomModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click.self="showAltUomModal = false"
+    >
+      <div class="bg-white rounded-xl shadow-xl max-w-lg w-full">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">
+            {{ editingAltUom ? 'O\'lchov birligini tahrirlash' : 'O\'lchov birligi qo\'shish' }}
+          </h3>
+          <button @click="showAltUomModal = false" class="p-1 text-gray-400 hover:text-gray-600 rounded">
+            <XMarkIcon class="h-5 w-5" />
+          </button>
+        </div>
+
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="label">O'lchov birligi *</label>
+            <select
+              v-model="altUomForm.uomId"
+              class="input"
+              :disabled="!!editingAltUom"
+            >
+              <option :value="null">Tanlang...</option>
+              <option v-for="u in availableAltUoms" :key="u.id" :value="u.id">
+                {{ u.name }} ({{ u.code }})
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label class="label">Koeffitsient (1 birlik = ? bazaviy) *</label>
+            <input
+              v-model.number="altUomForm.conversionFactor"
+              type="number"
+              step="0.000001"
+              min="0.000001"
+              class="input"
+              placeholder="Masalan: 12 (1 samosvol = 12 tonna)"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Masalan: Bazaviy birlik TONNA bo'lsa va 1 samosvol = 12 tonna, koeffitsient = 12
+            </p>
+          </div>
+
+          <div>
+            <label class="label">Sotish narxi (ixtiyoriy)</label>
+            <input
+              v-model.number="altUomForm.sellingPrice"
+              type="number"
+              step="0.01"
+              min="0"
+              class="input"
+              placeholder="Belgilanmasa bazaviy narx * koeffitsient ishlatiladi"
+            />
+          </div>
+
+          <div class="flex items-center gap-6">
+            <label class="flex items-center">
+              <input v-model="altUomForm.defaultSale" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
+              <span class="ml-2 text-sm text-gray-700">Standart sotish birligi</span>
+            </label>
+            <label class="flex items-center">
+              <input v-model="altUomForm.active" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
+              <span class="ml-2 text-sm text-gray-700">Faol</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
+          <button type="button" @click="showAltUomModal = false" class="btn-secondary">
+            Bekor qilish
+          </button>
+          <button
+            type="button"
+            @click="handleSaveAltUom"
+            :disabled="savingAltUom || !altUomForm.uomId || !altUomForm.conversionFactor"
+            class="btn-primary"
+          >
+            {{ savingAltUom ? 'Saqlanmoqda...' : 'Saqlash' }}
           </button>
         </div>
       </div>

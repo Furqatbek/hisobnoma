@@ -44,5 +44,9 @@ public class POSTransactionLineDto {
     private String serialNumber;
     private String batchNumber;
     private Long locationId;
+    private Long saleUomId;
+    private BigDecimal saleQuantity;
+    private String saleUomCode;
+    private String saleUomName;
     private String notes;
 }

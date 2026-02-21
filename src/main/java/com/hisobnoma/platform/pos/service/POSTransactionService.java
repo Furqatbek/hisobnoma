@@ -12,8 +12,10 @@ import com.hisobnoma.platform.finance.service.GLIntegrationService;
 import com.hisobnoma.platform.finance.service.TaxCalculationService;
 import com.hisobnoma.platform.inventory.entity.MovementReferenceType;
 import com.hisobnoma.platform.inventory.entity.Product;
+import com.hisobnoma.platform.inventory.entity.ProductUom;
 import com.hisobnoma.platform.inventory.entity.ProductVariant;
 import com.hisobnoma.platform.inventory.repository.ProductRepository;
+import com.hisobnoma.platform.inventory.repository.ProductUomRepository;
 import com.hisobnoma.platform.inventory.repository.ProductVariantRepository;
 import com.hisobnoma.platform.inventory.service.StockService;
 import com.hisobnoma.platform.delivery.repository.DeliveryRegionRepository;
@@ -49,6 +51,7 @@ public class POSTransactionService {
     private final POSTerminalRepository terminalRepository;
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
+    private final ProductUomRepository productUomRepository;
     private final CustomerRepository customerRepository;
     private final DeliveryRegionRepository deliveryRegionRepository;
     private final DeliveryVillageRepository deliveryVillageRepository;
@@ -181,10 +184,22 @@ public class POSTransactionService {
                             .orElseThrow(() -> new NotFoundException("Variant not found: " + item.getVariantId()));
                 }
 
-                BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() :
-                        (variant != null ? variant.getEffectiveSellingPrice() : product.getSellingPrice());
+                // Resolve alternate UOM if specified
+                ProductUom productUom = null;
+                BigDecimal saleQuantity = item.getQuantity();
+                BigDecimal baseQuantity = item.getQuantity();
 
-                // Calculate tax
+                if (item.getProductUomId() != null) {
+                    productUom = productUomRepository.findByIdAndTenantId(item.getProductUomId(), tenantId)
+                            .orElseThrow(() -> new NotFoundException("Product UOM not found: " + item.getProductUomId()));
+                    baseQuantity = productUom.toBaseQuantity(saleQuantity);
+                }
+
+                BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() :
+                        (productUom != null ? productUom.getEffectiveSellingPrice() :
+                        (variant != null ? variant.getEffectiveSellingPrice() : product.getSellingPrice()));
+
+                // Calculate tax — unitPrice and saleQuantity are in the sale UOM
                 BigDecimal taxAmount = BigDecimal.ZERO;
                 BigDecimal taxRate = BigDecimal.ZERO;
                 String taxCode = null;
@@ -196,7 +211,7 @@ public class POSTransactionService {
                     TaxRate rate = taxCalculationService.getApplicableRate(taxCode, LocalDate.now());
                     if (rate != null) {
                         taxRate = rate.getRate();
-                        BigDecimal grossAmount = unitPrice.multiply(item.getQuantity());
+                        BigDecimal grossAmount = unitPrice.multiply(saleQuantity);
                         BigDecimal discountedAmount = grossAmount.subtract(lineDiscount);
                         taxAmount = discountedAmount.multiply(taxRate).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
                     }
@@ -211,7 +226,7 @@ public class POSTransactionService {
                         .productName(product.getName())
                         .variantName(variant != null ? variant.getName() : null)
                         .barcode(product.getBarcode())
-                        .quantity(item.getQuantity())
+                        .quantity(baseQuantity)
                         .unitPrice(unitPrice)
                         .originalPrice(product.getSellingPrice())
                         .costPrice(variant != null ? variant.getEffectiveCostPrice() : product.getCostPrice())
@@ -221,15 +236,19 @@ public class POSTransactionService {
                         .taxRate(taxRate)
                         .taxAmount(taxAmount)
                         .isReturn(transaction.getTransactionType() == TransactionType.RETURN)
+                        .saleUomId(productUom != null ? productUom.getUom().getId() : null)
+                        .saleQuantity(productUom != null ? saleQuantity : null)
+                        .saleUomCode(productUom != null ? productUom.getUom().getCode() : null)
+                        .saleUomName(productUom != null ? productUom.getUom().getName() : null)
                         .build();
 
                 line.calculateLineTotal();
                 transaction.addLine(line);
 
-                // Reserve stock to prevent overselling between creation and completion
+                // Reserve stock in BASE UOM to prevent overselling
                 if (!line.isReturn() && product.isTrackInventory()) {
                     Long locId = transaction.getTerminal().getLocation().getId();
-                    reserveStockForLine(product.getId(), locId, item.getQuantity(), transaction);
+                    reserveStockForLine(product.getId(), locId, baseQuantity, transaction);
                 }
             }
             transaction = transactionRepository.save(transaction);
@@ -256,15 +275,27 @@ public class POSTransactionService {
                     .orElseThrow(() -> new NotFoundException("Variant not found: " + request.getVariantId()));
         }
 
-        // Determine unit price
+        // Resolve alternate UOM if specified
+        ProductUom productUom = null;
+        BigDecimal saleQuantity = request.getQuantity();
+        BigDecimal baseQuantity = request.getQuantity();
+
+        if (request.getProductUomId() != null) {
+            productUom = productUomRepository.findByIdAndTenantId(request.getProductUomId(), tenantId)
+                    .orElseThrow(() -> new NotFoundException("Product UOM not found: " + request.getProductUomId()));
+            baseQuantity = productUom.toBaseQuantity(saleQuantity);
+        }
+
+        // Determine unit price (per sale UOM unit)
         BigDecimal unitPrice = request.getUnitPrice() != null ? request.getUnitPrice() :
-                (variant != null ? variant.getEffectiveSellingPrice() : product.getSellingPrice());
+                (productUom != null ? productUom.getEffectiveSellingPrice() :
+                (variant != null ? variant.getEffectiveSellingPrice() : product.getSellingPrice()));
 
         // Get next line number
         Integer maxLineNumber = lineRepository.findMaxLineNumberByTransactionId(transactionId);
         int lineNumber = (maxLineNumber != null ? maxLineNumber : 0) + 1;
 
-        // Calculate tax on post-discount amount
+        // Calculate tax on post-discount amount (using sale UOM quantity)
         BigDecimal taxAmount = BigDecimal.ZERO;
         BigDecimal taxRate = BigDecimal.ZERO;
         String taxCode = null;
@@ -275,7 +306,7 @@ public class POSTransactionService {
             TaxRate rate = taxCalculationService.getApplicableRate(taxCode, LocalDate.now());
             if (rate != null) {
                 taxRate = rate.getRate();
-                BigDecimal grossAmount = unitPrice.multiply(request.getQuantity());
+                BigDecimal grossAmount = unitPrice.multiply(saleQuantity);
                 BigDecimal discountedAmount = grossAmount.subtract(lineDiscount);
                 taxAmount = discountedAmount.multiply(taxRate).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
             }
@@ -290,7 +321,7 @@ public class POSTransactionService {
                 .productName(product.getName())
                 .variantName(variant != null ? variant.getName() : null)
                 .barcode(product.getBarcode())
-                .quantity(request.getQuantity())
+                .quantity(baseQuantity)
                 .unitPrice(unitPrice)
                 .originalPrice(product.getSellingPrice())
                 .costPrice(variant != null ? variant.getEffectiveCostPrice() : product.getCostPrice())
@@ -304,6 +335,10 @@ public class POSTransactionService {
                 .serialNumber(request.getSerialNumber())
                 .batchNumber(request.getBatchNumber())
                 .locationId(request.getLocationId())
+                .saleUomId(productUom != null ? productUom.getUom().getId() : null)
+                .saleQuantity(productUom != null ? saleQuantity : null)
+                .saleUomCode(productUom != null ? productUom.getUom().getCode() : null)
+                .saleUomName(productUom != null ? productUom.getUom().getName() : null)
                 .notes(request.getNotes())
                 .build();
 
@@ -311,11 +346,11 @@ public class POSTransactionService {
         transaction.addLine(line);
         transaction = transactionRepository.save(transaction);
 
-        // Reserve stock to prevent overselling
+        // Reserve stock in BASE UOM to prevent overselling
         if (!line.isReturn() && product.isTrackInventory()) {
             Long locId = request.getLocationId() != null ? request.getLocationId() :
                     transaction.getTerminal().getLocation().getId();
-            reserveStockForLine(product.getId(), locId, request.getQuantity(), transaction);
+            reserveStockForLine(product.getId(), locId, baseQuantity, transaction);
         }
 
         log.info("Added line to transaction {}: {} x {} @ {}",

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { productsApi, customersApi, posApi, terminalsApi, shiftsApi, deliveryRegionsApi, deliveryVillagesApi } from '@/services/api'
+import { ScaleIcon } from '@heroicons/vue/24/outline'
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -178,23 +179,75 @@ async function searchCustomers() {
   }
 }
 
-function addToCart(product) {
-  const existingItem = cart.items.find(item => item.productId === product.id)
+// UOM selection state
+const showUomModal = ref(false)
+const pendingProduct = ref(null)
+const productUoms = ref([])
+const uomLoading = ref(false)
+
+// Cache of product UOMs to avoid re-fetching
+const productUomCache = {}
+
+async function addToCart(product) {
+  searchQuery.value = ''
+  products.value = []
+
+  // Check if product has alternate UOMs (fetch once, then cache)
+  if (!productUomCache[product.id]) {
+    try {
+      const res = await productsApi.getActiveUoms(product.id)
+      productUomCache[product.id] = res.data.data || res.data || []
+    } catch {
+      productUomCache[product.id] = []
+    }
+  }
+
+  const altUoms = productUomCache[product.id]
+
+  if (altUoms.length > 0) {
+    // Show UOM selection modal
+    pendingProduct.value = product
+    productUoms.value = altUoms
+    showUomModal.value = true
+  } else {
+    // No alternate UOMs — add directly in base UOM
+    addToCartWithUom(product, null)
+  }
+}
+
+function addToCartWithUom(product, selectedUom) {
+  showUomModal.value = false
+
+  const uomKey = selectedUom ? `${product.id}_uom_${selectedUom.id}` : `${product.id}`
+
+  const existingItem = cart.items.find(item => item._uomKey === uomKey)
 
   if (existingItem) {
     existingItem.quantity++
   } else {
     cart.items.push({
+      _uomKey: uomKey,
       productId: product.id,
       name: product.name,
       sku: product.sku,
-      price: product.sellingPrice,
-      quantity: 1
+      price: selectedUom ? selectedUom.effectiveSellingPrice : product.sellingPrice,
+      quantity: 1,
+      // Alternate UOM info (null = base UOM)
+      productUomId: selectedUom?.id || null,
+      uomCode: selectedUom?.uomCode || null,
+      uomName: selectedUom?.uomName || null,
+      conversionFactor: selectedUom?.conversionFactor || null
     })
   }
 
-  searchQuery.value = ''
-  products.value = []
+  pendingProduct.value = null
+  productUoms.value = []
+}
+
+function selectBaseUom() {
+  if (pendingProduct.value) {
+    addToCartWithUom(pendingProduct.value, null)
+  }
 }
 
 function updateQuantity(item, delta) {
@@ -419,7 +472,8 @@ async function processPayment() {
         quantity: item.quantity,
         unitPrice: item.price,
         discountAmount: item.discount || undefined,
-        discountReason: item.discountReason || undefined
+        discountReason: item.discountReason || undefined,
+        productUomId: item.productUomId || undefined
       }))
     }
 
@@ -802,11 +856,17 @@ onMounted(() => {
           </div>
 
           <ul v-else class="divide-y">
-            <li v-for="(item, index) in cart.items" :key="item.productId" class="p-4">
+            <li v-for="(item, index) in cart.items" :key="item._uomKey" class="p-4">
               <div class="flex justify-between">
                 <div class="flex-1 min-w-0">
                   <p class="font-medium text-gray-900 truncate">{{ item.name }}</p>
-                  <p class="text-sm text-gray-500">{{ item.sku }}</p>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-sm text-gray-500">{{ item.sku }}</span>
+                    <span v-if="item.uomName" class="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                      <ScaleIcon class="h-3 w-3" />
+                      {{ item.uomName }}
+                    </span>
+                  </div>
                 </div>
                 <button
                   @click="removeFromCart(item)"
@@ -1264,6 +1324,57 @@ onMounted(() => {
               Tasdiqlash
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UOM Selection Modal -->
+    <div v-if="showUomModal && pendingProduct" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showUomModal = false"></div>
+        <div class="relative bg-white rounded-lg max-w-sm w-full p-6">
+          <h3 class="text-lg font-medium text-gray-900 mb-1">O'lchov birligini tanlang</h3>
+          <p class="text-sm text-gray-500 mb-4">{{ pendingProduct.name }}</p>
+
+          <div class="space-y-2">
+            <!-- Base UOM option -->
+            <button
+              @click="selectBaseUom()"
+              class="w-full p-3 text-left rounded-lg border-2 border-gray-200 hover:border-primary-500 hover:bg-primary-50 transition-colors"
+            >
+              <div class="flex justify-between items-center">
+                <div>
+                  <p class="font-medium text-gray-900">Asosiy birlik</p>
+                  <p class="text-xs text-gray-500">1 = 1 (bazaviy)</p>
+                </div>
+                <span class="font-bold text-primary-600">{{ formatCurrency(pendingProduct.sellingPrice) }}</span>
+              </div>
+            </button>
+
+            <!-- Alternate UOM options -->
+            <button
+              v-for="puom in productUoms"
+              :key="puom.id"
+              @click="addToCartWithUom(pendingProduct, puom)"
+              class="w-full p-3 text-left rounded-lg border-2 transition-colors"
+              :class="puom.defaultSale ? 'border-primary-300 bg-primary-50 hover:border-primary-500' : 'border-gray-200 hover:border-primary-500 hover:bg-primary-50'"
+            >
+              <div class="flex justify-between items-center">
+                <div>
+                  <p class="font-medium text-gray-900">
+                    {{ puom.uomName }}
+                    <span v-if="puom.defaultSale" class="text-xs text-primary-600">(standart)</span>
+                  </p>
+                  <p class="text-xs text-gray-500">1 {{ puom.uomCode }} = {{ puom.conversionFactor }} bazaviy</p>
+                </div>
+                <span class="font-bold text-primary-600">{{ formatCurrency(puom.effectiveSellingPrice) }}</span>
+              </div>
+            </button>
+          </div>
+
+          <button @click="showUomModal = false" class="btn-secondary w-full mt-4">
+            Bekor qilish
+          </button>
         </div>
       </div>
     </div>

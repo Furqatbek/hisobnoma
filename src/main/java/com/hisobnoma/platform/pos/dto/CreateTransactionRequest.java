@@ -60,5 +60,10 @@ public class CreateTransactionRequest {
         private BigDecimal unitPrice;
         private BigDecimal discountAmount;
         private String discountReason;
+        /**
+         * Optional: alternate UOM for selling. If set, quantity is in this UOM
+         * and will be converted to base UOM for stock deduction.
+         */
+        private Long productUomId;
     }
 }

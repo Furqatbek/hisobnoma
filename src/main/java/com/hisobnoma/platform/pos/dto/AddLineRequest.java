@@ -45,6 +45,12 @@ public class AddLineRequest {
 
     private Long locationId;
 
+    /**
+     * Optional: alternate UOM for selling. If set, quantity is in this UOM
+     * and will be converted to base UOM for stock deduction.
+     */
+    private Long productUomId;
+
     @Size(max = 500, message = "Notes must not exceed 500 characters")
     private String notes;
 }

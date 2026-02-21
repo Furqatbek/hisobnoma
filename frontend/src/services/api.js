@@ -119,7 +119,13 @@ export const productsApi = {
   getVendors: (id) => api.get(`/inventory/products/${id}/vendors`),
   addVendor: (id, data) => api.post(`/inventory/products/${id}/vendors`, data),
   updateVendor: (id, linkId, data) => api.put(`/inventory/products/${id}/vendors/${linkId}`, data),
-  removeVendor: (id, linkId) => api.delete(`/inventory/products/${id}/vendors/${linkId}`)
+  removeVendor: (id, linkId) => api.delete(`/inventory/products/${id}/vendors/${linkId}`),
+  // Product UOM (alternate units) endpoints
+  getUoms: (id) => api.get(`/inventory/products/${id}/uoms`),
+  getActiveUoms: (id) => api.get(`/inventory/products/${id}/uoms/active`),
+  addUom: (id, data) => api.post(`/inventory/products/${id}/uoms`, data),
+  updateUom: (id, uomId, data) => api.put(`/inventory/products/${id}/uoms/${uomId}`, data),
+  removeUom: (id, uomId) => api.delete(`/inventory/products/${id}/uoms/${uomId}`)
 }
 
 // Categories API - Backend: /api/v1/inventory/categories

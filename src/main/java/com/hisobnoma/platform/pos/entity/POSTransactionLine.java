@@ -107,13 +107,31 @@ public class POSTransactionLine extends BaseEntity {
     @Column(name = "location_id")
     private Long locationId;
 
+    /**
+     * Sale UOM fields: track which alternate unit the cashier used.
+     * quantity is always in base UOM; saleQuantity is what the cashier entered.
+     */
+    @Column(name = "sale_uom_id")
+    private Long saleUomId;
+
+    @Column(name = "sale_quantity", precision = 18, scale = 4)
+    private BigDecimal saleQuantity;
+
+    @Column(name = "sale_uom_code", length = 20)
+    private String saleUomCode;
+
+    @Column(name = "sale_uom_name", length = 50)
+    private String saleUomName;
+
     @Column(length = 500)
     private String notes;
 
     @PrePersist
     @PreUpdate
     public void calculateLineTotal() {
-        BigDecimal grossAmount = unitPrice.multiply(quantity);
+        // Use saleQuantity if selling in alternate UOM, otherwise use base quantity
+        BigDecimal billingQuantity = (saleQuantity != null) ? saleQuantity : quantity;
+        BigDecimal grossAmount = unitPrice.multiply(billingQuantity);
         BigDecimal discountedAmount = grossAmount.subtract(discountAmount != null ? discountAmount : BigDecimal.ZERO);
         // Tax applies to the post-discount amount
         if (taxRate != null && taxRate.compareTo(BigDecimal.ZERO) > 0) {
@@ -131,13 +149,17 @@ public class POSTransactionLine extends BaseEntity {
         }
     }
 
+    private BigDecimal getBillingQuantity() {
+        return (saleQuantity != null) ? saleQuantity : quantity;
+    }
+
     public void applyPercentDiscount(BigDecimal percent, String reason) {
         if (percent == null || percent.compareTo(BigDecimal.ZERO) < 0 || percent.compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new IllegalArgumentException("Discount percent must be between 0 and 100");
         }
         this.discountPercent = percent;
         this.discountReason = reason;
-        BigDecimal grossAmount = unitPrice.multiply(quantity);
+        BigDecimal grossAmount = unitPrice.multiply(getBillingQuantity());
         this.discountAmount = grossAmount.multiply(percent).divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
         calculateLineTotal();
     }
@@ -146,7 +168,7 @@ public class POSTransactionLine extends BaseEntity {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Discount amount must be non-negative");
         }
-        BigDecimal grossAmount = unitPrice.multiply(quantity);
+        BigDecimal grossAmount = unitPrice.multiply(getBillingQuantity());
         if (amount.compareTo(grossAmount) > 0) {
             throw new IllegalArgumentException("Discount amount cannot exceed line gross amount of " + grossAmount);
         }
@@ -157,7 +179,7 @@ public class POSTransactionLine extends BaseEntity {
     }
 
     public BigDecimal getGrossAmount() {
-        return unitPrice.multiply(quantity);
+        return unitPrice.multiply(getBillingQuantity());
     }
 
     public BigDecimal getNetAmount() {
