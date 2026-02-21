@@ -33,12 +33,12 @@ public class GLIntegrationService {
 
     // Account codes - these should be configurable per tenant
     // For now, these are placeholder values that should be set up in the chart of accounts
-    private static final String INVENTORY_ACCOUNT = "1300";  // Asset: Inventory
+    private static final String INVENTORY_ACCOUNT = "1140";  // Asset: Inventory
     private static final String COGS_ACCOUNT = "5100";       // Expense: Cost of Goods Sold
     private static final String SALES_REVENUE_ACCOUNT = "4100"; // Revenue: Sales Revenue
     private static final String CASH_ACCOUNT = "1110";       // Asset: Cash
-    private static final String ACCOUNTS_RECEIVABLE = "1200"; // Asset: Accounts Receivable
-    private static final String ACCOUNTS_PAYABLE = "2100";   // Liability: Accounts Payable
+    private static final String ACCOUNTS_RECEIVABLE = "1130"; // Asset: Accounts Receivable
+    private static final String ACCOUNTS_PAYABLE = "2110";   // Liability: Accounts Payable
     private static final String PURCHASE_EXPENSE = "5200";   // Expense: Purchases
     private static final String SALES_DISCOUNTS_ACCOUNT = "4200"; // Contra-Revenue: Sales Discounts
     private static final String SALARY_EXPENSE_ACCOUNT = "6100"; // Expense: Salary and Wages
