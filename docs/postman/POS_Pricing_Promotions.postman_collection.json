@@ -205,6 +205,17 @@
           }
         },
         {
+          "name": "Get Price List Item",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pos/price-lists/1/items/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "price-lists", "1", "items", "1"]
+            }
+          }
+        },
+        {
           "name": "Add Price List Item",
           "request": {
             "method": "POST",
@@ -672,6 +683,28 @@
               "raw": "{{baseUrl}}/pos/coupons/1/redemptions",
               "host": ["{{baseUrl}}"],
               "path": ["pos", "coupons", "1", "redemptions"]
+            }
+          }
+        },
+        {
+          "name": "Update Expired Coupons",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/update-expired",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "update-expired"]
+            }
+          }
+        },
+        {
+          "name": "Update Depleted Coupons",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pos/coupons/update-depleted",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "coupons", "update-depleted"]
             }
           }
         }

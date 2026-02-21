@@ -2,6 +2,7 @@ package com.hisobnoma.platform.pos.controller;
 
 import com.hisobnoma.platform.pos.dto.*;
 import com.hisobnoma.platform.pos.service.PromotionService;
+import com.hisobnoma.platform.auth.security.RequiresPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,7 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,14 +26,14 @@ public class PromotionController {
 
     @GetMapping
     @Operation(summary = "Get all promotions", description = "Retrieves all promotions with pagination")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PROMOTION_READ")
     public ResponseEntity<Page<PromotionDto>> getAllPromotions(Pageable pageable) {
         return ResponseEntity.ok(promotionService.findAll(pageable));
     }
 
     @GetMapping("/search")
     @Operation(summary = "Search promotions", description = "Search promotions by query string")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PROMOTION_READ")
     public ResponseEntity<Page<PromotionDto>> searchPromotions(
             @Parameter(description = "Search query") @RequestParam String query,
             Pageable pageable) {
@@ -42,7 +42,7 @@ public class PromotionController {
 
     @GetMapping("/active")
     @Operation(summary = "Get active promotions", description = "Retrieves currently active promotions")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PROMOTION_READ")
     public ResponseEntity<List<PromotionDto>> getActivePromotions(
             @Parameter(description = "Location ID (optional)") @RequestParam(required = false) Long locationId) {
         return ResponseEntity.ok(promotionService.findActivePromotions(locationId));
@@ -50,7 +50,7 @@ public class PromotionController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get promotion by ID", description = "Retrieves a promotion by its ID with full details")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PROMOTION_READ")
     public ResponseEntity<PromotionDto> getPromotionById(
             @Parameter(description = "Promotion ID") @PathVariable Long id) {
         return ResponseEntity.ok(promotionService.findById(id));
@@ -58,7 +58,7 @@ public class PromotionController {
 
     @GetMapping("/code/{code}")
     @Operation(summary = "Get promotion by code", description = "Retrieves a promotion by its code")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PROMOTION_READ")
     public ResponseEntity<PromotionDto> getPromotionByCode(
             @Parameter(description = "Promotion code") @PathVariable String code) {
         return ResponseEntity.ok(promotionService.findByCode(code));
@@ -66,7 +66,7 @@ public class PromotionController {
 
     @PostMapping
     @Operation(summary = "Create promotion", description = "Creates a new promotion")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PROMOTION_CREATE")
     public ResponseEntity<PromotionDto> createPromotion(
             @Valid @RequestBody CreatePromotionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -75,7 +75,7 @@ public class PromotionController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update promotion", description = "Updates an existing promotion")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PROMOTION_UPDATE")
     public ResponseEntity<PromotionDto> updatePromotion(
             @Parameter(description = "Promotion ID") @PathVariable Long id,
             @Valid @RequestBody CreatePromotionRequest request) {
@@ -84,7 +84,7 @@ public class PromotionController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete promotion", description = "Deletes a promotion")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PROMOTION_DELETE")
     public ResponseEntity<Void> deletePromotion(
             @Parameter(description = "Promotion ID") @PathVariable Long id) {
         promotionService.delete(id);
@@ -93,7 +93,7 @@ public class PromotionController {
 
     @PostMapping("/{id}/activate")
     @Operation(summary = "Activate promotion", description = "Activates a promotion")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PROMOTION_UPDATE")
     public ResponseEntity<PromotionDto> activatePromotion(
             @Parameter(description = "Promotion ID") @PathVariable Long id) {
         return ResponseEntity.ok(promotionService.activate(id));
@@ -101,7 +101,7 @@ public class PromotionController {
 
     @PostMapping("/{id}/deactivate")
     @Operation(summary = "Deactivate promotion", description = "Deactivates a promotion")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PROMOTION_UPDATE")
     public ResponseEntity<PromotionDto> deactivatePromotion(
             @Parameter(description = "Promotion ID") @PathVariable Long id) {
         return ResponseEntity.ok(promotionService.deactivate(id));
@@ -111,7 +111,7 @@ public class PromotionController {
 
     @PostMapping("/{promotionId}/conditions")
     @Operation(summary = "Add condition to promotion", description = "Adds a condition to a promotion")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PROMOTION_CONDITIONS_MANAGE")
     public ResponseEntity<PromotionDto> addCondition(
             @Parameter(description = "Promotion ID") @PathVariable Long promotionId,
             @Valid @RequestBody CreatePromotionConditionRequest request) {
@@ -121,7 +121,7 @@ public class PromotionController {
 
     @DeleteMapping("/{promotionId}/conditions/{conditionId}")
     @Operation(summary = "Remove condition from promotion", description = "Removes a condition from a promotion")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PROMOTION_CONDITIONS_MANAGE")
     public ResponseEntity<PromotionDto> removeCondition(
             @Parameter(description = "Promotion ID") @PathVariable Long promotionId,
             @Parameter(description = "Condition ID") @PathVariable Long conditionId) {
@@ -132,7 +132,7 @@ public class PromotionController {
 
     @PostMapping("/{promotionId}/actions")
     @Operation(summary = "Add action to promotion", description = "Adds an action to a promotion")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PROMOTION_ACTIONS_MANAGE")
     public ResponseEntity<PromotionDto> addAction(
             @Parameter(description = "Promotion ID") @PathVariable Long promotionId,
             @Valid @RequestBody CreatePromotionActionRequest request) {
@@ -142,7 +142,7 @@ public class PromotionController {
 
     @DeleteMapping("/{promotionId}/actions/{actionId}")
     @Operation(summary = "Remove action from promotion", description = "Removes an action from a promotion")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PROMOTION_ACTIONS_MANAGE")
     public ResponseEntity<PromotionDto> removeAction(
             @Parameter(description = "Promotion ID") @PathVariable Long promotionId,
             @Parameter(description = "Action ID") @PathVariable Long actionId) {

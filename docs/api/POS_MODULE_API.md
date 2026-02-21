@@ -40,6 +40,39 @@ All endpoints require JWT Bearer token authentication and appropriate RBAC permi
 - `POS_DRAWER_OPEN` - Open cash drawer
 - `POS_REPORTS_VIEW` - View POS reports
 
+### Pricing Permissions
+- `POS_PRICING_CALCULATE` - Calculate prices and get product prices
+- `POS_COUPON_APPLY` - Apply and validate coupons
+- `POS_COUPON_REDEEM` - Record coupon redemptions
+
+### Price List Permissions
+- `POS_PRICELIST_READ` - View price lists and items
+- `POS_PRICELIST_CREATE` - Create new price lists
+- `POS_PRICELIST_UPDATE` - Update, activate, and deactivate price lists
+- `POS_PRICELIST_DELETE` - Delete price lists
+- `POS_PRICELIST_ITEMS_MANAGE` - Add, update, and remove price list items
+- `POS_PRICELIST_ASSIGN` - Assign/unassign price lists to customers
+
+### Promotion Permissions
+- `POS_PROMOTION_READ` - View promotions
+- `POS_PROMOTION_CREATE` - Create new promotions
+- `POS_PROMOTION_UPDATE` - Update, activate, and deactivate promotions
+- `POS_PROMOTION_DELETE` - Delete promotions
+- `POS_PROMOTION_CONDITIONS_MANAGE` - Add/remove promotion conditions
+- `POS_PROMOTION_ACTIONS_MANAGE` - Add/remove promotion actions
+
+### Coupon Permissions
+- `POS_COUPON_READ` - View coupons
+- `POS_COUPON_CREATE` - Create coupons
+- `POS_COUPON_UPDATE` - Update, activate, deactivate, and cancel coupons
+- `POS_COUPON_DELETE` - Delete unused coupons
+- `POS_COUPON_GENERATE` - Generate bulk coupons
+- `POS_COUPON_REDEMPTIONS_VIEW` - View coupon redemption history
+
+### Return Permissions
+- `POS_RETURN_CREATE` - Create return transactions
+- `POS_RETURN_APPROVE` - Approve return transactions
+
 ## Base URL
 
 ```
@@ -745,6 +778,11 @@ POST /transactions/{id}/payments
 
 **Payment Types:** `CASH`, `CARD`, `CREDIT`, `GIFT_CARD`, `MOBILE_PAYMENT`, `CHECK`, `OTHER`
 
+**Validation Rules:**
+- Non-cash payments cannot exceed the remaining balance due
+- Payment cannot be added if the transaction is already fully paid
+- Cash payments may exceed the balance (change is calculated automatically)
+
 **Response:** `201 Created`
 ```json
 {
@@ -891,6 +929,28 @@ Processes a refund for an approved payment on a completed transaction.
 
 ### Return Workflow
 
+1. **Create Return Transaction** (via dedicated return endpoint)
+   ```http
+   POST /transactions/{originalTransactionId}/return
+   {
+     "returnReason": "Customer changed mind",
+     "refundMethod": "ORIGINAL_PAYMENT_METHOD",
+     "items": [
+       {"productId": 100, "quantity": 1, "reason": "Unused product"}
+     ]
+   }
+   ```
+
+**Return Validation Rules:**
+- Return quantities are validated against the original transaction to prevent over-returns
+- Already-returned quantities (from previous returns) are tracked and deducted from the available return quantity
+- A refund payment record is automatically created based on the `refundMethod`
+- Stock is automatically restored to inventory on return completion
+
+**Refund Methods:** `CASH`, `CARD`, `STORE_CREDIT`, `ORIGINAL_PAYMENT_METHOD`
+
+**Alternative: Manual Return Workflow**
+
 1. **Create Return Transaction**
    ```http
    POST /transactions
@@ -932,6 +992,19 @@ Processes a refund for an approved payment on a completed transaction.
 - All transactions are linked to the current open shift
 - Shift totals are updated when transactions complete
 - Cash payments affect the shift's expected cash balance
+
+### Stock Reservation
+- When line items are added to a pending transaction, stock is reserved (preventing overselling)
+- When line quantities are updated, the reservation is adjusted accordingly
+- When line items are removed, the reservation is released
+- When a transaction is completed, reservations are converted to actual stock deductions
+- When a transaction is voided, all reservations are released
+
+### GL/AR Retry Scheduler
+- If GL posting or AR invoice creation fails during transaction completion, the transaction is still completed
+- A background scheduler runs every 15 minutes to retry failed GL postings and AR invoice creation
+- Each retry is isolated so that individual transaction failures don't affect other retries
+- The `glPosted` and `arInvoiceId` fields on the transaction indicate the status of these integrations
 
 ### Accounts Receivable Integration (Credit Sales)
 - When a transaction is completed with a **CREDIT** payment type, an **AR Invoice** is automatically created

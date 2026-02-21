@@ -3,13 +3,13 @@ package com.hisobnoma.platform.pos.controller;
 import com.hisobnoma.platform.pos.dto.*;
 import com.hisobnoma.platform.pos.service.PricingService;
 import com.hisobnoma.platform.pos.service.PromotionService;
+import com.hisobnoma.platform.auth.security.RequiresPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -26,7 +26,7 @@ public class PricingController {
     @PostMapping("/calculate")
     @Operation(summary = "Calculate prices",
             description = "Calculates prices for a set of items based on price lists, customer pricing, and promotions")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PRICING_CALCULATE")
     public ResponseEntity<PriceCalculationResult> calculatePrices(
             @Valid @RequestBody PriceCalculationRequest request) {
         return ResponseEntity.ok(pricingService.calculatePrices(request));
@@ -35,7 +35,7 @@ public class PricingController {
     @GetMapping("/product/{productId}")
     @Operation(summary = "Get product price",
             description = "Gets the best price for a single product based on customer and location")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PRICING_CALCULATE")
     public ResponseEntity<BigDecimal> getProductPrice(
             @Parameter(description = "Product ID") @PathVariable Long productId,
             @Parameter(description = "Variant ID (optional)") @RequestParam(required = false) Long variantId,
@@ -49,7 +49,7 @@ public class PricingController {
     @PostMapping("/apply-coupon")
     @Operation(summary = "Apply coupon",
             description = "Validates and applies a coupon code to get the discount amount")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_COUPON_APPLY")
     public ResponseEntity<ApplyCouponResponse> applyCoupon(
             @Valid @RequestBody ApplyCouponRequest request) {
         PriceCalculationResult.CouponApplication result = promotionService.applyCoupon(
@@ -71,7 +71,7 @@ public class PricingController {
     @PostMapping("/validate-coupon")
     @Operation(summary = "Validate coupon",
             description = "Validates a coupon code without applying it")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_COUPON_APPLY")
     public ResponseEntity<ApplyCouponResponse> validateCoupon(
             @RequestParam String couponCode,
             @Parameter(description = "Customer ID (optional)") @RequestParam(required = false) Long customerId) {
@@ -94,7 +94,7 @@ public class PricingController {
     @PostMapping("/record-coupon-redemption")
     @Operation(summary = "Record coupon redemption",
             description = "Records a coupon redemption after a successful transaction")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_COUPON_REDEEM")
     public ResponseEntity<Void> recordCouponRedemption(
             @RequestParam String couponCode,
             @RequestParam Long customerId,

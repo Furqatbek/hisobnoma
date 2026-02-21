@@ -2,6 +2,7 @@ package com.hisobnoma.platform.pos.controller;
 
 import com.hisobnoma.platform.pos.dto.*;
 import com.hisobnoma.platform.pos.service.PriceListService;
+import com.hisobnoma.platform.auth.security.RequiresPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,7 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,21 +26,21 @@ public class PriceListController {
 
     @GetMapping
     @Operation(summary = "Get all price lists", description = "Retrieves all price lists with pagination")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PRICELIST_READ")
     public ResponseEntity<Page<PriceListDto>> getAllPriceLists(Pageable pageable) {
         return ResponseEntity.ok(priceListService.findAllPriceLists(pageable));
     }
 
     @GetMapping("/active")
     @Operation(summary = "Get active price lists", description = "Retrieves currently active/effective price lists")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PRICELIST_READ")
     public ResponseEntity<List<PriceListDto>> getActivePriceLists() {
         return ResponseEntity.ok(priceListService.findActivePriceLists());
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get price list by ID", description = "Retrieves a price list by its ID with all items")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PRICELIST_READ")
     public ResponseEntity<PriceListDto> getPriceListById(
             @Parameter(description = "Price list ID") @PathVariable Long id) {
         return ResponseEntity.ok(priceListService.findPriceListById(id));
@@ -48,7 +48,7 @@ public class PriceListController {
 
     @GetMapping("/code/{code}")
     @Operation(summary = "Get price list by code", description = "Retrieves a price list by its code")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PRICELIST_READ")
     public ResponseEntity<PriceListDto> getPriceListByCode(
             @Parameter(description = "Price list code") @PathVariable String code) {
         return ResponseEntity.ok(priceListService.findPriceListByCode(code));
@@ -56,7 +56,7 @@ public class PriceListController {
 
     @PostMapping
     @Operation(summary = "Create price list", description = "Creates a new price list")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PRICELIST_CREATE")
     public ResponseEntity<PriceListDto> createPriceList(
             @Valid @RequestBody CreatePriceListRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -65,7 +65,7 @@ public class PriceListController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update price list", description = "Updates an existing price list")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PRICELIST_UPDATE")
     public ResponseEntity<PriceListDto> updatePriceList(
             @Parameter(description = "Price list ID") @PathVariable Long id,
             @Valid @RequestBody CreatePriceListRequest request) {
@@ -74,7 +74,7 @@ public class PriceListController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete price list", description = "Deletes a price list")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PRICELIST_DELETE")
     public ResponseEntity<Void> deletePriceList(
             @Parameter(description = "Price list ID") @PathVariable Long id) {
         priceListService.deletePriceList(id);
@@ -83,7 +83,7 @@ public class PriceListController {
 
     @PostMapping("/{id}/activate")
     @Operation(summary = "Activate price list", description = "Activates a price list")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PRICELIST_UPDATE")
     public ResponseEntity<PriceListDto> activatePriceList(
             @Parameter(description = "Price list ID") @PathVariable Long id) {
         return ResponseEntity.ok(priceListService.activatePriceList(id));
@@ -91,7 +91,7 @@ public class PriceListController {
 
     @PostMapping("/{id}/deactivate")
     @Operation(summary = "Deactivate price list", description = "Deactivates a price list")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PRICELIST_UPDATE")
     public ResponseEntity<PriceListDto> deactivatePriceList(
             @Parameter(description = "Price list ID") @PathVariable Long id) {
         return ResponseEntity.ok(priceListService.deactivatePriceList(id));
@@ -101,7 +101,7 @@ public class PriceListController {
 
     @GetMapping("/{priceListId}/items")
     @Operation(summary = "Get price list items", description = "Retrieves items in a price list with pagination")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PRICELIST_READ")
     public ResponseEntity<Page<PriceListItemDto>> getPriceListItems(
             @Parameter(description = "Price list ID") @PathVariable Long priceListId,
             Pageable pageable) {
@@ -110,7 +110,7 @@ public class PriceListController {
 
     @GetMapping("/{priceListId}/items/{itemId}")
     @Operation(summary = "Get price list item", description = "Retrieves a specific item from a price list")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PRICELIST_READ")
     public ResponseEntity<PriceListItemDto> getPriceListItem(
             @Parameter(description = "Price list ID") @PathVariable Long priceListId,
             @Parameter(description = "Item ID") @PathVariable Long itemId) {
@@ -119,7 +119,7 @@ public class PriceListController {
 
     @PostMapping("/{priceListId}/items")
     @Operation(summary = "Add item to price list", description = "Adds a new item to a price list")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PRICELIST_ITEMS_MANAGE")
     public ResponseEntity<PriceListItemDto> addPriceListItem(
             @Parameter(description = "Price list ID") @PathVariable Long priceListId,
             @Valid @RequestBody CreatePriceListItemRequest request) {
@@ -129,7 +129,7 @@ public class PriceListController {
 
     @PutMapping("/{priceListId}/items/{itemId}")
     @Operation(summary = "Update price list item", description = "Updates an item in a price list")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PRICELIST_ITEMS_MANAGE")
     public ResponseEntity<PriceListItemDto> updatePriceListItem(
             @Parameter(description = "Price list ID") @PathVariable Long priceListId,
             @Parameter(description = "Item ID") @PathVariable Long itemId,
@@ -139,7 +139,7 @@ public class PriceListController {
 
     @DeleteMapping("/{priceListId}/items/{itemId}")
     @Operation(summary = "Remove item from price list", description = "Removes an item from a price list")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PRICELIST_ITEMS_MANAGE")
     public ResponseEntity<Void> removePriceListItem(
             @Parameter(description = "Price list ID") @PathVariable Long priceListId,
             @Parameter(description = "Item ID") @PathVariable Long itemId) {
@@ -151,7 +151,7 @@ public class PriceListController {
 
     @GetMapping("/customer/{customerId}")
     @Operation(summary = "Get customer price lists", description = "Retrieves price lists assigned to a customer")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'POS_OPERATOR')")
+    @RequiresPermission("POS_PRICELIST_READ")
     public ResponseEntity<List<PriceListDto>> getCustomerPriceLists(
             @Parameter(description = "Customer ID") @PathVariable Long customerId) {
         return ResponseEntity.ok(priceListService.findCustomerPriceLists(customerId));
@@ -159,7 +159,7 @@ public class PriceListController {
 
     @PostMapping("/{priceListId}/assign-customer/{customerId}")
     @Operation(summary = "Assign price list to customer", description = "Assigns a price list to a customer")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PRICELIST_ASSIGN")
     public ResponseEntity<Void> assignPriceListToCustomer(
             @Parameter(description = "Price list ID") @PathVariable Long priceListId,
             @Parameter(description = "Customer ID") @PathVariable Long customerId,
@@ -170,7 +170,7 @@ public class PriceListController {
 
     @DeleteMapping("/{priceListId}/unassign-customer/{customerId}")
     @Operation(summary = "Remove price list from customer", description = "Removes a price list assignment from a customer")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @RequiresPermission("POS_PRICELIST_ASSIGN")
     public ResponseEntity<Void> removePriceListFromCustomer(
             @Parameter(description = "Price list ID") @PathVariable Long priceListId,
             @Parameter(description = "Customer ID") @PathVariable Long customerId) {
