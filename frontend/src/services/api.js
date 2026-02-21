@@ -485,3 +485,24 @@ export const telegramApi = {
   broadcast: (data) => api.post('/telegram/admin/broadcast', data),
   adminUnlinkUser: (userId) => api.delete(`/telegram/admin/users/${userId}/unlink`)
 }
+
+// Delivery Regions API - Backend: /api/v1/delivery/regions
+export const deliveryRegionsApi = {
+  getAll: (params) => api.get('/delivery/regions', { params }),
+  getActive: () => api.get('/delivery/regions/active'),
+  getById: (id) => api.get(`/delivery/regions/${id}`),
+  create: (data) => api.post('/delivery/regions', data),
+  update: (id, data) => api.put(`/delivery/regions/${id}`, data),
+  delete: (id) => api.delete(`/delivery/regions/${id}`)
+}
+
+// Delivery Villages API - Backend: /api/v1/delivery/villages
+export const deliveryVillagesApi = {
+  getAll: (params) => api.get('/delivery/villages', { params }),
+  getActive: () => api.get('/delivery/villages/active'),
+  getByRegion: (regionId) => api.get(`/delivery/villages/region/${regionId}`),
+  getById: (id) => api.get(`/delivery/villages/${id}`),
+  create: (data) => api.post('/delivery/villages', data),
+  update: (id, data) => api.put(`/delivery/villages/${id}`, data),
+  delete: (id) => api.delete(`/delivery/villages/${id}`)
+}

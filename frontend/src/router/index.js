@@ -350,6 +350,36 @@ const routes = [
             name: 'telegram-admin',
             component: () => import('@/views/admin/TelegramAdminView.vue'),
             meta: { permission: 'SETTINGS_MANAGE' }
+          },
+          {
+            path: 'regions',
+            name: 'regions',
+            component: () => import('@/views/admin/RegionsView.vue')
+          },
+          {
+            path: 'regions/new',
+            name: 'region-create',
+            component: () => import('@/views/admin/RegionFormView.vue')
+          },
+          {
+            path: 'regions/:id/edit',
+            name: 'region-edit',
+            component: () => import('@/views/admin/RegionFormView.vue')
+          },
+          {
+            path: 'villages',
+            name: 'villages',
+            component: () => import('@/views/admin/VillagesView.vue')
+          },
+          {
+            path: 'villages/new',
+            name: 'village-create',
+            component: () => import('@/views/admin/VillageFormView.vue')
+          },
+          {
+            path: 'villages/:id/edit',
+            name: 'village-edit',
+            component: () => import('@/views/admin/VillageFormView.vue')
           }
         ]
       }

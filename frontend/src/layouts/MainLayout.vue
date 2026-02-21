@@ -27,7 +27,9 @@ import {
   KeyIcon,
   BanknotesIcon,
   BriefcaseIcon,
-  PaperAirplaneIcon
+  PaperAirplaneIcon,
+  MapPinIcon,
+  MapIcon
 } from '@heroicons/vue/24/outline'
 
 const authStore = useAuthStore()
@@ -121,6 +123,8 @@ const navigation = computed(() => [
       { name: 'Foydalanuvchilar', href: '/admin/users', icon: UserGroupIcon },
       { name: 'Rollar va ruxsatlar', href: '/admin/roles', icon: KeyIcon },
       { name: 'POS Terminallar', href: '/admin/terminals', icon: ComputerDesktopIcon },
+      { name: 'Hududlar', href: '/admin/regions', icon: MapIcon },
+      { name: 'Mahallalar', href: '/admin/villages', icon: MapPinIcon },
       { name: 'Telegram bot', href: '/admin/telegram', icon: PaperAirplaneIcon },
       { name: 'Sozlamalar', href: '/admin/settings', icon: Cog6ToothIcon },
       { name: 'Audit jurnali', href: '/admin/audit-logs', icon: DocumentTextIcon }

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { productsApi, customersApi, posApi, terminalsApi, shiftsApi } from '@/services/api'
+import { productsApi, customersApi, posApi, terminalsApi, shiftsApi, deliveryRegionsApi, deliveryVillagesApi } from '@/services/api'
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -13,7 +13,9 @@ import {
   CheckIcon,
   DocumentTextIcon,
   ClockIcon,
-  ArrowRightStartOnRectangleIcon
+  ArrowRightStartOnRectangleIcon,
+  MapPinIcon,
+  PencilSquareIcon
 } from '@heroicons/vue/24/outline'
 
 // State
@@ -37,8 +39,19 @@ const shiftLoading = ref(false)
 const cart = reactive({
   items: [],
   customerId: null,
-  customerName: ''
+  customerName: '',
+  deliveryRegionId: null,
+  deliveryRegionName: '',
+  deliveryVillageId: null,
+  deliveryVillageName: ''
 })
+
+// Delivery address state
+const showDeliveryModal = ref(false)
+const deliveryRegions = ref([])
+const deliveryVillages = ref([])
+const selectedRegionId = ref(null)
+const selectedVillageId = ref(null)
 
 const showPaymentModal = ref(false)
 const showCustomerModal = ref(false)
@@ -209,6 +222,61 @@ function selectCustomer(customer) {
 function clearCustomer() {
   cart.customerId = null
   cart.customerName = ''
+}
+
+// Delivery address functions
+async function openDeliveryModal() {
+  showDeliveryModal.value = true
+  selectedRegionId.value = cart.deliveryRegionId
+  selectedVillageId.value = cart.deliveryVillageId
+  if (deliveryRegions.value.length === 0) {
+    try {
+      const response = await deliveryRegionsApi.getActive()
+      deliveryRegions.value = response.data.data || response.data || []
+    } catch (error) {
+      console.error('Failed to fetch regions:', error)
+    }
+  }
+  if (selectedRegionId.value) {
+    await fetchVillagesForRegion(selectedRegionId.value)
+  }
+}
+
+async function fetchVillagesForRegion(regionId) {
+  if (!regionId) {
+    deliveryVillages.value = []
+    return
+  }
+  try {
+    const response = await deliveryVillagesApi.getByRegion(regionId)
+    deliveryVillages.value = response.data.data || response.data || []
+  } catch (error) {
+    console.error('Failed to fetch villages:', error)
+    deliveryVillages.value = []
+  }
+}
+
+async function onRegionChange() {
+  selectedVillageId.value = null
+  await fetchVillagesForRegion(selectedRegionId.value)
+}
+
+function confirmDeliveryAddress() {
+  const region = deliveryRegions.value.find(r => r.id === selectedRegionId.value)
+  const village = deliveryVillages.value.find(v => v.id === selectedVillageId.value)
+
+  cart.deliveryRegionId = selectedRegionId.value
+  cart.deliveryRegionName = region?.name || ''
+  cart.deliveryVillageId = selectedVillageId.value
+  cart.deliveryVillageName = village?.name || ''
+  showDeliveryModal.value = false
+}
+
+function clearDeliveryAddress() {
+  cart.deliveryRegionId = null
+  cart.deliveryRegionName = ''
+  cart.deliveryVillageId = null
+  cart.deliveryVillageName = ''
 }
 
 // Discount functions
@@ -385,6 +453,7 @@ async function processPayment() {
     cart.items = []
     cart.customerId = null
     cart.customerName = ''
+    clearDeliveryAddress()
     payments.value = []
     clearTransactionDiscount()
     showPaymentModal.value = false
@@ -423,6 +492,7 @@ function clearCart() {
     cart.items = []
     cart.customerId = null
     cart.customerName = ''
+    clearDeliveryAddress()
     clearTransactionDiscount()
   }
 }
@@ -689,6 +759,36 @@ onMounted(() => {
             >
               <PlusIcon class="h-4 w-4 mr-1" />
               Quick Add
+            </button>
+          </div>
+        </div>
+
+        <!-- Delivery Address -->
+        <div class="px-4 py-2 border-b bg-gray-50">
+          <div v-if="cart.deliveryRegionId" class="flex items-center justify-between">
+            <div class="flex items-center min-w-0">
+              <MapPinIcon class="h-4 w-4 text-orange-500 mr-2 flex-shrink-0" />
+              <div class="truncate">
+                <span class="text-sm font-medium text-gray-700">{{ cart.deliveryRegionName }}</span>
+                <span v-if="cart.deliveryVillageName" class="text-sm text-gray-500"> / {{ cart.deliveryVillageName }}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <button @click="openDeliveryModal" class="text-primary-500 hover:text-primary-600">
+                <PencilSquareIcon class="h-3.5 w-3.5" />
+              </button>
+              <button @click="clearDeliveryAddress" class="text-gray-400 hover:text-red-500">
+                <XMarkIcon class="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+          <div v-else>
+            <button
+              @click="openDeliveryModal"
+              class="flex items-center text-orange-600 hover:text-orange-700 text-sm"
+            >
+              <MapPinIcon class="h-4 w-4 mr-1" />
+              Yetkazish manzili
             </button>
           </div>
         </div>
@@ -1106,6 +1206,60 @@ onMounted(() => {
             <button @click="closeShift" :disabled="shiftLoading" class="btn-primary flex-1 !bg-red-600 hover:!bg-red-700">
               <ArrowRightStartOnRectangleIcon class="h-5 w-5 mr-2" />
               {{ shiftLoading ? 'Yopilmoqda...' : 'Smenani yopish' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delivery Address Modal -->
+    <div v-if="showDeliveryModal" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showDeliveryModal = false"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">
+            <MapPinIcon class="h-5 w-5 inline mr-2 text-orange-500" />
+            Yetkazish manzili
+          </h3>
+
+          <div class="space-y-4">
+            <!-- Region -->
+            <div>
+              <label class="label">Hudud *</label>
+              <select v-model="selectedRegionId" @change="onRegionChange" class="input">
+                <option :value="null">Hududni tanlang</option>
+                <option v-for="region in deliveryRegions" :key="region.id" :value="region.id">
+                  {{ region.name }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Village -->
+            <div>
+              <label class="label">Mahalla</label>
+              <select v-model="selectedVillageId" class="input" :disabled="!selectedRegionId">
+                <option :value="null">Mahallani tanlang</option>
+                <option v-for="village in deliveryVillages" :key="village.id" :value="village.id">
+                  {{ village.name }}
+                </option>
+              </select>
+              <p v-if="selectedRegionId && deliveryVillages.length === 0" class="text-xs text-gray-400 mt-1">
+                Bu hududda mahallalar topilmadi
+              </p>
+            </div>
+          </div>
+
+          <div class="flex space-x-3 mt-6">
+            <button @click="showDeliveryModal = false" class="btn-secondary flex-1">
+              Bekor qilish
+            </button>
+            <button
+              @click="confirmDeliveryAddress"
+              :disabled="!selectedRegionId"
+              class="btn-primary flex-1"
+            >
+              <CheckIcon class="h-5 w-5 mr-2" />
+              Tasdiqlash
             </button>
           </div>
         </div>
