@@ -1,9 +1,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { arReportsApi, arInvoicesApi } from '@/services/api'
 import { useReceiptStore } from '@/stores/receipt'
-import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon } from '@heroicons/vue/24/outline'
+import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon, PlusIcon } from '@heroicons/vue/24/outline'
 
+const router = useRouter()
 const receiptStore = useReceiptStore()
 const brandConfig = computed(() => receiptStore.config)
 
@@ -459,14 +461,23 @@ function printDebtors() {
         <h1 class="text-2xl font-bold text-gray-900">Qarzdorlar</h1>
         <p class="mt-1 text-sm text-gray-500">Nasiyaga olgan mijozlar ro'yxati</p>
       </div>
-      <button
-        @click="printDebtors"
-        :disabled="loading || debtors.length === 0"
-        class="btn-primary flex items-center gap-2"
-      >
-        <PrinterIcon class="h-5 w-5" />
-        Chop etish
-      </button>
+      <div class="flex items-center gap-3">
+        <button
+          @click="router.push('/finance/debtors/new')"
+          class="btn-primary flex items-center gap-2"
+        >
+          <PlusIcon class="h-5 w-5" />
+          Qarz qo'shish
+        </button>
+        <button
+          @click="printDebtors"
+          :disabled="loading || debtors.length === 0"
+          class="btn-secondary flex items-center gap-2"
+        >
+          <PrinterIcon class="h-5 w-5" />
+          Chop etish
+        </button>
+      </div>
     </div>
 
     <!-- Summary Cards -->

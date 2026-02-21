@@ -238,7 +238,10 @@ export const arReportsApi = {
 export const arInvoicesApi = {
   getUnpaidByCustomer: (customerId) => api.get(`/finance/ar-invoices/customer/${customerId}/unpaid`),
   getByCustomer: (customerId, params) => api.get(`/finance/ar-invoices/customer/${customerId}`, { params }),
-  getById: (id) => api.get(`/finance/ar-invoices/${id}`)
+  getById: (id) => api.get(`/finance/ar-invoices/${id}`),
+  create: (data) => api.post('/finance/ar-invoices', data),
+  update: (id, data) => api.put(`/finance/ar-invoices/${id}`, data),
+  post: (id) => api.post(`/finance/ar-invoices/${id}/post`)
 }
 
 // Suppliers/Vendors API - Backend: /api/v1/inventory/vendors

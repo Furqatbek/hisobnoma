@@ -1,0 +1,493 @@
+<script setup>
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { arInvoicesApi, customersApi, productsApi } from '@/services/api'
+import { ArrowLeftIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+
+const router = useRouter()
+const saving = ref(false)
+const errors = reactive({})
+
+// Customer
+const customers = ref([])
+const customerSearch = ref('')
+const loadingCustomers = ref(false)
+const showCustomerDropdown = ref(false)
+const selectedCustomer = ref(null)
+
+// Products search
+const productSearch = ref('')
+const productResults = ref([])
+const loadingProducts = ref(false)
+const showProductDropdown = ref(false)
+
+// Form
+const form = reactive({
+  customerId: null,
+  invoiceDate: new Date().toISOString().split('T')[0],
+  dueDate: '',
+  description: '',
+  notes: '',
+  lines: []
+})
+
+// Calculate totals
+const subtotal = computed(() => {
+  return form.lines.reduce((sum, line) => {
+    const lineTotal = (parseFloat(line.quantity) || 0) * (parseFloat(line.unitPrice) || 0)
+    return sum + lineTotal
+  }, 0)
+})
+
+const totalAmount = computed(() => subtotal.value)
+
+onMounted(async () => {
+  // Set default due date to 30 days from now
+  const due = new Date()
+  due.setDate(due.getDate() + 30)
+  form.dueDate = due.toISOString().split('T')[0]
+})
+
+// Customer search
+let customerSearchTimeout = null
+async function onCustomerSearch() {
+  clearTimeout(customerSearchTimeout)
+  if (!customerSearch.value || customerSearch.value.length < 1) {
+    customers.value = []
+    showCustomerDropdown.value = false
+    return
+  }
+  customerSearchTimeout = setTimeout(async () => {
+    loadingCustomers.value = true
+    try {
+      const res = await customersApi.search(customerSearch.value)
+      customers.value = res.data.data || res.data || []
+      showCustomerDropdown.value = customers.value.length > 0
+    } catch (err) {
+      // Also try getAll with search param
+      try {
+        const res = await customersApi.getAll({ search: customerSearch.value, size: 20 })
+        const data = res.data.data
+        customers.value = data?.content || data || []
+        showCustomerDropdown.value = customers.value.length > 0
+      } catch (e) {
+        console.error('Customer search failed:', e)
+      }
+    } finally {
+      loadingCustomers.value = false
+    }
+  }, 300)
+}
+
+function selectCustomer(customer) {
+  selectedCustomer.value = customer
+  form.customerId = customer.id
+  customerSearch.value = customer.name || customer.companyName || ''
+  showCustomerDropdown.value = false
+
+  // Set payment terms as due date if available
+  if (customer.paymentTermsDays) {
+    const due = new Date()
+    due.setDate(due.getDate() + customer.paymentTermsDays)
+    form.dueDate = due.toISOString().split('T')[0]
+  }
+}
+
+function clearCustomer() {
+  selectedCustomer.value = null
+  form.customerId = null
+  customerSearch.value = ''
+}
+
+// Product search
+let productSearchTimeout = null
+async function onProductSearch() {
+  clearTimeout(productSearchTimeout)
+  if (!productSearch.value || productSearch.value.length < 1) {
+    productResults.value = []
+    showProductDropdown.value = false
+    return
+  }
+  productSearchTimeout = setTimeout(async () => {
+    loadingProducts.value = true
+    try {
+      const res = await productsApi.search(productSearch.value)
+      productResults.value = res.data.data || res.data || []
+      showProductDropdown.value = productResults.value.length > 0
+    } catch (err) {
+      try {
+        const res = await productsApi.getAll({ search: productSearch.value, size: 20 })
+        const data = res.data.data
+        productResults.value = data?.content || data || []
+        showProductDropdown.value = productResults.value.length > 0
+      } catch (e) {
+        console.error('Product search failed:', e)
+      }
+    } finally {
+      loadingProducts.value = false
+    }
+  }, 300)
+}
+
+function addProductLine(product) {
+  form.lines.push({
+    productId: product.id,
+    productSku: product.sku || product.code || '',
+    productName: product.name || '',
+    description: product.name || '',
+    quantity: 1,
+    unitPrice: product.sellingPrice || product.price || 0,
+    unitOfMeasure: product.uomCode || product.uom?.code || 'dona'
+  })
+  productSearch.value = ''
+  productResults.value = []
+  showProductDropdown.value = false
+}
+
+function addManualLine() {
+  form.lines.push({
+    productId: null,
+    productSku: '',
+    productName: '',
+    description: '',
+    quantity: 1,
+    unitPrice: 0,
+    unitOfMeasure: 'dona'
+  })
+}
+
+function removeLine(index) {
+  form.lines.splice(index, 1)
+}
+
+function lineTotal(line) {
+  return (parseFloat(line.quantity) || 0) * (parseFloat(line.unitPrice) || 0)
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('uz-UZ', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value || 0)
+}
+
+function validate() {
+  Object.keys(errors).forEach(key => delete errors[key])
+
+  if (!form.customerId) errors.customer = 'Mijozni tanlang'
+  if (!form.invoiceDate) errors.invoiceDate = 'Faktura sanasi kerak'
+  if (!form.dueDate) errors.dueDate = 'To\'lov muddati kerak'
+  if (form.lines.length === 0) errors.lines = 'Kamida bitta mahsulot qo\'shing'
+
+  for (let i = 0; i < form.lines.length; i++) {
+    const line = form.lines[i]
+    if (!line.description?.trim()) {
+      errors[`line_${i}_desc`] = 'Tavsif kerak'
+    }
+    if (!line.quantity || parseFloat(line.quantity) <= 0) {
+      errors[`line_${i}_qty`] = 'Miqdor kerak'
+    }
+    if (line.unitPrice === undefined || line.unitPrice === '' || parseFloat(line.unitPrice) < 0) {
+      errors[`line_${i}_price`] = 'Narx kerak'
+    }
+  }
+
+  return Object.keys(errors).length === 0
+}
+
+async function handleSubmit() {
+  if (!validate()) return
+
+  saving.value = true
+  Object.keys(errors).forEach(key => delete errors[key])
+
+  try {
+    const payload = {
+      customerId: form.customerId,
+      invoiceDate: form.invoiceDate,
+      dueDate: form.dueDate,
+      totalAmount: totalAmount.value,
+      description: form.description || null,
+      notes: form.notes || null,
+      lines: form.lines.map(line => ({
+        productId: line.productId || null,
+        productSku: line.productSku || null,
+        productName: line.productName || null,
+        description: line.description || line.productName || 'Mahsulot',
+        quantity: parseFloat(line.quantity),
+        unitPrice: parseFloat(line.unitPrice),
+        unitOfMeasure: line.unitOfMeasure || null
+      }))
+    }
+
+    await arInvoicesApi.create(payload)
+    router.push('/finance/debtors')
+  } catch (error) {
+    const response = error.response?.data
+    if (response?.validationErrors && Array.isArray(response.validationErrors)) {
+      response.validationErrors.forEach(err => {
+        if (err.field) errors[err.field] = err.message
+      })
+      errors.general = 'Xatoliklarni tuzating'
+    } else {
+      errors.general = response?.message || 'Saqlashda xatolik yuz berdi'
+    }
+  } finally {
+    saving.value = false
+  }
+}
+</script>
+
+<template>
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center space-x-4">
+      <button @click="router.back()" class="p-2 hover:bg-gray-100 rounded-lg">
+        <ArrowLeftIcon class="h-5 w-5 text-gray-500" />
+      </button>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Qarz qo'shish</h1>
+        <p class="text-sm text-gray-500">Mijozga nasiyaga sotilgan mahsulotlarni ro'yxatlash</p>
+      </div>
+    </div>
+
+    <form @submit.prevent="handleSubmit" class="space-y-6">
+      <!-- General error -->
+      <div v-if="errors.general" class="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-sm text-red-600">{{ errors.general }}</p>
+      </div>
+
+      <!-- Customer & Date -->
+      <div class="card">
+        <div class="card-header"><h3 class="text-lg font-medium">Asosiy ma'lumotlar</h3></div>
+        <div class="card-body grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Customer search -->
+          <div class="relative md:col-span-1">
+            <label class="label">Mijoz *</label>
+            <div v-if="selectedCustomer" class="flex items-center gap-2 p-2 bg-primary-50 border border-primary-200 rounded-lg">
+              <div class="flex-1">
+                <p class="font-medium text-sm">{{ selectedCustomer.name || selectedCustomer.companyName }}</p>
+                <p v-if="selectedCustomer.code" class="text-xs text-gray-500">{{ selectedCustomer.code }}</p>
+              </div>
+              <button type="button" @click="clearCustomer" class="p-1 text-gray-400 hover:text-red-500">
+                <TrashIcon class="h-4 w-4" />
+              </button>
+            </div>
+            <div v-else>
+              <div class="relative">
+                <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  v-model="customerSearch"
+                  @input="onCustomerSearch"
+                  @focus="customerSearch && onCustomerSearch()"
+                  type="text"
+                  placeholder="Mijoz qidirish..."
+                  :class="[errors.customer ? 'input-error pl-9' : 'input pl-9']"
+                />
+              </div>
+              <!-- Dropdown -->
+              <div
+                v-if="showCustomerDropdown"
+                class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+              >
+                <button
+                  v-for="c in customers"
+                  :key="c.id"
+                  type="button"
+                  @click="selectCustomer(c)"
+                  class="w-full text-left px-4 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                >
+                  <p class="font-medium text-sm">{{ c.name || c.companyName }}</p>
+                  <p class="text-xs text-gray-500">{{ c.code || '' }} {{ c.phone ? '| ' + c.phone : '' }}</p>
+                </button>
+              </div>
+            </div>
+            <p v-if="errors.customer" class="mt-1 text-sm text-red-600">{{ errors.customer }}</p>
+          </div>
+
+          <div>
+            <label class="label">Faktura sanasi *</label>
+            <input v-model="form.invoiceDate" type="date" :class="[errors.invoiceDate ? 'input-error' : 'input']" />
+            <p v-if="errors.invoiceDate" class="mt-1 text-sm text-red-600">{{ errors.invoiceDate }}</p>
+          </div>
+
+          <div>
+            <label class="label">To'lov muddati *</label>
+            <input v-model="form.dueDate" type="date" :class="[errors.dueDate ? 'input-error' : 'input']" />
+            <p v-if="errors.dueDate" class="mt-1 text-sm text-red-600">{{ errors.dueDate }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Line Items -->
+      <div class="card">
+        <div class="card-header">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-medium">Mahsulotlar</h3>
+          </div>
+        </div>
+        <div class="card-body space-y-4">
+          <!-- Product search bar -->
+          <div class="relative">
+            <div class="flex gap-2">
+              <div class="flex-1 relative">
+                <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  v-model="productSearch"
+                  @input="onProductSearch"
+                  @focus="productSearch && onProductSearch()"
+                  type="text"
+                  placeholder="Mahsulot qidirish (nomi yoki shtrix kodi)..."
+                  class="input pl-9"
+                />
+              </div>
+              <button
+                type="button"
+                @click="addManualLine"
+                class="btn-secondary flex items-center gap-1 whitespace-nowrap"
+              >
+                <PlusIcon class="h-4 w-4" />
+                Qo'lda qo'shish
+              </button>
+            </div>
+
+            <!-- Product dropdown -->
+            <div
+              v-if="showProductDropdown"
+              class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+            >
+              <button
+                v-for="p in productResults"
+                :key="p.id"
+                type="button"
+                @click="addProductLine(p)"
+                class="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 flex items-center justify-between"
+              >
+                <div>
+                  <p class="font-medium text-sm">{{ p.name }}</p>
+                  <p class="text-xs text-gray-500">
+                    {{ p.sku || p.code || '' }}
+                    {{ p.barcode ? ' | ' + p.barcode : '' }}
+                  </p>
+                </div>
+                <span class="text-sm font-semibold text-gray-700">{{ formatCurrency(p.sellingPrice || p.price || 0) }} so'm</span>
+              </button>
+              <div v-if="loadingProducts" class="px-4 py-3 text-center text-sm text-gray-400">
+                Qidirilmoqda...
+              </div>
+            </div>
+          </div>
+
+          <p v-if="errors.lines" class="text-sm text-red-600">{{ errors.lines }}</p>
+
+          <!-- Lines table -->
+          <div v-if="form.lines.length > 0" class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-gray-50 text-gray-600">
+                  <th class="px-3 py-2 text-left font-medium w-8">№</th>
+                  <th class="px-3 py-2 text-left font-medium">Mahsulot / Tavsif</th>
+                  <th class="px-3 py-2 text-center font-medium w-24">Soni</th>
+                  <th class="px-3 py-2 text-right font-medium w-36">Narxi</th>
+                  <th class="px-3 py-2 text-right font-medium w-36">Jami</th>
+                  <th class="px-3 py-2 w-12"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="(line, index) in form.lines" :key="index">
+                  <td class="px-3 py-2 text-gray-500">{{ index + 1 }}</td>
+                  <td class="px-3 py-2">
+                    <input
+                      v-model="line.description"
+                      type="text"
+                      :placeholder="line.productName || 'Tavsif kiriting...'"
+                      :class="[errors[`line_${index}_desc`] ? 'input-error text-sm' : 'input text-sm']"
+                    />
+                    <p v-if="line.productSku" class="text-xs text-gray-400 mt-1">{{ line.productSku }}</p>
+                    <p v-if="errors[`line_${index}_desc`]" class="text-xs text-red-600 mt-1">{{ errors[`line_${index}_desc`] }}</p>
+                  </td>
+                  <td class="px-3 py-2">
+                    <input
+                      v-model="line.quantity"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      :class="[errors[`line_${index}_qty`] ? 'input-error text-sm text-center' : 'input text-sm text-center']"
+                    />
+                    <p v-if="errors[`line_${index}_qty`]" class="text-xs text-red-600 mt-1">{{ errors[`line_${index}_qty`] }}</p>
+                  </td>
+                  <td class="px-3 py-2">
+                    <input
+                      v-model="line.unitPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      :class="[errors[`line_${index}_price`] ? 'input-error text-sm text-right' : 'input text-sm text-right']"
+                    />
+                    <p v-if="errors[`line_${index}_price`]" class="text-xs text-red-600 mt-1">{{ errors[`line_${index}_price`] }}</p>
+                  </td>
+                  <td class="px-3 py-2 text-right font-medium">
+                    {{ formatCurrency(lineTotal(line)) }} so'm
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <button
+                      type="button"
+                      @click="removeLine(index)"
+                      class="p-1 text-gray-400 hover:text-red-500 rounded"
+                    >
+                      <TrashIcon class="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="bg-gray-50 font-semibold">
+                  <td colspan="4" class="px-3 py-3 text-right">Jami:</td>
+                  <td class="px-3 py-3 text-right text-lg text-red-600">{{ formatCurrency(totalAmount) }} so'm</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div v-else class="text-center py-8 bg-gray-50 rounded-lg">
+            <p class="text-gray-500">Mahsulotlar qo'shilmagan</p>
+            <p class="text-sm text-gray-400 mt-1">Mahsulot qidiring yoki "Qo'lda qo'shish" tugmasini bosing</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="card">
+        <div class="card-header"><h3 class="text-lg font-medium">Qo'shimcha</h3></div>
+        <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="label">Tavsif</label>
+            <textarea v-model="form.description" rows="3" class="input" placeholder="Faktura tavsifi..."></textarea>
+          </div>
+          <div>
+            <label class="label">Izoh</label>
+            <textarea v-model="form.notes" rows="3" class="input" placeholder="Qo'shimcha izoh..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex justify-between items-center">
+        <div class="text-sm text-gray-500">
+          <span v-if="form.lines.length > 0">{{ form.lines.length }} ta mahsulot, jami: <strong class="text-red-600">{{ formatCurrency(totalAmount) }} so'm</strong></span>
+        </div>
+        <div class="flex gap-3">
+          <button type="button" @click="router.back()" class="btn-secondary">Bekor qilish</button>
+          <button
+            type="submit"
+            :disabled="saving || form.lines.length === 0"
+            class="btn-primary"
+          >
+            {{ saving ? 'Saqlanmoqda...' : 'Saqlash' }}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</template>
