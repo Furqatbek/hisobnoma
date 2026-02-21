@@ -414,8 +414,10 @@ public class POSTransactionService {
             if (transaction.isGlPosted()) {
                 try {
                     glIntegrationService.reverseSalesTransaction(transaction.getGlJournalEntryId());
+                    transaction.setGlPosted(false);
+                    transaction.setGlJournalEntryId(null);
                 } catch (Exception e) {
-                    log.warn("Failed to reverse GL entry for transaction {}: {}",
+                    log.error("Failed to reverse GL entry for voided transaction {}: {}",
                             transaction.getTransactionNumber(), e.getMessage());
                 }
             }
@@ -467,8 +469,8 @@ public class POSTransactionService {
                 transaction.setGlJournalEntryId(journalEntryId);
                 transaction.setGlPosted(true);
             } catch (Exception e) {
-                log.warn("Failed to post transaction to GL: {}", e.getMessage());
-                // Continue without failing the transaction
+                log.error("Failed to post transaction {} to GL: {}. Retry via POST /api/v1/pos/transactions/{}/retry-gl",
+                        transaction.getTransactionNumber(), e.getMessage(), transaction.getId());
             }
         }
 
@@ -492,14 +494,74 @@ public class POSTransactionService {
                 log.info("Auto-created AR Invoice {} for credit sale transaction {}",
                         arInvoice.getInvoiceNumber(), transaction.getTransactionNumber());
             } catch (Exception e) {
-                log.warn("Failed to auto-create AR Invoice for credit sale transaction {}: {}",
-                        transaction.getTransactionNumber(), e.getMessage());
-                // Don't fail the transaction - AR Invoice can be created manually
+                log.error("Failed to create AR Invoice for credit sale transaction {}: {}. Retry via POST /api/v1/pos/transactions/{}/retry-ar-invoice",
+                        transaction.getTransactionNumber(), e.getMessage(), transaction.getId());
             }
         }
 
         log.info("Completed transaction {}", transaction.getTransactionNumber());
 
+        return transactionMapper.toDto(transaction);
+    }
+
+    // ==================== GL / AR Invoice Retry ====================
+
+    @Transactional(readOnly = true)
+    public List<POSTransactionDto> findFailedGlPostings() {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return transactionRepository.findCompletedWithoutGlPosting(tenantId).stream()
+                .map(transactionMapper::toDtoWithoutDetails)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<POSTransactionDto> findFailedArInvoices() {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return transactionRepository.findCompletedCreditWithoutArInvoice(tenantId).stream()
+                .map(transactionMapper::toDtoWithoutDetails)
+                .toList();
+    }
+
+    @Transactional
+    public POSTransactionDto retryGlPosting(Long transactionId) {
+        POSTransaction transaction = getTransactionById(transactionId);
+
+        if (transaction.getStatus() != TransactionStatus.COMPLETED) {
+            throw new BusinessException("Only completed transactions can be posted to GL");
+        }
+        if (transaction.isGlPosted()) {
+            throw new BusinessException("Transaction is already posted to GL");
+        }
+
+        Long journalEntryId = glIntegrationService.postPOSTransaction(transaction);
+        transaction.setGlJournalEntryId(journalEntryId);
+        transaction.setGlPosted(true);
+        transaction = transactionRepository.save(transaction);
+
+        log.info("Retry GL posting succeeded for transaction {}", transaction.getTransactionNumber());
+        return transactionMapper.toDto(transaction);
+    }
+
+    @Transactional
+    public POSTransactionDto retryArInvoiceCreation(Long transactionId) {
+        POSTransaction transaction = getTransactionById(transactionId);
+
+        if (transaction.getStatus() != TransactionStatus.COMPLETED) {
+            throw new BusinessException("Only completed transactions can have AR invoices created");
+        }
+        if (transaction.getArInvoiceId() != null) {
+            throw new BusinessException("Transaction already has an AR invoice");
+        }
+        if (!hasCreditPayment(transaction)) {
+            throw new BusinessException("Transaction has no credit payments");
+        }
+
+        ARInvoiceDto arInvoice = arInvoiceService.createFromPOSTransaction(transaction);
+        transaction.setArInvoiceId(arInvoice.getId());
+        transaction = transactionRepository.save(transaction);
+
+        log.info("Retry AR invoice creation succeeded for transaction {} -> invoice {}",
+                transaction.getTransactionNumber(), arInvoice.getInvoiceNumber());
         return transactionMapper.toDto(transaction);
     }
 

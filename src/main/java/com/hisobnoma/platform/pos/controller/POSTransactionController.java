@@ -219,4 +219,34 @@ public class POSTransactionController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(returnTransaction, "Return transaction created from original"));
     }
+
+    // ==================== GL / AR Invoice Retry ====================
+
+    @GetMapping("/failed-gl")
+    @RequiresPermission("POS_REPORTS_VIEW")
+    public ResponseEntity<ApiResponse<List<POSTransactionDto>>> getFailedGlPostings() {
+        List<POSTransactionDto> transactions = transactionService.findFailedGlPostings();
+        return ResponseEntity.ok(ApiResponse.success(transactions));
+    }
+
+    @GetMapping("/failed-ar-invoice")
+    @RequiresPermission("POS_REPORTS_VIEW")
+    public ResponseEntity<ApiResponse<List<POSTransactionDto>>> getFailedArInvoices() {
+        List<POSTransactionDto> transactions = transactionService.findFailedArInvoices();
+        return ResponseEntity.ok(ApiResponse.success(transactions));
+    }
+
+    @PostMapping("/{id}/retry-gl")
+    @RequiresPermission("POS_REPORTS_VIEW")
+    public ResponseEntity<ApiResponse<POSTransactionDto>> retryGlPosting(@PathVariable Long id) {
+        POSTransactionDto transaction = transactionService.retryGlPosting(id);
+        return ResponseEntity.ok(ApiResponse.success(transaction, "GL posting succeeded"));
+    }
+
+    @PostMapping("/{id}/retry-ar-invoice")
+    @RequiresPermission("POS_REPORTS_VIEW")
+    public ResponseEntity<ApiResponse<POSTransactionDto>> retryArInvoiceCreation(@PathVariable Long id) {
+        POSTransactionDto transaction = transactionService.retryArInvoiceCreation(id);
+        return ResponseEntity.ok(ApiResponse.success(transaction, "AR invoice created"));
+    }
 }
