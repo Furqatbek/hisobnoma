@@ -22,6 +22,7 @@ public class UserDto {
     private String fullName;
     private boolean enabled;
     private boolean locked;
+    private boolean hasPin;
     private boolean phoneVerified;
     private Instant lastLoginAt;
     private Long tenantId;

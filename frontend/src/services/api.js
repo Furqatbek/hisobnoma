@@ -82,7 +82,9 @@ export const usersApi = {
   getById: (id) => api.get(`/users/${id}`),
   create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
-  delete: (id) => api.delete(`/users/${id}`)
+  delete: (id) => api.delete(`/users/${id}`),
+  setPin: (id, pin) => api.put(`/users/${id}/set-pin`, { pin }),
+  clearPin: (id) => api.put(`/users/${id}/set-pin`, { pin: null })
 }
 
 // Products API - Backend: /api/v1/inventory/products

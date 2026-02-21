@@ -207,4 +207,24 @@ public class UserService {
 
         log.info("Password reset for user: {} by admin", user.getUsername());
     }
+
+    @Transactional
+    public void setUserPin(Long id, String pin) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User", id));
+
+        if (pin == null || pin.isEmpty()) {
+            // Clear PIN
+            user.setPinHash(null);
+            log.info("PIN cleared for user: {} by admin", user.getUsername());
+        } else {
+            if (pin.length() < 4 || pin.length() > 6 || !pin.matches("\\d+")) {
+                throw new ValidationException("PIN must be 4-6 digits");
+            }
+            user.setPinHash(passwordEncoder.encode(pin));
+            log.info("PIN set for user: {} by admin", user.getUsername());
+        }
+
+        userRepository.save(user);
+    }
 }

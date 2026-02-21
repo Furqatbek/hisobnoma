@@ -112,4 +112,17 @@ public class UserController {
         userService.resetPassword(id, newPassword);
         return ResponseEntity.ok(ApiResponse.success("Password reset successfully"));
     }
+
+    @PutMapping("/{id}/set-pin")
+    @RequiresPermission("ADMIN_USER_MANAGE")
+    @Operation(summary = "Set or clear PIN for a user (admin)")
+    public ResponseEntity<ApiResponse<Void>> setUserPin(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+
+        String pin = request.get("pin");
+        userService.setUserPin(id, pin);
+        return ResponseEntity.ok(ApiResponse.success(
+                pin != null && !pin.isEmpty() ? "PIN set successfully" : "PIN cleared successfully"));
+    }
 }

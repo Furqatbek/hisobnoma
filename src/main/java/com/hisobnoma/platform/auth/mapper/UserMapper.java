@@ -15,6 +15,7 @@ public interface UserMapper {
 
     @Mapping(target = "fullName", expression = "java(user.getFullName())")
     @Mapping(target = "roles", source = "roles", qualifiedByName = "rolesToCodes")
+    @Mapping(target = "hasPin", expression = "java(user.getPinHash() != null)")
     UserDto toDto(User user);
 
     @Named("rolesToCodes")
