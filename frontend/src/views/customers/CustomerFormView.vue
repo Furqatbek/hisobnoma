@@ -20,7 +20,7 @@ const form = reactive({
   address: '',
   city: '',
   taxId: '',
-  creditLimit: 0,
+  creditLimit: null,
   active: true
 })
 
@@ -51,10 +51,11 @@ async function handleSubmit() {
 
   saving.value = true
   try {
+    const payload = { ...form, creditLimit: form.creditLimit || null }
     if (isEdit.value) {
-      await customersApi.update(route.params.id, form)
+      await customersApi.update(route.params.id, payload)
     } else {
-      await customersApi.create(form)
+      await customersApi.create(payload)
     }
     router.push('/customers')
   } catch (error) {
@@ -126,8 +127,8 @@ async function handleSubmit() {
             <input v-model="form.city" type="text" class="input" />
           </div>
           <div>
-            <label class="label">Credit Limit</label>
-            <input v-model.number="form.creditLimit" type="number" min="0" step="0.01" class="input" />
+            <label class="label">Kredit limiti</label>
+            <input v-model.number="form.creditLimit" type="number" min="0" step="0.01" class="input" placeholder="Bo'sh = cheksiz" />
           </div>
           <div>
             <label class="flex items-center">

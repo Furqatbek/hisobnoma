@@ -218,8 +218,8 @@ public class CustomerService {
             return false;
         }
 
-        if (customer.getCreditLimit() == null) {
-            return true; // No limit set
+        if (customer.getCreditLimit() == null || customer.getCreditLimit().compareTo(BigDecimal.ZERO) == 0) {
+            return true; // No limit set (null or 0 means unlimited)
         }
 
         BigDecimal currentBalance = customer.getCurrentBalance() != null ? customer.getCurrentBalance() : BigDecimal.ZERO;
