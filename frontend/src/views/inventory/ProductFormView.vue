@@ -262,10 +262,13 @@ async function handleSubmit() {
   try {
     if (isEdit.value) {
       await productsApi.update(route.params.id, form)
+      router.push('/inventory/products')
     } else {
-      await productsApi.create(form)
+      const res = await productsApi.create(form)
+      const created = res.data.data || res.data
+      // Redirect to edit page so user can immediately add vendors/images
+      router.replace(`/inventory/products/${created.id}/edit`)
     }
-    router.push('/inventory/products')
   } catch (error) {
     console.error('Failed to save product:', error)
     if (error.response?.data?.message) {
