@@ -63,4 +63,8 @@ public interface ShiftRepository extends JpaRepository<Shift, Long> {
             @Param("startDate") Instant startDate,
             @Param("endDate") Instant endDate,
             @Param("tenantId") Long tenantId);
+
+    @Query("SELECT MAX(s.shiftNumber) FROM Shift s " +
+           "WHERE s.tenantId = :tenantId AND s.shiftNumber LIKE CONCAT(:prefix, '%')")
+    String findMaxShiftNumberByPrefixAndTenantId(@Param("prefix") String prefix, @Param("tenantId") Long tenantId);
 }

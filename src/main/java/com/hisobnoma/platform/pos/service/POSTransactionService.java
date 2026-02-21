@@ -315,6 +315,13 @@ public class POSTransactionService {
         POSTransactionLine line = lineRepository.findByIdAndTransactionId(lineId, transactionId)
                 .orElseThrow(() -> new NotFoundException("Line not found: " + lineId));
 
+        // Validate quantity is positive when provided
+        if (request.getQuantity() != null && request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Quantity must be greater than zero");
+        }
+
+        BigDecimal oldQuantity = line.getQuantity();
+
         if (request.getQuantity() != null) {
             line.setQuantity(request.getQuantity());
         }
@@ -334,6 +341,16 @@ public class POSTransactionService {
         line.calculateLineTotal();
         transaction.recalculateTotals();
         transaction = transactionRepository.save(transaction);
+
+        // Update stock reservation if quantity changed on a non-return, tracked product
+        if (request.getQuantity() != null && request.getQuantity().compareTo(oldQuantity) != 0
+                && !line.isReturn() && line.getProduct().isTrackInventory()) {
+            // Release old reservation and create new one with updated quantity
+            releaseStockForLine(line, transaction);
+            Long locId = line.getLocationId() != null ? line.getLocationId() :
+                    transaction.getTerminal().getLocation().getId();
+            reserveStockForLine(line.getProduct().getId(), locId, request.getQuantity(), transaction);
+        }
 
         return transactionMapper.toDto(transaction);
     }
@@ -722,19 +739,22 @@ public class POSTransactionService {
 
     private String generateTransactionNumber(Long tenantId) {
         String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        Instant startOfDay = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant();
-        Instant endOfDay = LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
 
-        List<POSTransaction> todayTransactions = transactionRepository.findByDateRangeAndTenantId(
-                startOfDay, endOfDay, tenantId);
+        // Use MAX query + retry to handle concurrent generation atomically.
+        // If a duplicate constraint fires, the caller's @Transactional will handle retry.
+        String maxNumber = transactionRepository.findMaxTransactionNumberByPrefixAndTenantId(
+                "TX" + datePart + "-", tenantId);
 
-        int count = todayTransactions.size() + 1;
-        String number;
-        do {
-            number = String.format("TX%s-%05d", datePart, count++);
-        } while (transactionRepository.existsByTransactionNumberAndTenantId(number, tenantId));
+        int next;
+        if (maxNumber != null) {
+            // Extract the numeric suffix: TX20260221-00005 → 5
+            String suffix = maxNumber.substring(maxNumber.lastIndexOf('-') + 1);
+            next = Integer.parseInt(suffix) + 1;
+        } else {
+            next = 1;
+        }
 
-        return number;
+        return String.format("TX%s-%05d", datePart, next);
     }
 
     // ==================== Return Operations ====================
@@ -954,11 +974,18 @@ public class POSTransactionService {
 
     private String generateReturnNumber(Long tenantId) {
         String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        int count = 1;
-        String number;
-        do {
-            number = String.format("RET%s-%05d", datePart, count++);
-        } while (transactionRepository.existsByTransactionNumberAndTenantId(number, tenantId));
-        return number;
+
+        String maxNumber = transactionRepository.findMaxTransactionNumberByPrefixAndTenantId(
+                "RET" + datePart + "-", tenantId);
+
+        int next;
+        if (maxNumber != null) {
+            String suffix = maxNumber.substring(maxNumber.lastIndexOf('-') + 1);
+            next = Integer.parseInt(suffix) + 1;
+        } else {
+            next = 1;
+        }
+
+        return String.format("RET%s-%05d", datePart, next);
     }
 }

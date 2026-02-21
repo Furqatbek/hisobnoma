@@ -238,7 +238,13 @@ public class POSTransaction extends TenantAwareEntity {
     }
 
     public void recalculateChange() {
-        if (paidAmount != null && totalAmount != null && paidAmount.compareTo(totalAmount) > 0) {
+        if (paidAmount == null || totalAmount == null) {
+            this.changeAmount = BigDecimal.ZERO;
+            return;
+        }
+        // For returns, totalAmount is negative — change doesn't apply (customer gets a refund).
+        // Only compute change for sale/exchange where totalAmount > 0 and customer overpays.
+        if (totalAmount.compareTo(BigDecimal.ZERO) > 0 && paidAmount.compareTo(totalAmount) > 0) {
             this.changeAmount = paidAmount.subtract(totalAmount);
         } else {
             this.changeAmount = BigDecimal.ZERO;
@@ -259,7 +265,8 @@ public class POSTransaction extends TenantAwareEntity {
         }
         this.discountPercent = percent;
         this.discountReason = reason;
-        this.discountAmount = subtotal.multiply(percent).divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
+        // Use absolute subtotal so this works for both sales (positive) and returns (negative)
+        this.discountAmount = subtotal.abs().multiply(percent).divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
         recalculateTotals();
     }
 
@@ -267,8 +274,10 @@ public class POSTransaction extends TenantAwareEntity {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Discount amount must be non-negative");
         }
-        if (subtotal != null && amount.compareTo(subtotal) > 0) {
-            throw new IllegalArgumentException("Discount amount cannot exceed subtotal of " + subtotal);
+        // Compare against absolute subtotal — return subtotals are negative
+        BigDecimal absSubtotal = subtotal != null ? subtotal.abs() : BigDecimal.ZERO;
+        if (amount.compareTo(absSubtotal) > 0) {
+            throw new IllegalArgumentException("Discount amount cannot exceed subtotal of " + absSubtotal);
         }
         this.discountAmount = amount;
         this.discountReason = reason;

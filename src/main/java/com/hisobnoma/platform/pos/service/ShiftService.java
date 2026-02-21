@@ -282,10 +282,20 @@ public class ShiftService {
 
     private String generateShiftNumber(Long tenantId) {
         String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        Instant startOfDay = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant();
-        Instant endOfDay = LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        String prefix = "SH" + datePart + "-";
 
-        Long count = shiftRepository.countByDateRangeAndTenantId(startOfDay, endOfDay, tenantId);
-        return String.format("SH%s-%04d", datePart, count + 1);
+        // Use MAX query to avoid TOCTOU race with count-based approach.
+        // If a duplicate constraint fires, the caller's @Transactional will handle retry.
+        String maxNumber = shiftRepository.findMaxShiftNumberByPrefixAndTenantId(prefix, tenantId);
+
+        int next;
+        if (maxNumber != null) {
+            String suffix = maxNumber.substring(maxNumber.lastIndexOf('-') + 1);
+            next = Integer.parseInt(suffix) + 1;
+        } else {
+            next = 1;
+        }
+
+        return String.format("SH%s-%04d", datePart, next);
     }
 }

@@ -101,6 +101,10 @@ public interface POSTransactionRepository extends JpaRepository<POSTransaction, 
            "WHERE t.tenantId = :tenantId AND t.transactionNumber = :number")
     boolean existsByTransactionNumberAndTenantId(@Param("number") String number, @Param("tenantId") Long tenantId);
 
+    @Query("SELECT MAX(t.transactionNumber) FROM POSTransaction t " +
+           "WHERE t.tenantId = :tenantId AND t.transactionNumber LIKE CONCAT(:prefix, '%')")
+    String findMaxTransactionNumberByPrefixAndTenantId(@Param("prefix") String prefix, @Param("tenantId") Long tenantId);
+
     @Query("SELECT COUNT(t) FROM POSTransaction t WHERE t.customer.id = :customerId AND t.tenantId = :tenantId AND t.status = :status")
     long countByCustomerIdAndTenantIdAndStatus(
             @Param("customerId") Long customerId,

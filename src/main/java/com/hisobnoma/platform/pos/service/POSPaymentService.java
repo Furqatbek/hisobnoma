@@ -60,6 +60,19 @@ public class POSPaymentService {
             throw new BusinessException("Cannot add payment to transaction in status: " + transaction.getStatus());
         }
 
+        // Prevent overpayment: non-cash payments must not exceed the remaining balance.
+        // Cash payments are allowed to exceed (change is given back).
+        BigDecimal balanceDue = transaction.getBalanceDue();
+        if (request.getPaymentType() != POSPaymentType.CASH
+                && request.getAmount().compareTo(balanceDue) > 0) {
+            throw new BusinessException(
+                    "Payment amount " + request.getAmount() + " exceeds balance due " + balanceDue +
+                    ". Non-cash payments cannot exceed the remaining balance.");
+        }
+        if (balanceDue.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Transaction is already fully paid");
+        }
+
         // Get next payment number
         Integer maxPaymentNumber = paymentRepository.findMaxPaymentNumberByTransactionId(transactionId);
         int paymentNumber = (maxPaymentNumber != null ? maxPaymentNumber : 0) + 1;
