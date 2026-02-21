@@ -24,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -376,7 +375,7 @@ public class ARInvoiceService {
      * @param transaction The POS transaction with credit payment
      * @return The created AR Invoice DTO
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public ARInvoiceDto createFromPOSTransaction(POSTransaction transaction) {
         if (transaction.getCustomer() == null) {
             throw new BusinessException("Credit sales require a customer to be associated with the transaction");
@@ -399,11 +398,7 @@ public class ARInvoiceService {
         }
 
         Long tenantId = transaction.getTenantId();
-
-        // Reload customer in this new transaction to avoid LazyInitializationException
-        // (the customer proxy was loaded in the caller's now-suspended session)
-        Customer customer = customerRepository.findByIdAndTenantId(transaction.getCustomer().getId(), tenantId)
-                .orElseThrow(() -> new BusinessException("Customer not found for credit sale"));
+        Customer customer = transaction.getCustomer();
 
         // Check credit limit
         if (!customerService.canBeInvoiced(customer.getId(), creditAmount)) {

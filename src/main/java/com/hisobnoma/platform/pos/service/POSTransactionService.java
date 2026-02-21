@@ -462,7 +462,7 @@ public class POSTransactionService {
             transaction.setStockDeducted(true);
         }
 
-        // Post to GL
+        // Post to GL (non-blocking — POS must work even if GL accounts aren't configured)
         if (!transaction.isGlPosted()) {
             try {
                 Long journalEntryId = glIntegrationService.postPOSTransaction(transaction);
@@ -472,6 +472,15 @@ public class POSTransactionService {
                 log.error("Failed to post transaction {} to GL: {}. Retry via POST /api/v1/pos/transactions/{}/retry-gl",
                         transaction.getTransactionNumber(), e.getMessage(), transaction.getId());
             }
+        }
+
+        // Create AR Invoice for credit sales BEFORE marking COMPLETED.
+        // A credit sale without an AR invoice means the debt is untracked — this must be atomic.
+        if (hasCreditPayment(transaction) && transaction.getArInvoiceId() == null) {
+            ARInvoiceDto arInvoice = arInvoiceService.createFromPOSTransaction(transaction);
+            transaction.setArInvoiceId(arInvoice.getId());
+            log.info("Created AR Invoice {} for credit sale transaction {}",
+                    arInvoice.getInvoiceNumber(), transaction.getTransactionNumber());
         }
 
         transaction.setStatus(TransactionStatus.COMPLETED);
@@ -484,20 +493,6 @@ public class POSTransactionService {
         shiftRepository.save(shift);
 
         transaction = transactionRepository.save(transaction);
-
-        // Auto-create AR Invoice if transaction has credit payment
-        if (hasCreditPayment(transaction) && transaction.getArInvoiceId() == null) {
-            try {
-                ARInvoiceDto arInvoice = arInvoiceService.createFromPOSTransaction(transaction);
-                transaction.setArInvoiceId(arInvoice.getId());
-                transaction = transactionRepository.save(transaction);
-                log.info("Auto-created AR Invoice {} for credit sale transaction {}",
-                        arInvoice.getInvoiceNumber(), transaction.getTransactionNumber());
-            } catch (Exception e) {
-                log.error("Failed to create AR Invoice for credit sale transaction {}: {}. Retry via POST /api/v1/pos/transactions/{}/retry-ar-invoice",
-                        transaction.getTransactionNumber(), e.getMessage(), transaction.getId());
-            }
-        }
 
         log.info("Completed transaction {}", transaction.getTransactionNumber());
 
