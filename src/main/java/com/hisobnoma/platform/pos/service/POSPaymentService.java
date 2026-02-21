@@ -30,11 +30,17 @@ public class POSPaymentService {
 
     @Transactional(readOnly = true)
     public List<POSPaymentDto> findByTransaction(Long transactionId) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        transactionRepository.findByIdAndTenantId(transactionId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Transaction not found: " + transactionId));
         return paymentMapper.toDtoList(paymentRepository.findByTransactionId(transactionId));
     }
 
     @Transactional(readOnly = true)
     public POSPaymentDto findById(Long transactionId, Long paymentId) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        transactionRepository.findByIdAndTenantId(transactionId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Transaction not found: " + transactionId));
         return paymentRepository.findByIdAndTransactionId(paymentId, transactionId)
                 .map(paymentMapper::toDto)
                 .orElseThrow(() -> new NotFoundException("Payment not found: " + paymentId));
@@ -162,13 +168,17 @@ public class POSPaymentService {
 
     @Transactional(readOnly = true)
     public BigDecimal getTotalPaidAmount(Long transactionId) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        transactionRepository.findByIdAndTenantId(transactionId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Transaction not found: " + transactionId));
         BigDecimal total = paymentRepository.sumApprovedByTransactionId(transactionId);
         return total != null ? total : BigDecimal.ZERO;
     }
 
     @Transactional(readOnly = true)
     public BigDecimal getPaymentTotalByType(Long shiftId, POSPaymentType paymentType) {
-        BigDecimal total = paymentRepository.sumByShiftIdAndPaymentType(shiftId, paymentType);
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        BigDecimal total = paymentRepository.sumByShiftIdAndPaymentTypeAndTenantId(shiftId, paymentType, tenantId);
         return total != null ? total : BigDecimal.ZERO;
     }
 }

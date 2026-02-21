@@ -25,8 +25,9 @@ public interface POSPaymentRepository extends JpaRepository<POSPayment, Long> {
     @Query("SELECT SUM(p.amount) FROM POSPayment p WHERE p.transaction.id = :transactionId AND p.status = 'APPROVED'")
     BigDecimal sumApprovedByTransactionId(@Param("transactionId") Long transactionId);
 
-    @Query("SELECT SUM(p.amount) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type AND p.status = 'APPROVED' AND p.transaction.status = 'COMPLETED'")
-    BigDecimal sumByShiftIdAndPaymentType(@Param("shiftId") Long shiftId, @Param("type") POSPaymentType type);
+    @Query("SELECT SUM(p.amount) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type " +
+           "AND p.status = 'APPROVED' AND p.transaction.status = 'COMPLETED' AND p.transaction.tenantId = :tenantId")
+    BigDecimal sumByShiftIdAndPaymentTypeAndTenantId(@Param("shiftId") Long shiftId, @Param("type") POSPaymentType type, @Param("tenantId") Long tenantId);
 
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type " +
            "AND p.status = 'APPROVED' AND p.transaction.status = 'COMPLETED' AND p.transaction.transactionType = 'SALE'")
@@ -36,17 +37,18 @@ public interface POSPaymentRepository extends JpaRepository<POSPayment, Long> {
            "AND p.status = 'APPROVED' AND p.transaction.status = 'COMPLETED' AND p.transaction.transactionType = 'RETURN'")
     BigDecimal sumRefundsByShiftIdAndPaymentType(@Param("shiftId") Long shiftId, @Param("type") POSPaymentType type);
 
-    @Query("SELECT p FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type ORDER BY p.createdAt DESC")
-    List<POSPayment> findByShiftIdAndPaymentType(@Param("shiftId") Long shiftId, @Param("type") POSPaymentType type);
+    @Query("SELECT p FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type " +
+           "AND p.transaction.tenantId = :tenantId ORDER BY p.createdAt DESC")
+    List<POSPayment> findByShiftIdAndPaymentType(@Param("shiftId") Long shiftId, @Param("type") POSPaymentType type, @Param("tenantId") Long tenantId);
 
     @Query("SELECT MAX(p.paymentNumber) FROM POSPayment p WHERE p.transaction.id = :transactionId")
     Integer findMaxPaymentNumberByTransactionId(@Param("transactionId") Long transactionId);
 
-    @Query("SELECT p FROM POSPayment p WHERE p.gatewayReference = :reference")
-    Optional<POSPayment> findByGatewayReference(@Param("reference") String reference);
+    @Query("SELECT p FROM POSPayment p WHERE p.gatewayReference = :reference AND p.transaction.tenantId = :tenantId")
+    Optional<POSPayment> findByGatewayReference(@Param("reference") String reference, @Param("tenantId") Long tenantId);
 
-    @Query("SELECT p FROM POSPayment p WHERE p.giftCardNumber = :giftCardNumber AND p.status = 'APPROVED'")
-    List<POSPayment> findByGiftCardNumber(@Param("giftCardNumber") String giftCardNumber);
+    @Query("SELECT p FROM POSPayment p WHERE p.giftCardNumber = :giftCardNumber AND p.status = 'APPROVED' AND p.transaction.tenantId = :tenantId")
+    List<POSPayment> findByGiftCardNumber(@Param("giftCardNumber") String giftCardNumber, @Param("tenantId") Long tenantId);
 
     @Query("SELECT SUM(p.amount) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.status = 'APPROVED' " +
            "AND p.transaction.status = 'COMPLETED'")
@@ -60,9 +62,10 @@ public interface POSPaymentRepository extends JpaRepository<POSPayment, Long> {
            "AND p.transaction.status = 'COMPLETED' AND p.transaction.transactionType = 'RETURN'")
     BigDecimal sumAllRefundsByShiftId(@Param("shiftId") Long shiftId);
 
-    @Query("SELECT p FROM POSPayment p WHERE p.status = :status AND p.createdAt >= :startDate AND p.createdAt < :endDate")
+    @Query("SELECT p FROM POSPayment p WHERE p.status = :status AND p.createdAt >= :startDate AND p.createdAt < :endDate AND p.transaction.tenantId = :tenantId")
     List<POSPayment> findByStatusAndDateRange(
             @Param("status") POSPaymentStatus status,
             @Param("startDate") Instant startDate,
-            @Param("endDate") Instant endDate);
+            @Param("endDate") Instant endDate,
+            @Param("tenantId") Long tenantId);
 }
