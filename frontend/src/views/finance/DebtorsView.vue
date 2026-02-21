@@ -1,9 +1,9 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { arReportsApi, arInvoicesApi } from '@/services/api'
+import { arReportsApi, arInvoicesApi, arPaymentsApi } from '@/services/api'
 import { useReceiptStore } from '@/stores/receipt'
-import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon, PlusIcon } from '@heroicons/vue/24/outline'
+import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon, PlusIcon, BanknotesIcon } from '@heroicons/vue/24/outline'
 
 const router = useRouter()
 const receiptStore = useReceiptStore()
@@ -110,6 +110,79 @@ function closeModal() {
   selectedAging.value = null
   unpaidInvoices.value = []
   expandedInvoice.value = null
+}
+
+// Payment modal
+const showPaymentModal = ref(false)
+const paymentInvoice = ref(null)
+const paymentForm = reactive({
+  amount: 0,
+  method: 'CASH',
+  date: new Date().toISOString().split('T')[0],
+  notes: ''
+})
+const paymentSubmitting = ref(false)
+const paymentError = ref('')
+
+const paymentMethods = [
+  { value: 'CASH', label: 'Naqd pul' },
+  { value: 'BANK_TRANSFER', label: 'Bank o\'tkazmasi' },
+  { value: 'CREDIT_CARD', label: 'Kredit karta' },
+  { value: 'MOBILE_PAYMENT', label: 'Mobil to\'lov' }
+]
+
+function openPayment(invoice) {
+  paymentInvoice.value = invoice
+  paymentForm.amount = invoice.balanceDue || 0
+  paymentForm.method = 'CASH'
+  paymentForm.date = new Date().toISOString().split('T')[0]
+  paymentForm.notes = ''
+  paymentError.value = ''
+  showPaymentModal.value = true
+}
+
+async function submitPayment() {
+  if (!paymentInvoice.value || !selectedCustomer.value) return
+  if (paymentForm.amount <= 0) {
+    paymentError.value = 'To\'lov summasi musbat bo\'lishi kerak'
+    return
+  }
+  if (paymentForm.amount > paymentInvoice.value.balanceDue) {
+    paymentError.value = 'To\'lov summasi qarz qoldig\'idan oshmasligi kerak'
+    return
+  }
+
+  paymentSubmitting.value = true
+  paymentError.value = ''
+  try {
+    const res = await arPaymentsApi.create({
+      customerId: selectedCustomer.value.customerId,
+      paymentDate: paymentForm.date,
+      paymentMethod: paymentForm.method,
+      paymentAmount: paymentForm.amount,
+      notes: paymentForm.notes || null,
+      allocations: [{
+        arInvoiceId: paymentInvoice.value.id,
+        allocatedAmount: paymentForm.amount
+      }]
+    })
+
+    const paymentId = res.data?.data?.id || res.data?.id
+    if (paymentId) {
+      await arPaymentsApi.complete(paymentId)
+    }
+
+    showPaymentModal.value = false
+
+    // Refresh invoices and main data
+    const invoiceRes = await arInvoicesApi.getUnpaidByCustomer(selectedCustomer.value.customerId)
+    unpaidInvoices.value = invoiceRes.data.data || invoiceRes.data || []
+    await fetchData()
+  } catch (e) {
+    paymentError.value = e.response?.data?.message || 'To\'lovni qayd etishda xatolik'
+  } finally {
+    paymentSubmitting.value = false
+  }
 }
 
 function getStatusLabel(status) {
@@ -746,9 +819,18 @@ function printDebtors() {
                       {{ invoice.daysOverdue }} kun kechikkan
                     </span>
                   </div>
-                  <div class="text-right">
-                    <p class="font-semibold text-red-600 text-sm">{{ formatCurrency(invoice.balanceDue) }} so'm</p>
-                    <p class="text-xs text-gray-500">Jami: {{ formatCurrency(invoice.totalAmount) }} so'm</p>
+                  <div class="flex items-center gap-3">
+                    <div class="text-right">
+                      <p class="font-semibold text-red-600 text-sm">{{ formatCurrency(invoice.balanceDue) }} so'm</p>
+                      <p class="text-xs text-gray-500">Jami: {{ formatCurrency(invoice.totalAmount) }} so'm</p>
+                    </div>
+                    <button
+                      @click.stop="openPayment(invoice)"
+                      class="px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center gap-1"
+                    >
+                      <BanknotesIcon class="h-3.5 w-3.5" />
+                      To'lov
+                    </button>
                   </div>
                 </div>
 
@@ -790,6 +872,92 @@ function printDebtors() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div
+      v-if="showPaymentModal && paymentInvoice"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4"
+      @click.self="showPaymentModal = false"
+    >
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div>
+            <h3 class="text-lg font-bold text-gray-900">To'lov qabul qilish</h3>
+            <p class="text-sm text-gray-500">{{ paymentInvoice.invoiceNumber }}</p>
+          </div>
+          <button @click="showPaymentModal = false" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+            <XMarkIcon class="h-5 w-5" />
+          </button>
+        </div>
+
+        <div class="p-6 space-y-4">
+          <div v-if="paymentError" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-sm text-red-600">{{ paymentError }}</p>
+          </div>
+
+          <!-- Invoice info -->
+          <div class="bg-gray-50 rounded-lg p-3 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-500">Faktura summasi:</span>
+              <span class="font-medium">{{ formatCurrency(paymentInvoice.totalAmount) }} so'm</span>
+            </div>
+            <div v-if="paymentInvoice.paidAmount > 0" class="flex justify-between mt-1">
+              <span class="text-gray-500">To'langan:</span>
+              <span class="font-medium text-green-600">{{ formatCurrency(paymentInvoice.paidAmount) }} so'm</span>
+            </div>
+            <div class="flex justify-between mt-1 pt-1 border-t border-gray-200">
+              <span class="text-gray-600 font-medium">Qarz qoldig'i:</span>
+              <span class="font-bold text-red-600">{{ formatCurrency(paymentInvoice.balanceDue) }} so'm</span>
+            </div>
+          </div>
+
+          <!-- Amount -->
+          <div>
+            <label class="label">To'lov summasi <span class="text-red-500">*</span></label>
+            <input
+              v-model.number="paymentForm.amount"
+              type="number"
+              :max="paymentInvoice.balanceDue"
+              min="1"
+              step="1"
+              class="input"
+            />
+          </div>
+
+          <!-- Method -->
+          <div>
+            <label class="label">To'lov usuli</label>
+            <select v-model="paymentForm.method" class="input">
+              <option v-for="m in paymentMethods" :key="m.value" :value="m.value">{{ m.label }}</option>
+            </select>
+          </div>
+
+          <!-- Date -->
+          <div>
+            <label class="label">Sana</label>
+            <input v-model="paymentForm.date" type="date" class="input" />
+          </div>
+
+          <!-- Notes -->
+          <div>
+            <label class="label">Izoh</label>
+            <input v-model="paymentForm.notes" type="text" class="input" placeholder="Ixtiyoriy izoh" />
+          </div>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <button @click="showPaymentModal = false" class="btn-secondary">Bekor qilish</button>
+            <button
+              @click="submitPayment"
+              :disabled="paymentSubmitting || paymentForm.amount <= 0"
+              class="btn-primary flex items-center gap-2"
+            >
+              <BanknotesIcon class="h-4 w-4" />
+              {{ paymentSubmitting ? 'Saqlanmoqda...' : 'To\'lovni saqlash' }}
+            </button>
           </div>
         </div>
       </div>

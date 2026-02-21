@@ -246,6 +246,13 @@ export const arInvoicesApi = {
   post: (id) => api.post(`/finance/ar-invoices/${id}/post`)
 }
 
+// AR Payments API - Backend: /api/v1/finance/ar-payments
+export const arPaymentsApi = {
+  create: (data) => api.post('/finance/ar-payments', data),
+  complete: (id) => api.post(`/finance/ar-payments/${id}/complete`),
+  getByCustomer: (customerId, params) => api.get(`/finance/ar-payments/customer/${customerId}`, { params })
+}
+
 // Suppliers/Vendors API - Backend: /api/v1/inventory/vendors
 export const suppliersApi = {
   getAll: (params) => api.get('/inventory/vendors', { params }),
