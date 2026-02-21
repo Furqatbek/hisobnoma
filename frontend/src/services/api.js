@@ -444,5 +444,11 @@ export const advancesApi = {
 export const telegramApi = {
   getStatus: () => api.get('/telegram/status'),
   generateLinkCode: () => api.post('/telegram/link-code'),
-  unlink: () => api.delete('/telegram/unlink')
+  unlink: () => api.delete('/telegram/unlink'),
+  // Admin endpoints
+  getBotInfo: () => api.get('/telegram/admin/info'),
+  getConnectedUsers: () => api.get('/telegram/admin/users'),
+  sendMessage: (data) => api.post('/telegram/admin/send', data),
+  broadcast: (data) => api.post('/telegram/admin/broadcast', data),
+  adminUnlinkUser: (userId) => api.delete(`/telegram/admin/users/${userId}/unlink`)
 }

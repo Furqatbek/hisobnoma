@@ -334,6 +334,12 @@ const routes = [
             name: 'role-edit',
             component: () => import('@/views/admin/RoleFormView.vue'),
             meta: { permission: 'ADMIN_ROLE_MANAGE' }
+          },
+          {
+            path: 'telegram',
+            name: 'telegram-admin',
+            component: () => import('@/views/admin/TelegramAdminView.vue'),
+            meta: { permission: 'SETTINGS_MANAGE' }
           }
         ]
       }
