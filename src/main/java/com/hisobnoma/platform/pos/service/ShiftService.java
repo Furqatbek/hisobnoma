@@ -152,6 +152,14 @@ public class ShiftService {
             throw new BusinessException("Shift is not open");
         }
 
+        // Block close if there are unresolved (PENDING/HELD) transactions
+        Long unresolvedCount = transactionRepository.countUnresolvedByShiftId(shiftId, shift.getTenantId());
+        if (unresolvedCount != null && unresolvedCount > 0) {
+            throw new BusinessException(
+                    "Cannot close shift with " + unresolvedCount + " unresolved transaction(s). " +
+                    "Complete, void, or cancel all pending/held transactions first.");
+        }
+
         recalculateShiftTotals(shift);
 
         // Close the shift

@@ -108,6 +108,9 @@ public interface POSTransactionRepository extends JpaRepository<POSTransaction, 
            "AND p.paymentType = 'CREDIT' AND p.status = 'APPROVED' AND t.arInvoiceId IS NULL ORDER BY t.completedAt DESC")
     List<POSTransaction> findCompletedCreditWithoutArInvoice(@Param("tenantId") Long tenantId);
 
+    @Query("SELECT COUNT(t) FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.shift.id = :shiftId AND t.status IN ('PENDING', 'HELD')")
+    Long countUnresolvedByShiftId(@Param("shiftId") Long shiftId, @Param("tenantId") Long tenantId);
+
     // Mobile dashboard methods
     @Query("SELECT COALESCE(SUM(t.totalAmount), 0) FROM POSTransaction t WHERE t.tenantId = :tenantId " +
            "AND t.status = 'COMPLETED' AND t.transactionType = 'SALE' " +
