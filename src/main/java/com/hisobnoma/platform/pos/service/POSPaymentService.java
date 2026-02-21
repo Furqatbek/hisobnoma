@@ -3,6 +3,7 @@ package com.hisobnoma.platform.pos.service;
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.exception.NotFoundException;
+import com.hisobnoma.platform.finance.service.CustomerService;
 import com.hisobnoma.platform.pos.dto.AddPaymentRequest;
 import com.hisobnoma.platform.pos.dto.POSPaymentDto;
 import com.hisobnoma.platform.pos.entity.*;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -27,6 +27,7 @@ public class POSPaymentService {
     private final POSTransactionRepository transactionRepository;
     private final POSPaymentMapper paymentMapper;
     private final SecurityContextHelper securityContextHelper;
+    private final CustomerService customerService;
 
     @Transactional(readOnly = true)
     public List<POSPaymentDto> findByTransaction(Long transactionId) {
@@ -82,6 +83,11 @@ public class POSPaymentService {
         // Calculate change for cash payments
         if (request.getPaymentType() == POSPaymentType.CASH) {
             payment.calculateChange();
+        }
+
+        // Validate credit limit before approving CREDIT payments
+        if (request.getPaymentType() == POSPaymentType.CREDIT) {
+            validateCreditPayment(transaction, request.getAmount());
         }
 
         // Auto-approve the payment (in a real system, card payments would go through a gateway)
@@ -180,5 +186,24 @@ public class POSPaymentService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         BigDecimal total = paymentRepository.sumByShiftIdAndPaymentTypeAndTenantId(shiftId, paymentType, tenantId);
         return total != null ? total : BigDecimal.ZERO;
+    }
+
+    private void validateCreditPayment(POSTransaction transaction, BigDecimal amount) {
+        if (transaction.getCustomer() == null) {
+            throw new BusinessException("Credit payments require a customer on the transaction");
+        }
+
+        // Sum existing approved CREDIT payments on this transaction
+        BigDecimal existingCredit = transaction.getPayments().stream()
+                .filter(p -> p.getPaymentType() == POSPaymentType.CREDIT)
+                .filter(p -> p.getStatus() == POSPaymentStatus.APPROVED)
+                .map(POSPayment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalCreditAmount = existingCredit.add(amount);
+
+        if (!customerService.canBeInvoiced(transaction.getCustomer().getId(), totalCreditAmount)) {
+            throw new BusinessException("Customer credit limit exceeded or customer is on credit hold");
+        }
     }
 }
