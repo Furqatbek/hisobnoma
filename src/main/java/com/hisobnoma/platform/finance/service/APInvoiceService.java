@@ -522,6 +522,7 @@ public class APInvoiceService {
     }
 
     private void updateVendorBalance(Long vendorId, BigDecimal amount) {
+        if (vendorId == null) return;
         vendorRepository.findById(vendorId).ifPresent(vendor -> {
             BigDecimal currentBalance = vendor.getCurrentBalance() != null ? vendor.getCurrentBalance() : BigDecimal.ZERO;
             vendor.setCurrentBalance(currentBalance.add(amount));
