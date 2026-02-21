@@ -146,7 +146,8 @@ public class ShiftService {
 
     @Transactional
     public ShiftDto closeShift(Long shiftId, CloseShiftRequest request) {
-        Shift shift = getShiftById(shiftId);
+        // Lock the shift row to prevent concurrent close
+        Shift shift = getShiftByIdForUpdate(shiftId);
 
         if (shift.getStatus() != ShiftStatus.OPEN) {
             throw new BusinessException("Shift is not open");
@@ -270,6 +271,12 @@ public class ShiftService {
     private Shift getShiftById(Long id) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         return shiftRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Shift not found: " + id));
+    }
+
+    private Shift getShiftByIdForUpdate(Long id) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return shiftRepository.findByIdAndTenantIdForUpdate(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Shift not found: " + id));
     }
 

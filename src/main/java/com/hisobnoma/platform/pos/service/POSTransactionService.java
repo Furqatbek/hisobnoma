@@ -400,7 +400,8 @@ public class POSTransactionService {
     @Transactional
     public POSTransactionDto voidTransaction(Long transactionId, VoidTransactionRequest request) {
         Long userId = securityContextHelper.getCurrentUserId();
-        POSTransaction transaction = getTransactionById(transactionId);
+        // Lock the transaction row to prevent concurrent void/complete
+        POSTransaction transaction = getTransactionByIdForUpdate(transactionId);
 
         if (transaction.getStatus() == TransactionStatus.VOIDED) {
             throw new BusinessException("Transaction is already voided");
@@ -440,7 +441,8 @@ public class POSTransactionService {
     @Transactional
     public POSTransactionDto completeTransaction(Long transactionId) {
         Long userId = securityContextHelper.getCurrentUserId();
-        POSTransaction transaction = getTransactionById(transactionId);
+        // Lock the transaction row to prevent concurrent complete/void
+        POSTransaction transaction = getTransactionByIdForUpdate(transactionId);
 
         if (transaction.getStatus() != TransactionStatus.PENDING) {
             throw new BusinessException("Only pending transactions can be completed");
@@ -599,6 +601,12 @@ public class POSTransactionService {
     private POSTransaction getTransactionById(Long id) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         return transactionRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Transaction not found: " + id));
+    }
+
+    private POSTransaction getTransactionByIdForUpdate(Long id) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return transactionRepository.findByIdAndTenantIdForUpdate(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Transaction not found: " + id));
     }
 

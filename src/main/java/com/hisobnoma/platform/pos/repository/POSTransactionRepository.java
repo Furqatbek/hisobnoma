@@ -3,10 +3,12 @@ package com.hisobnoma.platform.pos.repository;
 import com.hisobnoma.platform.pos.entity.POSTransaction;
 import com.hisobnoma.platform.pos.entity.TransactionStatus;
 import com.hisobnoma.platform.pos.entity.TransactionType;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -25,6 +27,11 @@ public interface POSTransactionRepository extends JpaRepository<POSTransaction, 
     @EntityGraph(attributePaths = {"terminal", "terminal.location", "shift", "customer"})
     @Query("SELECT t FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.id = :id")
     Optional<POSTransaction> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"terminal", "terminal.location", "shift", "customer"})
+    @Query("SELECT t FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.id = :id")
+    Optional<POSTransaction> findByIdAndTenantIdForUpdate(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     @EntityGraph(attributePaths = {"terminal", "terminal.location", "shift", "customer"})
     @Query("SELECT t FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.transactionNumber = :number")

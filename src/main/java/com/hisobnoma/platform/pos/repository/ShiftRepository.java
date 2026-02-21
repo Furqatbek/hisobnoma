@@ -2,9 +2,11 @@ package com.hisobnoma.platform.pos.repository;
 
 import com.hisobnoma.platform.pos.entity.Shift;
 import com.hisobnoma.platform.pos.entity.ShiftStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -21,6 +23,10 @@ public interface ShiftRepository extends JpaRepository<Shift, Long> {
 
     @Query("SELECT s FROM Shift s WHERE s.tenantId = :tenantId AND s.id = :id")
     Optional<Shift> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Shift s WHERE s.tenantId = :tenantId AND s.id = :id")
+    Optional<Shift> findByIdAndTenantIdForUpdate(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     @Query("SELECT s FROM Shift s WHERE s.tenantId = :tenantId AND s.terminal.id = :terminalId AND s.status = :status")
     Optional<Shift> findByTerminalIdAndStatusAndTenantId(

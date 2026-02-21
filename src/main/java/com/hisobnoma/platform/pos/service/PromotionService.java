@@ -493,6 +493,7 @@ public class PromotionService {
 
     /**
      * Record coupon redemption.
+     * Locks the coupon row and re-validates usage limits to prevent concurrent over-redemption.
      */
     @Transactional
     public void recordCouponRedemption(String couponCode, Long customerId, String customerEmail,
@@ -500,8 +501,20 @@ public class PromotionService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Long userId = securityContextHelper.getCurrentUserId();
 
-        Coupon coupon = couponRepository.findByCodeAndTenantId(couponCode, tenantId)
+        // Lock the coupon row to prevent concurrent redemptions exceeding the limit
+        Coupon coupon = couponRepository.findByCodeAndTenantIdForUpdate(couponCode, tenantId)
                 .orElseThrow(() -> new NotFoundException("Coupon not found: " + couponCode));
+
+        // Re-validate usage limits under the lock (applyCoupon() ran without a lock)
+        if (!coupon.isValid(LocalDate.now())) {
+            throw new BusinessException("Coupon is no longer valid");
+        }
+        if (customerId != null && coupon.getMaxUsesPerCustomer() != null) {
+            int customerUsage = redemptionRepository.countByCustomerAndCoupon(coupon.getId(), customerId);
+            if (customerUsage >= coupon.getMaxUsesPerCustomer()) {
+                throw new BusinessException("Coupon usage limit reached for this customer");
+            }
+        }
 
         CouponRedemption redemption = CouponRedemption.builder()
                 .coupon(coupon)

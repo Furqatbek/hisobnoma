@@ -52,7 +52,8 @@ public class POSPaymentService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Long userId = securityContextHelper.getCurrentUserId();
 
-        POSTransaction transaction = transactionRepository.findByIdAndTenantId(transactionId, tenantId)
+        // Lock the transaction row to prevent concurrent payment additions
+        POSTransaction transaction = transactionRepository.findByIdAndTenantIdForUpdate(transactionId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Transaction not found: " + transactionId));
 
         if (transaction.getStatus() != TransactionStatus.PENDING) {
@@ -113,7 +114,8 @@ public class POSPaymentService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Long userId = securityContextHelper.getCurrentUserId();
 
-        POSTransaction transaction = transactionRepository.findByIdAndTenantId(transactionId, tenantId)
+        // Lock the transaction row to prevent concurrent payment modifications
+        POSTransaction transaction = transactionRepository.findByIdAndTenantIdForUpdate(transactionId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Transaction not found: " + transactionId));
 
         if (transaction.getStatus() != TransactionStatus.PENDING) {
@@ -145,7 +147,8 @@ public class POSPaymentService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Long userId = securityContextHelper.getCurrentUserId();
 
-        POSTransaction transaction = transactionRepository.findByIdAndTenantId(transactionId, tenantId)
+        // Lock the transaction row to prevent concurrent payment modifications
+        POSTransaction transaction = transactionRepository.findByIdAndTenantIdForUpdate(transactionId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Transaction not found: " + transactionId));
 
         POSPayment payment = paymentRepository.findByIdAndTransactionId(paymentId, transactionId)
