@@ -512,44 +512,34 @@ public class POSTransactionService {
 
     private void deductStock(POSTransaction transaction) {
         for (POSTransactionLine line : transaction.getLines()) {
-            if (!line.isReturn()) {
+            if (!line.isReturn() && line.getProduct().isTrackInventory()) {
                 Long locationId = line.getLocationId() != null ? line.getLocationId() :
                         transaction.getTerminal().getLocation().getId();
-                try {
-                    stockService.deductStock(
-                            line.getProduct().getId(),
-                            locationId,
-                            line.getQuantity(),
-                            "POS_SALE",
-                            transaction.getId(),
-                            "POS Transaction: " + transaction.getTransactionNumber()
-                    );
-                } catch (Exception e) {
-                    log.warn("Failed to deduct stock for product {}: {}",
-                            line.getProduct().getSku(), e.getMessage());
-                }
+                stockService.deductStock(
+                        line.getProduct().getId(),
+                        locationId,
+                        line.getQuantity(),
+                        "POS_SALE",
+                        transaction.getId(),
+                        "POS Transaction: " + transaction.getTransactionNumber()
+                );
             }
         }
     }
 
     private void restoreStock(POSTransaction transaction) {
         for (POSTransactionLine line : transaction.getLines()) {
-            if (!line.isReturn()) {
+            if (!line.isReturn() && line.getProduct().isTrackInventory()) {
                 Long locationId = line.getLocationId() != null ? line.getLocationId() :
                         transaction.getTerminal().getLocation().getId();
-                try {
-                    stockService.addStock(
-                            line.getProduct().getId(),
-                            locationId,
-                            line.getQuantity(),
-                            "POS_VOID",
-                            transaction.getId(),
-                            "Voided POS Transaction: " + transaction.getTransactionNumber()
-                    );
-                } catch (Exception e) {
-                    log.warn("Failed to restore stock for product {}: {}",
-                            line.getProduct().getSku(), e.getMessage());
-                }
+                stockService.addStock(
+                        line.getProduct().getId(),
+                        locationId,
+                        line.getQuantity(),
+                        "POS_VOID",
+                        transaction.getId(),
+                        "Voided POS Transaction: " + transaction.getTransactionNumber()
+                );
             }
         }
     }
@@ -732,9 +722,9 @@ public class POSTransactionService {
 
     private void restoreStockForReturn(POSTransaction transaction) {
         for (POSTransactionLine line : transaction.getLines()) {
-            Long locationId = line.getLocationId() != null ? line.getLocationId() :
-                    transaction.getTerminal().getLocation().getId();
-            try {
+            if (line.getProduct().isTrackInventory()) {
+                Long locationId = line.getLocationId() != null ? line.getLocationId() :
+                        transaction.getTerminal().getLocation().getId();
                 stockService.addStock(
                         line.getProduct().getId(),
                         locationId,
@@ -743,9 +733,6 @@ public class POSTransactionService {
                         transaction.getId(),
                         "POS Return: " + transaction.getTransactionNumber()
                 );
-            } catch (Exception e) {
-                log.warn("Failed to restore stock for returned product {}: {}",
-                        line.getProduct().getSku(), e.getMessage());
             }
         }
     }
