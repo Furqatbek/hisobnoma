@@ -61,14 +61,23 @@ async function onCustomerSearch() {
     loadingCustomers.value = true
     try {
       const res = await customersApi.search(customerSearch.value)
-      customers.value = res.data.data || res.data || []
+      // Response can be PageResponse (has content array) or ApiResponse wrapping PageResponse
+      const data = res.data.data || res.data
+      customers.value = data?.content || (Array.isArray(data) ? data : [])
       showCustomerDropdown.value = customers.value.length > 0
     } catch (err) {
-      // Also try getAll with search param
+      // Fallback: load all active customers and filter client-side
       try {
-        const res = await customersApi.getAll({ search: customerSearch.value, size: 20 })
-        const data = res.data.data
-        customers.value = data?.content || data || []
+        const res = await customersApi.getAll({ size: 50 })
+        const data = res.data.data || res.data
+        const all = data?.content || (Array.isArray(data) ? data : [])
+        const q = customerSearch.value.toLowerCase()
+        customers.value = all.filter(c =>
+          (c.name || '').toLowerCase().includes(q) ||
+          (c.companyName || '').toLowerCase().includes(q) ||
+          (c.code || '').toLowerCase().includes(q) ||
+          (c.phone || '').toLowerCase().includes(q)
+        )
         showCustomerDropdown.value = customers.value.length > 0
       } catch (e) {
         console.error('Customer search failed:', e)
@@ -112,17 +121,11 @@ async function onProductSearch() {
     loadingProducts.value = true
     try {
       const res = await productsApi.search(productSearch.value)
-      productResults.value = res.data.data || res.data || []
+      const data = res.data.data || res.data
+      productResults.value = data?.content || (Array.isArray(data) ? data : [])
       showProductDropdown.value = productResults.value.length > 0
     } catch (err) {
-      try {
-        const res = await productsApi.getAll({ search: productSearch.value, size: 20 })
-        const data = res.data.data
-        productResults.value = data?.content || data || []
-        showProductDropdown.value = productResults.value.length > 0
-      } catch (e) {
-        console.error('Product search failed:', e)
-      }
+      console.error('Product search failed:', err)
     } finally {
       loadingProducts.value = false
     }
