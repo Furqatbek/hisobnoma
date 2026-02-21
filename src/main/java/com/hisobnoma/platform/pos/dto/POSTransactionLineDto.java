@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.pos.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -34,7 +35,10 @@ public class POSTransactionLineDto {
     private BigDecimal taxRate;
     private BigDecimal taxAmount;
     private BigDecimal lineTotal;
+
+    @JsonProperty("isReturn")
     private boolean isReturn;
+
     private Long originalLineId;
     private String returnReason;
     private String serialNumber;

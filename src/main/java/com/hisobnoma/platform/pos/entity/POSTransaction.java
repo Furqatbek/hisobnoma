@@ -217,9 +217,14 @@ public class POSTransaction extends TenantAwareEntity {
 
         this.lineCount = lines.size();
 
-        this.totalAmount = subtotal
-                .subtract(discountAmount != null ? discountAmount : BigDecimal.ZERO)
-                .add(taxAmount);
+        BigDecimal discount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
+        if (transactionType == TransactionType.RETURN) {
+            // For returns, subtotal and taxAmount are negative (from negated line totals).
+            // Discount reduces the refund, so we add it back (making totalAmount less negative).
+            this.totalAmount = subtotal.add(discount).add(taxAmount);
+        } else {
+            this.totalAmount = subtotal.subtract(discount).add(taxAmount);
+        }
 
         recalculateChange();
     }

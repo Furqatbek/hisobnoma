@@ -10,6 +10,7 @@ import com.hisobnoma.platform.finance.repository.CustomerRepository;
 import com.hisobnoma.platform.finance.service.ARInvoiceService;
 import com.hisobnoma.platform.finance.service.GLIntegrationService;
 import com.hisobnoma.platform.finance.service.TaxCalculationService;
+import com.hisobnoma.platform.inventory.entity.MovementReferenceType;
 import com.hisobnoma.platform.inventory.entity.Product;
 import com.hisobnoma.platform.inventory.entity.ProductVariant;
 import com.hisobnoma.platform.inventory.repository.ProductRepository;
@@ -207,6 +208,12 @@ public class POSTransactionService {
 
                 line.calculateLineTotal();
                 transaction.addLine(line);
+
+                // Reserve stock to prevent overselling between creation and completion
+                if (!line.isReturn() && product.isTrackInventory()) {
+                    Long locId = transaction.getTerminal().getLocation().getId();
+                    reserveStockForLine(product.getId(), locId, item.getQuantity(), transaction);
+                }
             }
             transaction = transactionRepository.save(transaction);
         }
@@ -287,6 +294,13 @@ public class POSTransactionService {
         transaction.addLine(line);
         transaction = transactionRepository.save(transaction);
 
+        // Reserve stock to prevent overselling
+        if (!line.isReturn() && product.isTrackInventory()) {
+            Long locId = request.getLocationId() != null ? request.getLocationId() :
+                    transaction.getTerminal().getLocation().getId();
+            reserveStockForLine(product.getId(), locId, request.getQuantity(), transaction);
+        }
+
         log.info("Added line to transaction {}: {} x {} @ {}",
                 transaction.getTransactionNumber(), request.getQuantity(), product.getName(), unitPrice);
 
@@ -331,6 +345,11 @@ public class POSTransactionService {
 
         POSTransactionLine line = lineRepository.findByIdAndTransactionId(lineId, transactionId)
                 .orElseThrow(() -> new NotFoundException("Line not found: " + lineId));
+
+        // Release stock reservation for the removed line
+        if (!line.isReturn() && line.getProduct().isTrackInventory()) {
+            releaseStockForLine(line, transaction);
+        }
 
         transaction.removeLine(line);
         lineRepository.delete(line);
@@ -421,6 +440,9 @@ public class POSTransactionService {
                             transaction.getTransactionNumber(), e.getMessage());
                 }
             }
+        } else {
+            // Pending/Held transaction — release any stock reservations
+            releaseAllReservations(transaction);
         }
 
         transaction.setStatus(TransactionStatus.VOIDED);
@@ -451,12 +473,25 @@ public class POSTransactionService {
             throw new BusinessException("Transaction has no items");
         }
 
+        // Validate exchange transactions have both return and sale lines
+        if (transaction.getTransactionType() == TransactionType.EXCHANGE) {
+            boolean hasReturnLines = transaction.getLines().stream().anyMatch(POSTransactionLine::isReturn);
+            boolean hasSaleLines = transaction.getLines().stream().anyMatch(l -> !l.isReturn());
+            if (!hasReturnLines || !hasSaleLines) {
+                throw new BusinessException("Exchange transactions must have both return and sale line items");
+            }
+            if (transaction.getOriginalTransactionId() == null) {
+                throw new BusinessException("Exchange transactions must reference an original transaction");
+            }
+        }
+
         if (!transaction.isFullyPaid()) {
             throw new BusinessException("Transaction is not fully paid. Balance due: " + transaction.getBalanceDue());
         }
 
-        // Deduct stock
+        // Release reservations and deduct actual stock
         if (!transaction.isStockDeducted()) {
+            releaseAllReservations(transaction);
             deductStock(transaction);
             transaction.setStockDeducted(true);
         }
@@ -565,9 +600,23 @@ public class POSTransactionService {
 
     private void deductStock(POSTransaction transaction) {
         for (POSTransactionLine line : transaction.getLines()) {
-            if (!line.isReturn() && line.getProduct().isTrackInventory()) {
-                Long locationId = line.getLocationId() != null ? line.getLocationId() :
-                        transaction.getTerminal().getLocation().getId();
+            if (!line.getProduct().isTrackInventory()) {
+                continue;
+            }
+            Long locationId = line.getLocationId() != null ? line.getLocationId() :
+                    transaction.getTerminal().getLocation().getId();
+            if (line.isReturn()) {
+                // Return lines within an exchange: restore stock
+                stockService.addStock(
+                        line.getProduct().getId(),
+                        locationId,
+                        line.getQuantity(),
+                        "POS_RETURN",
+                        transaction.getId(),
+                        "POS Exchange Return: " + transaction.getTransactionNumber()
+                );
+            } else {
+                // Sale lines: deduct stock
                 stockService.deductStock(
                         line.getProduct().getId(),
                         locationId,
@@ -581,10 +630,26 @@ public class POSTransactionService {
     }
 
     private void restoreStock(POSTransaction transaction) {
+        // Reverses whatever deductStock did: sale lines get stock back,
+        // return lines (in exchanges) get stock re-deducted.
         for (POSTransactionLine line : transaction.getLines()) {
-            if (!line.isReturn() && line.getProduct().isTrackInventory()) {
-                Long locationId = line.getLocationId() != null ? line.getLocationId() :
-                        transaction.getTerminal().getLocation().getId();
+            if (!line.getProduct().isTrackInventory()) {
+                continue;
+            }
+            Long locationId = line.getLocationId() != null ? line.getLocationId() :
+                    transaction.getTerminal().getLocation().getId();
+            if (line.isReturn()) {
+                // Reverse the restoration that happened during completion
+                stockService.deductStock(
+                        line.getProduct().getId(),
+                        locationId,
+                        line.getQuantity(),
+                        "POS_VOID",
+                        transaction.getId(),
+                        "Voided POS Exchange Return: " + transaction.getTransactionNumber()
+                );
+            } else {
+                // Reverse the deduction that happened during completion
                 stockService.addStock(
                         line.getProduct().getId(),
                         locationId,
@@ -593,6 +658,46 @@ public class POSTransactionService {
                         transaction.getId(),
                         "Voided POS Transaction: " + transaction.getTransactionNumber()
                 );
+            }
+        }
+    }
+
+    // ==================== Stock Reservation Helpers ====================
+
+    private void reserveStockForLine(Long productId, Long locationId, BigDecimal quantity,
+                                     POSTransaction transaction) {
+        try {
+            stockService.reserveStock(
+                    productId, locationId, quantity,
+                    MovementReferenceType.POS_TRANSACTION,
+                    transaction.getId(),
+                    transaction.getTransactionNumber()
+            );
+        } catch (Exception e) {
+            log.warn("Could not reserve stock for product {} on transaction {}: {}",
+                    productId, transaction.getTransactionNumber(), e.getMessage());
+        }
+    }
+
+    private void releaseStockForLine(POSTransactionLine line, POSTransaction transaction) {
+        try {
+            Long locationId = line.getLocationId() != null ? line.getLocationId() :
+                    transaction.getTerminal().getLocation().getId();
+            stockService.releaseReservation(
+                    line.getProduct().getId(), locationId,
+                    MovementReferenceType.POS_TRANSACTION,
+                    transaction.getId()
+            );
+        } catch (Exception e) {
+            log.warn("Could not release stock reservation for product {} on transaction {}: {}",
+                    line.getProduct().getId(), transaction.getTransactionNumber(), e.getMessage());
+        }
+    }
+
+    private void releaseAllReservations(POSTransaction transaction) {
+        for (POSTransactionLine line : transaction.getLines()) {
+            if (!line.isReturn() && line.getProduct().isTrackInventory()) {
+                releaseStockForLine(line, transaction);
             }
         }
     }
@@ -698,12 +803,13 @@ public class POSTransactionService {
 
         returnTransaction = transactionRepository.save(returnTransaction);
 
-        // Add return lines
-        BigDecimal subtotal = BigDecimal.ZERO;
-        BigDecimal taxAmount = BigDecimal.ZERO;
+        // Add return lines — calculateLineTotal() handles negation for isReturn lines,
+        // so we set taxCode/taxRate and let the entity compute lineTotal and taxAmount.
         BigDecimal lineDiscountTotal = BigDecimal.ZERO;
+        int lineNumber = 0;
 
         for (CreateReturnRequest.ReturnLineItem item : request.getItems()) {
+            lineNumber++;
             Product product = productRepository.findByIdAndTenantId(item.getProductId(), tenantId)
                     .orElseThrow(() -> new NotFoundException("Product", item.getProductId()));
 
@@ -717,6 +823,8 @@ public class POSTransactionService {
             BigDecimal unitPrice = item.getUnitPrice();
             BigDecimal lineDiscount = BigDecimal.ZERO;
             BigDecimal lineDiscountPercent = BigDecimal.ZERO;
+            String lineTaxCode = product.getTaxCode();
+            BigDecimal lineTaxRate = BigDecimal.ZERO;
 
             if (item.getOriginalLineId() != null && originalTransaction != null) {
                 POSTransactionLine originalLine = originalTransaction.getLines().stream()
@@ -726,6 +834,14 @@ public class POSTransactionService {
 
                 if (unitPrice == null) {
                     unitPrice = originalLine.getUnitPrice();
+                }
+
+                // Carry forward tax code/rate from original line
+                if (originalLine.getTaxCode() != null) {
+                    lineTaxCode = originalLine.getTaxCode();
+                }
+                if (originalLine.getTaxRate() != null) {
+                    lineTaxRate = originalLine.getTaxRate();
                 }
 
                 // Proportional discount: (originalDiscount / originalQty) * returnQty
@@ -742,18 +858,17 @@ public class POSTransactionService {
                 unitPrice = variant != null ? variant.getEffectiveSellingPrice() : product.getSellingPrice();
             }
 
-            BigDecimal grossAmount = unitPrice.multiply(item.getQuantity());
-            BigDecimal netAmount = grossAmount.subtract(lineDiscount);
-
-            // Calculate tax on the net (discounted) amount
-            TaxRate taxRate = taxCalculationService.getDefaultTaxRate(tenantId);
-            BigDecimal lineTax = BigDecimal.ZERO;
-            if (taxRate != null && taxRate.getRate() != null) {
-                lineTax = netAmount.multiply(taxRate.getRate()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+            // If no tax rate from original line, look up default
+            if (lineTaxRate.compareTo(BigDecimal.ZERO) == 0) {
+                TaxRate defaultRate = taxCalculationService.getDefaultTaxRate(tenantId);
+                if (defaultRate != null && defaultRate.getRate() != null) {
+                    lineTaxRate = defaultRate.getRate();
+                }
             }
 
             POSTransactionLine line = POSTransactionLine.builder()
                     .transaction(returnTransaction)
+                    .lineNumber(lineNumber)
                     .product(product)
                     .variant(variant)
                     .productName(product.getName())
@@ -762,41 +877,36 @@ public class POSTransactionService {
                     .quantity(item.getQuantity())
                     .unitPrice(unitPrice)
                     .costPrice(variant != null ? variant.getEffectiveCostPrice() : product.getCostPrice())
-                    .lineTotal(netAmount.negate()) // Negative for returns
-                    .taxAmount(lineTax.negate())
+                    .taxCode(lineTaxCode)
+                    .taxRate(lineTaxRate)
                     .discountAmount(lineDiscount)
                     .discountPercent(lineDiscountPercent != null ? lineDiscountPercent : BigDecimal.ZERO)
                     .isReturn(true)
                     .returnReason(item.getReason())
+                    .originalLineId(item.getOriginalLineId())
                     .build();
 
-            lineRepository.save(line);
-
-            subtotal = subtotal.add(grossAmount);
+            // calculateLineTotal() fires via @PrePersist and negates for isReturn
+            returnTransaction.addLine(line);
             lineDiscountTotal = lineDiscountTotal.add(lineDiscount);
-            taxAmount = taxAmount.add(lineTax);
         }
 
-        // Proportionally allocate transaction-level discount for linked returns
+        // Proportionally allocate transaction-level discount for linked returns.
+        // Use absolute subtotal for the ratio since return subtotal is negative.
+        BigDecimal absSubtotal = returnTransaction.getSubtotal().abs();
         BigDecimal txLevelDiscount = BigDecimal.ZERO;
         if (originalTransaction != null && originalTransaction.getDiscountAmount() != null
                 && originalTransaction.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0
                 && originalTransaction.getSubtotal().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal returnRatio = subtotal.divide(
+            BigDecimal returnRatio = absSubtotal.divide(
                     originalTransaction.getSubtotal(), 6, RoundingMode.HALF_UP);
             txLevelDiscount = originalTransaction.getDiscountAmount()
                     .multiply(returnRatio).setScale(4, RoundingMode.HALF_UP);
         }
 
-        BigDecimal totalDiscount = lineDiscountTotal.add(txLevelDiscount);
-
-        // Update return transaction totals (negative values for returns)
-        // Must match the sale formula: totalAmount = subtotal - discount + tax
-        returnTransaction.setSubtotal(subtotal.negate());
-        returnTransaction.setDiscountAmount(totalDiscount);
-        returnTransaction.setTaxAmount(taxAmount.negate());
-        returnTransaction.setTotalAmount(
-                subtotal.subtract(totalDiscount).add(taxAmount).negate());
+        // Set transaction-level discount and let recalculateTotals() handle the rest
+        returnTransaction.setDiscountAmount(lineDiscountTotal.add(txLevelDiscount));
+        returnTransaction.recalculateTotals();
         returnTransaction = transactionRepository.save(returnTransaction);
 
         // Restore stock for returned items

@@ -121,6 +121,14 @@ public class POSTransactionLine extends BaseEntity {
                     .divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
         }
         this.lineTotal = discountedAmount.add(taxAmount != null ? taxAmount : BigDecimal.ZERO);
+
+        // Return lines store negative totals so recalculateTotals() aggregates correctly
+        if (isReturn) {
+            this.lineTotal = this.lineTotal.negate();
+            if (this.taxAmount != null) {
+                this.taxAmount = this.taxAmount.negate();
+            }
+        }
     }
 
     public void applyPercentDiscount(BigDecimal percent, String reason) {
