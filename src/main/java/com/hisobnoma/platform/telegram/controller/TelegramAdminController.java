@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.telegram.controller;
 
+import com.hisobnoma.platform.admin.service.TenantSettingService;
 import com.hisobnoma.platform.auth.entity.User;
 import com.hisobnoma.platform.auth.repository.UserRepository;
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
@@ -10,7 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -21,40 +22,40 @@ import java.util.Map;
 
 /**
  * Admin controller for Telegram bot management.
- * Always registered (no @ConditionalOnProperty) so the admin page works
- * even when Telegram is disabled — it just shows "disabled" status.
- *
- * Telegram-dependent beans (TelegramApiClient, TelegramNotificationService)
- * are injected optionally via @Autowired(required = false).
+ * Allows configuring bot credentials from the frontend.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/telegram/admin")
 @RequiredArgsConstructor
 public class TelegramAdminController {
 
+    private static final String SETTING_ENABLED = "telegram.enabled";
+    private static final String SETTING_BOT_TOKEN = "telegram.bot_token";
+    private static final String SETTING_BOT_USERNAME = "telegram.bot_username";
+
     private final UserRepository userRepository;
     private final SecurityContextHelper securityContextHelper;
     private final TelegramProperties properties;
-
-    @Autowired(required = false)
-    private TelegramApiClient telegramApiClient;
-
-    @Autowired(required = false)
-    private TelegramNotificationService notificationService;
+    private final TelegramApiClient telegramApiClient;
+    private final TelegramNotificationService notificationService;
+    private final TenantSettingService tenantSettingService;
 
     /**
-     * Get bot info and statistics. Works even when Telegram is disabled.
+     * Get bot info and statistics.
      */
     @GetMapping("/info")
     @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
     public ResponseEntity<Map<String, Object>> getBotInfo() {
         Long tenantId = securityContextHelper.getRequiredTenantId();
+        loadSettingsFromDb();
 
         Map<String, Object> info = new HashMap<>();
         info.put("enabled", properties.isEnabled());
         info.put("botUsername", properties.getBotUsername());
+        info.put("tokenConfigured", properties.getBotToken() != null && !properties.getBotToken().isBlank());
 
-        if (!properties.isEnabled() || telegramApiClient == null) {
+        if (!telegramApiClient.isConfigured()) {
             info.put("botName", "");
             info.put("connectedUsers", 0);
             info.put("totalUsers", userRepository.countByTenantId(tenantId));
@@ -74,6 +75,67 @@ public class TelegramAdminController {
         info.put("totalUsers", userRepository.countByTenantId(tenantId));
 
         return ResponseEntity.ok(info);
+    }
+
+    /**
+     * Get current Telegram settings (token is masked).
+     */
+    @GetMapping("/settings")
+    @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
+    public ResponseEntity<Map<String, Object>> getSettings() {
+        loadSettingsFromDb();
+
+        String token = properties.getBotToken();
+        String maskedToken = "";
+        if (token != null && token.length() > 8) {
+            maskedToken = token.substring(0, 4) + "****" + token.substring(token.length() - 4);
+        }
+
+        Map<String, Object> settings = new HashMap<>();
+        settings.put("enabled", properties.isEnabled());
+        settings.put("botToken", maskedToken);
+        settings.put("botUsername", properties.getBotUsername());
+        return ResponseEntity.ok(settings);
+    }
+
+    /**
+     * Save Telegram settings (enable/disable, token, username).
+     */
+    @PostMapping("/settings")
+    @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
+    public ResponseEntity<Map<String, Object>> saveSettings(@Valid @RequestBody SaveSettingsRequest request) {
+        tenantSettingService.updateSettings(Map.of(
+                SETTING_ENABLED, String.valueOf(request.isEnabled()),
+                SETTING_BOT_USERNAME, request.getBotUsername() != null ? request.getBotUsername() : "hisobnoma_bot"
+        ));
+
+        // Only update token if a new one was provided (not masked)
+        if (request.getBotToken() != null && !request.getBotToken().isBlank()
+                && !request.getBotToken().contains("****")) {
+            tenantSettingService.updateSettings(Map.of(SETTING_BOT_TOKEN, request.getBotToken()));
+        }
+
+        // Reload properties from DB
+        loadSettingsFromDb();
+
+        // Validate the token by calling getMe
+        Map<String, Object> result = new HashMap<>();
+        result.put("saved", true);
+
+        if (properties.isEnabled() && telegramApiClient.isConfigured()) {
+            Map<String, Object> botInfo = telegramApiClient.getMe();
+            if (botInfo != null && Boolean.TRUE.equals(botInfo.get("ok"))) {
+                result.put("valid", true);
+                if (botInfo.get("result") instanceof Map<?, ?> r) {
+                    result.put("botName", r.get("first_name"));
+                }
+            } else {
+                result.put("valid", false);
+                result.put("error", "Token noto'g'ri yoki bot javob bermayapti");
+            }
+        }
+
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -105,7 +167,7 @@ public class TelegramAdminController {
     @PostMapping("/send")
     @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
     public ResponseEntity<Map<String, String>> sendMessage(@Valid @RequestBody SendMessageRequest request) {
-        if (notificationService == null) {
+        if (!telegramApiClient.isConfigured()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Telegram bot yoqilmagan"));
         }
 
@@ -124,7 +186,7 @@ public class TelegramAdminController {
     @PostMapping("/broadcast")
     @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
     public ResponseEntity<Map<String, Object>> broadcastMessage(@Valid @RequestBody BroadcastRequest request) {
-        if (notificationService == null) {
+        if (!telegramApiClient.isConfigured()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Telegram bot yoqilmagan"));
         }
 
@@ -157,14 +219,43 @@ public class TelegramAdminController {
             user.setTelegramChatId(null);
             user.setTelegramLinkedAt(null);
             userRepository.save(user);
-            if (telegramApiClient != null) {
+            if (telegramApiClient.isConfigured()) {
                 telegramApiClient.sendMessage(chatId, "Akkauntingiz administrator tomonidan uzildi.");
             }
         }
         return ResponseEntity.ok(Map.of("status", "unlinked"));
     }
 
+    /**
+     * Load Telegram settings from tenant_settings into TelegramProperties.
+     */
+    private void loadSettingsFromDb() {
+        try {
+            String enabled = tenantSettingService.getSettingValue(SETTING_ENABLED, "false");
+            String token = tenantSettingService.getSettingValue(SETTING_BOT_TOKEN, "");
+            String username = tenantSettingService.getSettingValue(SETTING_BOT_USERNAME, "hisobnoma_bot");
+
+            properties.setEnabled("true".equalsIgnoreCase(enabled));
+            if (token != null && !token.isBlank()) {
+                properties.setBotToken(token);
+            }
+            if (username != null && !username.isBlank()) {
+                properties.setBotUsername(username);
+            }
+        } catch (Exception e) {
+            // Settings may not exist yet — use defaults from application.yml
+            log.debug("Telegram settings not found in DB, using defaults");
+        }
+    }
+
     // ======================= Request DTOs =======================
+
+    @Data
+    public static class SaveSettingsRequest {
+        private boolean enabled;
+        private String botToken;
+        private String botUsername;
+    }
 
     @Data
     public static class SendMessageRequest {

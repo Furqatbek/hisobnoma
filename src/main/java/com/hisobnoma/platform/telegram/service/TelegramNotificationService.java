@@ -6,7 +6,6 @@ import com.hisobnoma.platform.mobile.entity.MobileAlert;
 import com.hisobnoma.platform.mobile.repository.AlertPreferenceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +18,6 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.telegram.enabled", havingValue = "true")
 public class TelegramNotificationService {
 
     private final TelegramApiClient telegramApi;

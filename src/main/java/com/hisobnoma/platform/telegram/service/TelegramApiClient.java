@@ -2,7 +2,6 @@ package com.hisobnoma.platform.telegram.service;
 
 import com.hisobnoma.platform.telegram.config.TelegramProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -14,21 +13,30 @@ import java.util.Map;
 
 /**
  * Lightweight HTTP client for Telegram Bot API.
- * Uses Spring RestTemplate to call Telegram endpoints directly.
+ * Reads bot token from TelegramProperties at runtime (supports dynamic config).
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(name = "app.telegram.enabled", havingValue = "true")
 public class TelegramApiClient {
 
     private static final String BASE_URL = "https://api.telegram.org/bot";
 
     private final RestTemplate restTemplate;
-    private final String apiUrl;
+    private final TelegramProperties properties;
 
     public TelegramApiClient(TelegramProperties properties) {
         this.restTemplate = new RestTemplate();
-        this.apiUrl = BASE_URL + properties.getBotToken();
+        this.properties = properties;
+    }
+
+    private String getApiUrl() {
+        return BASE_URL + properties.getBotToken();
+    }
+
+    public boolean isConfigured() {
+        return properties.isEnabled()
+                && properties.getBotToken() != null
+                && !properties.getBotToken().isBlank();
     }
 
     /**
@@ -42,6 +50,7 @@ public class TelegramApiClient {
      * Send a text message with specified parse mode.
      */
     public void sendMessage(Long chatId, String text, String parseMode) {
+        if (!isConfigured()) return;
         try {
             Map<String, Object> body = new HashMap<>();
             body.put("chat_id", chatId);
@@ -52,7 +61,7 @@ public class TelegramApiClient {
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
-            restTemplate.postForEntity(apiUrl + "/sendMessage", request, String.class);
+            restTemplate.postForEntity(getApiUrl() + "/sendMessage", request, String.class);
             log.debug("Telegram message sent to chatId={}", chatId);
         } catch (Exception e) {
             log.error("Failed to send Telegram message to chatId={}: {}", chatId, e.getMessage());
@@ -64,8 +73,9 @@ public class TelegramApiClient {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getMe() {
+        if (!isConfigured()) return null;
         try {
-            return restTemplate.getForObject(apiUrl + "/getMe", Map.class);
+            return restTemplate.getForObject(getApiUrl() + "/getMe", Map.class);
         } catch (Exception e) {
             log.error("Failed to call getMe: {}", e.getMessage());
             return null;
@@ -77,8 +87,9 @@ public class TelegramApiClient {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getUpdates(Long offset) {
+        if (!isConfigured()) return null;
         try {
-            String url = apiUrl + "/getUpdates?timeout=30";
+            String url = getApiUrl() + "/getUpdates?timeout=30";
             if (offset != null) {
                 url += "&offset=" + offset;
             }

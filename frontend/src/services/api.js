@@ -447,6 +447,8 @@ export const telegramApi = {
   unlink: () => api.delete('/telegram/unlink'),
   // Admin endpoints
   getBotInfo: () => api.get('/telegram/admin/info'),
+  getSettings: () => api.get('/telegram/admin/settings'),
+  saveSettings: (data) => api.post('/telegram/admin/settings', data),
   getConnectedUsers: () => api.get('/telegram/admin/users'),
   sendMessage: (data) => api.post('/telegram/admin/send', data),
   broadcast: (data) => api.post('/telegram/admin/broadcast', data),

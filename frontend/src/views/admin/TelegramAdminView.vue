@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { telegramApi } from '@/services/api'
-import { PaperAirplaneIcon, UserGroupIcon, SignalIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { PaperAirplaneIcon, UserGroupIcon, SignalIcon, XMarkIcon, Cog6ToothIcon, CheckCircleIcon } from '@heroicons/vue/24/outline'
 
 const loading = ref(true)
 const botInfo = ref(null)
@@ -9,13 +9,17 @@ const users = ref([])
 const error = ref('')
 const successMsg = ref('')
 
+// Settings
+const settingsForm = reactive({ enabled: false, botToken: '', botUsername: 'hisobnoma_bot' })
+const savingSettings = ref(false)
+const settingsLoaded = ref(false)
+
 // Send message modal
 const showSendModal = ref(false)
-const sendTarget = ref(null) // null = broadcast, user object = direct
+const sendTarget = ref(null)
 const sendForm = reactive({ title: '', message: '' })
 const sending = ref(false)
 
-// Computed
 const botConnected = computed(() => botInfo.value && botInfo.value.botName)
 
 onMounted(async () => {
@@ -26,20 +30,46 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [infoRes, usersRes] = await Promise.all([
+    const [infoRes, usersRes, settingsRes] = await Promise.all([
       telegramApi.getBotInfo(),
-      telegramApi.getConnectedUsers()
+      telegramApi.getConnectedUsers(),
+      telegramApi.getSettings()
     ])
     botInfo.value = infoRes.data
     users.value = usersRes.data
+    settingsForm.enabled = settingsRes.data.enabled || false
+    settingsForm.botToken = settingsRes.data.botToken || ''
+    settingsForm.botUsername = settingsRes.data.botUsername || 'hisobnoma_bot'
+    settingsLoaded.value = true
   } catch (e) {
-    if (e.response?.status === 404) {
-      error.value = 'Telegram bot yoqilmagan. TELEGRAM_BOT_ENABLED=true sozlamasini belgilang.'
-    } else {
-      error.value = e.response?.data?.message || 'Ma\'lumotlarni yuklashda xatolik'
-    }
+    error.value = e.response?.data?.message || 'Ma\'lumotlarni yuklashda xatolik'
   } finally {
     loading.value = false
+  }
+}
+
+async function saveSettings() {
+  savingSettings.value = true
+  error.value = ''
+  successMsg.value = ''
+  try {
+    const res = await telegramApi.saveSettings({
+      enabled: settingsForm.enabled,
+      botToken: settingsForm.botToken,
+      botUsername: settingsForm.botUsername
+    })
+    if (res.data.saved) {
+      if (res.data.valid === false) {
+        error.value = res.data.error || 'Token noto\'g\'ri'
+      } else {
+        successMsg.value = 'Sozlamalar saqlandi' + (res.data.botName ? ` — Bot: ${res.data.botName}` : '')
+      }
+    }
+    await loadData()
+  } catch (e) {
+    error.value = e.response?.data?.message || 'Saqlashda xatolik'
+  } finally {
+    savingSettings.value = false
   }
 }
 
@@ -107,10 +137,10 @@ function formatDate(dateStr) {
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">Telegram bot boshqaruvi</h1>
-        <p class="mt-1 text-sm text-gray-500">Telegram bot holati, ulangan foydalanuvchilar va xabar yuborish</p>
+        <p class="mt-1 text-sm text-gray-500">Bot sozlamalari, ulangan foydalanuvchilar va xabar yuborish</p>
       </div>
       <button
-        v-if="!loading && users.length > 0"
+        v-if="!loading && botConnected && users.length > 0"
         @click="openBroadcast"
         class="btn-primary inline-flex items-center gap-2"
       >
@@ -134,109 +164,178 @@ function formatDate(dateStr) {
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
     </div>
 
-    <template v-else-if="botInfo">
-      <!-- Bot Info Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="card">
-          <div class="card-body flex items-center gap-4">
-            <div class="p-3 rounded-full" :class="botConnected ? 'bg-green-100' : 'bg-red-100'">
-              <SignalIcon class="h-6 w-6" :class="botConnected ? 'text-green-600' : 'text-red-600'" />
-            </div>
-            <div>
-              <p class="text-sm text-gray-500">Bot holati</p>
-              <p class="text-lg font-bold" :class="botConnected ? 'text-green-600' : 'text-red-600'">
-                {{ botConnected ? 'Ulangan' : 'Ulanmagan' }}
-              </p>
-              <p v-if="botInfo.botName" class="text-xs text-gray-400">{{ botInfo.botName }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-body flex items-center gap-4">
-            <div class="p-3 bg-blue-100 rounded-full">
-              <PaperAirplaneIcon class="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <p class="text-sm text-gray-500">Bot username</p>
-              <p class="text-lg font-bold text-gray-900">@{{ botInfo.botUsername }}</p>
-              <a
-                :href="'https://t.me/' + botInfo.botUsername"
-                target="_blank"
-                class="text-xs text-blue-600 hover:underline"
-              >Telegramda ochish</a>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-body flex items-center gap-4">
-            <div class="p-3 bg-purple-100 rounded-full">
-              <UserGroupIcon class="h-6 w-6 text-purple-600" />
-            </div>
-            <div>
-              <p class="text-sm text-gray-500">Ulangan foydalanuvchilar</p>
-              <p class="text-lg font-bold text-gray-900">
-                {{ botInfo.connectedUsers }} / {{ botInfo.totalUsers }}
-              </p>
-              <p class="text-xs text-gray-400">jami foydalanuvchilardan</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Connected Users Table -->
+    <template v-else>
+      <!-- Settings Card -->
       <div class="card">
-        <div class="card-header flex items-center justify-between">
-          <h3 class="text-lg font-medium">Ulangan foydalanuvchilar</h3>
-          <span class="text-sm text-gray-500">{{ users.length }} ta</span>
+        <div class="card-header flex items-center gap-2">
+          <Cog6ToothIcon class="h-5 w-5 text-gray-500" />
+          <h3 class="text-lg font-medium">Bot sozlamalari</h3>
         </div>
-        <div v-if="users.length === 0" class="card-body">
-          <div class="text-center py-8 text-gray-500">
-            <UserGroupIcon class="h-12 w-12 mx-auto text-gray-300 mb-3" />
-            <p>Hali hech kim Telegramga ulanmagan</p>
-            <p class="text-sm mt-1">Foydalanuvchilar Sozlamalar > Telegram orqali ulana oladi</p>
+        <div class="card-body space-y-4">
+          <!-- Enable toggle -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-gray-900">Telegram botni yoqish</p>
+              <p class="text-sm text-gray-500">Yoqilganda bot xabarlarni qabul qiladi va bildirishnomalar yuboradi</p>
+            </div>
+            <button
+              @click="settingsForm.enabled = !settingsForm.enabled"
+              :class="[
+                'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                settingsForm.enabled ? 'bg-primary-600' : 'bg-gray-200'
+              ]"
+            >
+              <span
+                :class="[
+                  'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                  settingsForm.enabled ? 'translate-x-5' : 'translate-x-0'
+                ]"
+              />
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="label">Bot Token</label>
+              <input
+                v-model="settingsForm.botToken"
+                type="text"
+                class="input font-mono text-sm"
+                placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+              />
+              <p class="mt-1 text-xs text-gray-400">@BotFather dan olingan token</p>
+            </div>
+            <div>
+              <label class="label">Bot username</label>
+              <div class="flex">
+                <span class="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-300 rounded-l-lg text-gray-500 text-sm">@</span>
+                <input
+                  v-model="settingsForm.botUsername"
+                  type="text"
+                  class="input rounded-l-none"
+                  placeholder="hisobnoma_bot"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end">
+            <button
+              @click="saveSettings"
+              :disabled="savingSettings"
+              class="btn-primary inline-flex items-center gap-2"
+            >
+              <CheckCircleIcon class="h-4 w-4" />
+              {{ savingSettings ? 'Saqlanmoqda...' : 'Saqlash' }}
+            </button>
           </div>
         </div>
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Foydalanuvchi</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefon</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ulangan sana</th>
-                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amallar</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="user in users" :key="user.id">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center gap-3">
-                    <div class="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span class="text-sm font-medium text-blue-700">{{ user.fullName?.charAt(0) || '?' }}</span>
-                    </div>
-                    <span class="text-sm font-medium text-gray-900">{{ user.fullName }}</span>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.username }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.phone || '-' }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(user.linkedAt) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
-                  <button
-                    @click="openSendToUser(user)"
-                    class="text-sm text-blue-600 hover:text-blue-800"
-                  >Xabar</button>
-                  <button
-                    @click="unlinkUser(user)"
-                    class="text-sm text-red-600 hover:text-red-800"
-                  >Uzish</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
+
+      <!-- Bot Info Cards (only when configured) -->
+      <template v-if="botInfo">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="card">
+            <div class="card-body flex items-center gap-4">
+              <div class="p-3 rounded-full" :class="botConnected ? 'bg-green-100' : 'bg-red-100'">
+                <SignalIcon class="h-6 w-6" :class="botConnected ? 'text-green-600' : 'text-red-600'" />
+              </div>
+              <div>
+                <p class="text-sm text-gray-500">Bot holati</p>
+                <p class="text-lg font-bold" :class="botConnected ? 'text-green-600' : 'text-red-600'">
+                  {{ botConnected ? 'Ulangan' : 'Ulanmagan' }}
+                </p>
+                <p v-if="botInfo.botName" class="text-xs text-gray-400">{{ botInfo.botName }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body flex items-center gap-4">
+              <div class="p-3 bg-blue-100 rounded-full">
+                <PaperAirplaneIcon class="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p class="text-sm text-gray-500">Bot username</p>
+                <p class="text-lg font-bold text-gray-900">@{{ botInfo.botUsername }}</p>
+                <a
+                  :href="'https://t.me/' + botInfo.botUsername"
+                  target="_blank"
+                  class="text-xs text-blue-600 hover:underline"
+                >Telegramda ochish</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body flex items-center gap-4">
+              <div class="p-3 bg-purple-100 rounded-full">
+                <UserGroupIcon class="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <p class="text-sm text-gray-500">Ulangan foydalanuvchilar</p>
+                <p class="text-lg font-bold text-gray-900">
+                  {{ botInfo.connectedUsers }} / {{ botInfo.totalUsers }}
+                </p>
+                <p class="text-xs text-gray-400">jami foydalanuvchilardan</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connected Users Table -->
+        <div class="card">
+          <div class="card-header flex items-center justify-between">
+            <h3 class="text-lg font-medium">Ulangan foydalanuvchilar</h3>
+            <span class="text-sm text-gray-500">{{ users.length }} ta</span>
+          </div>
+          <div v-if="users.length === 0" class="card-body">
+            <div class="text-center py-8 text-gray-500">
+              <UserGroupIcon class="h-12 w-12 mx-auto text-gray-300 mb-3" />
+              <p>Hali hech kim Telegramga ulanmagan</p>
+              <p class="text-sm mt-1">Foydalanuvchilar Sozlamalar > Telegram orqali ulana oladi</p>
+            </div>
+          </div>
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Foydalanuvchi</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefon</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ulangan sana</th>
+                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amallar</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="user in users" :key="user.id">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center gap-3">
+                      <div class="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span class="text-sm font-medium text-blue-700">{{ user.fullName?.charAt(0) || '?' }}</span>
+                      </div>
+                      <span class="text-sm font-medium text-gray-900">{{ user.fullName }}</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.username }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.phone || '-' }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(user.linkedAt) }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
+                    <button
+                      @click="openSendToUser(user)"
+                      class="text-sm text-blue-600 hover:text-blue-800"
+                    >Xabar</button>
+                    <button
+                      @click="unlinkUser(user)"
+                      class="text-sm text-red-600 hover:text-red-800"
+                    >Uzish</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
     </template>
 
     <!-- Send Message Modal -->

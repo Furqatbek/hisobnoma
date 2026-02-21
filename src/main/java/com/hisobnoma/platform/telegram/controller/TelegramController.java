@@ -6,7 +6,6 @@ import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.telegram.config.TelegramProperties;
 import com.hisobnoma.platform.telegram.service.TelegramBotService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +18,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/telegram")
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.telegram.enabled", havingValue = "true")
 public class TelegramController {
 
     private final TelegramBotService botService;

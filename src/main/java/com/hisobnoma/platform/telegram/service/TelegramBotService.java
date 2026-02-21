@@ -5,7 +5,6 @@ import com.hisobnoma.platform.auth.repository.UserRepository;
 import com.hisobnoma.platform.telegram.config.TelegramProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.telegram.enabled", havingValue = "true")
 public class TelegramBotService {
 
     private final TelegramApiClient telegramApi;
@@ -54,6 +52,7 @@ public class TelegramBotService {
      */
     @Scheduled(fixedDelay = 5000, initialDelay = 10000)
     public void pollUpdates() {
+        if (!telegramApi.isConfigured()) return;
         try {
             Map<String, Object> response = telegramApi.getUpdates(lastUpdateId);
             if (response == null || !Boolean.TRUE.equals(response.get("ok"))) {
