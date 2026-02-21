@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { arInvoicesApi, customersApi, productsApi } from '@/services/api'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
@@ -9,7 +9,7 @@ const saving = ref(false)
 const errors = reactive({})
 
 // Customer
-const customers = ref([])
+const allCustomers = ref([])
 const customerSearch = ref('')
 const loadingCustomers = ref(false)
 const showCustomerDropdown = ref(false)
@@ -20,6 +20,7 @@ const productSearch = ref('')
 const productResults = ref([])
 const loadingProducts = ref(false)
 const showProductDropdown = ref(false)
+const productSearchEmpty = ref(false)
 
 // Form
 const form = reactive({
@@ -41,57 +42,51 @@ const subtotal = computed(() => {
 
 const totalAmount = computed(() => subtotal.value)
 
+// Filtered customers based on search
+const filteredCustomers = computed(() => {
+  if (!customerSearch.value) return allCustomers.value
+  const q = customerSearch.value.toLowerCase()
+  return allCustomers.value.filter(c =>
+    (c.name || '').toLowerCase().includes(q) ||
+    (c.code || '').toLowerCase().includes(q) ||
+    (c.phone || '').toLowerCase().includes(q)
+  )
+})
+
 onMounted(async () => {
   // Set default due date to 30 days from now
   const due = new Date()
   due.setDate(due.getDate() + 30)
   form.dueDate = due.toISOString().split('T')[0]
+
+  // Preload all customers
+  loadingCustomers.value = true
+  try {
+    // Try active customers first (returns a simple list)
+    const res = await customersApi.getAll({ size: 200 })
+    const data = res.data.data || res.data
+    allCustomers.value = data?.content || (Array.isArray(data) ? data : [])
+  } catch (err) {
+    console.error('Failed to load customers:', err)
+  } finally {
+    loadingCustomers.value = false
+  }
 })
 
-// Customer search
-let customerSearchTimeout = null
-async function onCustomerSearch() {
-  clearTimeout(customerSearchTimeout)
-  if (!customerSearch.value || customerSearch.value.length < 1) {
-    customers.value = []
-    showCustomerDropdown.value = false
-    return
+function onCustomerFocus() {
+  if (!selectedCustomer.value) {
+    showCustomerDropdown.value = true
   }
-  customerSearchTimeout = setTimeout(async () => {
-    loadingCustomers.value = true
-    try {
-      const res = await customersApi.search(customerSearch.value)
-      // Response can be PageResponse (has content array) or ApiResponse wrapping PageResponse
-      const data = res.data.data || res.data
-      customers.value = data?.content || (Array.isArray(data) ? data : [])
-      showCustomerDropdown.value = customers.value.length > 0
-    } catch (err) {
-      // Fallback: load all active customers and filter client-side
-      try {
-        const res = await customersApi.getAll({ size: 50 })
-        const data = res.data.data || res.data
-        const all = data?.content || (Array.isArray(data) ? data : [])
-        const q = customerSearch.value.toLowerCase()
-        customers.value = all.filter(c =>
-          (c.name || '').toLowerCase().includes(q) ||
-          (c.companyName || '').toLowerCase().includes(q) ||
-          (c.code || '').toLowerCase().includes(q) ||
-          (c.phone || '').toLowerCase().includes(q)
-        )
-        showCustomerDropdown.value = customers.value.length > 0
-      } catch (e) {
-        console.error('Customer search failed:', e)
-      }
-    } finally {
-      loadingCustomers.value = false
-    }
-  }, 300)
+}
+
+function onCustomerInput() {
+  showCustomerDropdown.value = true
 }
 
 function selectCustomer(customer) {
   selectedCustomer.value = customer
   form.customerId = customer.id
-  customerSearch.value = customer.name || customer.companyName || ''
+  customerSearch.value = ''
   showCustomerDropdown.value = false
 
   // Set payment terms as due date if available
@@ -108,29 +103,52 @@ function clearCustomer() {
   customerSearch.value = ''
 }
 
-// Product search
+// Product search with debounce
 let productSearchTimeout = null
-async function onProductSearch() {
+
+function extractList(res) {
+  const d = res.data.data || res.data
+  return d?.content || (Array.isArray(d) ? d : [])
+}
+
+watch(productSearch, (val) => {
   clearTimeout(productSearchTimeout)
-  if (!productSearch.value || productSearch.value.length < 1) {
+  productSearchEmpty.value = false
+
+  if (!val || val.length < 1) {
     productResults.value = []
     showProductDropdown.value = false
     return
   }
+
+  showProductDropdown.value = true
+  loadingProducts.value = true
+
   productSearchTimeout = setTimeout(async () => {
-    loadingProducts.value = true
     try {
-      const res = await productsApi.search(productSearch.value)
-      const data = res.data.data || res.data
-      productResults.value = data?.content || (Array.isArray(data) ? data : [])
-      showProductDropdown.value = productResults.value.length > 0
+      const res = await productsApi.search(val)
+      productResults.value = extractList(res)
     } catch (err) {
-      console.error('Product search failed:', err)
+      // Fallback: load all products and filter client-side
+      try {
+        const res = await productsApi.getAll({ size: 100 })
+        const all = extractList(res)
+        const q = val.toLowerCase()
+        productResults.value = all.filter(p =>
+          (p.name || '').toLowerCase().includes(q) ||
+          (p.sku || '').toLowerCase().includes(q) ||
+          (p.barcode || '').toLowerCase().includes(q)
+        )
+      } catch (e) {
+        productResults.value = []
+        console.error('Product search failed:', e)
+      }
     } finally {
       loadingProducts.value = false
+      productSearchEmpty.value = productResults.value.length === 0
     }
   }, 300)
-}
+})
 
 function addProductLine(product) {
   form.lines.push({
@@ -145,6 +163,7 @@ function addProductLine(product) {
   productSearch.value = ''
   productResults.value = []
   showProductDropdown.value = false
+  productSearchEmpty.value = false
 }
 
 function addManualLine() {
@@ -269,7 +288,7 @@ async function handleSubmit() {
             <label class="label">Mijoz *</label>
             <div v-if="selectedCustomer" class="flex items-center gap-2 p-2 bg-primary-50 border border-primary-200 rounded-lg">
               <div class="flex-1">
-                <p class="font-medium text-sm">{{ selectedCustomer.name || selectedCustomer.companyName }}</p>
+                <p class="font-medium text-sm">{{ selectedCustomer.name }}</p>
                 <p v-if="selectedCustomer.code" class="text-xs text-gray-500">{{ selectedCustomer.code }}</p>
               </div>
               <button type="button" @click="clearCustomer" class="p-1 text-gray-400 hover:text-red-500">
@@ -281,28 +300,35 @@ async function handleSubmit() {
                 <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   v-model="customerSearch"
-                  @input="onCustomerSearch"
-                  @focus="customerSearch && onCustomerSearch()"
+                  @input="onCustomerInput"
+                  @focus="onCustomerFocus"
+                  @blur="setTimeout(() => showCustomerDropdown = false, 200)"
                   type="text"
-                  placeholder="Mijoz qidirish..."
+                  :placeholder="loadingCustomers ? 'Yuklanmoqda...' : 'Mijoz qidirish...'"
                   :class="[errors.customer ? 'input-error pl-9' : 'input pl-9']"
                 />
               </div>
               <!-- Dropdown -->
               <div
-                v-if="showCustomerDropdown"
+                v-if="showCustomerDropdown && filteredCustomers.length > 0"
                 class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
               >
                 <button
-                  v-for="c in customers"
+                  v-for="c in filteredCustomers"
                   :key="c.id"
                   type="button"
-                  @click="selectCustomer(c)"
+                  @mousedown.prevent="selectCustomer(c)"
                   class="w-full text-left px-4 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0"
                 >
-                  <p class="font-medium text-sm">{{ c.name || c.companyName }}</p>
+                  <p class="font-medium text-sm">{{ c.name }}</p>
                   <p class="text-xs text-gray-500">{{ c.code || '' }} {{ c.phone ? '| ' + c.phone : '' }}</p>
                 </button>
+              </div>
+              <div
+                v-if="showCustomerDropdown && filteredCustomers.length === 0 && !loadingCustomers && customerSearch"
+                class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-3 text-center text-sm text-gray-400"
+              >
+                Mijoz topilmadi
               </div>
             </div>
             <p v-if="errors.customer" class="mt-1 text-sm text-red-600">{{ errors.customer }}</p>
@@ -337,8 +363,8 @@ async function handleSubmit() {
                 <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   v-model="productSearch"
-                  @input="onProductSearch"
-                  @focus="productSearch && onProductSearch()"
+                  @blur="setTimeout(() => { showProductDropdown = false; productSearchEmpty = false }, 200)"
+                  @focus="productSearch && (showProductDropdown = true)"
                   type="text"
                   placeholder="Mahsulot qidirish (nomi yoki shtrix kodi)..."
                   class="input pl-9"
@@ -359,24 +385,29 @@ async function handleSubmit() {
               v-if="showProductDropdown"
               class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
             >
-              <button
-                v-for="p in productResults"
-                :key="p.id"
-                type="button"
-                @click="addProductLine(p)"
-                class="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 flex items-center justify-between"
-              >
-                <div>
-                  <p class="font-medium text-sm">{{ p.name }}</p>
-                  <p class="text-xs text-gray-500">
-                    {{ p.sku || p.code || '' }}
-                    {{ p.barcode ? ' | ' + p.barcode : '' }}
-                  </p>
-                </div>
-                <span class="text-sm font-semibold text-gray-700">{{ formatCurrency(p.sellingPrice || p.price || 0) }} so'm</span>
-              </button>
               <div v-if="loadingProducts" class="px-4 py-3 text-center text-sm text-gray-400">
                 Qidirilmoqda...
+              </div>
+              <template v-else-if="productResults.length > 0">
+                <button
+                  v-for="p in productResults"
+                  :key="p.id"
+                  type="button"
+                  @mousedown.prevent="addProductLine(p)"
+                  class="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 flex items-center justify-between"
+                >
+                  <div>
+                    <p class="font-medium text-sm">{{ p.name }}</p>
+                    <p class="text-xs text-gray-500">
+                      {{ p.sku || '' }}
+                      {{ p.barcode ? ' | ' + p.barcode : '' }}
+                    </p>
+                  </div>
+                  <span class="text-sm font-semibold text-gray-700">{{ formatCurrency(p.sellingPrice || 0) }} so'm</span>
+                </button>
+              </template>
+              <div v-else-if="productSearchEmpty" class="px-4 py-3 text-center text-sm text-gray-400">
+                Mahsulot topilmadi
               </div>
             </div>
           </div>
