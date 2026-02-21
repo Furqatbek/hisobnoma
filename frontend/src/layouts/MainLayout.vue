@@ -62,7 +62,8 @@ const navigation = computed(() => [
     key: 'pos',
     children: [
       { name: 'Kassa', href: '/pos', icon: ShoppingCartIcon },
-      { name: 'Sotuv tarixi', href: '/pos/transactions', icon: ClockIcon }
+      { name: 'Sotuv tarixi', href: '/pos/transactions', icon: ClockIcon },
+      { name: 'Smenalar', href: '/pos/shifts', icon: ClipboardDocumentListIcon }
     ]
   },
   {

@@ -125,6 +125,11 @@ const routes = [
         name: 'transactions',
         component: () => import('@/views/pos/TransactionsView.vue')
       },
+      {
+        path: 'pos/shifts',
+        name: 'shifts',
+        component: () => import('@/views/pos/ShiftsView.vue')
+      },
       // Customers
       {
         path: 'customers',
