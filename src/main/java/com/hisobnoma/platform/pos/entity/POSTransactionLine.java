@@ -115,6 +115,11 @@ public class POSTransactionLine extends BaseEntity {
     public void calculateLineTotal() {
         BigDecimal grossAmount = unitPrice.multiply(quantity);
         BigDecimal discountedAmount = grossAmount.subtract(discountAmount != null ? discountAmount : BigDecimal.ZERO);
+        // Tax applies to the post-discount amount
+        if (taxRate != null && taxRate.compareTo(BigDecimal.ZERO) > 0) {
+            this.taxAmount = discountedAmount.multiply(taxRate)
+                    .divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
+        }
         this.lineTotal = discountedAmount.add(taxAmount != null ? taxAmount : BigDecimal.ZERO);
     }
 

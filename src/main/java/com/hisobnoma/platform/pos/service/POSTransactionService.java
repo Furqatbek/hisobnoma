@@ -171,13 +171,16 @@ public class POSTransactionService {
                 BigDecimal taxRate = BigDecimal.ZERO;
                 String taxCode = null;
 
+                BigDecimal lineDiscount = item.getDiscountAmount() != null ? item.getDiscountAmount() : BigDecimal.ZERO;
+
                 if (product.getTaxCode() != null) {
                     taxCode = product.getTaxCode();
                     TaxRate rate = taxCalculationService.getApplicableRate(taxCode, LocalDate.now());
                     if (rate != null) {
                         taxRate = rate.getRate();
                         BigDecimal grossAmount = unitPrice.multiply(item.getQuantity());
-                        taxAmount = grossAmount.multiply(taxRate).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                        BigDecimal discountedAmount = grossAmount.subtract(lineDiscount);
+                        taxAmount = discountedAmount.multiply(taxRate).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
                     }
                 }
 
@@ -194,7 +197,7 @@ public class POSTransactionService {
                         .unitPrice(unitPrice)
                         .originalPrice(product.getSellingPrice())
                         .costPrice(product.getCostPrice())
-                        .discountAmount(item.getDiscountAmount() != null ? item.getDiscountAmount() : BigDecimal.ZERO)
+                        .discountAmount(lineDiscount)
                         .discountReason(item.getDiscountReason())
                         .taxCode(taxCode)
                         .taxRate(taxRate)
@@ -237,10 +240,11 @@ public class POSTransactionService {
         Integer maxLineNumber = lineRepository.findMaxLineNumberByTransactionId(transactionId);
         int lineNumber = (maxLineNumber != null ? maxLineNumber : 0) + 1;
 
-        // Calculate tax
+        // Calculate tax on post-discount amount
         BigDecimal taxAmount = BigDecimal.ZERO;
         BigDecimal taxRate = BigDecimal.ZERO;
         String taxCode = null;
+        BigDecimal lineDiscount = request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO;
 
         if (product.getTaxCode() != null) {
             taxCode = product.getTaxCode();
@@ -248,7 +252,8 @@ public class POSTransactionService {
             if (rate != null) {
                 taxRate = rate.getRate();
                 BigDecimal grossAmount = unitPrice.multiply(request.getQuantity());
-                taxAmount = grossAmount.multiply(taxRate).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                BigDecimal discountedAmount = grossAmount.subtract(lineDiscount);
+                taxAmount = discountedAmount.multiply(taxRate).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
             }
         }
 
@@ -265,7 +270,7 @@ public class POSTransactionService {
                 .unitPrice(unitPrice)
                 .originalPrice(product.getSellingPrice())
                 .costPrice(product.getCostPrice())
-                .discountAmount(request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO)
+                .discountAmount(lineDiscount)
                 .discountPercent(request.getDiscountPercent())
                 .discountReason(request.getDiscountReason())
                 .taxCode(taxCode)
@@ -311,13 +316,7 @@ public class POSTransactionService {
             line.setNotes(request.getNotes());
         }
 
-        // Recalculate tax
-        if (line.getTaxCode() != null && line.getTaxRate() != null) {
-            BigDecimal grossAmount = line.getUnitPrice().multiply(line.getQuantity());
-            BigDecimal discountedAmount = grossAmount.subtract(line.getDiscountAmount() != null ? line.getDiscountAmount() : BigDecimal.ZERO);
-            line.setTaxAmount(discountedAmount.multiply(line.getTaxRate()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
-        }
-
+        // calculateLineTotal() recalculates tax on the post-discount amount
         line.calculateLineTotal();
         transaction.recalculateTotals();
         transaction = transactionRepository.save(transaction);

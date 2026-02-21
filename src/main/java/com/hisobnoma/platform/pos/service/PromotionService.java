@@ -356,9 +356,9 @@ public class PromotionService {
         boolean hasNonStackableApplied = false;
 
         for (Promotion promotion : applicablePromotions) {
-            // Check if we can stack this promotion
-            if (hasNonStackableApplied && !promotion.isStackable()) {
-                continue;
+            // A non-stackable promotion means nothing else stacks with it
+            if (hasNonStackableApplied) {
+                break;
             }
 
             // Check conditions
