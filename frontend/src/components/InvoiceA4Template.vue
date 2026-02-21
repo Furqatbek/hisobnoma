@@ -115,6 +115,10 @@ function printInvoice() {
             <div style="font-weight: 600; font-size: 15px;">${props.transaction.customerName}</div>
             ${props.transaction.customerPhone ? '<div style="color: #6b7280;">Tel: ' + props.transaction.customerPhone + '</div>' : ''}
           ` : '<div style="color: #9ca3af;">Mijoz ko\'rsatilmagan</div>'}
+          ${props.transaction.deliveryRegionName || props.transaction.deliveryVillageName ? `
+            <div style="font-size: 12px; text-transform: uppercase; color: #9ca3af; font-weight: 600; letter-spacing: 1px; margin-bottom: 6px; margin-top: 12px;">Yetkazish manzili</div>
+            <div style="font-weight: 600; font-size: 14px;">${[props.transaction.deliveryRegionName, props.transaction.deliveryVillageName].filter(Boolean).join(', ')}</div>
+          ` : ''}
         </div>
         <div style="text-align: right;">
           ${props.transaction.terminalName ? '<div style="color: #6b7280;">Terminal: ' + props.transaction.terminalName + '</div>' : ''}
@@ -260,6 +264,12 @@ defineExpose({ printInvoice })
       <div class="section-label">Mijoz</div>
       <div class="customer-name">{{ transaction.customerName }}</div>
       <div class="customer-detail" v-if="transaction.customerPhone">Tel: {{ transaction.customerPhone }}</div>
+    </div>
+
+    <!-- Delivery -->
+    <div class="customer-section" v-if="transaction.deliveryRegionName || transaction.deliveryVillageName">
+      <div class="section-label">Yetkazish manzili</div>
+      <div class="customer-name">{{ [transaction.deliveryRegionName, transaction.deliveryVillageName].filter(Boolean).join(', ') }}</div>
     </div>
 
     <!-- Items Table -->

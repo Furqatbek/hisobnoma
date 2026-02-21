@@ -295,6 +295,10 @@ defineExpose({ printReceipt })
           <span v-if="transaction.customerPhone" style="font-size: 9px;"> ({{ transaction.customerPhone }})</span>
         </span>
       </div>
+      <div class="rc-meta-row" v-if="transaction.deliveryRegionName || transaction.deliveryVillageName">
+        <span class="rc-meta-label">Yetkazish:</span>
+        <span class="rc-meta-value">{{ [transaction.deliveryRegionName, transaction.deliveryVillageName].filter(Boolean).join(', ') }}</span>
+      </div>
     </div>
 
     <!-- Items Table -->
