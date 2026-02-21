@@ -10,6 +10,10 @@ const router = useRouter()
 const isEdit = computed(() => !!route.params.id)
 const loading = ref(false)
 const saving = ref(false)
+const togglingHold = ref(false)
+
+// Full customer data from API (for displaying balance info in edit mode)
+const customerData = ref(null)
 
 const form = reactive({
   name: '',
@@ -21,17 +25,30 @@ const form = reactive({
   city: '',
   taxId: '',
   creditLimit: null,
+  creditHold: false,
+  paymentTermsDays: 30,
   active: true
 })
 
 const errors = reactive({})
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('uz-UZ', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value || 0)
+}
 
 onMounted(async () => {
   if (isEdit.value) {
     loading.value = true
     try {
       const response = await customersApi.getById(route.params.id)
-      Object.assign(form, response.data)
+      const data = response.data
+      customerData.value = data
+      Object.assign(form, data)
+      // Ensure creditLimit is null if 0 for display purposes
+      if (!form.creditLimit) form.creditLimit = null
     } catch (error) {
       console.error('Failed to load customer:', error)
     } finally {
@@ -42,7 +59,7 @@ onMounted(async () => {
 
 function validate() {
   Object.keys(errors).forEach(key => delete errors[key])
-  if (!form.name?.trim()) errors.name = 'Name is required'
+  if (!form.name?.trim()) errors.name = 'Ism kiritish shart'
   return Object.keys(errors).length === 0
 }
 
@@ -59,9 +76,24 @@ async function handleSubmit() {
     }
     router.push('/customers')
   } catch (error) {
-    errors.general = error.response?.data?.message || 'Failed to save'
+    errors.general = error.response?.data?.message || 'Saqlashda xatolik yuz berdi'
   } finally {
     saving.value = false
+  }
+}
+
+async function toggleCreditHold() {
+  if (!isEdit.value) return
+  togglingHold.value = true
+  try {
+    const newHold = !form.creditHold
+    const res = await customersApi.setCreditHold(route.params.id, newHold)
+    form.creditHold = res.data.creditHold
+    customerData.value = res.data
+  } catch (error) {
+    errors.general = error.response?.data?.message || 'Kredit holdni o\'zgartirishda xatolik'
+  } finally {
+    togglingHold.value = false
   }
 }
 </script>
@@ -73,7 +105,7 @@ async function handleSubmit() {
         <ArrowLeftIcon class="h-5 w-5 text-gray-500" />
       </button>
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Edit Customer' : 'New Customer' }}</h1>
+        <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Mijozni tahrirlash' : 'Yangi mijoz' }}</h1>
       </div>
     </div>
 
@@ -86,32 +118,127 @@ async function handleSubmit() {
         <p class="text-sm text-red-600">{{ errors.general }}</p>
       </div>
 
+      <!-- Credit hold warning banner -->
+      <div v-if="isEdit && form.creditHold" class="p-4 bg-red-50 border border-red-300 rounded-lg flex items-center justify-between">
+        <div>
+          <p class="font-semibold text-red-700">Kredit to'xtatilgan</p>
+          <p class="text-sm text-red-600">Bu mijozga yangi faktura yaratib bo'lmaydi</p>
+        </div>
+        <button
+          type="button"
+          @click="toggleCreditHold"
+          :disabled="togglingHold"
+          class="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg disabled:opacity-50"
+        >
+          {{ togglingHold ? 'O\'zgartirilmoqda...' : 'Kreditni yoqish' }}
+        </button>
+      </div>
+
+      <!-- Balance info (edit mode only) -->
+      <div v-if="isEdit && customerData" class="card">
+        <div class="card-header"><h3 class="text-lg font-medium">Kredit holati</h3></div>
+        <div class="card-body">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+              <p class="text-xs text-gray-500">Joriy qarz</p>
+              <p class="text-lg font-bold" :class="(customerData.currentBalance || 0) > 0 ? 'text-red-600' : 'text-gray-900'">
+                {{ formatCurrency(customerData.currentBalance) }} so'm
+              </p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <p class="text-xs text-gray-500">Kredit limiti</p>
+              <p class="text-lg font-bold text-gray-900">
+                {{ customerData.creditLimit ? formatCurrency(customerData.creditLimit) + " so'm" : 'Cheksiz' }}
+              </p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <p class="text-xs text-gray-500">Mavjud kredit</p>
+              <p class="text-lg font-bold" :class="customerData.overCreditLimit ? 'text-red-600' : 'text-green-600'">
+                {{ customerData.creditLimit ? formatCurrency(customerData.availableCredit) + " so'm" : 'Cheksiz' }}
+              </p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <p class="text-xs text-gray-500">Kredit holati</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span
+                  class="inline-block w-2.5 h-2.5 rounded-full"
+                  :class="form.creditHold ? 'bg-red-500' : 'bg-green-500'"
+                ></span>
+                <span class="text-sm font-medium" :class="form.creditHold ? 'text-red-600' : 'text-green-600'">
+                  {{ form.creditHold ? 'To\'xtatilgan' : 'Faol' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-center gap-4 pt-4 border-t border-gray-100">
+            <div class="flex-1">
+              <label class="label">Kredit limiti (so'm)</label>
+              <input
+                v-model.number="form.creditLimit"
+                type="number"
+                min="0"
+                step="1000"
+                class="input"
+                placeholder="Bo'sh = cheksiz"
+              />
+              <p class="text-xs text-gray-400 mt-1">0 yoki bo'sh = cheksiz kredit</p>
+            </div>
+            <div class="flex-1">
+              <label class="label">To'lov muddati (kun)</label>
+              <input
+                v-model.number="form.paymentTermsDays"
+                type="number"
+                min="0"
+                step="1"
+                class="input"
+                placeholder="30"
+              />
+            </div>
+            <div class="pt-5">
+              <button
+                type="button"
+                @click="toggleCreditHold"
+                :disabled="togglingHold"
+                class="px-4 py-2 text-sm font-medium rounded-lg border disabled:opacity-50"
+                :class="form.creditHold
+                  ? 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100'
+                  : 'text-red-700 bg-red-50 border-red-200 hover:bg-red-100'"
+              >
+                {{ togglingHold ? '...' : (form.creditHold ? 'Kreditni yoqish' : 'Kreditni to\'xtatish') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer info -->
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Customer Information</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">Mijoz ma'lumotlari</h3></div>
         <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label class="label">Name *</label>
+            <label class="label">Ism *</label>
             <input v-model="form.name" type="text" :class="[errors.name ? 'input-error' : 'input']" />
             <p v-if="errors.name" class="mt-1 text-sm text-red-600">{{ errors.name }}</p>
           </div>
           <div>
-            <label class="label">Code</label>
-            <input v-model="form.code" type="text" class="input" placeholder="Auto-generated if empty" />
+            <label class="label">Kod</label>
+            <input v-model="form.code" type="text" class="input" placeholder="Avtomatik yaratiladi" :disabled="isEdit" />
           </div>
           <div>
-            <label class="label">Type</label>
+            <label class="label">Turi</label>
             <select v-model="form.customerType" class="input">
-              <option value="RETAIL">Retail</option>
-              <option value="WHOLESALE">Wholesale</option>
-              <option value="CORPORATE">Corporate</option>
+              <option value="RETAIL">Chakana</option>
+              <option value="WHOLESALE">Ulgurji</option>
+              <option value="CORPORATE">Korporativ</option>
             </select>
           </div>
           <div>
-            <label class="label">Tax ID</label>
+            <label class="label">INN</label>
             <input v-model="form.taxId" type="text" class="input" />
           </div>
           <div>
-            <label class="label">Phone</label>
+            <label class="label">Telefon</label>
             <input v-model="form.phone" type="tel" class="input" />
           </div>
           <div>
@@ -119,30 +246,32 @@ async function handleSubmit() {
             <input v-model="form.email" type="email" class="input" />
           </div>
           <div class="md:col-span-2">
-            <label class="label">Address</label>
+            <label class="label">Manzil</label>
             <textarea v-model="form.address" rows="2" class="input"></textarea>
           </div>
           <div>
-            <label class="label">City</label>
+            <label class="label">Shahar</label>
             <input v-model="form.city" type="text" class="input" />
           </div>
-          <div>
+          <!-- Credit limit for new customers (edit mode shows it in credit section above) -->
+          <div v-if="!isEdit">
             <label class="label">Kredit limiti</label>
-            <input v-model.number="form.creditLimit" type="number" min="0" step="0.01" class="input" placeholder="Bo'sh = cheksiz" />
+            <input v-model.number="form.creditLimit" type="number" min="0" step="1000" class="input" placeholder="Bo'sh = cheksiz" />
+            <p class="text-xs text-gray-400 mt-1">0 yoki bo'sh = cheksiz kredit</p>
           </div>
           <div>
             <label class="flex items-center">
               <input v-model="form.active" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-              <span class="ml-2 text-sm">Active</span>
+              <span class="ml-2 text-sm">Faol</span>
             </label>
           </div>
         </div>
       </div>
 
       <div class="flex justify-end space-x-3">
-        <button type="button" @click="router.back()" class="btn-secondary">Cancel</button>
+        <button type="button" @click="router.back()" class="btn-secondary">Bekor qilish</button>
         <button type="submit" :disabled="saving" class="btn-primary">
-          {{ saving ? 'Saving...' : (isEdit ? 'Update' : 'Create') }}
+          {{ saving ? 'Saqlanmoqda...' : (isEdit ? 'Yangilash' : 'Yaratish') }}
         </button>
       </div>
     </form>
