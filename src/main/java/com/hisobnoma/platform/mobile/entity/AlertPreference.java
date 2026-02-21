@@ -45,6 +45,10 @@ public class AlertPreference extends TenantAwareEntity {
     @Builder.Default
     private boolean smsEnabled = false;
 
+    @Column(name = "telegram_enabled", nullable = false)
+    @Builder.Default
+    private boolean telegramEnabled = false;
+
     @Column(name = "threshold_value")
     private Integer thresholdValue;
 

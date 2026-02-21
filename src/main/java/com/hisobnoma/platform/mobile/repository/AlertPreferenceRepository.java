@@ -25,4 +25,10 @@ public interface AlertPreferenceRepository extends JpaRepository<AlertPreference
     List<Long> findUserIdsWithPushEnabledForType(@Param("tenantId") Long tenantId, @Param("alertType") MobileAlert.AlertType alertType);
 
     boolean existsByUserIdAndTenantIdAndAlertTypeAndPushEnabledTrue(Long userId, Long tenantId, MobileAlert.AlertType alertType);
+
+    boolean existsByUserIdAndTenantIdAndAlertTypeAndTelegramEnabledTrue(Long userId, Long tenantId, MobileAlert.AlertType alertType);
+
+    @Query("SELECT ap.userId FROM AlertPreference ap WHERE ap.tenantId = :tenantId " +
+            "AND ap.alertType = :alertType AND ap.telegramEnabled = true")
+    List<Long> findUserIdsWithTelegramEnabledForType(@Param("tenantId") Long tenantId, @Param("alertType") MobileAlert.AlertType alertType);
 }

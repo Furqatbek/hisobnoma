@@ -439,3 +439,10 @@ export const advancesApi = {
   create: (data) => api.post('/hr/advances', data),
   cancel: (id) => api.put(`/hr/advances/${id}/cancel`)
 }
+
+// Telegram API - Backend: /api/v1/telegram
+export const telegramApi = {
+  getStatus: () => api.get('/telegram/status'),
+  generateLinkCode: () => api.post('/telegram/link-code'),
+  unlink: () => api.delete('/telegram/unlink')
+}

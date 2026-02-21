@@ -1,7 +1,8 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { Cog6ToothIcon, BuildingStorefrontIcon, CurrencyDollarIcon, BellIcon, PrinterIcon } from '@heroicons/vue/24/outline'
+import { ref, reactive, onMounted, watch } from 'vue'
+import { Cog6ToothIcon, BuildingStorefrontIcon, CurrencyDollarIcon, BellIcon, PrinterIcon, PaperAirplaneIcon } from '@heroicons/vue/24/outline'
 import { useReceiptStore } from '@/stores/receipt'
+import { telegramApi } from '@/services/api'
 import ReceiptTemplate from '@/components/ReceiptTemplate.vue'
 import InvoiceA4Template from '@/components/InvoiceA4Template.vue'
 
@@ -9,6 +10,18 @@ const receiptStore = useReceiptStore()
 const activeTab = ref('general')
 const receiptRef = ref(null)
 const invoiceA4Ref = ref(null)
+
+// Telegram state
+const telegram = reactive({
+  linked: false,
+  botUsername: '',
+  linkedAt: '',
+  linkCode: '',
+  loading: false,
+  generatingCode: false,
+  unlinking: false,
+  error: ''
+})
 
 const settings = reactive({
   company: {
@@ -98,11 +111,62 @@ function printTestReceipt() {
   }
 }
 
+// Telegram functions
+async function loadTelegramStatus() {
+  telegram.loading = true
+  telegram.error = ''
+  try {
+    const res = await telegramApi.getStatus()
+    telegram.linked = res.data.linked
+    telegram.botUsername = res.data.botUsername
+    telegram.linkedAt = res.data.linkedAt
+  } catch (e) {
+    // Telegram not enabled on backend — hide the tab silently
+    telegram.error = e.response?.status === 404 ? '' : 'Telegram holatini yuklashda xatolik'
+  } finally {
+    telegram.loading = false
+  }
+}
+
+async function generateTelegramCode() {
+  telegram.generatingCode = true
+  telegram.error = ''
+  try {
+    const res = await telegramApi.generateLinkCode()
+    telegram.linkCode = res.data.code
+    telegram.botUsername = res.data.botUsername
+  } catch (e) {
+    telegram.error = e.response?.data?.message || 'Kod yaratishda xatolik'
+  } finally {
+    telegram.generatingCode = false
+  }
+}
+
+async function unlinkTelegram() {
+  if (!confirm('Telegram akkauntni uzmoqchimisiz?')) return
+  telegram.unlinking = true
+  try {
+    await telegramApi.unlink()
+    telegram.linked = false
+    telegram.linkedAt = ''
+    telegram.linkCode = ''
+  } catch (e) {
+    telegram.error = e.response?.data?.message || 'Uzishda xatolik'
+  } finally {
+    telegram.unlinking = false
+  }
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'telegram') loadTelegramStatus()
+})
+
 const tabs = [
   { key: 'general', name: 'Umumiy', icon: BuildingStorefrontIcon },
   { key: 'pos', name: 'Kassa (POS)', icon: CurrencyDollarIcon },
   { key: 'receipt', name: 'Chek sozlamalari', icon: PrinterIcon },
-  { key: 'notifications', name: 'Bildirishnomalar', icon: BellIcon }
+  { key: 'notifications', name: 'Bildirishnomalar', icon: BellIcon },
+  { key: 'telegram', name: 'Telegram', icon: PaperAirplaneIcon }
 ]
 </script>
 
@@ -349,8 +413,89 @@ const tabs = [
           </div>
         </div>
 
+        <!-- Telegram Settings -->
+        <div v-show="activeTab === 'telegram'" class="card">
+          <div class="card-header">
+            <h3 class="text-lg font-medium">Telegram bot</h3>
+            <p class="text-sm text-gray-500 mt-1">Telegram orqali bildirishnomalar olish</p>
+          </div>
+          <div class="card-body space-y-6">
+            <div v-if="telegram.error" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p class="text-sm text-red-600">{{ telegram.error }}</p>
+            </div>
+
+            <div v-if="telegram.loading" class="flex items-center justify-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+
+            <template v-else>
+              <!-- Linked state -->
+              <div v-if="telegram.linked" class="space-y-4">
+                <div class="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <span class="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                  <div>
+                    <p class="font-medium text-green-800">Telegram ulangan</p>
+                    <p v-if="telegram.linkedAt" class="text-sm text-green-600">
+                      Ulangan sana: {{ new Date(telegram.linkedAt).toLocaleDateString('uz-UZ') }}
+                    </p>
+                  </div>
+                </div>
+                <p class="text-sm text-gray-600">
+                  Siz bildirishnomalarni Telegram orqali olasiz. Bildirishnoma turlarini
+                  "Bildirishnomalar" bo'limida sozlashingiz mumkin.
+                </p>
+                <button
+                  @click="unlinkTelegram"
+                  :disabled="telegram.unlinking"
+                  class="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                >
+                  {{ telegram.unlinking ? 'Uzilmoqda...' : 'Telegramni uzish' }}
+                </button>
+              </div>
+
+              <!-- Not linked state -->
+              <div v-else class="space-y-6">
+                <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p class="font-medium text-blue-800 mb-2">Telegram botga ulanish</p>
+                  <ol class="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                    <li>"Kod olish" tugmasini bosing</li>
+                    <li>Telegramda <b>@{{ telegram.botUsername || 'hisobnoma_bot' }}</b> botni oching</li>
+                    <li>Olingan 6 raqamli kodni botga yuboring</li>
+                  </ol>
+                </div>
+
+                <!-- Link code display -->
+                <div v-if="telegram.linkCode" class="text-center space-y-3">
+                  <p class="text-sm text-gray-600">Ushbu kodni Telegram botga yuboring:</p>
+                  <div class="inline-block px-8 py-4 bg-gray-900 rounded-xl">
+                    <span class="text-3xl font-mono font-bold text-white tracking-widest">{{ telegram.linkCode }}</span>
+                  </div>
+                  <p class="text-xs text-gray-400">Kod 10 daqiqa amal qiladi</p>
+                  <div>
+                    <a
+                      :href="'https://t.me/' + (telegram.botUsername || 'hisobnoma_bot')"
+                      target="_blank"
+                      class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg"
+                    >
+                      Telegram botni ochish
+                    </a>
+                  </div>
+                </div>
+
+                <button
+                  @click="generateTelegramCode"
+                  :disabled="telegram.generatingCode"
+                  class="btn-primary"
+                >
+                  {{ telegram.generatingCode ? 'Yaratilmoqda...' : (telegram.linkCode ? 'Yangi kod olish' : 'Kod olish') }}
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+
         <!-- Save Button for other tabs -->
-        <div v-if="activeTab !== 'receipt'" class="mt-6 flex justify-end">
+        <div v-if="activeTab !== 'receipt' && activeTab !== 'telegram'" class="mt-6 flex justify-end">
           <button @click="saveSettings" :disabled="saving" class="btn-primary">
             {{ saving ? 'Saqlanmoqda...' : 'Saqlash' }}
           </button>

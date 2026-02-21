@@ -82,6 +82,12 @@ public class User extends TenantAwareEntity {
 
     private Instant lockedUntil;
 
+    @Column(name = "telegram_chat_id")
+    private Long telegramChatId;
+
+    @Column(name = "telegram_linked_at")
+    private Instant telegramLinkedAt;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "user_roles",

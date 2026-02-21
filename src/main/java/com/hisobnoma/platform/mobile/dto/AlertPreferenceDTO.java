@@ -21,6 +21,7 @@ public class AlertPreferenceDTO {
     private boolean inAppEnabled;
     private boolean emailEnabled;
     private boolean smsEnabled;
+    private boolean telegramEnabled;
     private Integer thresholdValue;
     private Integer quietHoursStart;
     private Integer quietHoursEnd;

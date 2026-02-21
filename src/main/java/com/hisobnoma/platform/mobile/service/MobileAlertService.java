@@ -10,8 +10,10 @@ import com.hisobnoma.platform.mobile.mapper.AlertPreferenceMapper;
 import com.hisobnoma.platform.mobile.mapper.MobileAlertMapper;
 import com.hisobnoma.platform.mobile.repository.AlertPreferenceRepository;
 import com.hisobnoma.platform.mobile.repository.MobileAlertRepository;
+import com.hisobnoma.platform.telegram.service.TelegramNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -35,6 +37,9 @@ public class MobileAlertService {
     private final AlertPreferenceMapper preferenceMapper;
     private final SecurityContextHelper securityContextHelper;
     private final PushNotificationService pushNotificationService;
+
+    @Autowired(required = false)
+    private TelegramNotificationService telegramNotificationService;
 
     /**
      * Get paginated alerts for the current user.
@@ -130,6 +135,11 @@ public class MobileAlertService {
             alert.setSentViaPush(true);
             alert.setPushSentAt(Instant.now());
             alert = alertRepository.save(alert);
+        }
+
+        // Send Telegram notification if user has it enabled
+        if (telegramNotificationService != null) {
+            telegramNotificationService.sendAlert(userId, tenantId, alertType, title, message);
         }
 
         return alertMapper.toDto(alert);
