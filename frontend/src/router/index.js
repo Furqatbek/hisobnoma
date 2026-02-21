@@ -226,6 +226,11 @@ const routes = [
             path: 'expenses/:id/edit',
             name: 'expense-edit',
             component: () => import('@/views/finance/ExpenseFormView.vue')
+          },
+          {
+            path: 'payments',
+            name: 'payments',
+            component: () => import('@/views/finance/PaymentsView.vue')
           }
         ]
       },

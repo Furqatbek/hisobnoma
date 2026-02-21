@@ -86,6 +86,7 @@ const navigation = computed(() => [
     key: 'finance',
     children: [
       { name: 'Qarzdorlar', href: '/finance/debtors', icon: UsersIcon },
+      { name: 'To\'lovlar', href: '/finance/payments', icon: BanknotesIcon },
       { name: 'Xarajatlar', href: '/finance/expenses', icon: CurrencyDollarIcon }
     ]
   },

@@ -248,9 +248,14 @@ export const arInvoicesApi = {
 
 // AR Payments API - Backend: /api/v1/finance/ar-payments
 export const arPaymentsApi = {
+  getAll: (params) => api.get('/finance/ar-payments', { params }),
+  getById: (id) => api.get(`/finance/ar-payments/${id}`),
+  getByCustomer: (customerId, params) => api.get(`/finance/ar-payments/customer/${customerId}`, { params }),
+  getByStatus: (status, params) => api.get(`/finance/ar-payments/status/${status}`, { params }),
+  getByDateRange: (startDate, endDate) => api.get('/finance/ar-payments/date-range', { params: { startDate, endDate } }),
   create: (data) => api.post('/finance/ar-payments', data),
   complete: (id) => api.post(`/finance/ar-payments/${id}/complete`),
-  getByCustomer: (customerId, params) => api.get(`/finance/ar-payments/customer/${customerId}`, { params })
+  cancel: (id, reason) => api.post(`/finance/ar-payments/${id}/cancel`, null, { params: { reason } })
 }
 
 // Suppliers/Vendors API - Backend: /api/v1/inventory/vendors
