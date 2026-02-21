@@ -64,10 +64,23 @@ function getStatusClass(status) {
     'DRAFT': 'badge-info',
     'PENDING': 'badge-warning',
     'APPROVED': 'badge-success',
+    'PARTIAL': 'badge-warning',
     'RECEIVED': 'badge-success',
     'CANCELLED': 'badge-danger'
   }
   return classes[status] || 'badge-info'
+}
+
+function getStatusLabel(status) {
+  const labels = {
+    'DRAFT': 'Qoralama',
+    'PENDING': 'Kutilmoqda',
+    'APPROVED': 'Tasdiqlangan',
+    'PARTIAL': 'Qisman qabul',
+    'RECEIVED': 'Qabul qilingan',
+    'CANCELLED': 'Bekor qilingan'
+  }
+  return labels[status] || status
 }
 </script>
 
@@ -88,28 +101,28 @@ function getStatusClass(status) {
 
       <div v-if="order" class="flex space-x-3">
         <button
-          v-if="order.status === 'DRAFT'"
+          v-if="['DRAFT', 'PENDING'].includes(order.status)"
           @click="approveOrder"
           class="btn-success"
         >
           <CheckIcon class="h-5 w-5 mr-2" />
-          Approve
+          Tasdiqlash
         </button>
         <button
-          v-if="order.status === 'APPROVED'"
+          v-if="['APPROVED', 'PARTIAL'].includes(order.status)"
           @click="receiveOrder"
           class="btn-primary"
         >
           <TruckIcon class="h-5 w-5 mr-2" />
-          Mark Received
+          Qabul qilish
         </button>
         <button
-          v-if="['DRAFT', 'PENDING'].includes(order.status)"
+          v-if="['DRAFT', 'PENDING', 'APPROVED'].includes(order.status)"
           @click="cancelOrder"
           class="btn-danger"
         >
           <XMarkIcon class="h-5 w-5 mr-2" />
-          Cancel
+          Bekor qilish
         </button>
       </div>
     </div>
@@ -124,7 +137,7 @@ function getStatusClass(status) {
         <div class="card">
           <div class="card-body">
             <p class="text-sm text-gray-500">Status</p>
-            <span :class="['badge mt-1', getStatusClass(order.status)]">{{ order.status }}</span>
+            <span :class="['badge mt-1', getStatusClass(order.status)]">{{ getStatusLabel(order.status) }}</span>
           </div>
         </div>
         <div class="card">

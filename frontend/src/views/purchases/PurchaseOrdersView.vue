@@ -88,6 +88,7 @@ function getStatusClass(status) {
     'DRAFT': 'badge-info',
     'PENDING': 'badge-warning',
     'APPROVED': 'badge-success',
+    'PARTIAL': 'badge-warning',
     'RECEIVED': 'badge-success',
     'CANCELLED': 'badge-danger'
   }
@@ -99,6 +100,7 @@ function getStatusLabel(status) {
     'DRAFT': 'Qoralama',
     'PENDING': 'Kutilmoqda',
     'APPROVED': 'Tasdiqlangan',
+    'PARTIAL': 'Qisman qabul',
     'RECEIVED': 'Qabul qilingan',
     'CANCELLED': 'Bekor qilingan'
   }
