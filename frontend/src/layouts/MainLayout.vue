@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watchEffect } from 'vue'
 import { RouterView, RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -34,7 +34,7 @@ const authStore = useAuthStore()
 const route = useRoute()
 
 const sidebarOpen = ref(false)
-const expandedMenus = ref(['inventory', 'pos', 'purchases', 'finance', 'hr', 'reports', 'admin'])
+const expandedMenus = ref([])
 
 const navigation = computed(() => [
   {
@@ -128,11 +128,10 @@ const navigation = computed(() => [
 ])
 
 function toggleMenu(key) {
-  const index = expandedMenus.value.indexOf(key)
-  if (index > -1) {
-    expandedMenus.value.splice(index, 1)
+  if (expandedMenus.value.includes(key)) {
+    expandedMenus.value = []
   } else {
-    expandedMenus.value.push(key)
+    expandedMenus.value = [key]
   }
 }
 
@@ -143,6 +142,16 @@ function isMenuExpanded(key) {
 function isChildActive(children) {
   return children?.some(child => route.path.startsWith(child.href))
 }
+
+// Auto-expand the menu containing the active route
+watchEffect(() => {
+  const activeGroup = navigation.value.find(
+    item => item.children && isChildActive(item.children)
+  )
+  if (activeGroup) {
+    expandedMenus.value = [activeGroup.key]
+  }
+})
 </script>
 
 <template>
