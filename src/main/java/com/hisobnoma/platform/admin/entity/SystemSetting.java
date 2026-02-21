@@ -18,7 +18,6 @@ import lombok.experimental.SuperBuilder;
 @Setter
 @SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
 public class SystemSetting extends AuditableEntity {
 
     @Column(name = "setting_key", nullable = false, unique = true, length = 100)

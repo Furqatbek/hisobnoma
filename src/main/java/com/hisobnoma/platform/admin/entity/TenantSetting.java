@@ -21,7 +21,6 @@ import lombok.experimental.SuperBuilder;
 @Setter
 @SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
 public class TenantSetting extends TenantAwareEntity {
 
     @Column(name = "setting_key", nullable = false, length = 100)

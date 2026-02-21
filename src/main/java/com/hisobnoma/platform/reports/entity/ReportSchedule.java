@@ -21,7 +21,6 @@ import java.time.LocalTime;
 @Setter
 @SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
 public class ReportSchedule extends TenantAwareEntity {
 
     public enum ScheduleFrequency {

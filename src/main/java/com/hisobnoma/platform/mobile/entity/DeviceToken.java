@@ -20,7 +20,6 @@ import java.time.Instant;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 @SuperBuilder
 public class DeviceToken extends TenantAwareEntity {
 

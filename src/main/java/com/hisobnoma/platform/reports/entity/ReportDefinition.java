@@ -21,7 +21,6 @@ import java.util.List;
 @Setter
 @SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
 public class ReportDefinition extends TenantAwareEntity {
 
     public enum ReportCategory {
