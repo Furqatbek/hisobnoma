@@ -242,7 +242,13 @@ async function handleSubmit() {
       }))
     }
 
-    await arInvoicesApi.create(payload)
+    const res = await arInvoicesApi.create(payload)
+    // Auto-post so the invoice moves from DRAFT to PENDING
+    // and appears in the debtors list (balance report excludes DRAFTs)
+    const invoiceId = res.data?.data?.id || res.data?.id
+    if (invoiceId) {
+      await arInvoicesApi.post(invoiceId)
+    }
     router.push('/finance/debtors')
   } catch (error) {
     const response = error.response?.data
