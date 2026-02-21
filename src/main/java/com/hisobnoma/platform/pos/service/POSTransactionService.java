@@ -147,21 +147,21 @@ public class POSTransactionService {
                 .notes(request.getNotes())
                 .build();
 
-        // Resolve delivery address names
-        if (request.getDeliveryRegionId() != null) {
-            deliveryRegionRepository.findByIdAndTenantId(request.getDeliveryRegionId(), tenantId)
-                    .ifPresent(r -> transaction.setDeliveryRegionName(r.getName()));
-        }
-        if (request.getDeliveryVillageId() != null) {
-            deliveryVillageRepository.findByIdAndTenantId(request.getDeliveryVillageId(), tenantId)
-                    .ifPresent(v -> transaction.setDeliveryVillageName(v.getName()));
-        }
-
-        // For returns, get original transaction number
-        if (request.getOriginalTransactionId() != null) {
+        // Resolve delivery address names and original transaction number before save
+        {
             final POSTransaction txn = transaction;
-            transactionRepository.findByIdAndTenantId(request.getOriginalTransactionId(), tenantId)
-                    .ifPresent(orig -> txn.setOriginalTransactionNumber(orig.getTransactionNumber()));
+            if (request.getDeliveryRegionId() != null) {
+                deliveryRegionRepository.findByIdAndTenantId(request.getDeliveryRegionId(), tenantId)
+                        .ifPresent(r -> txn.setDeliveryRegionName(r.getName()));
+            }
+            if (request.getDeliveryVillageId() != null) {
+                deliveryVillageRepository.findByIdAndTenantId(request.getDeliveryVillageId(), tenantId)
+                        .ifPresent(v -> txn.setDeliveryVillageName(v.getName()));
+            }
+            if (request.getOriginalTransactionId() != null) {
+                transactionRepository.findByIdAndTenantId(request.getOriginalTransactionId(), tenantId)
+                        .ifPresent(orig -> txn.setOriginalTransactionNumber(orig.getTransactionNumber()));
+            }
         }
 
         transaction = transactionRepository.save(transaction);
