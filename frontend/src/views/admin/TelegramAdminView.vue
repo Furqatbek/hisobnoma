@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { telegramApi } from '@/services/api'
-import { PaperAirplaneIcon, UserGroupIcon, SignalIcon, XMarkIcon, Cog6ToothIcon, CheckCircleIcon } from '@heroicons/vue/24/outline'
+import { PaperAirplaneIcon, UserGroupIcon, SignalIcon, XMarkIcon, Cog6ToothIcon, CheckCircleIcon, LinkIcon } from '@heroicons/vue/24/outline'
 
 const loading = ref(true)
 const botInfo = ref(null)
@@ -14,6 +14,17 @@ const settingsForm = reactive({ enabled: false, botToken: '', botUsername: 'hiso
 const savingSettings = ref(false)
 const settingsLoaded = ref(false)
 
+// My Telegram link state
+const myTelegram = reactive({
+  linked: false,
+  linkedAt: '',
+  botUsername: '',
+  linkCode: '',
+  loading: false,
+  generatingCode: false,
+  unlinking: false
+})
+
 // Send message modal
 const showSendModal = ref(false)
 const sendTarget = ref(null)
@@ -23,8 +34,52 @@ const sending = ref(false)
 const botConnected = computed(() => botInfo.value && botInfo.value.botName)
 
 onMounted(async () => {
-  await loadData()
+  await Promise.all([loadData(), loadMyTelegramStatus()])
 })
+
+async function loadMyTelegramStatus() {
+  myTelegram.loading = true
+  try {
+    const res = await telegramApi.getStatus()
+    myTelegram.linked = res.data.linked
+    myTelegram.botUsername = res.data.botUsername
+    myTelegram.linkedAt = res.data.linkedAt
+  } catch (e) {
+    // Silently fail — user-facing status endpoint may not be available
+  } finally {
+    myTelegram.loading = false
+  }
+}
+
+async function generateMyCode() {
+  myTelegram.generatingCode = true
+  error.value = ''
+  try {
+    const res = await telegramApi.generateLinkCode()
+    myTelegram.linkCode = res.data.code
+    myTelegram.botUsername = res.data.botUsername
+  } catch (e) {
+    error.value = e.response?.data?.message || 'Kod yaratishda xatolik'
+  } finally {
+    myTelegram.generatingCode = false
+  }
+}
+
+async function unlinkMyTelegram() {
+  if (!confirm('Telegram akkauntni uzmoqchimisiz?')) return
+  myTelegram.unlinking = true
+  try {
+    await telegramApi.unlink()
+    myTelegram.linked = false
+    myTelegram.linkedAt = ''
+    myTelegram.linkCode = ''
+    await loadData() // refresh connected users list
+  } catch (e) {
+    error.value = e.response?.data?.message || 'Uzishda xatolik'
+  } finally {
+    myTelegram.unlinking = false
+  }
+}
 
 async function loadData() {
   loading.value = true
@@ -227,6 +282,78 @@ function formatDate(dateStr) {
             >
               <CheckCircleIcon class="h-4 w-4" />
               {{ savingSettings ? 'Saqlanmoqda...' : 'Saqlash' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- My Telegram Account Link -->
+      <div class="card">
+        <div class="card-header flex items-center gap-2">
+          <LinkIcon class="h-5 w-5 text-gray-500" />
+          <h3 class="text-lg font-medium">Mening Telegram akkauntim</h3>
+        </div>
+        <div class="card-body">
+          <div v-if="myTelegram.loading" class="flex items-center justify-center py-4">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+          </div>
+
+          <!-- Linked state -->
+          <div v-else-if="myTelegram.linked" class="space-y-3">
+            <div class="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <span class="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+              <div>
+                <p class="font-medium text-green-800">Telegram ulangan</p>
+                <p v-if="myTelegram.linkedAt" class="text-sm text-green-600">
+                  Ulangan sana: {{ formatDate(myTelegram.linkedAt) }}
+                </p>
+              </div>
+            </div>
+            <button
+              @click="unlinkMyTelegram"
+              :disabled="myTelegram.unlinking"
+              class="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50"
+            >
+              {{ myTelegram.unlinking ? 'Uzilmoqda...' : 'Telegramni uzish' }}
+            </button>
+          </div>
+
+          <!-- Not linked state -->
+          <div v-else class="space-y-4">
+            <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p class="font-medium text-blue-800 mb-2">Telegram botga ulanish</p>
+              <ol class="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                <li>"Kod olish" tugmasini bosing</li>
+                <li>Telegramda <b>@{{ myTelegram.botUsername || settingsForm.botUsername || 'hisobnoma_bot' }}</b> botni oching</li>
+                <li>Olingan 6 raqamli kodni botga yuboring</li>
+              </ol>
+            </div>
+
+            <!-- Link code display -->
+            <div v-if="myTelegram.linkCode" class="text-center space-y-3">
+              <p class="text-sm text-gray-600">Ushbu kodni Telegram botga yuboring:</p>
+              <div class="inline-block px-8 py-4 bg-gray-900 rounded-xl">
+                <span class="text-3xl font-mono font-bold text-white tracking-widest">{{ myTelegram.linkCode }}</span>
+              </div>
+              <p class="text-xs text-gray-400">Kod 10 daqiqa amal qiladi</p>
+              <div>
+                <a
+                  :href="'https://t.me/' + (myTelegram.botUsername || settingsForm.botUsername || 'hisobnoma_bot')"
+                  target="_blank"
+                  class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg"
+                >
+                  <PaperAirplaneIcon class="h-4 w-4" />
+                  Telegram botni ochish
+                </a>
+              </div>
+            </div>
+
+            <button
+              @click="generateMyCode"
+              :disabled="myTelegram.generatingCode"
+              class="btn-primary"
+            >
+              {{ myTelegram.generatingCode ? 'Yaratilmoqda...' : (myTelegram.linkCode ? 'Yangi kod olish' : 'Kod olish') }}
             </button>
           </div>
         </div>
