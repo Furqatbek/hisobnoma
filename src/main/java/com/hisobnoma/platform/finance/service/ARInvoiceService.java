@@ -91,7 +91,7 @@ public class ARInvoiceService {
                 ARInvoiceStatus.PARTIAL, ARInvoiceStatus.OVERDUE
         );
         List<ARInvoice> invoices = arInvoiceRepository.findUnpaidByCustomer(tenantId, customerId, unpaidStatuses);
-        return arInvoiceMapper.toDtoList(invoices);
+        return invoices.stream().map(arInvoiceMapper::toDto).toList();
     }
 
     @Transactional(readOnly = true)
