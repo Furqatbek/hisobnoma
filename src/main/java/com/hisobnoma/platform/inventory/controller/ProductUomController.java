@@ -20,19 +20,19 @@ public class ProductUomController {
     private final ProductUomService productUomService;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_VIEW')")
+    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_READ')")
     public ResponseEntity<List<ProductUomDto>> getByProduct(@PathVariable Long productId) {
         return ResponseEntity.ok(productUomService.getByProduct(productId));
     }
 
     @GetMapping("/active")
-    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_VIEW')")
+    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_READ')")
     public ResponseEntity<List<ProductUomDto>> getActiveByProduct(@PathVariable Long productId) {
         return ResponseEntity.ok(productUomService.getActiveByProduct(productId));
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_EDIT')")
+    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_UPDATE')")
     public ResponseEntity<ProductUomDto> create(
             @PathVariable Long productId,
             @Valid @RequestBody CreateProductUomRequest request) {
@@ -41,7 +41,7 @@ public class ProductUomController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_EDIT')")
+    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_UPDATE')")
     public ResponseEntity<ProductUomDto> update(
             @PathVariable Long productId,
             @PathVariable Long id,
@@ -50,7 +50,7 @@ public class ProductUomController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_EDIT')")
+    @PreAuthorize("hasAuthority('INVENTORY_PRODUCT_DELETE')")
     public ResponseEntity<Void> delete(
             @PathVariable Long productId,
             @PathVariable Long id) {
