@@ -116,19 +116,19 @@ function handleSearch() {
 function transformOrderForReceipt(order) {
   return {
     id: order.id,
-    orderNumber: order.orderNumber || `PO-${order.id}`,
+    orderNumber: order.poNumber || `PO-${order.id}`,
     orderDate: order.orderDate || order.createdAt,
     createdAt: order.createdAt,
-    customer: order.vendor || order.supplier,
-    items: (order.items || []).map(item => ({
+    customer: { name: order.vendorName },
+    items: (order.lines || []).map(item => ({
       ...item,
-      productName: item.product?.name || item.productName,
+      productName: item.productName,
       price: item.unitPrice,
       unitPrice: item.unitPrice
     })),
     totalAmount: order.totalAmount,
     subtotal: order.subtotal,
-    tax: order.tax,
+    tax: order.taxAmount,
     payments: []
   }
 }
@@ -190,10 +190,10 @@ function transformOrderForReceipt(order) {
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-for="order in orders" :key="order.id">
-              <td class="font-mono">{{ order.orderNumber || `PO-${order.id}` }}</td>
-              <td>{{ order.vendor?.name || order.supplier?.name || '-' }}</td>
+              <td class="font-mono">{{ order.poNumber || `PO-${order.id}` }}</td>
+              <td>{{ order.vendorName || '-' }}</td>
               <td>{{ formatDate(order.orderDate || order.createdAt) }}</td>
-              <td>{{ order.items?.length || 0 }} ta</td>
+              <td>{{ order.lines?.length || '-' }}</td>
               <td class="text-right font-medium">{{ formatCurrency(order.totalAmount) }} so'm</td>
               <td>
                 <span :class="['badge', getStatusClass(order.status)]">{{ getStatusLabel(order.status) }}</span>
@@ -258,7 +258,7 @@ function transformOrderForReceipt(order) {
               Buyurtma tafsilotlari
             </h2>
             <p class="text-sm text-gray-500">
-              {{ selectedOrder?.orderNumber || `PO-${selectedOrder?.id}` }}
+              {{ selectedOrder?.poNumber || `PO-${selectedOrder?.id}` }}
             </p>
           </div>
           <div class="flex items-center gap-2">
@@ -304,14 +304,14 @@ function transformOrderForReceipt(order) {
                 </div>
                 <div>
                   <label class="text-sm text-gray-500">Yetkazib beruvchi</label>
-                  <p class="font-medium">{{ selectedOrder.vendor?.name || selectedOrder.supplier?.name || '-' }}</p>
-                  <p v-if="selectedOrder.vendor?.phone || selectedOrder.supplier?.phone" class="text-sm text-gray-500">
-                    {{ selectedOrder.vendor?.phone || selectedOrder.supplier?.phone }}
+                  <p class="font-medium">{{ selectedOrder.vendorName || '-' }}</p>
+                  <p v-if="selectedOrder.vendorCode" class="text-sm text-gray-500">
+                    {{ selectedOrder.vendorCode }}
                   </p>
                 </div>
                 <div>
                   <label class="text-sm text-gray-500">Ombor</label>
-                  <p class="font-medium">{{ selectedOrder.location?.name || selectedOrder.warehouse?.name || '-' }}</p>
+                  <p class="font-medium">{{ selectedOrder.locationName || '-' }}</p>
                 </div>
               </div>
 
@@ -329,14 +329,14 @@ function transformOrderForReceipt(order) {
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                      <tr v-for="item in selectedOrder.items" :key="item.id">
+                      <tr v-for="line in selectedOrder.lines" :key="line.id">
                         <td class="px-4 py-3">
-                          <p class="font-medium">{{ item.product?.name || item.productName }}</p>
-                          <p v-if="item.product?.sku" class="text-sm text-gray-500">{{ item.product.sku }}</p>
+                          <p class="font-medium">{{ line.productName }}</p>
+                          <p v-if="line.productSku" class="text-sm text-gray-500">{{ line.productSku }}</p>
                         </td>
-                        <td class="px-4 py-3 text-right">{{ item.quantity }}</td>
-                        <td class="px-4 py-3 text-right">{{ formatCurrency(item.unitPrice) }} so'm</td>
-                        <td class="px-4 py-3 text-right font-medium">{{ formatCurrency(item.quantity * item.unitPrice) }} so'm</td>
+                        <td class="px-4 py-3 text-right">{{ line.quantity }}</td>
+                        <td class="px-4 py-3 text-right">{{ formatCurrency(line.unitPrice) }} so'm</td>
+                        <td class="px-4 py-3 text-right font-medium">{{ formatCurrency(line.lineTotal) }} so'm</td>
                       </tr>
                     </tbody>
                   </table>
@@ -350,9 +350,9 @@ function transformOrderForReceipt(order) {
                     <span class="text-gray-600">Oraliq summa:</span>
                     <span>{{ formatCurrency(selectedOrder.subtotal) }} so'm</span>
                   </div>
-                  <div class="flex justify-between" v-if="selectedOrder.tax">
+                  <div class="flex justify-between" v-if="selectedOrder.taxAmount">
                     <span class="text-gray-600">Soliq:</span>
-                    <span>{{ formatCurrency(selectedOrder.tax) }} so'm</span>
+                    <span>{{ formatCurrency(selectedOrder.taxAmount) }} so'm</span>
                   </div>
                   <div class="flex justify-between text-lg font-bold border-t pt-2">
                     <span>Jami:</span>
