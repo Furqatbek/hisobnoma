@@ -66,6 +66,15 @@ public interface POSTransactionRepository extends JpaRepository<POSTransaction, 
     @Query("SELECT COUNT(t) FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.shift.id = :shiftId AND t.status = 'VOIDED'")
     Long countVoidedByShiftId(@Param("shiftId") Long shiftId, @Param("tenantId") Long tenantId);
 
+    @Query("SELECT COUNT(t) FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.shift.id = :shiftId AND t.status = 'COMPLETED' AND t.transactionType = 'RETURN'")
+    Long countReturnsByShiftId(@Param("shiftId") Long shiftId, @Param("tenantId") Long tenantId);
+
+    @Query("SELECT COALESCE(SUM(t.discountAmount), 0) FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.shift.id = :shiftId AND t.status = 'COMPLETED'")
+    BigDecimal sumDiscountsByShiftId(@Param("shiftId") Long shiftId, @Param("tenantId") Long tenantId);
+
+    @Query("SELECT COALESCE(SUM(t.taxAmount), 0) FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.shift.id = :shiftId AND t.status = 'COMPLETED'")
+    BigDecimal sumTaxesByShiftId(@Param("shiftId") Long shiftId, @Param("tenantId") Long tenantId);
+
     @Query("SELECT t FROM POSTransaction t WHERE t.tenantId = :tenantId AND " +
            "(LOWER(t.transactionNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(t.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +

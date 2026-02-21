@@ -25,7 +25,7 @@ public interface POSPaymentRepository extends JpaRepository<POSPayment, Long> {
     @Query("SELECT SUM(p.amount) FROM POSPayment p WHERE p.transaction.id = :transactionId AND p.status = 'APPROVED'")
     BigDecimal sumApprovedByTransactionId(@Param("transactionId") Long transactionId);
 
-    @Query("SELECT SUM(p.amount) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type AND p.status = 'APPROVED'")
+    @Query("SELECT SUM(p.amount) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type AND p.status = 'APPROVED' AND p.transaction.status = 'COMPLETED'")
     BigDecimal sumByShiftIdAndPaymentType(@Param("shiftId") Long shiftId, @Param("type") POSPaymentType type);
 
     @Query("SELECT p FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type ORDER BY p.createdAt DESC")

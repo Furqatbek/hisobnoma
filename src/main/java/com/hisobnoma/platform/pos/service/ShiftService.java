@@ -156,16 +156,21 @@ public class ShiftService {
         // Calculate totals from transactions
         BigDecimal totalSales = transactionRepository.sumSalesByShiftId(shiftId, tenantId);
         BigDecimal totalReturns = transactionRepository.sumReturnsByShiftId(shiftId, tenantId);
+        BigDecimal totalDiscounts = transactionRepository.sumDiscountsByShiftId(shiftId, tenantId);
+        BigDecimal totalTaxes = transactionRepository.sumTaxesByShiftId(shiftId, tenantId);
         Long completedCount = transactionRepository.countCompletedByShiftId(shiftId, tenantId);
         Long voidedCount = transactionRepository.countVoidedByShiftId(shiftId, tenantId);
+        Long returnCount = transactionRepository.countReturnsByShiftId(shiftId, tenantId);
 
-        // Calculate payment totals by type
+        // Calculate payment totals by type (all queries filter by completed transactions)
         BigDecimal cashPayments = paymentRepository.sumByShiftIdAndPaymentType(shiftId, POSPaymentType.CASH);
         BigDecimal cardPayments = paymentRepository.sumByShiftIdAndPaymentType(shiftId, POSPaymentType.CARD);
-        BigDecimal otherPayments = paymentRepository.sumAllByShiftId(shiftId);
-        if (otherPayments != null && cashPayments != null && cardPayments != null) {
-            otherPayments = otherPayments.subtract(cashPayments).subtract(cardPayments);
-        }
+        BigDecimal allPayments = paymentRepository.sumAllByShiftId(shiftId);
+
+        BigDecimal safeCash = cashPayments != null ? cashPayments : BigDecimal.ZERO;
+        BigDecimal safeCard = cardPayments != null ? cardPayments : BigDecimal.ZERO;
+        BigDecimal safeAll = allPayments != null ? allPayments : BigDecimal.ZERO;
+        BigDecimal otherPayments = safeAll.subtract(safeCash).subtract(safeCard);
 
         // Update shift
         shift.setStatus(ShiftStatus.CLOSED);
@@ -174,11 +179,14 @@ public class ShiftService {
         shift.setClosingNotes(request.getClosingNotes());
         shift.setTotalSales(totalSales != null ? totalSales : BigDecimal.ZERO);
         shift.setTotalReturns(totalReturns != null ? totalReturns : BigDecimal.ZERO);
-        shift.setCashPayments(cashPayments != null ? cashPayments : BigDecimal.ZERO);
-        shift.setCardPayments(cardPayments != null ? cardPayments : BigDecimal.ZERO);
-        shift.setOtherPayments(otherPayments != null ? otherPayments : BigDecimal.ZERO);
+        shift.setTotalDiscounts(totalDiscounts != null ? totalDiscounts : BigDecimal.ZERO);
+        shift.setTotalTaxes(totalTaxes != null ? totalTaxes : BigDecimal.ZERO);
+        shift.setCashPayments(safeCash);
+        shift.setCardPayments(safeCard);
+        shift.setOtherPayments(otherPayments);
         shift.setTransactionCount(completedCount != null ? completedCount.intValue() : 0);
         shift.setVoidedCount(voidedCount != null ? voidedCount.intValue() : 0);
+        shift.setReturnCount(returnCount != null ? returnCount.intValue() : 0);
 
         // Calculate expected cash and difference
         shift.calculateExpectedCash();
