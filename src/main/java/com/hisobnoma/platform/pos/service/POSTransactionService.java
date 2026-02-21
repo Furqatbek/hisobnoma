@@ -165,7 +165,7 @@ public class POSTransactionService {
                 }
 
                 BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() :
-                        (variant != null && variant.getSellingPrice() != null ? variant.getSellingPrice() : product.getSellingPrice());
+                        (variant != null ? variant.getEffectiveSellingPrice() : product.getSellingPrice());
 
                 // Calculate tax
                 BigDecimal taxAmount = BigDecimal.ZERO;
@@ -197,7 +197,7 @@ public class POSTransactionService {
                         .quantity(item.getQuantity())
                         .unitPrice(unitPrice)
                         .originalPrice(product.getSellingPrice())
-                        .costPrice(product.getCostPrice())
+                        .costPrice(variant != null ? variant.getEffectiveCostPrice() : product.getCostPrice())
                         .discountAmount(lineDiscount)
                         .discountReason(item.getDiscountReason())
                         .taxCode(taxCode)
@@ -241,7 +241,7 @@ public class POSTransactionService {
 
         // Determine unit price
         BigDecimal unitPrice = request.getUnitPrice() != null ? request.getUnitPrice() :
-                (variant != null && variant.getSellingPrice() != null ? variant.getSellingPrice() : product.getSellingPrice());
+                (variant != null ? variant.getEffectiveSellingPrice() : product.getSellingPrice());
 
         // Get next line number
         Integer maxLineNumber = lineRepository.findMaxLineNumberByTransactionId(transactionId);
@@ -276,7 +276,7 @@ public class POSTransactionService {
                 .quantity(request.getQuantity())
                 .unitPrice(unitPrice)
                 .originalPrice(product.getSellingPrice())
-                .costPrice(product.getCostPrice())
+                .costPrice(variant != null ? variant.getEffectiveCostPrice() : product.getCostPrice())
                 .discountAmount(lineDiscount)
                 .discountPercent(request.getDiscountPercent())
                 .discountReason(request.getDiscountReason())
