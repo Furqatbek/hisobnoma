@@ -52,6 +52,7 @@ public class POSTransactionService {
     private final TaxCalculationService taxCalculationService;
     private final GLIntegrationService glIntegrationService;
     private final ARInvoiceService arInvoiceService;
+    private final ShiftService shiftService;
 
     @Transactional(readOnly = true)
     public Page<POSTransactionDto> findAll(Pageable pageable) {
@@ -426,13 +427,11 @@ public class POSTransactionService {
         transaction.setVoidedAt(Instant.now());
         transaction.setVoidedBy(userId);
         transaction.setVoidReason(request.getReason());
-
-        // Update shift voided count
-        Shift shift = transaction.getShift();
-        shift.setVoidedCount(shift.getVoidedCount() + 1);
-        shiftRepository.save(shift);
-
         transaction = transactionRepository.save(transaction);
+
+        // Recalculate shift totals (voidedCount, totalSales, etc. all recomputed from queries)
+        shiftService.recalculateShiftTotals(transaction.getShift().getId());
+
         log.info("Voided transaction {}: {}", transaction.getTransactionNumber(), request.getReason());
 
         return transactionMapper.toDto(transaction);
@@ -485,13 +484,10 @@ public class POSTransactionService {
         transaction.setStatus(TransactionStatus.COMPLETED);
         transaction.setCompletedAt(Instant.now());
         transaction.setCompletedBy(userId);
-
-        // Update shift totals
-        Shift shift = transaction.getShift();
-        shift.addTransaction(transaction);
-        shiftRepository.save(shift);
-
         transaction = transactionRepository.save(transaction);
+
+        // Recalculate shift totals from queries (single source of truth)
+        shiftService.recalculateShiftTotals(transaction.getShift().getId());
 
         log.info("Completed transaction {}", transaction.getTransactionNumber());
 
@@ -814,6 +810,9 @@ public class POSTransactionService {
             log.error("Failed to post return transaction {} to GL: {}. Retry via POST /api/v1/pos/transactions/{}/retry-gl",
                     returnTransaction.getTransactionNumber(), e.getMessage(), returnTransaction.getId());
         }
+
+        // Recalculate shift totals
+        shiftService.recalculateShiftTotals(returnTransaction.getShift().getId());
 
         log.info("Created return transaction: {}", returnTransaction.getTransactionNumber());
         return transactionMapper.toDto(returnTransaction);

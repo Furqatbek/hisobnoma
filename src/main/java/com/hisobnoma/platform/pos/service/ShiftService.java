@@ -146,14 +146,49 @@ public class ShiftService {
 
     @Transactional
     public ShiftDto closeShift(Long shiftId, CloseShiftRequest request) {
-        Long tenantId = securityContextHelper.getCurrentTenantId();
         Shift shift = getShiftById(shiftId);
 
         if (shift.getStatus() != ShiftStatus.OPEN) {
             throw new BusinessException("Shift is not open");
         }
 
-        // Calculate totals from transactions
+        recalculateShiftTotals(shift);
+
+        // Close the shift
+        shift.setStatus(ShiftStatus.CLOSED);
+        shift.setClosedAt(Instant.now());
+        shift.setClosingCash(request.getClosingCash());
+        shift.setClosingNotes(request.getClosingNotes());
+        shift.calculateExpectedCash();
+        shift.calculateCashDifference();
+
+        shift = shiftRepository.save(shift);
+
+        // Clear terminal's current shift
+        terminalService.updateCurrentShift(shift.getTerminal().getId(), null);
+
+        log.info("Closed shift {} on terminal {} with difference {}",
+                shift.getShiftNumber(), shift.getTerminal().getTerminalCode(), shift.getCashDifference());
+
+        return shiftMapper.toDto(shift);
+    }
+
+    /**
+     * Recalculates all shift totals from transaction and payment queries.
+     * Single source of truth — called after every transaction change and at shift close.
+     */
+    @Transactional
+    public void recalculateShiftTotals(Long shiftId) {
+        Shift shift = getShiftById(shiftId);
+        recalculateShiftTotals(shift);
+        shiftRepository.save(shift);
+    }
+
+    private void recalculateShiftTotals(Shift shift) {
+        Long shiftId = shift.getId();
+        Long tenantId = shift.getTenantId();
+
+        // Transaction totals
         BigDecimal totalSales = transactionRepository.sumSalesByShiftId(shiftId, tenantId);
         BigDecimal totalReturns = transactionRepository.sumReturnsByShiftId(shiftId, tenantId);
         BigDecimal totalDiscounts = transactionRepository.sumDiscountsByShiftId(shiftId, tenantId);
@@ -162,24 +197,18 @@ public class ShiftService {
         Long voidedCount = transactionRepository.countVoidedByShiftId(shiftId, tenantId);
         Long returnCount = transactionRepository.countReturnsByShiftId(shiftId, tenantId);
 
-        // Calculate payment totals — sales and refunds split for reconciliation.
-        // Sales payments (from SALE transactions only):
+        // Sales payments (from SALE transactions only)
         BigDecimal cashPayments = paymentRepository.sumSalesByShiftIdAndPaymentType(shiftId, POSPaymentType.CASH);
         BigDecimal cardPayments = paymentRepository.sumSalesByShiftIdAndPaymentType(shiftId, POSPaymentType.CARD);
         BigDecimal allSalePayments = paymentRepository.sumAllSalesByShiftId(shiftId);
         BigDecimal otherPayments = allSalePayments.subtract(cashPayments).subtract(cardPayments);
 
-        // Refund payments (from RETURN transactions only, stored as positive for display):
+        // Refund payments (from RETURN transactions only, stored as positive for display)
         BigDecimal cashRefunds = paymentRepository.sumRefundsByShiftIdAndPaymentType(shiftId, POSPaymentType.CASH).abs();
         BigDecimal cardRefunds = paymentRepository.sumRefundsByShiftIdAndPaymentType(shiftId, POSPaymentType.CARD).abs();
         BigDecimal allRefundPayments = paymentRepository.sumAllRefundsByShiftId(shiftId).abs();
         BigDecimal otherRefunds = allRefundPayments.subtract(cashRefunds).subtract(cardRefunds);
 
-        // Update shift
-        shift.setStatus(ShiftStatus.CLOSED);
-        shift.setClosedAt(Instant.now());
-        shift.setClosingCash(request.getClosingCash());
-        shift.setClosingNotes(request.getClosingNotes());
         shift.setTotalSales(totalSales != null ? totalSales : BigDecimal.ZERO);
         shift.setTotalReturns(totalReturns != null ? totalReturns : BigDecimal.ZERO);
         shift.setTotalDiscounts(totalDiscounts != null ? totalDiscounts : BigDecimal.ZERO);
@@ -193,20 +222,6 @@ public class ShiftService {
         shift.setTransactionCount(completedCount != null ? completedCount.intValue() : 0);
         shift.setVoidedCount(voidedCount != null ? voidedCount.intValue() : 0);
         shift.setReturnCount(returnCount != null ? returnCount.intValue() : 0);
-
-        // Calculate expected cash and difference
-        shift.calculateExpectedCash();
-        shift.calculateCashDifference();
-
-        shift = shiftRepository.save(shift);
-
-        // Clear terminal's current shift
-        terminalService.updateCurrentShift(shift.getTerminal().getId(), null);
-
-        log.info("Closed shift {} on terminal {} with difference {}",
-                shift.getShiftNumber(), shift.getTerminal().getTerminalCode(), shift.getCashDifference());
-
-        return shiftMapper.toDto(shift);
     }
 
     @Transactional

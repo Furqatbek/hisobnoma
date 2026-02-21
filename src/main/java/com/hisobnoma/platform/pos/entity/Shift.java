@@ -143,19 +143,4 @@ public class Shift extends TenantAwareEntity {
         }
     }
 
-    public void addTransaction(POSTransaction transaction) {
-        this.transactionCount++;
-        if (transaction.getTransactionType() == TransactionType.SALE) {
-            this.totalSales = this.totalSales.add(transaction.getTotalAmount());
-        } else if (transaction.getTransactionType() == TransactionType.RETURN) {
-            this.totalReturns = this.totalReturns.add(transaction.getTotalAmount());
-            this.returnCount++;
-        }
-        if (transaction.getDiscountAmount() != null) {
-            this.totalDiscounts = this.totalDiscounts.add(transaction.getDiscountAmount());
-        }
-        if (transaction.getTaxAmount() != null) {
-            this.totalTaxes = this.totalTaxes.add(transaction.getTaxAmount());
-        }
-    }
 }
