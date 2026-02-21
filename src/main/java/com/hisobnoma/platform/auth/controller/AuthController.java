@@ -11,6 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -30,6 +33,37 @@ public class AuthController {
 
         AuthResponse response = authService.login(request, ipAddress, deviceInfo);
         return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
+    }
+
+    @PostMapping("/pin-login")
+    @Operation(summary = "Login with PIN code (POS)")
+    public ResponseEntity<ApiResponse<AuthResponse>> pinLogin(
+            @Valid @RequestBody PinLoginRequest request,
+            HttpServletRequest httpRequest) {
+
+        String ipAddress = getClientIpAddress(httpRequest);
+        String deviceInfo = httpRequest.getHeader("User-Agent");
+
+        AuthResponse response = authService.loginWithPin(request, ipAddress, deviceInfo);
+        return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
+    }
+
+    @GetMapping("/users/list")
+    @Operation(summary = "Get active users for POS login screen")
+    public ResponseEntity<ApiResponse<List<UserListItem>>> getActiveUsers() {
+        return ResponseEntity.ok(ApiResponse.success(authService.getActiveUserList()));
+    }
+
+    @PutMapping("/set-pin")
+    @Operation(summary = "Set PIN code for current user")
+    public ResponseEntity<ApiResponse<Void>> setPin(@RequestBody Map<String, String> request) {
+        String pin = request.get("pin");
+        if (pin == null || pin.length() < 4 || pin.length() > 6) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("PIN must be 4-6 digits"));
+        }
+        authService.setPin(pin);
+        return ResponseEntity.ok(ApiResponse.success("PIN set successfully"));
     }
 
     @PostMapping("/refresh")

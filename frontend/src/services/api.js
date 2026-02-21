@@ -65,6 +65,9 @@ export default api
 // Auth API
 export const authApi = {
   login: (credentials) => api.post('/auth/login', credentials),
+  pinLogin: (credentials) => api.post('/auth/pin-login', credentials),
+  getUsersList: () => api.get('/auth/users/list'),
+  setPin: (pin) => api.put('/auth/set-pin', { pin }),
   logout: () => api.post('/auth/logout'),
   refresh: (refreshToken) => api.post('/auth/refresh', { refreshToken }),
   forgotPassword: (phone) => api.post('/auth/forgot-password', { phone }),

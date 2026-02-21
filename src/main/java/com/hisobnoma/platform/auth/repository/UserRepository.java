@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -44,6 +45,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByTenantId(Long tenantId);
 
     long countByTenantIdAndEnabledTrue(Long tenantId);
+
+    @Query("SELECT u FROM User u WHERE u.enabled = true ORDER BY u.firstName, u.username")
+    List<User> findAllActiveUsers();
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.tenantId = :tenantId AND u.createdAt >= :since")
     long countByTenantIdAndCreatedAtAfter(@Param("tenantId") Long tenantId, @Param("since") Instant since);

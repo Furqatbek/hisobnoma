@@ -53,6 +53,9 @@ public class User extends TenantAwareEntity {
     @Column(nullable = false)
     private String passwordHash;
 
+    @Column(name = "pin_hash")
+    private String pinHash;
+
     @Column(length = 50)
     private String firstName;
 

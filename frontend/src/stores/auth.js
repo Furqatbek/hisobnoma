@@ -53,6 +53,29 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function pinLogin(credentials) {
+    loading.value = true
+    error.value = null
+
+    try {
+      setRememberMe(false)
+
+      const response = await authApi.pinLogin(credentials)
+      const { accessToken, refreshToken, user: userData } = response.data.data
+
+      setTokens(accessToken, refreshToken)
+      user.value = userData
+
+      router.push('/dashboard')
+      return { success: true }
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Invalid PIN'
+      return { success: false, error: error.value }
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function logout() {
     try {
       await authApi.logout()
@@ -115,6 +138,7 @@ export const useAuthStore = defineStore('auth', () => {
     hasRole,
     hasAnyRole,
     login,
+    pinLogin,
     logout,
     fetchUser,
     initializeAuth,

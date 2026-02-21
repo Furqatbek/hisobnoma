@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -85,6 +86,72 @@ public class AuthService {
             handleFailedLogin(user);
             throw new UnauthorizedException("Invalid credentials");
         }
+    }
+
+    @Transactional
+    public AuthResponse loginWithPin(PinLoginRequest request, String ipAddress, String deviceInfo) {
+        User user = userRepository.findByUsernameWithRolesAndPermissions(request.getUsername())
+                .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
+
+        if (user.isLocked() && !user.isAccountNonLocked()) {
+            throw new LockedException("Account is locked. Try again later.");
+        }
+
+        if (user.getPinHash() == null) {
+            throw new BusinessException("PIN not set for this user. Use password login.");
+        }
+
+        if (!passwordEncoder.matches(request.getPin(), user.getPinHash())) {
+            handleFailedLogin(user);
+            throw new UnauthorizedException("Invalid PIN");
+        }
+
+        user.resetFailedLoginAttempts();
+        user.setLastLoginAt(Instant.now());
+        userRepository.save(user);
+
+        UserPrincipal userPrincipal = UserPrincipal.create(user);
+        String accessToken = tokenProvider.generateAccessToken(userPrincipal);
+        String refreshToken = createRefreshToken(user, ipAddress, deviceInfo, false);
+
+        return buildAuthResponse(accessToken, refreshToken, user, userPrincipal, false);
+    }
+
+    public List<UserListItem> getActiveUserList() {
+        return userRepository.findAllActiveUsers().stream()
+                .map(u -> {
+                    String initials = "";
+                    if (u.getFirstName() != null && !u.getFirstName().isEmpty()) {
+                        initials += u.getFirstName().substring(0, 1).toUpperCase();
+                    }
+                    if (u.getLastName() != null && !u.getLastName().isEmpty()) {
+                        initials += u.getLastName().substring(0, 1).toUpperCase();
+                    }
+                    if (initials.isEmpty()) {
+                        initials = u.getUsername().substring(0, Math.min(2, u.getUsername().length())).toUpperCase();
+                    }
+                    return UserListItem.builder()
+                            .id(u.getId())
+                            .username(u.getUsername())
+                            .firstName(u.getFirstName())
+                            .lastName(u.getLastName())
+                            .fullName(u.getFullName())
+                            .initials(initials)
+                            .hasPin(u.getPinHash() != null)
+                            .build();
+                })
+                .toList();
+    }
+
+    @Transactional
+    public void setPin(String pin) {
+        UserPrincipal currentUser = securityContextHelper.getRequiredCurrentUser();
+        User user = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new UnauthorizedException("User not found"));
+
+        user.setPinHash(passwordEncoder.encode(pin));
+        userRepository.save(user);
+        log.info("PIN set for user {}", user.getUsername());
     }
 
     @Transactional
