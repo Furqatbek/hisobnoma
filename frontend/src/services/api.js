@@ -28,6 +28,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
+    // Handle 403 - redirect to no access page
+    if (error.response?.status === 403) {
+      router.push('/no-access')
+      return Promise.reject(error)
+    }
+
     // Handle 401 - try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true

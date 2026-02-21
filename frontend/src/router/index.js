@@ -351,6 +351,11 @@ const routes = [
     ]
   },
   {
+    path: '/no-access',
+    name: 'no-access',
+    component: () => import('@/views/NoAccessView.vue')
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue')
@@ -381,7 +386,7 @@ router.beforeEach(async (to, from, next) => {
     // Check permissions
     const permission = to.meta.permission
     if (permission && !authStore.hasPermission(permission)) {
-      next({ name: 'dashboard' })
+      next({ name: 'no-access' })
       return
     }
   }
