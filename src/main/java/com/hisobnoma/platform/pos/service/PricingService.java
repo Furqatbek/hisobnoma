@@ -216,8 +216,12 @@ public class PricingService {
     private BigDecimal getBasePrice(Product product, Long variantId) {
         if (variantId != null) {
             ProductVariant variant = variantRepository.findById(variantId).orElse(null);
-            if (variant != null && variant.getSellingPrice() != null) {
-                return variant.getSellingPrice();
+            if (variant != null) {
+                // Use effective price which falls back to product price + priceDifference
+                BigDecimal effectivePrice = variant.getEffectiveSellingPrice();
+                if (effectivePrice != null) {
+                    return effectivePrice;
+                }
             }
         }
         return product.getSellingPrice() != null ? product.getSellingPrice() : BigDecimal.ZERO;

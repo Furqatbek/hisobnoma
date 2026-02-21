@@ -42,6 +42,7 @@ public class POSTransactionService {
 
     private final POSTransactionRepository transactionRepository;
     private final POSTransactionLineRepository lineRepository;
+    private final POSPaymentRepository paymentRepository;
     private final ShiftRepository shiftRepository;
     private final POSTerminalRepository terminalRepository;
     private final ProductRepository productRepository;
@@ -852,6 +853,17 @@ public class POSTransactionService {
                         .findFirst()
                         .orElseThrow(() -> new NotFoundException("Original transaction line", item.getOriginalLineId()));
 
+                // Validate return quantity does not exceed remaining returnable quantity
+                BigDecimal alreadyReturned = lineRepository.sumReturnedQuantityByOriginalLineId(
+                        item.getOriginalLineId());
+                BigDecimal remainingReturnable = originalLine.getQuantity().subtract(alreadyReturned);
+                if (item.getQuantity().compareTo(remainingReturnable) > 0) {
+                    throw new BusinessException(
+                            "Cannot return " + item.getQuantity() + " of product " + product.getName() +
+                            ". Only " + remainingReturnable + " remaining (original: " +
+                            originalLine.getQuantity() + ", already returned: " + alreadyReturned + ")");
+                }
+
                 if (unitPrice == null) {
                     unitPrice = originalLine.getUnitPrice();
                 }
@@ -929,12 +941,31 @@ public class POSTransactionService {
         returnTransaction.recalculateTotals();
         returnTransaction = transactionRepository.save(returnTransaction);
 
+        // Create refund payment record based on the requested refund method
+        BigDecimal refundAmount = returnTransaction.getTotalAmount().abs();
+        POSPaymentType refundPaymentType = mapRefundMethodToPaymentType(
+                request.getRefundMethod(), originalTransaction);
+        POSPayment refundPayment = POSPayment.builder()
+                .transaction(returnTransaction)
+                .paymentNumber(1)
+                .paymentType(refundPaymentType)
+                .amount(refundAmount)
+                .notes("Refund for return: " + returnTransaction.getTransactionNumber())
+                .build();
+        refundPayment.approve();
+        refundPayment.setProcessedBy(userId);
+        refundPayment = paymentRepository.save(refundPayment);
+        returnTransaction.addPayment(refundPayment);
+        returnTransaction = transactionRepository.save(returnTransaction);
+
         // Restore stock for returned items
         restoreStockForReturn(returnTransaction);
 
-        // Complete the return immediately
+        // Complete the return
         returnTransaction.setStatus(TransactionStatus.COMPLETED);
         returnTransaction.setCompletedAt(Instant.now());
+        returnTransaction.setCompletedBy(userId);
+        returnTransaction.setStockDeducted(true);
         returnTransaction = transactionRepository.save(returnTransaction);
 
         // Post to GL
@@ -969,6 +1000,37 @@ public class POSTransactionService {
                         "POS Return: " + transaction.getTransactionNumber()
                 );
             }
+        }
+    }
+
+    /**
+     * Map the refund method from the request to a POSPaymentType.
+     * ORIGINAL_PAYMENT_METHOD looks at the original transaction's primary payment type.
+     */
+    private POSPaymentType mapRefundMethodToPaymentType(
+            CreateReturnRequest.RefundMethod refundMethod, POSTransaction originalTransaction) {
+        if (refundMethod == null) {
+            return POSPaymentType.CASH;
+        }
+        switch (refundMethod) {
+            case CASH:
+                return POSPaymentType.CASH;
+            case CARD:
+                return POSPaymentType.CARD;
+            case STORE_CREDIT:
+                return POSPaymentType.CREDIT;
+            case ORIGINAL_PAYMENT_METHOD:
+                if (originalTransaction != null && originalTransaction.getPayments() != null) {
+                    // Use the primary (largest approved) payment type from original transaction
+                    return originalTransaction.getPayments().stream()
+                            .filter(p -> p.getStatus() == POSPaymentStatus.APPROVED)
+                            .max((a, b) -> a.getAmount().compareTo(b.getAmount()))
+                            .map(POSPayment::getPaymentType)
+                            .orElse(POSPaymentType.CASH);
+                }
+                return POSPaymentType.CASH;
+            default:
+                return POSPaymentType.CASH;
         }
     }
 

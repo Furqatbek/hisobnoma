@@ -39,6 +39,11 @@ public interface POSTransactionLineRepository extends JpaRepository<POSTransacti
     @Query("SELECT MAX(l.lineNumber) FROM POSTransactionLine l WHERE l.transaction.id = :transactionId")
     Integer findMaxLineNumberByTransactionId(@Param("transactionId") Long transactionId);
 
+    @Query("SELECT COALESCE(SUM(l.quantity), 0) FROM POSTransactionLine l " +
+           "WHERE l.originalLineId = :originalLineId AND l.isReturn = true " +
+           "AND l.transaction.status IN ('PENDING', 'COMPLETED')")
+    BigDecimal sumReturnedQuantityByOriginalLineId(@Param("originalLineId") Long originalLineId);
+
     @Query("SELECT l FROM POSTransactionLine l WHERE l.serialNumber = :serialNumber")
     List<POSTransactionLine> findBySerialNumber(@Param("serialNumber") String serialNumber);
 
