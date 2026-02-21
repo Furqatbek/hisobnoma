@@ -45,7 +45,8 @@ const filteredPayments = computed(() => {
   return payments.value.filter(p =>
     p.paymentNumber?.toLowerCase().includes(q) ||
     p.customerName?.toLowerCase().includes(q) ||
-    p.notes?.toLowerCase().includes(q)
+    p.notes?.toLowerCase().includes(q) ||
+    p.allocations?.some(a => a.invoiceNumber?.toLowerCase().includes(q))
   )
 })
 
@@ -127,6 +128,13 @@ function getMethodLabel(method) {
   }
   return labels[method] || method
 }
+
+function getInvoiceNumbers(payment) {
+  if (!payment.allocations?.length) return '-'
+  return payment.allocations
+    .map(a => a.invoiceNumber || `#${a.arInvoiceId}`)
+    .join(', ')
+}
 </script>
 
 <template>
@@ -183,6 +191,7 @@ function getMethodLabel(method) {
             <tr>
               <th>To'lov raqami</th>
               <th>Mijoz</th>
+              <th>Faktura</th>
               <th>Sana</th>
               <th>Usul</th>
               <th class="text-right">Summa</th>
@@ -197,6 +206,9 @@ function getMethodLabel(method) {
               </td>
               <td>
                 <p class="text-sm">{{ payment.customerName || '-' }}</p>
+              </td>
+              <td>
+                <p class="text-sm text-blue-600">{{ getInvoiceNumbers(payment) }}</p>
               </td>
               <td class="text-sm text-gray-500">
                 {{ formatDate(payment.paymentDate) }}
