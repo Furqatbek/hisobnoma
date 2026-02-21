@@ -59,6 +59,10 @@ public class POSTransactionDto {
     private Long glJournalEntryId;
     private boolean glPosted;
     private boolean stockDeducted;
+    private Long deliveryRegionId;
+    private String deliveryRegionName;
+    private Long deliveryVillageId;
+    private String deliveryVillageName;
     private String notes;
     private List<POSTransactionLineDto> lines;
     private List<POSPaymentDto> payments;

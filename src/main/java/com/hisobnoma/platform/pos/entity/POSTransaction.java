@@ -167,6 +167,18 @@ public class POSTransaction extends TenantAwareEntity {
     @Builder.Default
     private boolean stockDeducted = false;
 
+    @Column(name = "delivery_region_id")
+    private Long deliveryRegionId;
+
+    @Column(name = "delivery_region_name", length = 100)
+    private String deliveryRegionName;
+
+    @Column(name = "delivery_village_id")
+    private Long deliveryVillageId;
+
+    @Column(name = "delivery_village_name", length = 100)
+    private String deliveryVillageName;
+
     @Column(length = 1000)
     private String notes;
 

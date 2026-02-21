@@ -412,6 +412,8 @@ async function processPayment() {
       terminalId: selectedTerminalId.value,
       transactionType: 'SALE',
       customerId: cart.customerId,
+      deliveryRegionId: cart.deliveryRegionId || undefined,
+      deliveryVillageId: cart.deliveryVillageId || undefined,
       items: cart.items.map(item => ({
         productId: item.productId,
         quantity: item.quantity,

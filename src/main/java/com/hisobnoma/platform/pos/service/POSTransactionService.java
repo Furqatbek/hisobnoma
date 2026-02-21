@@ -16,6 +16,8 @@ import com.hisobnoma.platform.inventory.entity.ProductVariant;
 import com.hisobnoma.platform.inventory.repository.ProductRepository;
 import com.hisobnoma.platform.inventory.repository.ProductVariantRepository;
 import com.hisobnoma.platform.inventory.service.StockService;
+import com.hisobnoma.platform.delivery.repository.DeliveryRegionRepository;
+import com.hisobnoma.platform.delivery.repository.DeliveryVillageRepository;
 import com.hisobnoma.platform.pos.dto.*;
 import com.hisobnoma.platform.pos.entity.*;
 import com.hisobnoma.platform.pos.mapper.POSTransactionMapper;
@@ -48,6 +50,8 @@ public class POSTransactionService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
     private final CustomerRepository customerRepository;
+    private final DeliveryRegionRepository deliveryRegionRepository;
+    private final DeliveryVillageRepository deliveryVillageRepository;
     private final POSTransactionMapper transactionMapper;
     private final SecurityContextHelper securityContextHelper;
     private final StockService stockService;
@@ -138,8 +142,20 @@ public class POSTransactionService {
                 .transactionType(request.getTransactionType())
                 .status(TransactionStatus.PENDING)
                 .originalTransactionId(request.getOriginalTransactionId())
+                .deliveryRegionId(request.getDeliveryRegionId())
+                .deliveryVillageId(request.getDeliveryVillageId())
                 .notes(request.getNotes())
                 .build();
+
+        // Resolve delivery address names
+        if (request.getDeliveryRegionId() != null) {
+            deliveryRegionRepository.findByIdAndTenantId(request.getDeliveryRegionId(), tenantId)
+                    .ifPresent(r -> transaction.setDeliveryRegionName(r.getName()));
+        }
+        if (request.getDeliveryVillageId() != null) {
+            deliveryVillageRepository.findByIdAndTenantId(request.getDeliveryVillageId(), tenantId)
+                    .ifPresent(v -> transaction.setDeliveryVillageName(v.getName()));
+        }
 
         // For returns, get original transaction number
         if (request.getOriginalTransactionId() != null) {

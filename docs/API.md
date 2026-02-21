@@ -3318,3 +3318,31 @@ Get count of failed login attempts.
 - `ENUM` - Predefined options
 - `DATE` - Date value
 - `DATETIME` - Date and time value
+
+---
+
+## Delivery Module (Regions & Villages)
+
+Delivery address management for POS. Full documentation: [DELIVERY_MODULE_API.md](api/DELIVERY_MODULE_API.md)
+
+### Endpoints
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /delivery/regions | DELIVERY_REGION_READ | List regions (paginated, searchable) |
+| GET | /delivery/regions/active | DELIVERY_REGION_READ | Get active regions |
+| GET | /delivery/regions/{id} | DELIVERY_REGION_READ | Get region by ID |
+| POST | /delivery/regions | DELIVERY_REGION_CREATE | Create region |
+| PUT | /delivery/regions/{id} | DELIVERY_REGION_UPDATE | Update region |
+| DELETE | /delivery/regions/{id} | DELIVERY_REGION_DELETE | Delete region |
+| GET | /delivery/villages | DELIVERY_VILLAGE_READ | List villages (paginated, searchable) |
+| GET | /delivery/villages/active | DELIVERY_VILLAGE_READ | Get active villages |
+| GET | /delivery/villages/region/{regionId} | DELIVERY_VILLAGE_READ | Get villages by region |
+| GET | /delivery/villages/{id} | DELIVERY_VILLAGE_READ | Get village by ID |
+| POST | /delivery/villages | DELIVERY_VILLAGE_CREATE | Create village |
+| PUT | /delivery/villages/{id} | DELIVERY_VILLAGE_UPDATE | Update village |
+| DELETE | /delivery/villages/{id} | DELIVERY_VILLAGE_DELETE | Delete village |
+
+### POS Integration
+
+POS transactions now accept optional `deliveryRegionId` and `deliveryVillageId` fields. The backend resolves and stores region/village names denormalized on the transaction.

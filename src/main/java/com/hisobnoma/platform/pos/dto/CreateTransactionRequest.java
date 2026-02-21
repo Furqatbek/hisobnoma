@@ -36,6 +36,9 @@ public class CreateTransactionRequest {
      */
     private Long originalTransactionId;
 
+    private Long deliveryRegionId;
+    private Long deliveryVillageId;
+
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;
 

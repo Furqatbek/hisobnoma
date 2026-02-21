@@ -5204,6 +5204,246 @@
         }
       ],
       "description": "Audit trail and activity logging APIs for compliance and security monitoring."
+    },
+    {
+      "name": "Delivery - Regions",
+      "item": [
+        {
+          "name": "List Regions (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/delivery/regions?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "regions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            },
+            "description": "List delivery regions with pagination and optional search."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Regions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/delivery/regions/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "regions", "active"]
+            },
+            "description": "Get all active delivery regions for dropdown selection."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Region by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/delivery/regions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "regions", "1"]
+            },
+            "description": "Get a delivery region by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Region",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Toshkent shahri\",\n  \"code\": \"TASH\",\n  \"description\": \"Toshkent shahri hududlari\",\n  \"active\": true,\n  \"sortOrder\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/delivery/regions",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "regions"]
+            },
+            "description": "Create a new delivery region."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Region",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Toshkent shahri (yangilangan)\",\n  \"code\": \"TASH\",\n  \"description\": \"Yangilangan tavsif\",\n  \"active\": true,\n  \"sortOrder\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/delivery/regions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "regions", "1"]
+            },
+            "description": "Update an existing delivery region."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Region",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/delivery/regions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "regions", "1"]
+            },
+            "description": "Delete a delivery region. Fails if region contains villages."
+          },
+          "response": []
+        }
+      ],
+      "description": "Delivery region management APIs for organizing delivery areas."
+    },
+    {
+      "name": "Delivery - Villages",
+      "item": [
+        {
+          "name": "List Villages (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/delivery/villages?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "villages"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            },
+            "description": "List delivery villages with pagination and optional search."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Villages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/delivery/villages/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "villages", "active"]
+            },
+            "description": "Get all active delivery villages."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Villages by Region",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/delivery/villages/region/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "villages", "region", "1"]
+            },
+            "description": "Get active villages for a specific region. Used for cascading dropdown in POS."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Village by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/delivery/villages/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "villages", "1"]
+            },
+            "description": "Get a delivery village by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Village",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"regionId\": 1,\n  \"name\": \"Yunusobod tumani\",\n  \"code\": \"YUN\",\n  \"description\": \"Yunusobod tumani mahallalari\",\n  \"active\": true,\n  \"sortOrder\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/delivery/villages",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "villages"]
+            },
+            "description": "Create a new delivery village within a region."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Village",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"regionId\": 1,\n  \"name\": \"Yunusobod tumani (yangilangan)\",\n  \"code\": \"YUN\",\n  \"description\": \"Yangilangan tavsif\",\n  \"active\": true,\n  \"sortOrder\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/delivery/villages/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "villages", "1"]
+            },
+            "description": "Update an existing delivery village."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Village",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/delivery/villages/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["delivery", "villages", "1"]
+            },
+            "description": "Delete a delivery village."
+          },
+          "response": []
+        }
+      ],
+      "description": "Delivery village management APIs for managing villages within regions."
     }
   ]
 }
