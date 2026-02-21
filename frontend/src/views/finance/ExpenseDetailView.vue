@@ -1,7 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { expensesApi } from '@/services/api'
+import { expensesApi, apPaymentsApi } from '@/services/api'
 import {
   ArrowLeftIcon,
   PencilSquareIcon,
@@ -17,6 +17,19 @@ const router = useRouter()
 const expense = ref(null)
 const loading = ref(true)
 const actionLoading = ref(false)
+
+// Payment modal
+const showPaymentModal = ref(false)
+const paymentSaving = ref(false)
+const paymentForm = ref({
+  paymentMethod: 'BANK_TRANSFER',
+  paymentAmount: 0,
+  paymentDate: new Date().toISOString().split('T')[0],
+  referenceNumber: '',
+  memo: ''
+})
+
+const balanceDue = computed(() => Number(expense.value?.balanceDue) || 0)
 
 async function fetchExpense() {
   loading.value = true
@@ -38,7 +51,7 @@ async function submitForApproval() {
     await expensesApi.submit(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert('Xatolik yuz berdi')
+    alert(error.response?.data?.message || 'Xatolik yuz berdi')
   } finally {
     actionLoading.value = false
   }
@@ -50,7 +63,7 @@ async function approveExpense() {
     await expensesApi.approve(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert('Xatolik yuz berdi')
+    alert(error.response?.data?.message || 'Xatolik yuz berdi')
   } finally {
     actionLoading.value = false
   }
@@ -65,7 +78,7 @@ async function rejectExpense() {
     await expensesApi.reject(expense.value.id, reason)
     await fetchExpense()
   } catch (error) {
-    alert('Xatolik yuz berdi')
+    alert(error.response?.data?.message || 'Xatolik yuz berdi')
   } finally {
     actionLoading.value = false
   }
@@ -77,7 +90,7 @@ async function holdExpense() {
     await expensesApi.hold(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert('Xatolik yuz berdi')
+    alert(error.response?.data?.message || 'Xatolik yuz berdi')
   } finally {
     actionLoading.value = false
   }
@@ -89,7 +102,7 @@ async function releaseHold() {
     await expensesApi.releaseHold(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert('Xatolik yuz berdi')
+    alert(error.response?.data?.message || 'Xatolik yuz berdi')
   } finally {
     actionLoading.value = false
   }
@@ -104,9 +117,66 @@ async function cancelExpense() {
     await expensesApi.cancel(expense.value.id, reason)
     await fetchExpense()
   } catch (error) {
-    alert('Xatolik yuz berdi')
+    alert(error.response?.data?.message || 'Xatolik yuz berdi')
   } finally {
     actionLoading.value = false
+  }
+}
+
+// Payment flow
+function openPaymentModal() {
+  paymentForm.value = {
+    paymentMethod: 'BANK_TRANSFER',
+    paymentAmount: balanceDue.value,
+    paymentDate: new Date().toISOString().split('T')[0],
+    referenceNumber: '',
+    memo: ''
+  }
+  showPaymentModal.value = true
+}
+
+async function submitPayment() {
+  const amount = parseFloat(paymentForm.value.paymentAmount)
+  if (!amount || amount <= 0) {
+    alert('To\'lov summasi kiritilishi kerak')
+    return
+  }
+  if (amount > balanceDue.value) {
+    alert('To\'lov summasi qoldiqdan oshmasligi kerak')
+    return
+  }
+
+  paymentSaving.value = true
+  try {
+    const paymentData = {
+      vendorId: expense.value.vendorId || null,
+      paymentDate: paymentForm.value.paymentDate,
+      paymentMethod: paymentForm.value.paymentMethod,
+      paymentAmount: amount,
+      currency: expense.value.currency || 'UZS',
+      referenceNumber: paymentForm.value.referenceNumber || null,
+      memo: paymentForm.value.memo || null,
+      allocations: [{
+        apInvoiceId: expense.value.id,
+        allocatedAmount: amount
+      }]
+    }
+
+    const res = await apPaymentsApi.create(paymentData)
+    const payment = res.data.data || res.data
+
+    // Auto-submit, approve and process the payment
+    await apPaymentsApi.submit(payment.id)
+    await apPaymentsApi.approve(payment.id)
+    await apPaymentsApi.process(payment.id)
+
+    showPaymentModal.value = false
+    await fetchExpense()
+  } catch (error) {
+    console.error('To\'lov xatosi:', error)
+    alert(error.response?.data?.message || 'To\'lovni amalga oshirishda xatolik yuz berdi')
+  } finally {
+    paymentSaving.value = false
   }
 }
 
@@ -129,7 +199,8 @@ function getStatusClass(status) {
     'DRAFT': 'badge-info',
     'PENDING_APPROVAL': 'badge-warning',
     'APPROVED': 'badge-success',
-    'PARTIALLY_PAID': 'badge-info',
+    'PARTIAL': 'badge-warning',
+    'PARTIALLY_PAID': 'badge-warning',
     'PAID': 'badge-success',
     'ON_HOLD': 'badge-warning',
     'CANCELLED': 'badge-danger',
@@ -143,6 +214,7 @@ function getStatusLabel(status) {
     'DRAFT': 'Qoralama',
     'PENDING_APPROVAL': 'Tasdiqlanmoqda',
     'APPROVED': 'Tasdiqlangan',
+    'PARTIAL': 'Qisman to\'langan',
     'PARTIALLY_PAID': 'Qisman to\'langan',
     'PAID': 'To\'langan',
     'ON_HOLD': 'Kutish',
@@ -164,8 +236,13 @@ function canApprove() {
   return expense.value?.status === 'PENDING_APPROVAL'
 }
 
+function canPay() {
+  const s = expense.value?.status
+  return (s === 'APPROVED' || s === 'PARTIAL' || s === 'PARTIALLY_PAID') && balanceDue.value > 0
+}
+
 function canHold() {
-  return ['APPROVED', 'PENDING_APPROVAL'].includes(expense.value?.status)
+  return ['APPROVED', 'PENDING_APPROVAL', 'PARTIAL', 'PARTIALLY_PAID'].includes(expense.value?.status)
 }
 
 function canReleaseHold() {
@@ -173,7 +250,7 @@ function canReleaseHold() {
 }
 
 function canCancel() {
-  return ['DRAFT', 'PENDING_APPROVAL', 'ON_HOLD'].includes(expense.value?.status)
+  return ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'ON_HOLD'].includes(expense.value?.status)
 }
 </script>
 
@@ -231,6 +308,16 @@ function canCancel() {
         >
           <XMarkIcon class="h-5 w-5 mr-2" />
           Rad etish
+        </button>
+
+        <button
+          v-if="canPay()"
+          @click="openPaymentModal"
+          :disabled="actionLoading"
+          class="btn-pay"
+        >
+          <BanknotesIcon class="h-5 w-5 mr-2" />
+          To'lov qilish
         </button>
 
         <button
@@ -294,7 +381,7 @@ function canCancel() {
         <div class="card">
           <div class="card-body">
             <p class="text-sm text-gray-500">Qoldiq</p>
-            <p :class="['text-xl font-bold', Number(expense.balanceDue) > 0 ? 'text-red-600' : 'text-green-600']">
+            <p :class="['text-xl font-bold', balanceDue > 0 ? 'text-red-600' : 'text-green-600']">
               {{ formatCurrency(expense.balanceDue) }} so'm
             </p>
           </div>
@@ -315,7 +402,7 @@ function canCancel() {
                   <dt class="text-sm text-gray-500">{{ expense.vendorId ? 'Yetkazib beruvchi' : 'Xarajat nomi' }}</dt>
                   <dd class="font-medium">{{ expense.vendorName || '-' }}</dd>
                 </div>
-                <div>
+                <div v-if="expense.vendorId">
                   <dt class="text-sm text-gray-500">Yetkazib beruvchi hisob-faktura №</dt>
                   <dd class="font-medium">{{ expense.vendorInvoiceNumber || '-' }}</dd>
                 </div>
@@ -418,9 +505,85 @@ function canCancel() {
               <p class="text-red-700">{{ expense.rejectionReason }}</p>
             </div>
           </div>
+
+          <!-- Cancellation Reason -->
+          <div v-if="expense.cancellationReason" class="card border-red-200 bg-red-50">
+            <div class="card-header">
+              <h3 class="text-lg font-medium text-red-800">Bekor qilish sababi</h3>
+            </div>
+            <div class="card-body">
+              <p class="text-red-700">{{ expense.cancellationReason }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </template>
+
+    <!-- Payment Modal -->
+    <Teleport to="body">
+      <div v-if="showPaymentModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+          <div class="px-6 py-4 border-b">
+            <h3 class="text-lg font-semibold text-gray-900">To'lov qilish</h3>
+            <p class="text-sm text-gray-500 mt-1">
+              {{ expense?.invoiceNumber }} — Qoldiq: {{ formatCurrency(balanceDue) }} so'm
+            </p>
+          </div>
+
+          <div class="px-6 py-4 space-y-4">
+            <div>
+              <label class="label">To'lov summasi <span class="text-red-500">*</span></label>
+              <input
+                v-model.number="paymentForm.paymentAmount"
+                type="number"
+                :max="balanceDue"
+                min="0.01"
+                step="any"
+                class="input"
+              />
+              <p class="text-xs text-gray-400 mt-1">Maksimum: {{ formatCurrency(balanceDue) }} so'm</p>
+            </div>
+
+            <div>
+              <label class="label">To'lov usuli <span class="text-red-500">*</span></label>
+              <select v-model="paymentForm.paymentMethod" class="input">
+                <option value="BANK_TRANSFER">Bank o'tkazmasi</option>
+                <option value="CASH">Naqd pul</option>
+                <option value="CHECK">Chek</option>
+                <option value="CREDIT_CARD">Kredit karta</option>
+                <option value="ACH">ACH</option>
+                <option value="ONLINE">Onlayn to'lov</option>
+                <option value="OTHER">Boshqa</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="label">To'lov sanasi <span class="text-red-500">*</span></label>
+              <input v-model="paymentForm.paymentDate" type="date" class="input" />
+            </div>
+
+            <div>
+              <label class="label">Havola raqami</label>
+              <input v-model="paymentForm.referenceNumber" type="text" class="input" placeholder="Tranzaksiya raqami" />
+            </div>
+
+            <div>
+              <label class="label">Izoh</label>
+              <input v-model="paymentForm.memo" type="text" class="input" placeholder="To'lov izohi" />
+            </div>
+          </div>
+
+          <div class="px-6 py-4 border-t flex justify-end space-x-3">
+            <button @click="showPaymentModal = false" class="btn-secondary" :disabled="paymentSaving">
+              Bekor qilish
+            </button>
+            <button @click="submitPayment" class="btn-pay" :disabled="paymentSaving">
+              {{ paymentSaving ? 'Jarayonda...' : 'To\'lov qilish' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -433,5 +596,8 @@ function canCancel() {
 }
 .btn-danger {
   @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.btn-pay {
+  @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed;
 }
 </style>

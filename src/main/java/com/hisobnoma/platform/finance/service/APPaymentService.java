@@ -71,17 +71,15 @@ public class APPaymentService {
     public APPaymentDto createPayment(CreateAPPaymentRequest request) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
 
-        // Validate vendor
-        Vendor vendor = vendorRepository.findByIdAndTenantId(request.getVendorId(), tenantId)
-                .orElseThrow(() -> new NotFoundException("Vendor not found with id: " + request.getVendorId()));
+        // Validate vendor (optional for vendor-less expenses)
+        String vendorDisplayName = null;
+        if (request.getVendorId() != null) {
+            Vendor vendor = vendorRepository.findByIdAndTenantId(request.getVendorId(), tenantId)
+                    .orElseThrow(() -> new NotFoundException("Vendor not found with id: " + request.getVendorId()));
+            vendorDisplayName = vendor.getName();
+        }
 
         // Validate total allocations
-        BigDecimal totalAllocated = request.getAllocations().stream()
-                .map(a -> a.getAllocatedAmount()
-                        .add(a.getDiscountTaken() != null ? a.getDiscountTaken() : BigDecimal.ZERO)
-                        .add(a.getWriteOffAmount() != null ? a.getWriteOffAmount() : BigDecimal.ZERO))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
         BigDecimal totalPaymentWithExtras = request.getAllocations().stream()
                 .map(CreateAPPaymentAllocationRequest::getAllocatedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -94,12 +92,11 @@ public class APPaymentService {
         APPayment payment = apPaymentMapper.toEntity(request);
         payment.setTenantId(tenantId);
         payment.setPaymentNumber(generatePaymentNumber(tenantId));
-        payment.setVendorName(vendor.getName());
+        payment.setVendorName(vendorDisplayName);
         payment.setStatus(APPaymentStatus.DRAFT);
 
         // Set bank account name if provided
         if (request.getBankAccountId() != null) {
-            // TODO: Lookup bank account name when BankAccount entity is implemented
             payment.setBankAccountName("Bank Account #" + request.getBankAccountId());
         }
 
@@ -114,7 +111,9 @@ public class APPaymentService {
                 throw new BusinessException("Invoice " + invoice.getInvoiceNumber() + " is not approved for payment");
             }
 
-            if (invoice.getVendorId().longValue() != request.getVendorId().longValue()) {
+            // Vendor cross-check only when both have a vendor
+            if (request.getVendorId() != null && invoice.getVendorId() != null
+                    && invoice.getVendorId().longValue() != request.getVendorId().longValue()) {
                 throw new BusinessException("Invoice " + invoice.getInvoiceNumber() + " belongs to a different vendor");
             }
 
@@ -136,8 +135,8 @@ public class APPaymentService {
         payment.recalculateAllocations();
         payment = apPaymentRepository.save(payment);
 
-        log.info("Created AP Payment: {} for vendor: {}, amount: {}",
-                payment.getPaymentNumber(), vendor.getName(), payment.getPaymentAmount());
+        log.info("Created AP Payment: {} for: {}, amount: {}",
+                payment.getPaymentNumber(), vendorDisplayName != null ? vendorDisplayName : "direct expense", payment.getPaymentAmount());
 
         return apPaymentMapper.toDto(payment);
     }
@@ -362,6 +361,7 @@ public class APPaymentService {
     }
 
     private void updateVendorBalance(Long vendorId, BigDecimal amount) {
+        if (vendorId == null) return;
         vendorRepository.findById(vendorId).ifPresent(vendor -> {
             BigDecimal currentBalance = vendor.getCurrentBalance() != null ? vendor.getCurrentBalance() : BigDecimal.ZERO;
             vendor.setCurrentBalance(currentBalance.add(amount));

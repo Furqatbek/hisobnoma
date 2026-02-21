@@ -18,7 +18,6 @@ import java.util.List;
 @AllArgsConstructor
 public class CreateAPPaymentRequest {
 
-    @NotNull(message = "Vendor ID is required")
     private Long vendorId;
 
     @NotNull(message = "Payment date is required")

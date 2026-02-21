@@ -33,7 +33,7 @@ public class APPayment extends TenantAwareEntity {
     @Column(name = "payment_number", nullable = false, unique = true, length = 50)
     private String paymentNumber;
 
-    @Column(name = "vendor_id", nullable = false)
+    @Column(name = "vendor_id")
     private Long vendorId;
 
     @Column(name = "vendor_name", length = 200)

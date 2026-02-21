@@ -402,6 +402,19 @@ export const expensesApi = {
   getOverdueBalance: () => api.get('/ap/invoices/summary/overdue-balance')
 }
 
+// AP Payments API - Backend: /api/v1/ap/payments
+export const apPaymentsApi = {
+  getAll: (params) => api.get('/ap/payments', { params }),
+  getById: (id) => api.get(`/ap/payments/${id}`),
+  getByVendor: (vendorId, params) => api.get(`/ap/payments/vendor/${vendorId}`, { params }),
+  getByStatus: (status, params) => api.get(`/ap/payments/status/${status}`, { params }),
+  create: (data) => api.post('/ap/payments', data),
+  submit: (id) => api.post(`/ap/payments/${id}/submit`),
+  approve: (id) => api.post(`/ap/payments/${id}/approve`),
+  process: (id) => api.post(`/ap/payments/${id}/process`),
+  void: (id, reason) => api.post(`/ap/payments/${id}/void`, { reason }),
+}
+
 // HR Departments API - Backend: /api/v1/hr/departments
 export const departmentsApi = {
   getAll: () => api.get('/hr/departments'),
