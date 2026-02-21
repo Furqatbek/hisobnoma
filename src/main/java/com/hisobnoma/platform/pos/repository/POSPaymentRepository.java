@@ -28,6 +28,14 @@ public interface POSPaymentRepository extends JpaRepository<POSPayment, Long> {
     @Query("SELECT SUM(p.amount) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type AND p.status = 'APPROVED' AND p.transaction.status = 'COMPLETED'")
     BigDecimal sumByShiftIdAndPaymentType(@Param("shiftId") Long shiftId, @Param("type") POSPaymentType type);
 
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type " +
+           "AND p.status = 'APPROVED' AND p.transaction.status = 'COMPLETED' AND p.transaction.transactionType = 'SALE'")
+    BigDecimal sumSalesByShiftIdAndPaymentType(@Param("shiftId") Long shiftId, @Param("type") POSPaymentType type);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type " +
+           "AND p.status = 'APPROVED' AND p.transaction.status = 'COMPLETED' AND p.transaction.transactionType = 'RETURN'")
+    BigDecimal sumRefundsByShiftIdAndPaymentType(@Param("shiftId") Long shiftId, @Param("type") POSPaymentType type);
+
     @Query("SELECT p FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.paymentType = :type ORDER BY p.createdAt DESC")
     List<POSPayment> findByShiftIdAndPaymentType(@Param("shiftId") Long shiftId, @Param("type") POSPaymentType type);
 
@@ -43,6 +51,14 @@ public interface POSPaymentRepository extends JpaRepository<POSPayment, Long> {
     @Query("SELECT SUM(p.amount) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.status = 'APPROVED' " +
            "AND p.transaction.status = 'COMPLETED'")
     BigDecimal sumAllByShiftId(@Param("shiftId") Long shiftId);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.status = 'APPROVED' " +
+           "AND p.transaction.status = 'COMPLETED' AND p.transaction.transactionType = 'SALE'")
+    BigDecimal sumAllSalesByShiftId(@Param("shiftId") Long shiftId);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM POSPayment p WHERE p.transaction.shift.id = :shiftId AND p.status = 'APPROVED' " +
+           "AND p.transaction.status = 'COMPLETED' AND p.transaction.transactionType = 'RETURN'")
+    BigDecimal sumAllRefundsByShiftId(@Param("shiftId") Long shiftId);
 
     @Query("SELECT p FROM POSPayment p WHERE p.status = :status AND p.createdAt >= :startDate AND p.createdAt < :endDate")
     List<POSPayment> findByStatusAndDateRange(

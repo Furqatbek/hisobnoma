@@ -91,6 +91,18 @@ public class Shift extends TenantAwareEntity {
     @Builder.Default
     private BigDecimal otherPayments = BigDecimal.ZERO;
 
+    @Column(name = "cash_refunds", precision = 18, scale = 4)
+    @Builder.Default
+    private BigDecimal cashRefunds = BigDecimal.ZERO;
+
+    @Column(name = "card_refunds", precision = 18, scale = 4)
+    @Builder.Default
+    private BigDecimal cardRefunds = BigDecimal.ZERO;
+
+    @Column(name = "other_refunds", precision = 18, scale = 4)
+    @Builder.Default
+    private BigDecimal otherRefunds = BigDecimal.ZERO;
+
     @Column(name = "transaction_count")
     @Builder.Default
     private Integer transactionCount = 0;
@@ -120,6 +132,7 @@ public class Shift extends TenantAwareEntity {
     public void calculateExpectedCash() {
         this.expectedCash = openingCash
                 .add(cashPayments != null ? cashPayments : BigDecimal.ZERO)
+                .subtract(cashRefunds != null ? cashRefunds : BigDecimal.ZERO)
                 .add(cashIn != null ? cashIn : BigDecimal.ZERO)
                 .subtract(cashOut != null ? cashOut : BigDecimal.ZERO);
     }

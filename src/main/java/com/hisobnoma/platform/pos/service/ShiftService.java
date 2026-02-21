@@ -162,15 +162,18 @@ public class ShiftService {
         Long voidedCount = transactionRepository.countVoidedByShiftId(shiftId, tenantId);
         Long returnCount = transactionRepository.countReturnsByShiftId(shiftId, tenantId);
 
-        // Calculate payment totals by type (all queries filter by completed transactions)
-        BigDecimal cashPayments = paymentRepository.sumByShiftIdAndPaymentType(shiftId, POSPaymentType.CASH);
-        BigDecimal cardPayments = paymentRepository.sumByShiftIdAndPaymentType(shiftId, POSPaymentType.CARD);
-        BigDecimal allPayments = paymentRepository.sumAllByShiftId(shiftId);
+        // Calculate payment totals — sales and refunds split for reconciliation.
+        // Sales payments (from SALE transactions only):
+        BigDecimal cashPayments = paymentRepository.sumSalesByShiftIdAndPaymentType(shiftId, POSPaymentType.CASH);
+        BigDecimal cardPayments = paymentRepository.sumSalesByShiftIdAndPaymentType(shiftId, POSPaymentType.CARD);
+        BigDecimal allSalePayments = paymentRepository.sumAllSalesByShiftId(shiftId);
+        BigDecimal otherPayments = allSalePayments.subtract(cashPayments).subtract(cardPayments);
 
-        BigDecimal safeCash = cashPayments != null ? cashPayments : BigDecimal.ZERO;
-        BigDecimal safeCard = cardPayments != null ? cardPayments : BigDecimal.ZERO;
-        BigDecimal safeAll = allPayments != null ? allPayments : BigDecimal.ZERO;
-        BigDecimal otherPayments = safeAll.subtract(safeCash).subtract(safeCard);
+        // Refund payments (from RETURN transactions only, stored as positive for display):
+        BigDecimal cashRefunds = paymentRepository.sumRefundsByShiftIdAndPaymentType(shiftId, POSPaymentType.CASH).abs();
+        BigDecimal cardRefunds = paymentRepository.sumRefundsByShiftIdAndPaymentType(shiftId, POSPaymentType.CARD).abs();
+        BigDecimal allRefundPayments = paymentRepository.sumAllRefundsByShiftId(shiftId).abs();
+        BigDecimal otherRefunds = allRefundPayments.subtract(cashRefunds).subtract(cardRefunds);
 
         // Update shift
         shift.setStatus(ShiftStatus.CLOSED);
@@ -181,9 +184,12 @@ public class ShiftService {
         shift.setTotalReturns(totalReturns != null ? totalReturns : BigDecimal.ZERO);
         shift.setTotalDiscounts(totalDiscounts != null ? totalDiscounts : BigDecimal.ZERO);
         shift.setTotalTaxes(totalTaxes != null ? totalTaxes : BigDecimal.ZERO);
-        shift.setCashPayments(safeCash);
-        shift.setCardPayments(safeCard);
+        shift.setCashPayments(cashPayments);
+        shift.setCardPayments(cardPayments);
         shift.setOtherPayments(otherPayments);
+        shift.setCashRefunds(cashRefunds);
+        shift.setCardRefunds(cardRefunds);
+        shift.setOtherRefunds(otherRefunds);
         shift.setTransactionCount(completedCount != null ? completedCount.intValue() : 0);
         shift.setVoidedCount(voidedCount != null ? voidedCount.intValue() : 0);
         shift.setReturnCount(returnCount != null ? returnCount.intValue() : 0);

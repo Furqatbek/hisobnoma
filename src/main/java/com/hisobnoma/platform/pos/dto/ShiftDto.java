@@ -35,6 +35,9 @@ public class ShiftDto {
     private BigDecimal cashPayments;
     private BigDecimal cardPayments;
     private BigDecimal otherPayments;
+    private BigDecimal cashRefunds;
+    private BigDecimal cardRefunds;
+    private BigDecimal otherRefunds;
     private Integer transactionCount;
     private Integer voidedCount;
     private Integer returnCount;
