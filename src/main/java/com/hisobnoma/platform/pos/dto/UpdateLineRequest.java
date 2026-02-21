@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.pos.dto;
 
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -20,8 +21,11 @@ public class UpdateLineRequest {
 
     private BigDecimal unitPrice;
 
+    @DecimalMin(value = "0", message = "Discount amount must be non-negative")
     private BigDecimal discountAmount;
 
+    @DecimalMin(value = "0", message = "Discount percent must be non-negative")
+    @DecimalMax(value = "100", message = "Discount percent must not exceed 100")
     private BigDecimal discountPercent;
 
     @Size(max = 200, message = "Discount reason must not exceed 200 characters")

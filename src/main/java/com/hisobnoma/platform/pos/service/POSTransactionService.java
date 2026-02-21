@@ -301,11 +301,10 @@ public class POSTransactionService {
         if (request.getUnitPrice() != null) {
             line.setUnitPrice(request.getUnitPrice());
         }
-        if (request.getDiscountAmount() != null) {
-            line.setDiscountAmount(request.getDiscountAmount());
-        }
         if (request.getDiscountPercent() != null) {
             line.applyPercentDiscount(request.getDiscountPercent(), request.getDiscountReason());
+        } else if (request.getDiscountAmount() != null) {
+            line.applyFixedDiscount(request.getDiscountAmount(), request.getDiscountReason());
         }
         if (request.getNotes() != null) {
             line.setNotes(request.getNotes());

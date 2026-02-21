@@ -249,6 +249,9 @@ public class POSTransaction extends TenantAwareEntity {
     }
 
     public void applyPercentDiscount(BigDecimal percent, String reason) {
+        if (percent == null || percent.compareTo(BigDecimal.ZERO) < 0 || percent.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalArgumentException("Discount percent must be between 0 and 100");
+        }
         this.discountPercent = percent;
         this.discountReason = reason;
         this.discountAmount = subtotal.multiply(percent).divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
@@ -256,6 +259,12 @@ public class POSTransaction extends TenantAwareEntity {
     }
 
     public void applyFixedDiscount(BigDecimal amount, String reason) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Discount amount must be non-negative");
+        }
+        if (subtotal != null && amount.compareTo(subtotal) > 0) {
+            throw new IllegalArgumentException("Discount amount cannot exceed subtotal of " + subtotal);
+        }
         this.discountAmount = amount;
         this.discountReason = reason;
         this.discountPercent = null;

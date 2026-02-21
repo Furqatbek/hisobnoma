@@ -119,6 +119,9 @@ public class POSTransactionLine extends BaseEntity {
     }
 
     public void applyPercentDiscount(BigDecimal percent, String reason) {
+        if (percent == null || percent.compareTo(BigDecimal.ZERO) < 0 || percent.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalArgumentException("Discount percent must be between 0 and 100");
+        }
         this.discountPercent = percent;
         this.discountReason = reason;
         BigDecimal grossAmount = unitPrice.multiply(quantity);
@@ -127,6 +130,13 @@ public class POSTransactionLine extends BaseEntity {
     }
 
     public void applyFixedDiscount(BigDecimal amount, String reason) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Discount amount must be non-negative");
+        }
+        BigDecimal grossAmount = unitPrice.multiply(quantity);
+        if (amount.compareTo(grossAmount) > 0) {
+            throw new IllegalArgumentException("Discount amount cannot exceed line gross amount of " + grossAmount);
+        }
         this.discountAmount = amount;
         this.discountReason = reason;
         this.discountPercent = null;
