@@ -699,6 +699,7 @@ public class POSTransactionService {
         // Add return lines
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal taxAmount = BigDecimal.ZERO;
+        BigDecimal lineDiscountTotal = BigDecimal.ZERO;
 
         for (CreateReturnRequest.ReturnLineItem item : request.getItems()) {
             Product product = productRepository.findByIdAndTenantId(item.getProductId(), tenantId)
@@ -710,20 +711,43 @@ public class POSTransactionService {
                         .orElseThrow(() -> new NotFoundException("Variant", item.getVariantId()));
             }
 
-            // Determine unit price
+            // Look up original line for price and discount info
             BigDecimal unitPrice = item.getUnitPrice();
+            BigDecimal lineDiscount = BigDecimal.ZERO;
+            BigDecimal lineDiscountPercent = BigDecimal.ZERO;
+
+            if (item.getOriginalLineId() != null && originalTransaction != null) {
+                POSTransactionLine originalLine = originalTransaction.getLines().stream()
+                        .filter(l -> l.getId().equals(item.getOriginalLineId()))
+                        .findFirst()
+                        .orElseThrow(() -> new NotFoundException("Original transaction line", item.getOriginalLineId()));
+
+                if (unitPrice == null) {
+                    unitPrice = originalLine.getUnitPrice();
+                }
+
+                // Proportional discount: (originalDiscount / originalQty) * returnQty
+                if (originalLine.getDiscountAmount() != null
+                        && originalLine.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    lineDiscount = originalLine.getDiscountAmount()
+                            .multiply(item.getQuantity())
+                            .divide(originalLine.getQuantity(), 4, RoundingMode.HALF_UP);
+                    lineDiscountPercent = originalLine.getDiscountPercent();
+                }
+            }
+
             if (unitPrice == null) {
-                // Use original transaction price if available, otherwise product price
                 unitPrice = variant != null ? variant.getEffectiveSellingPrice() : product.getSellingPrice();
             }
 
-            BigDecimal lineTotal = unitPrice.multiply(item.getQuantity());
+            BigDecimal grossAmount = unitPrice.multiply(item.getQuantity());
+            BigDecimal netAmount = grossAmount.subtract(lineDiscount);
 
-            // Calculate tax for return line
+            // Calculate tax on the net (discounted) amount
             TaxRate taxRate = taxCalculationService.getDefaultTaxRate(tenantId);
             BigDecimal lineTax = BigDecimal.ZERO;
             if (taxRate != null && taxRate.getRate() != null) {
-                lineTax = lineTotal.multiply(taxRate.getRate()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                lineTax = netAmount.multiply(taxRate.getRate()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
             }
 
             POSTransactionLine line = POSTransactionLine.builder()
@@ -736,24 +760,41 @@ public class POSTransactionService {
                     .quantity(item.getQuantity())
                     .unitPrice(unitPrice)
                     .costPrice(variant != null ? variant.getEffectiveCostPrice() : product.getCostPrice())
-                    .lineTotal(lineTotal.negate()) // Negative for returns
+                    .lineTotal(netAmount.negate()) // Negative for returns
                     .taxAmount(lineTax.negate())
-                    .discountAmount(BigDecimal.ZERO)
-                    .discountPercent(BigDecimal.ZERO)
+                    .discountAmount(lineDiscount)
+                    .discountPercent(lineDiscountPercent != null ? lineDiscountPercent : BigDecimal.ZERO)
                     .isReturn(true)
                     .returnReason(item.getReason())
                     .build();
 
             lineRepository.save(line);
 
-            subtotal = subtotal.add(lineTotal);
+            subtotal = subtotal.add(grossAmount);
+            lineDiscountTotal = lineDiscountTotal.add(lineDiscount);
             taxAmount = taxAmount.add(lineTax);
         }
 
+        // Proportionally allocate transaction-level discount for linked returns
+        BigDecimal txLevelDiscount = BigDecimal.ZERO;
+        if (originalTransaction != null && originalTransaction.getDiscountAmount() != null
+                && originalTransaction.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0
+                && originalTransaction.getSubtotal().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal returnRatio = subtotal.divide(
+                    originalTransaction.getSubtotal(), 6, RoundingMode.HALF_UP);
+            txLevelDiscount = originalTransaction.getDiscountAmount()
+                    .multiply(returnRatio).setScale(4, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal totalDiscount = lineDiscountTotal.add(txLevelDiscount);
+
         // Update return transaction totals (negative values for returns)
+        // Must match the sale formula: totalAmount = subtotal - discount + tax
         returnTransaction.setSubtotal(subtotal.negate());
+        returnTransaction.setDiscountAmount(totalDiscount);
         returnTransaction.setTaxAmount(taxAmount.negate());
-        returnTransaction.setTotalAmount(subtotal.add(taxAmount).negate());
+        returnTransaction.setTotalAmount(
+                subtotal.subtract(totalDiscount).add(taxAmount).negate());
         returnTransaction = transactionRepository.save(returnTransaction);
 
         // Restore stock for returned items
@@ -766,11 +807,13 @@ public class POSTransactionService {
 
         // Post to GL
         try {
-            glIntegrationService.postPOSTransaction(returnTransaction);
+            Long journalEntryId = glIntegrationService.postPOSTransaction(returnTransaction);
+            returnTransaction.setGlJournalEntryId(journalEntryId);
             returnTransaction.setGlPosted(true);
             transactionRepository.save(returnTransaction);
         } catch (Exception e) {
-            log.warn("Failed to post return transaction to GL: {}", e.getMessage());
+            log.error("Failed to post return transaction {} to GL: {}. Retry via POST /api/v1/pos/transactions/{}/retry-gl",
+                    returnTransaction.getTransactionNumber(), e.getMessage(), returnTransaction.getId());
         }
 
         log.info("Created return transaction: {}", returnTransaction.getTransactionNumber());
