@@ -111,13 +111,21 @@ public interface POSTransactionRepository extends JpaRepository<POSTransaction, 
             @Param("tenantId") Long tenantId,
             @Param("status") TransactionStatus status);
 
-    // Failed GL posting / AR invoice queries for retry
+    // Failed GL posting / AR invoice queries for retry (tenant-scoped)
     @Query("SELECT t FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.status = 'COMPLETED' AND t.glPosted = false ORDER BY t.completedAt DESC")
     List<POSTransaction> findCompletedWithoutGlPosting(@Param("tenantId") Long tenantId);
 
     @Query("SELECT t FROM POSTransaction t JOIN t.payments p WHERE t.tenantId = :tenantId AND t.status = 'COMPLETED' " +
            "AND p.paymentType = 'CREDIT' AND p.status = 'APPROVED' AND t.arInvoiceId IS NULL ORDER BY t.completedAt DESC")
     List<POSTransaction> findCompletedCreditWithoutArInvoice(@Param("tenantId") Long tenantId);
+
+    // Failed GL posting / AR invoice queries for scheduled retry (cross-tenant)
+    @Query("SELECT t FROM POSTransaction t WHERE t.status = 'COMPLETED' AND t.glPosted = false ORDER BY t.completedAt ASC")
+    List<POSTransaction> findAllCompletedWithoutGlPosting();
+
+    @Query("SELECT DISTINCT t FROM POSTransaction t JOIN t.payments p WHERE t.status = 'COMPLETED' " +
+           "AND p.paymentType = 'CREDIT' AND p.status = 'APPROVED' AND t.arInvoiceId IS NULL ORDER BY t.completedAt ASC")
+    List<POSTransaction> findAllCompletedCreditWithoutArInvoice();
 
     @Query("SELECT COUNT(t) FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.shift.id = :shiftId AND t.status IN ('PENDING', 'HELD')")
     Long countUnresolvedByShiftId(@Param("shiftId") Long shiftId, @Param("tenantId") Long tenantId);
