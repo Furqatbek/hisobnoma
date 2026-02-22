@@ -2,6 +2,9 @@
 import { ref, onMounted, reactive } from 'vue'
 import api from '@/services/api'
 import { MagnifyingGlassIcon, FunnelIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const logs = ref([])
 const loading = ref(true)
@@ -58,8 +61,8 @@ function getActionClass(action) {
 <template>
   <div class="space-y-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Audit Logs</h1>
-      <p class="mt-1 text-sm text-gray-500">Track system activity</p>
+      <h1 class="text-2xl font-bold text-gray-900">{{ $t('admin.auditLogs.title') }}</h1>
+      <p class="mt-1 text-sm text-gray-500">{{ $t('admin.auditLogs.subtitle') }}</p>
     </div>
 
     <!-- Filters -->
@@ -70,29 +73,29 @@ function getActionClass(action) {
           <input
             v-model="filters.search"
             type="text"
-            placeholder="Search logs..."
+            :placeholder="$t('admin.auditLogs.searchPlaceholder')"
             class="input pl-10"
           />
         </div>
         <select v-model="filters.action" class="input w-auto">
-          <option value="">All Actions</option>
-          <option value="CREATE">Create</option>
-          <option value="UPDATE">Update</option>
-          <option value="DELETE">Delete</option>
-          <option value="LOGIN">Login</option>
-          <option value="LOGOUT">Logout</option>
+          <option value="">{{ $t('admin.auditLogs.allActions') }}</option>
+          <option value="CREATE">{{ $t('admin.auditLogs.create') }}</option>
+          <option value="UPDATE">{{ $t('admin.auditLogs.update') }}</option>
+          <option value="DELETE">{{ $t('admin.auditLogs.deleteAction') }}</option>
+          <option value="LOGIN">{{ $t('admin.auditLogs.login') }}</option>
+          <option value="LOGOUT">{{ $t('admin.auditLogs.logout') }}</option>
         </select>
         <select v-model="filters.module" class="input w-auto">
-          <option value="">All Modules</option>
-          <option value="AUTH">Auth</option>
-          <option value="INVENTORY">Inventory</option>
-          <option value="POS">POS</option>
-          <option value="CUSTOMER">Customer</option>
-          <option value="PURCHASE">Purchase</option>
+          <option value="">{{ $t('admin.auditLogs.allModules') }}</option>
+          <option value="AUTH">{{ $t('admin.auditLogs.auth') }}</option>
+          <option value="INVENTORY">{{ $t('admin.auditLogs.inventory') }}</option>
+          <option value="POS">{{ $t('admin.auditLogs.pos') }}</option>
+          <option value="CUSTOMER">{{ $t('admin.auditLogs.customer') }}</option>
+          <option value="PURCHASE">{{ $t('admin.auditLogs.purchase') }}</option>
         </select>
         <button @click="fetchLogs" class="btn-primary">
           <FunnelIcon class="h-5 w-5 mr-2" />
-          Filter
+          {{ $t('admin.auditLogs.filter') }}
         </button>
       </div>
     </div>
@@ -104,19 +107,19 @@ function getActionClass(action) {
       </div>
 
       <div v-else-if="logs.length === 0" class="text-center py-12">
-        <p class="text-gray-500">No audit logs found</p>
+        <p class="text-gray-500">{{ $t('admin.auditLogs.noLogs') }}</p>
       </div>
 
       <div v-else class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>Timestamp</th>
-              <th>User</th>
-              <th>Action</th>
-              <th>Module</th>
-              <th>Description</th>
-              <th>IP Address</th>
+              <th>{{ $t('admin.auditLogs.timestamp') }}</th>
+              <th>{{ $t('admin.auditLogs.user') }}</th>
+              <th>{{ $t('admin.auditLogs.action') }}</th>
+              <th>{{ $t('admin.auditLogs.module') }}</th>
+              <th>{{ $t('description') }}</th>
+              <th>{{ $t('admin.auditLogs.ipAddress') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -157,17 +160,17 @@ function getActionClass(action) {
             :disabled="pagination.page === 0"
             class="btn-secondary"
           >
-            Previous
+            {{ $t('previous') }}
           </button>
           <span class="text-sm text-gray-500">
-            Page {{ pagination.page + 1 }} of {{ pagination.totalPages }}
+            {{ $t('page') }} {{ pagination.page + 1 }} {{ $t('of') }} {{ pagination.totalPages }}
           </span>
           <button
             @click="pagination.page++; fetchLogs()"
             :disabled="pagination.page >= pagination.totalPages - 1"
             class="btn-secondary"
           >
-            Next
+            {{ $t('next') }}
           </button>
         </div>
       </div>

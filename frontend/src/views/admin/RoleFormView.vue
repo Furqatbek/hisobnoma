@@ -3,6 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { rolesApi } from '@/services/api'
 import { ArrowLeftIcon, ShieldCheckIcon, CheckIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -119,7 +122,7 @@ async function fetchRole() {
     isSystemRole.value = role.systemRole || false
   } catch (error) {
     console.error('Rolni yuklashda xatolik:', error)
-    alert('Rolni yuklashda xatolik yuz berdi')
+    alert(t('admin.roleForm.loadError'))
     router.push('/admin/roles')
   } finally {
     loading.value = false
@@ -139,13 +142,13 @@ function validateForm() {
   errors.value = {}
 
   if (!form.value.name?.trim()) {
-    errors.value.name = 'Rol nomi majburiy'
+    errors.value.name = t('admin.roleForm.nameRequired')
   }
 
   if (!form.value.code?.trim()) {
-    errors.value.code = 'Rol kodi majburiy'
+    errors.value.code = t('admin.roleForm.codeRequired')
   } else if (!/^[A-Z][A-Z0-9_]*$/.test(form.value.code)) {
-    errors.value.code = 'Kod faqat katta harflar va pastki chiziqdan iborat bo\'lishi kerak'
+    errors.value.code = t('admin.roleForm.codeFormat')
   }
 
   return Object.keys(errors.value).length === 0
@@ -180,7 +183,7 @@ async function saveRole() {
     } else if (error.response?.data?.message) {
       alert(error.response.data.message)
     } else {
-      alert('Rolni saqlashda xatolik yuz berdi')
+      alert(t('admin.roleForm.saveError'))
     }
   } finally {
     saving.value = false
@@ -256,10 +259,10 @@ onMounted(() => {
       </button>
       <div>
         <h1 class="text-2xl font-bold text-gray-900">
-          {{ isEdit ? 'Rolni tahrirlash' : 'Yangi rol' }}
+          {{ isEdit ? $t('admin.roleForm.editRole') : $t('admin.roleForm.newRole') }}
         </h1>
         <p class="mt-1 text-sm text-gray-500">
-          {{ isEdit ? 'Rol ma\'lumotlari va ruxsatlarini yangilash' : 'Yangi rol va uning ruxsatlarini qo\'shish' }}
+          {{ isEdit ? $t('admin.roleForm.editSubtitle') : $t('admin.roleForm.newSubtitle') }}
         </p>
       </div>
     </div>
@@ -275,7 +278,7 @@ onMounted(() => {
           <div class="card-header">
             <div class="flex items-center">
               <ShieldCheckIcon class="h-6 w-6 text-primary-600 mr-2" />
-              <h3 class="text-lg font-medium">Rol ma'lumotlari</h3>
+              <h3 class="text-lg font-medium">{{ $t('admin.roleForm.roleInfo') }}</h3>
             </div>
           </div>
 
@@ -283,7 +286,7 @@ onMounted(() => {
             <!-- Name -->
             <div>
               <label class="label">
-                Rol nomi <span class="text-red-500">*</span>
+                {{ $t('admin.roles.roleName') }} <span class="text-red-500">*</span>
               </label>
               <input
                 v-model="form.name"
@@ -299,7 +302,7 @@ onMounted(() => {
             <!-- Code -->
             <div>
               <label class="label">
-                Rol kodi <span class="text-red-500">*</span>
+                {{ $t('admin.roleForm.roleCode') }} <span class="text-red-500">*</span>
               </label>
               <input
                 v-model="form.code"
@@ -310,17 +313,17 @@ onMounted(() => {
                 :disabled="isEdit"
               />
               <p v-if="errors.code" class="text-sm text-red-500 mt-1">{{ errors.code }}</p>
-              <p v-else class="text-xs text-gray-500 mt-1">Faqat katta harflar va pastki chiziq</p>
+              <p v-else class="text-xs text-gray-500 mt-1">{{ $t('admin.roleForm.codeHint') }}</p>
             </div>
 
             <!-- Description -->
             <div>
-              <label class="label">Tavsif</label>
+              <label class="label">{{ $t('description') }}</label>
               <textarea
                 v-model="form.description"
                 rows="3"
                 class="input"
-                placeholder="Rol haqida qisqacha..."
+                :placeholder="$t('admin.roleForm.descriptionPlaceholder')"
                 :disabled="isSystemRole"
               ></textarea>
             </div>
@@ -328,7 +331,7 @@ onMounted(() => {
             <!-- Selected count -->
             <div class="pt-4 border-t">
               <div class="flex items-center justify-between text-sm">
-                <span class="text-gray-500">Tanlangan ruxsatlar:</span>
+                <span class="text-gray-500">{{ $t('admin.roleForm.selectedPermissions') }}:</span>
                 <span class="font-bold text-primary-600">{{ form.permissionCodes.length }} / {{ allPermissions.length }}</span>
               </div>
             </div>
@@ -336,17 +339,17 @@ onMounted(() => {
             <!-- System role warning -->
             <div v-if="isSystemRole" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
               <p class="text-sm text-yellow-800">
-                Bu tizim roli. Faqat ruxsatlarni o'zgartirish mumkin.
+                {{ $t('admin.roleForm.systemRoleWarning') }}
               </p>
             </div>
           </div>
 
           <div class="card-footer flex justify-end space-x-3">
             <button @click="router.back()" class="btn-secondary">
-              Bekor qilish
+              {{ $t('cancel') }}
             </button>
             <button @click="saveRole" :disabled="saving" class="btn-primary">
-              {{ saving ? 'Saqlanmoqda...' : (isEdit ? 'Yangilash' : 'Saqlash') }}
+              {{ saving ? $t('saving') : (isEdit ? $t('admin.roleForm.update') : $t('save')) }}
             </button>
           </div>
         </div>
@@ -356,14 +359,14 @@ onMounted(() => {
       <div class="lg:col-span-2">
         <div class="card">
           <div class="card-header flex items-center justify-between">
-            <h3 class="text-lg font-medium">Ruxsatlar</h3>
+            <h3 class="text-lg font-medium">{{ $t('admin.roles.permissions') }}</h3>
             <div class="flex space-x-2">
               <button @click="selectAll" class="text-sm text-primary-600 hover:text-primary-800">
-                Hammasini tanlash
+                {{ $t('admin.roleForm.selectAll') }}
               </button>
               <span class="text-gray-300">|</span>
               <button @click="deselectAll" class="text-sm text-gray-500 hover:text-gray-700">
-                Hammasini bekor qilish
+                {{ $t('admin.roleForm.deselectAll') }}
               </button>
             </div>
           </div>
@@ -394,7 +397,7 @@ onMounted(() => {
                     <span class="ml-2 text-sm text-gray-500">({{ group.permissions.length }})</span>
                   </div>
                   <span class="text-sm text-gray-500">
-                    {{ group.permissions.filter(p => isPermissionSelected(p.code)).length }} tanlangan
+                    {{ group.permissions.filter(p => isPermissionSelected(p.code)).length }} {{ $t('admin.roleForm.selected') }}
                   </span>
                 </div>
 
@@ -417,7 +420,7 @@ onMounted(() => {
               </div>
 
               <div v-if="Object.keys(permissionGroups).length === 0" class="text-center py-8">
-                <p class="text-gray-500">Ruxsatlar yuklanmoqda...</p>
+                <p class="text-gray-500">{{ $t('admin.roleForm.permissionsLoading') }}</p>
               </div>
             </div>
           </div>

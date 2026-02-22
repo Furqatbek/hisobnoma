@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { expensesApi, apPaymentsApi } from '@/services/api'
 import {
   ArrowLeftIcon,
@@ -12,6 +13,7 @@ import {
   BanknotesIcon
 } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const expense = ref(null)
@@ -38,7 +40,7 @@ async function fetchExpense() {
     expense.value = response.data.data || response.data
   } catch (error) {
     console.error('Xarajatni yuklashda xatolik:', error)
-    alert('Xarajatni yuklashda xatolik yuz berdi')
+    alert(t('failedToLoad'))
     router.push('/finance/expenses')
   } finally {
     loading.value = false
@@ -51,7 +53,7 @@ async function submitForApproval() {
     await expensesApi.submit(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || 'Xatolik yuz berdi')
+    alert(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
@@ -63,14 +65,14 @@ async function approveExpense() {
     await expensesApi.approve(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || 'Xatolik yuz berdi')
+    alert(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
 }
 
 async function rejectExpense() {
-  const reason = prompt('Rad etish sababini kiriting:')
+  const reason = prompt(t('finance.expenseDetail.rejectReason') + ':')
   if (!reason) return
 
   actionLoading.value = true
@@ -78,7 +80,7 @@ async function rejectExpense() {
     await expensesApi.reject(expense.value.id, reason)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || 'Xatolik yuz berdi')
+    alert(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
@@ -90,7 +92,7 @@ async function holdExpense() {
     await expensesApi.hold(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || 'Xatolik yuz berdi')
+    alert(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
@@ -102,14 +104,14 @@ async function releaseHold() {
     await expensesApi.releaseHold(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || 'Xatolik yuz berdi')
+    alert(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
 }
 
 async function cancelExpense() {
-  const reason = prompt('Bekor qilish sababini kiriting:')
+  const reason = prompt(t('finance.expenseDetail.cancelReason') + ':')
   if (!reason) return
 
   actionLoading.value = true
@@ -117,7 +119,7 @@ async function cancelExpense() {
     await expensesApi.cancel(expense.value.id, reason)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || 'Xatolik yuz berdi')
+    alert(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
@@ -138,11 +140,11 @@ function openPaymentModal() {
 async function submitPayment() {
   const amount = parseFloat(paymentForm.value.paymentAmount)
   if (!amount || amount <= 0) {
-    alert('To\'lov summasi kiritilishi kerak')
+    alert(t('finance.expenseDetail.paymentAmountRequired'))
     return
   }
   if (amount > balanceDue.value) {
-    alert('To\'lov summasi qoldiqdan oshmasligi kerak')
+    alert(t('finance.expenseDetail.paymentExceedsBalance'))
     return
   }
 
@@ -174,7 +176,7 @@ async function submitPayment() {
     await fetchExpense()
   } catch (error) {
     console.error('To\'lov xatosi:', error)
-    alert(error.response?.data?.message || 'To\'lovni amalga oshirishda xatolik yuz berdi')
+    alert(error.response?.data?.message || t('finance.expenseDetail.paymentError'))
   } finally {
     paymentSaving.value = false
   }
@@ -210,18 +212,7 @@ function getStatusClass(status) {
 }
 
 function getStatusLabel(status) {
-  const labels = {
-    'DRAFT': 'Qoralama',
-    'PENDING_APPROVAL': 'Tasdiqlanmoqda',
-    'APPROVED': 'Tasdiqlangan',
-    'PARTIAL': 'Qisman to\'langan',
-    'PARTIALLY_PAID': 'Qisman to\'langan',
-    'PAID': 'To\'langan',
-    'ON_HOLD': 'Kutish',
-    'CANCELLED': 'Bekor qilingan',
-    'REJECTED': 'Rad etilgan'
-  }
-  return labels[status] || status
+  return t(`enums.apInvoiceStatus.${status}`, status)
 }
 
 function canEdit() {
@@ -263,7 +254,7 @@ function canCancel() {
         </button>
         <div>
           <h1 class="text-2xl font-bold text-gray-900">
-            Xarajat {{ expense?.invoiceNumber || `#${route.params.id}` }}
+            {{ $t('finance.expenseDetail.expense') }} {{ expense?.invoiceNumber || `#${route.params.id}` }}
           </h1>
           <p v-if="expense" class="text-sm text-gray-500">
             {{ expense.vendorName || '-' }} • {{ formatDate(expense.invoiceDate) }}
@@ -278,7 +269,7 @@ function canCancel() {
           class="btn-secondary"
         >
           <PencilSquareIcon class="h-5 w-5 mr-2" />
-          Tahrirlash
+          {{ $t('edit') }}
         </RouterLink>
 
         <button
@@ -287,7 +278,7 @@ function canCancel() {
           :disabled="actionLoading"
           class="btn-primary"
         >
-          Tasdiqlashga yuborish
+          {{ $t('finance.expenseDetail.sendForApproval') }}
         </button>
 
         <button
@@ -297,7 +288,7 @@ function canCancel() {
           class="btn-success"
         >
           <CheckIcon class="h-5 w-5 mr-2" />
-          Tasdiqlash
+          {{ $t('finance.expenseDetail.approve') }}
         </button>
 
         <button
@@ -307,7 +298,7 @@ function canCancel() {
           class="btn-danger"
         >
           <XMarkIcon class="h-5 w-5 mr-2" />
-          Rad etish
+          {{ $t('finance.expenseDetail.reject') }}
         </button>
 
         <button
@@ -317,7 +308,7 @@ function canCancel() {
           class="btn-pay"
         >
           <BanknotesIcon class="h-5 w-5 mr-2" />
-          To'lov qilish
+          {{ $t('finance.expenseDetail.makePayment') }}
         </button>
 
         <button
@@ -327,7 +318,7 @@ function canCancel() {
           class="btn-warning"
         >
           <PauseIcon class="h-5 w-5 mr-2" />
-          Kutishga olish
+          {{ $t('finance.expenseDetail.putOnHold') }}
         </button>
 
         <button
@@ -337,7 +328,7 @@ function canCancel() {
           class="btn-primary"
         >
           <PlayIcon class="h-5 w-5 mr-2" />
-          Davom ettirish
+          {{ $t('finance.expenseDetail.continue') }}
         </button>
 
         <button
@@ -346,7 +337,7 @@ function canCancel() {
           :disabled="actionLoading"
           class="btn-danger"
         >
-          Bekor qilish
+          {{ $t('cancel') }}
         </button>
       </div>
     </div>
@@ -360,7 +351,7 @@ function canCancel() {
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Holat</p>
+            <p class="text-sm text-gray-500">{{ $t('status') }}</p>
             <span :class="['badge mt-2', getStatusClass(expense.status)]">
               {{ getStatusLabel(expense.status) }}
             </span>
@@ -368,21 +359,21 @@ function canCancel() {
         </div>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Jami summa</p>
-            <p class="text-xl font-bold text-gray-900">{{ formatCurrency(expense.totalAmount) }} so'm</p>
+            <p class="text-sm text-gray-500">{{ $t('total') }}</p>
+            <p class="text-xl font-bold text-gray-900">{{ formatCurrency(expense.totalAmount) }} {{ $t('sum') }}</p>
           </div>
         </div>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">To'langan</p>
-            <p class="text-xl font-bold text-green-600">{{ formatCurrency(expense.paidAmount) }} so'm</p>
+            <p class="text-sm text-gray-500">{{ $t('finance.debtors.paidAmount') }}</p>
+            <p class="text-xl font-bold text-green-600">{{ formatCurrency(expense.paidAmount) }} {{ $t('sum') }}</p>
           </div>
         </div>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Qoldiq</p>
+            <p class="text-sm text-gray-500">{{ $t('balance') }}</p>
             <p :class="['text-xl font-bold', balanceDue > 0 ? 'text-red-600' : 'text-green-600']">
-              {{ formatCurrency(expense.balanceDue) }} so'm
+              {{ formatCurrency(expense.balanceDue) }} {{ $t('sum') }}
             </p>
           </div>
         </div>
@@ -394,28 +385,28 @@ function canCancel() {
           <!-- Basic Info -->
           <div class="card">
             <div class="card-header">
-              <h3 class="text-lg font-medium">Ma'lumotlar</h3>
+              <h3 class="text-lg font-medium">{{ $t('finance.expenseDetail.info') }}</h3>
             </div>
             <div class="card-body">
               <dl class="grid grid-cols-2 gap-4">
                 <div>
-                  <dt class="text-sm text-gray-500">{{ expense.vendorId ? 'Yetkazib beruvchi' : 'Xarajat nomi' }}</dt>
+                  <dt class="text-sm text-gray-500">{{ expense.vendorId ? $t('finance.expenseForm.supplier') : $t('finance.expenseDetail.expenseName') }}</dt>
                   <dd class="font-medium">{{ expense.vendorName || '-' }}</dd>
                 </div>
                 <div v-if="expense.vendorId">
-                  <dt class="text-sm text-gray-500">Yetkazib beruvchi hisob-faktura №</dt>
+                  <dt class="text-sm text-gray-500">{{ $t('finance.expenseDetail.vendorInvoiceNumber') }}</dt>
                   <dd class="font-medium">{{ expense.vendorInvoiceNumber || '-' }}</dd>
                 </div>
                 <div>
-                  <dt class="text-sm text-gray-500">Sana</dt>
+                  <dt class="text-sm text-gray-500">{{ $t('date') }}</dt>
                   <dd class="font-medium">{{ formatDate(expense.invoiceDate) }}</dd>
                 </div>
                 <div>
-                  <dt class="text-sm text-gray-500">To'lov muddati</dt>
+                  <dt class="text-sm text-gray-500">{{ $t('finance.expenseForm.dueDate') }}</dt>
                   <dd class="font-medium">{{ formatDate(expense.dueDate) }}</dd>
                 </div>
                 <div v-if="expense.description" class="col-span-2">
-                  <dt class="text-sm text-gray-500">Tavsif</dt>
+                  <dt class="text-sm text-gray-500">{{ $t('description') }}</dt>
                   <dd class="font-medium">{{ expense.description }}</dd>
                 </div>
               </dl>
@@ -425,17 +416,17 @@ function canCancel() {
           <!-- Line Items -->
           <div class="card">
             <div class="card-header">
-              <h3 class="text-lg font-medium">Xarajat qatorlari</h3>
+              <h3 class="text-lg font-medium">{{ $t('finance.expenseDetail.lineItems') }}</h3>
             </div>
             <div class="table-container">
               <table class="table">
                 <thead>
                   <tr>
-                    <th>Tavsif</th>
-                    <th class="text-right">Miqdor</th>
-                    <th class="text-right">Narx</th>
-                    <th class="text-right">Soliq %</th>
-                    <th class="text-right">Jami</th>
+                    <th>{{ $t('description') }}</th>
+                    <th class="text-right">{{ $t('quantity') }}</th>
+                    <th class="text-right">{{ $t('price') }}</th>
+                    <th class="text-right">{{ $t('finance.expenseForm.taxPercent') }}</th>
+                    <th class="text-right">{{ $t('total') }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
@@ -447,7 +438,7 @@ function canCancel() {
                     <td class="text-right">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
                     <td class="text-right">{{ formatCurrency(line.unitPrice) }}</td>
                     <td class="text-right">{{ line.taxRate || 0 }}%</td>
-                    <td class="text-right font-medium">{{ formatCurrency(line.lineTotal) }} so'm</td>
+                    <td class="text-right font-medium">{{ formatCurrency(line.lineTotal) }} {{ $t('sum') }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -460,28 +451,28 @@ function canCancel() {
           <!-- Totals -->
           <div class="card">
             <div class="card-header">
-              <h3 class="text-lg font-medium">Jami</h3>
+              <h3 class="text-lg font-medium">{{ $t('total') }}</h3>
             </div>
             <div class="card-body space-y-3">
               <div class="flex justify-between">
-                <span class="text-gray-500">Oraliq jami:</span>
-                <span>{{ formatCurrency(expense.subtotal) }} so'm</span>
+                <span class="text-gray-500">{{ $t('finance.expenseDetail.subtotal') }}:</span>
+                <span>{{ formatCurrency(expense.subtotal) }} {{ $t('sum') }}</span>
               </div>
               <div v-if="Number(expense.taxAmount) > 0" class="flex justify-between">
-                <span class="text-gray-500">Soliq:</span>
-                <span>{{ formatCurrency(expense.taxAmount) }} so'm</span>
+                <span class="text-gray-500">{{ $t('finance.expenseDetail.taxAmount') }}:</span>
+                <span>{{ formatCurrency(expense.taxAmount) }} {{ $t('sum') }}</span>
               </div>
               <div v-if="Number(expense.shippingAmount) > 0" class="flex justify-between">
-                <span class="text-gray-500">Yetkazish:</span>
-                <span>{{ formatCurrency(expense.shippingAmount) }} so'm</span>
+                <span class="text-gray-500">{{ $t('finance.expenseDetail.shippingAmount') }}:</span>
+                <span>{{ formatCurrency(expense.shippingAmount) }} {{ $t('sum') }}</span>
               </div>
               <div v-if="Number(expense.discountAmount) > 0" class="flex justify-between text-green-600">
-                <span>Chegirma:</span>
-                <span>-{{ formatCurrency(expense.discountAmount) }} so'm</span>
+                <span>{{ $t('finance.expenseDetail.discountAmount') }}:</span>
+                <span>-{{ formatCurrency(expense.discountAmount) }} {{ $t('sum') }}</span>
               </div>
               <div class="flex justify-between text-lg font-bold border-t pt-3">
-                <span>Jami:</span>
-                <span>{{ formatCurrency(expense.totalAmount) }} so'm</span>
+                <span>{{ $t('total') }}:</span>
+                <span>{{ formatCurrency(expense.totalAmount) }} {{ $t('sum') }}</span>
               </div>
             </div>
           </div>
@@ -489,7 +480,7 @@ function canCancel() {
           <!-- Notes -->
           <div v-if="expense.notes" class="card">
             <div class="card-header">
-              <h3 class="text-lg font-medium">Izohlar</h3>
+              <h3 class="text-lg font-medium">{{ $t('notes') }}</h3>
             </div>
             <div class="card-body">
               <p class="text-gray-600">{{ expense.notes }}</p>
@@ -499,7 +490,7 @@ function canCancel() {
           <!-- Rejection Reason -->
           <div v-if="expense.rejectionReason" class="card border-red-200 bg-red-50">
             <div class="card-header">
-              <h3 class="text-lg font-medium text-red-800">Rad etish sababi</h3>
+              <h3 class="text-lg font-medium text-red-800">{{ $t('finance.expenseDetail.rejectReason') }}</h3>
             </div>
             <div class="card-body">
               <p class="text-red-700">{{ expense.rejectionReason }}</p>
@@ -509,7 +500,7 @@ function canCancel() {
           <!-- Cancellation Reason -->
           <div v-if="expense.cancellationReason" class="card border-red-200 bg-red-50">
             <div class="card-header">
-              <h3 class="text-lg font-medium text-red-800">Bekor qilish sababi</h3>
+              <h3 class="text-lg font-medium text-red-800">{{ $t('finance.expenseDetail.cancelReason') }}</h3>
             </div>
             <div class="card-body">
               <p class="text-red-700">{{ expense.cancellationReason }}</p>
@@ -524,15 +515,15 @@ function canCancel() {
       <div v-if="showPaymentModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
         <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
           <div class="px-6 py-4 border-b">
-            <h3 class="text-lg font-semibold text-gray-900">To'lov qilish</h3>
+            <h3 class="text-lg font-semibold text-gray-900">{{ $t('finance.expenseDetail.paymentForm') }}</h3>
             <p class="text-sm text-gray-500 mt-1">
-              {{ expense?.invoiceNumber }} — Qoldiq: {{ formatCurrency(balanceDue) }} so'm
+              {{ expense?.invoiceNumber }} — {{ $t('balance') }}: {{ formatCurrency(balanceDue) }} {{ $t('sum') }}
             </p>
           </div>
 
           <div class="px-6 py-4 space-y-4">
             <div>
-              <label class="label">To'lov summasi <span class="text-red-500">*</span></label>
+              <label class="label">{{ $t('finance.expenseDetail.paymentAmount') }} <span class="text-red-500">*</span></label>
               <input
                 v-model.number="paymentForm.paymentAmount"
                 type="number"
@@ -541,44 +532,44 @@ function canCancel() {
                 step="any"
                 class="input"
               />
-              <p class="text-xs text-gray-400 mt-1">Maksimum: {{ formatCurrency(balanceDue) }} so'm</p>
+              <p class="text-xs text-gray-400 mt-1">{{ $t('finance.expenseDetail.maxAmount') }}: {{ formatCurrency(balanceDue) }} {{ $t('sum') }}</p>
             </div>
 
             <div>
-              <label class="label">To'lov usuli <span class="text-red-500">*</span></label>
+              <label class="label">{{ $t('finance.payments.paymentMethod') }} <span class="text-red-500">*</span></label>
               <select v-model="paymentForm.paymentMethod" class="input">
-                <option value="BANK_TRANSFER">Bank o'tkazmasi</option>
-                <option value="CASH">Naqd pul</option>
-                <option value="CHECK">Chek</option>
-                <option value="CREDIT_CARD">Kredit karta</option>
-                <option value="ACH">ACH</option>
-                <option value="ONLINE">Onlayn to'lov</option>
-                <option value="OTHER">Boshqa</option>
+                <option value="BANK_TRANSFER">{{ $t('enums.paymentMethod.BANK_TRANSFER') }}</option>
+                <option value="CASH">{{ $t('enums.paymentMethod.CASH') }}</option>
+                <option value="CHECK">{{ $t('enums.paymentMethod.CHECK') }}</option>
+                <option value="CREDIT_CARD">{{ $t('enums.paymentMethod.CREDIT_CARD') }}</option>
+                <option value="ACH">{{ $t('enums.paymentMethod.ACH') }}</option>
+                <option value="ONLINE">{{ $t('enums.paymentMethod.ONLINE_PAYMENT') }}</option>
+                <option value="OTHER">{{ $t('enums.paymentMethod.OTHER') }}</option>
               </select>
             </div>
 
             <div>
-              <label class="label">To'lov sanasi <span class="text-red-500">*</span></label>
+              <label class="label">{{ $t('finance.expenseDetail.paymentDate') }} <span class="text-red-500">*</span></label>
               <input v-model="paymentForm.paymentDate" type="date" class="input" />
             </div>
 
             <div>
-              <label class="label">Havola raqami</label>
-              <input v-model="paymentForm.referenceNumber" type="text" class="input" placeholder="Tranzaksiya raqami" />
+              <label class="label">{{ $t('finance.expenseDetail.referenceNumber') }}</label>
+              <input v-model="paymentForm.referenceNumber" type="text" class="input" :placeholder="$t('finance.expenseDetail.transactionNumber')" />
             </div>
 
             <div>
-              <label class="label">Izoh</label>
-              <input v-model="paymentForm.memo" type="text" class="input" placeholder="To'lov izohi" />
+              <label class="label">{{ $t('notes') }}</label>
+              <input v-model="paymentForm.memo" type="text" class="input" :placeholder="$t('finance.expenseDetail.paymentNote')" />
             </div>
           </div>
 
           <div class="px-6 py-4 border-t flex justify-end space-x-3">
             <button @click="showPaymentModal = false" class="btn-secondary" :disabled="paymentSaving">
-              Bekor qilish
+              {{ $t('cancel') }}
             </button>
             <button @click="submitPayment" class="btn-pay" :disabled="paymentSaving">
-              {{ paymentSaving ? 'Jarayonda...' : 'To\'lov qilish' }}
+              {{ paymentSaving ? $t('finance.expenseDetail.processingPayment') : $t('finance.expenseDetail.makePayment') }}
             </button>
           </div>
         </div>

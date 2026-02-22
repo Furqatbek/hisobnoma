@@ -40,7 +40,29 @@
     "warehouseRequired": "Омбор танланиши шарт",
     "itemsRequired": "Камида битта маҳсулот қўшинг",
     "saveDraft": "Қоралама сақлаш",
-    "saveAndSubmit": "Сақлаш ва юбориш"
+    "saveAndSubmit": "Сақлаш ва юбориш",
+    "currency": "Валюта",
+    "vendorReference": "Етказиб берувчи ҳаволаси",
+    "shippingAndPayment": "Етказиб бериш ва тўлов",
+    "paymentTerms": "Тўлов шартлари",
+    "selectPaymentTerms": "Тўлов шартларини танланг",
+    "prepaid": "Олдиндан тўлов",
+    "cod": "Олиб кетишда тўлов",
+    "shippingMethod": "Етказиб бериш усули",
+    "shippingAddress": "Етказиб бериш манзили",
+    "notes": "Изоҳлар (етказиб берувчига кўринади)",
+    "internalNotes": "Ички изоҳлар",
+    "uom": "Ўлчов бирлиги",
+    "product": "Маҳсулот",
+    "received": "Қабул қилинган",
+    "pending": "Кутилмоқда",
+    "orderItems": "Буюртма маҳсулотлари",
+    "discount": "Чегирма",
+    "tax": "Солиқ",
+    "shipping": "Етказиб бериш",
+    "totalAmount": "Жами сумма",
+    "location": "Жойлашув",
+    "createdDate": "Яратилган"
   },
   "suppliers": {
     "title": "Етказиб берувчилар",
@@ -56,6 +78,7 @@
     "editSupplier": "Етказиб берувчини таҳрирлаш",
     "companyName": "Компания номи",
     "nameRequired": "Номи киритилиши шарт",
-    "codeRequired": "Коди киритилиши шарт"
+    "codeRequired": "Коди киритилиши шарт",
+    "contact": "Алоқа"
   }
 }

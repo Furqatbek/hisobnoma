@@ -3,6 +3,8 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { arInvoicesApi, customersApi, productsApi } from '@/services/api'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const router = useRouter()
 const saving = ref(false)
@@ -196,21 +198,21 @@ function formatCurrency(value) {
 function validate() {
   Object.keys(errors).forEach(key => delete errors[key])
 
-  if (!form.customerId) errors.customer = 'Mijozni tanlang'
-  if (!form.invoiceDate) errors.invoiceDate = 'Faktura sanasi kerak'
-  if (!form.dueDate) errors.dueDate = 'To\'lov muddati kerak'
-  if (form.lines.length === 0) errors.lines = 'Kamida bitta mahsulot qo\'shing'
+  if (!form.customerId) errors.customer = t('finance.debtors.customerRequired')
+  if (!form.invoiceDate) errors.invoiceDate = t('finance.debtors.invoiceDateRequired')
+  if (!form.dueDate) errors.dueDate = t('finance.debtors.dueDateRequired')
+  if (form.lines.length === 0) errors.lines = t('finance.debtors.atLeastOneProduct')
 
   for (let i = 0; i < form.lines.length; i++) {
     const line = form.lines[i]
     if (!line.description?.trim()) {
-      errors[`line_${i}_desc`] = 'Tavsif kerak'
+      errors[`line_${i}_desc`] = t('finance.debtors.descriptionRequired')
     }
     if (!line.quantity || parseFloat(line.quantity) <= 0) {
-      errors[`line_${i}_qty`] = 'Miqdor kerak'
+      errors[`line_${i}_qty`] = t('finance.debtors.quantityRequired')
     }
     if (line.unitPrice === undefined || line.unitPrice === '' || parseFloat(line.unitPrice) < 0) {
-      errors[`line_${i}_price`] = 'Narx kerak'
+      errors[`line_${i}_price`] = t('finance.debtors.priceRequired')
     }
   }
 
@@ -235,7 +237,7 @@ async function handleSubmit() {
         productId: line.productId || null,
         productSku: line.productSku || null,
         productName: line.productName || null,
-        description: line.description || line.productName || 'Mahsulot',
+        description: line.description || line.productName || t('finance.debtors.defaultProduct'),
         quantity: parseFloat(line.quantity),
         unitPrice: parseFloat(line.unitPrice),
         unitOfMeasure: line.unitOfMeasure || null
@@ -256,9 +258,9 @@ async function handleSubmit() {
       response.validationErrors.forEach(err => {
         if (err.field) errors[err.field] = err.message
       })
-      errors.general = 'Xatoliklarni tuzating'
+      errors.general = t('fixErrors')
     } else {
-      errors.general = response?.message || 'Saqlashda xatolik yuz berdi'
+      errors.general = response?.message || t('failedToSave')
     }
   } finally {
     saving.value = false
@@ -274,8 +276,8 @@ async function handleSubmit() {
         <ArrowLeftIcon class="h-5 w-5 text-gray-500" />
       </button>
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Qarz qo'shish</h1>
-        <p class="text-sm text-gray-500">Mijozga nasiyaga sotilgan mahsulotlarni ro'yxatlash</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('finance.debtors.addDebt') }}</h1>
+        <p class="text-sm text-gray-500">{{ $t('finance.debtors.addDebtSubtitle') }}</p>
       </div>
     </div>
 
@@ -287,11 +289,11 @@ async function handleSubmit() {
 
       <!-- Customer & Date -->
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Asosiy ma'lumotlar</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">{{ $t('finance.debtors.basicInfo') }}</h3></div>
         <div class="card-body grid grid-cols-1 md:grid-cols-3 gap-6">
           <!-- Customer search -->
           <div class="relative md:col-span-1">
-            <label class="label">Mijoz *</label>
+            <label class="label">{{ $t('customer') }} *</label>
             <div v-if="selectedCustomer" class="flex items-center gap-2 p-2 bg-primary-50 border border-primary-200 rounded-lg">
               <div class="flex-1">
                 <p class="font-medium text-sm">{{ selectedCustomer.name }}</p>
@@ -310,7 +312,7 @@ async function handleSubmit() {
                   @focus="onCustomerFocus"
                   @blur="setTimeout(() => showCustomerDropdown = false, 200)"
                   type="text"
-                  :placeholder="loadingCustomers ? 'Yuklanmoqda...' : 'Mijoz qidirish...'"
+                  :placeholder="loadingCustomers ? $t('loading') : $t('finance.debtors.searchCustomer')"
                   :class="[errors.customer ? 'input-error pl-9' : 'input pl-9']"
                 />
               </div>
@@ -334,20 +336,20 @@ async function handleSubmit() {
                 v-if="showCustomerDropdown && filteredCustomers.length === 0 && !loadingCustomers && customerSearch"
                 class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-3 text-center text-sm text-gray-400"
               >
-                Mijoz topilmadi
+                {{ $t('finance.debtors.customerNotFound') }}
               </div>
             </div>
             <p v-if="errors.customer" class="mt-1 text-sm text-red-600">{{ errors.customer }}</p>
           </div>
 
           <div>
-            <label class="label">Faktura sanasi *</label>
+            <label class="label">{{ $t('finance.debtors.invoiceDate') }} *</label>
             <input v-model="form.invoiceDate" type="date" :class="[errors.invoiceDate ? 'input-error' : 'input']" />
             <p v-if="errors.invoiceDate" class="mt-1 text-sm text-red-600">{{ errors.invoiceDate }}</p>
           </div>
 
           <div>
-            <label class="label">To'lov muddati *</label>
+            <label class="label">{{ $t('finance.debtors.dueDate') }} *</label>
             <input v-model="form.dueDate" type="date" :class="[errors.dueDate ? 'input-error' : 'input']" />
             <p v-if="errors.dueDate" class="mt-1 text-sm text-red-600">{{ errors.dueDate }}</p>
           </div>
@@ -358,7 +360,7 @@ async function handleSubmit() {
       <div class="card">
         <div class="card-header">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-medium">Mahsulotlar</h3>
+            <h3 class="text-lg font-medium">{{ $t('finance.debtors.products') }}</h3>
           </div>
         </div>
         <div class="card-body space-y-4">
@@ -372,7 +374,7 @@ async function handleSubmit() {
                   @blur="setTimeout(() => { showProductDropdown = false; productSearchEmpty = false }, 200)"
                   @focus="productSearch && (showProductDropdown = true)"
                   type="text"
-                  placeholder="Mahsulot qidirish (nomi yoki shtrix kodi)..."
+                  :placeholder="$t('finance.debtors.searchProduct')"
                   class="input pl-9"
                 />
               </div>
@@ -382,7 +384,7 @@ async function handleSubmit() {
                 class="btn-secondary flex items-center gap-1 whitespace-nowrap"
               >
                 <PlusIcon class="h-4 w-4" />
-                Qo'lda qo'shish
+                {{ $t('finance.debtors.manualAdd') }}
               </button>
             </div>
 
@@ -392,7 +394,7 @@ async function handleSubmit() {
               class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
             >
               <div v-if="loadingProducts" class="px-4 py-3 text-center text-sm text-gray-400">
-                Qidirilmoqda...
+                {{ $t('searching') }}
               </div>
               <template v-else-if="productResults.length > 0">
                 <button
@@ -409,11 +411,11 @@ async function handleSubmit() {
                       {{ p.barcode ? ' | ' + p.barcode : '' }}
                     </p>
                   </div>
-                  <span class="text-sm font-semibold text-gray-700">{{ formatCurrency(p.sellingPrice || 0) }} so'm</span>
+                  <span class="text-sm font-semibold text-gray-700">{{ formatCurrency(p.sellingPrice || 0) }} {{ $t('sum') }}</span>
                 </button>
               </template>
               <div v-else-if="productSearchEmpty" class="px-4 py-3 text-center text-sm text-gray-400">
-                Mahsulot topilmadi
+                {{ $t('noData') }}
               </div>
             </div>
           </div>
@@ -426,10 +428,10 @@ async function handleSubmit() {
               <thead>
                 <tr class="bg-gray-50 text-gray-600">
                   <th class="px-3 py-2 text-left font-medium w-8">№</th>
-                  <th class="px-3 py-2 text-left font-medium">Mahsulot / Tavsif</th>
-                  <th class="px-3 py-2 text-center font-medium w-24">Soni</th>
-                  <th class="px-3 py-2 text-right font-medium w-36">Narxi</th>
-                  <th class="px-3 py-2 text-right font-medium w-36">Jami</th>
+                  <th class="px-3 py-2 text-left font-medium">{{ $t('product') }} / {{ $t('description') }}</th>
+                  <th class="px-3 py-2 text-center font-medium w-24">{{ $t('quantity') }}</th>
+                  <th class="px-3 py-2 text-right font-medium w-36">{{ $t('price') }}</th>
+                  <th class="px-3 py-2 text-right font-medium w-36">{{ $t('total') }}</th>
                   <th class="px-3 py-2 w-12"></th>
                 </tr>
               </thead>
@@ -440,7 +442,7 @@ async function handleSubmit() {
                     <input
                       v-model="line.description"
                       type="text"
-                      :placeholder="line.productName || 'Tavsif kiriting...'"
+                      :placeholder="line.productName || $t('description')"
                       :class="[errors[`line_${index}_desc`] ? 'input-error text-sm' : 'input text-sm']"
                     />
                     <p v-if="line.productSku" class="text-xs text-gray-400 mt-1">{{ line.productSku }}</p>
@@ -467,7 +469,7 @@ async function handleSubmit() {
                     <p v-if="errors[`line_${index}_price`]" class="text-xs text-red-600 mt-1">{{ errors[`line_${index}_price`] }}</p>
                   </td>
                   <td class="px-3 py-2 text-right font-medium">
-                    {{ formatCurrency(lineTotal(line)) }} so'm
+                    {{ formatCurrency(lineTotal(line)) }} {{ $t('sum') }}
                   </td>
                   <td class="px-3 py-2 text-center">
                     <button
@@ -482,8 +484,8 @@ async function handleSubmit() {
               </tbody>
               <tfoot>
                 <tr class="bg-gray-50 font-semibold">
-                  <td colspan="4" class="px-3 py-3 text-right">Jami:</td>
-                  <td class="px-3 py-3 text-right text-lg text-red-600">{{ formatCurrency(totalAmount) }} so'm</td>
+                  <td colspan="4" class="px-3 py-3 text-right">{{ $t('total') }}:</td>
+                  <td class="px-3 py-3 text-right text-lg text-red-600">{{ formatCurrency(totalAmount) }} {{ $t('sum') }}</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -491,23 +493,23 @@ async function handleSubmit() {
           </div>
 
           <div v-else class="text-center py-8 bg-gray-50 rounded-lg">
-            <p class="text-gray-500">Mahsulotlar qo'shilmagan</p>
-            <p class="text-sm text-gray-400 mt-1">Mahsulot qidiring yoki "Qo'lda qo'shish" tugmasini bosing</p>
+            <p class="text-gray-500">{{ $t('finance.debtors.noProducts') }}</p>
+            <p class="text-sm text-gray-400 mt-1">{{ $t('finance.debtors.noProductsHint') }}</p>
           </div>
         </div>
       </div>
 
       <!-- Notes -->
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Qo'shimcha</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">{{ $t('finance.debtors.additional') }}</h3></div>
         <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label class="label">Tavsif</label>
-            <textarea v-model="form.description" rows="3" class="input" placeholder="Faktura tavsifi..."></textarea>
+            <label class="label">{{ $t('description') }}</label>
+            <textarea v-model="form.description" rows="3" class="input" :placeholder="$t('description')"></textarea>
           </div>
           <div>
-            <label class="label">Izoh</label>
-            <textarea v-model="form.notes" rows="3" class="input" placeholder="Qo'shimcha izoh..."></textarea>
+            <label class="label">{{ $t('notes') }}</label>
+            <textarea v-model="form.notes" rows="3" class="input" :placeholder="$t('notes')"></textarea>
           </div>
         </div>
       </div>
@@ -515,16 +517,16 @@ async function handleSubmit() {
       <!-- Submit -->
       <div class="flex justify-between items-center">
         <div class="text-sm text-gray-500">
-          <span v-if="form.lines.length > 0">{{ form.lines.length }} ta mahsulot, jami: <strong class="text-red-600">{{ formatCurrency(totalAmount) }} so'm</strong></span>
+          <span v-if="form.lines.length > 0">{{ form.lines.length }} {{ $t('items') }} {{ $t('product') }}, {{ $t('total') }}: <strong class="text-red-600">{{ formatCurrency(totalAmount) }} {{ $t('sum') }}</strong></span>
         </div>
         <div class="flex gap-3">
-          <button type="button" @click="router.back()" class="btn-secondary">Bekor qilish</button>
+          <button type="button" @click="router.back()" class="btn-secondary">{{ $t('cancel') }}</button>
           <button
             type="submit"
             :disabled="saving || form.lines.length === 0"
             class="btn-primary"
           >
-            {{ saving ? 'Saqlanmoqda...' : 'Saqlash' }}
+            {{ saving ? $t('saving') : $t('save') }}
           </button>
         </div>
       </div>

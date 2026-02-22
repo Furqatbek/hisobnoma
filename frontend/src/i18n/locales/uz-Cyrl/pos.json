@@ -65,6 +65,19 @@
     "completed": "Бажарилди",
     "voided": "Бекор қилинган",
     "held": "Кутиш",
-    "cancelled": "Бекор қилинган"
+    "cancelled": "Бекор қилинган",
+    "today": "Бугун",
+    "thisWeek": "Шу ҳафта",
+    "thisMonth": "Шу ой",
+    "all": "Барчаси",
+    "transactionDetails": "Трансакция тафсилотлари",
+    "date": "Сана",
+    "cashier": "Кассир",
+    "location": "Филиал",
+    "product": "Маҳсулот",
+    "paid": "Тўланган",
+    "payments": "Тўловлар",
+    "voidReason": "Бекор қилиш сабаби",
+    "debt": "қарз"
   }
 }

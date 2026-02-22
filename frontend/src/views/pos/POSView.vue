@@ -452,13 +452,13 @@ async function processPayment() {
   // Verify total payments
   const finalTotal = payments.value.reduce((sum, p) => sum + p.amount, 0)
   if (finalTotal < total.value) {
-    alert('Payment amount is less than total. Please add more payment or sell as debt.')
+    alert(t('pos.paymentLessThanTotal'))
     return
   }
 
   // Validate terminal is selected
   if (!selectedTerminalId.value) {
-    alert('No POS terminal available. Please contact administrator.')
+    alert(t('pos.noTerminalAvailable'))
     return
   }
 
@@ -517,10 +517,10 @@ async function processPayment() {
     clearTransactionDiscount()
     showPaymentModal.value = false
 
-    alert(hasDebtPayment ? 'Sale completed with debt!' : 'Sale completed successfully!')
+    alert(hasDebtPayment ? t('pos.saleCompletedWithDebt') : t('pos.saleComplete'))
   } catch (error) {
     console.error('Payment failed:', error)
-    alert('Payment failed: ' + (error.response?.data?.message || error.message))
+    alert(t('pos.paymentFailed') + ': ' + (error.response?.data?.message || error.message))
   }
 }
 
@@ -532,7 +532,7 @@ async function sellAsDebt() {
     return
   }
 
-  if (!confirm(`Sell ${formatCurrency(total.value)} as debt to ${cart.customerName}?`)) {
+  if (!confirm(t('pos.confirmDebtSale', { amount: formatCurrency(total.value), customer: cart.customerName }))) {
     return
   }
 
@@ -547,7 +547,7 @@ async function sellAsDebt() {
 }
 
 function clearCart() {
-  if (confirm('Clear all items from cart?')) {
+  if (confirm(t('pos.clearCart') + '?')) {
     cart.items = []
     cart.customerId = null
     cart.customerName = ''
@@ -565,7 +565,7 @@ function formatCurrency(value) {
 
 async function createQuickCustomer() {
   if (!newCustomer.name?.trim()) {
-    alert('Customer name is required')
+    alert(t('customers.form.nameRequired'))
     return
   }
 
@@ -584,7 +584,7 @@ async function createQuickCustomer() {
     newCustomer.email = ''
   } catch (error) {
     console.error('Failed to create customer:', error)
-    alert('Failed to create customer: ' + (error.response?.data?.message || error.message))
+    alert(t('pos.failedToCreateCustomer') + ': ' + (error.response?.data?.message || error.message))
   }
 }
 
@@ -651,7 +651,7 @@ async function openShift() {
     showOpenShiftModal.value = false
     openingCash.value = 0
   } catch (error) {
-    alert('Smenani ochishda xatolik: ' + (error.response?.data?.message || error.message))
+    alert(t('pos.shifts.openError') + ': ' + (error.response?.data?.message || error.message))
   } finally {
     shiftLoading.value = false
   }
@@ -668,7 +668,7 @@ async function closeShift() {
     showCloseShiftModal.value = false
     closingCash.value = 0
   } catch (error) {
-    alert('Smenani yopishda xatolik: ' + (error.response?.data?.message || error.message))
+    alert(t('pos.shifts.closeError') + ': ' + (error.response?.data?.message || error.message))
   } finally {
     shiftLoading.value = false
   }
@@ -698,7 +698,7 @@ onMounted(() => {
               v-model="searchQuery"
               @input="searchProducts"
               type="text"
-              placeholder="Search products by name, SKU, or scan barcode..."
+              :placeholder="$t('pos.searchPlaceholder')"
               class="input pl-10 text-lg"
               autofocus
             />
@@ -727,7 +727,7 @@ onMounted(() => {
                   (product.stockQuantity || 0) > 0 ? 'text-green-600' : 'text-red-600'
                 ]"
               >
-                Stock: {{ product.stockQuantity || 0 }}
+                {{ $t('pos.stock') }}: {{ product.stockQuantity || 0 }}
               </div>
             </button>
           </div>
@@ -738,7 +738,7 @@ onMounted(() => {
       <div v-else class="card flex-1 flex items-center justify-center">
         <div class="text-center text-gray-500">
           <MagnifyingGlassIcon class="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <p>Search for products or scan a barcode to add items</p>
+          <p>{{ $t('pos.noProductsFound') }}</p>
         </div>
       </div>
     </div>
@@ -747,7 +747,7 @@ onMounted(() => {
     <div class="w-96 flex flex-col">
       <!-- Terminal Warning -->
       <div v-if="terminals.length === 0" class="mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-        <p class="text-sm text-red-700">No active POS terminal found. Please contact administrator.</p>
+        <p class="text-sm text-red-700">{{ $t('pos.noTerminalAvailable') }}</p>
       </div>
 
       <!-- Terminal Selector (if multiple) -->
@@ -763,16 +763,16 @@ onMounted(() => {
       <div v-if="currentShift" class="mb-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
         <div class="flex items-center">
           <ClockIcon class="h-4 w-4 text-green-600 mr-2" />
-          <span class="text-sm text-green-700 font-medium">Smena ochiq: {{ currentShift.shiftNumber }}</span>
+          <span class="text-sm text-green-700 font-medium">{{ $t('pos.shifts.shiftOpen') }}: {{ currentShift.shiftNumber }}</span>
         </div>
         <button @click="showCloseShiftModal = true" class="text-sm text-red-600 hover:text-red-700 font-medium">
-          Smenani yopish
+          {{ $t('pos.shifts.closeShift') }}
         </button>
       </div>
       <div v-else-if="terminals.length > 0" class="mb-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
-        <span class="text-sm text-yellow-700">Smena ochilmagan. Sotish uchun smenani oching.</span>
+        <span class="text-sm text-yellow-700">{{ $t('pos.shifts.noOpenShift') }}</span>
         <button @click="showOpenShiftModal = true" class="btn-primary text-sm py-1 px-3">
-          Smena ochish
+          {{ $t('pos.shifts.openShift') }}
         </button>
       </div>
 
@@ -780,7 +780,7 @@ onMounted(() => {
         <!-- Cart Header -->
         <div class="card-header flex items-center justify-between">
           <div>
-            <h2 class="text-lg font-medium">Current Sale</h2>
+            <h2 class="text-lg font-medium">{{ $t('pos.cart') }}</h2>
             <p v-if="terminals.length === 1" class="text-xs text-gray-500">{{ terminals[0]?.name || terminals[0]?.terminalCode }}</p>
           </div>
           <button
@@ -788,7 +788,7 @@ onMounted(() => {
             @click="clearCart"
             class="text-sm text-red-600 hover:text-red-700"
           >
-            Clear All
+            {{ $t('pos.clearCart') }}
           </button>
         </div>
 
@@ -809,7 +809,7 @@ onMounted(() => {
               class="flex items-center text-primary-600 hover:text-primary-700 text-sm"
             >
               <MagnifyingGlassIcon class="h-4 w-4 mr-1" />
-              Find Customer
+              {{ $t('pos.selectCustomer') }}
             </button>
             <span class="text-gray-300">|</span>
             <button
@@ -817,7 +817,7 @@ onMounted(() => {
               class="flex items-center text-green-600 hover:text-green-700 text-sm"
             >
               <PlusIcon class="h-4 w-4 mr-1" />
-              Quick Add
+              {{ $t('pos.quickAdd') }}
             </button>
           </div>
         </div>
@@ -847,7 +847,7 @@ onMounted(() => {
               class="flex items-center text-orange-600 hover:text-orange-700 text-sm"
             >
               <MapPinIcon class="h-4 w-4 mr-1" />
-              Yetkazish manzili
+              {{ $t('pos.deliveryAddress') }}
             </button>
           </div>
         </div>
@@ -855,7 +855,7 @@ onMounted(() => {
         <!-- Cart Items -->
         <div class="flex-1 overflow-y-auto">
           <div v-if="cart.items.length === 0" class="flex items-center justify-center h-full text-gray-500">
-            <p>Cart is empty</p>
+            <p>{{ $t('pos.cartEmpty') }}</p>
           </div>
 
           <ul v-else class="divide-y">
@@ -913,14 +913,14 @@ onMounted(() => {
         <!-- Cart Summary -->
         <div class="border-t bg-gray-50 p-4 space-y-2">
           <div class="flex justify-between text-sm">
-            <span class="text-gray-500">Subtotal</span>
+            <span class="text-gray-500">{{ $t('pos.subtotal') }}</span>
             <span>{{ formatCurrency(subtotal) }}</span>
           </div>
 
           <!-- Discount row -->
           <div v-if="totalDiscount > 0" class="flex justify-between text-sm text-green-600">
             <span>
-              Chegirma
+              {{ $t('pos.discount') }}
               <span v-if="transactionDiscount.type === 'percent'" class="text-xs">({{ transactionDiscount.value }}%)</span>
             </span>
             <span>-{{ formatCurrency(totalDiscount) }}</span>
@@ -934,7 +934,7 @@ onMounted(() => {
               class="text-xs px-2 py-1 rounded border transition-colors"
               :class="transactionDiscount.type ? 'text-green-600 border-green-300 bg-green-50 hover:bg-green-100' : 'text-gray-500 border-gray-200 hover:bg-gray-100'"
             >
-              {{ transactionDiscount.type ? 'Chegirmani o\'zgartirish' : '+ Chegirma' }}
+              {{ transactionDiscount.type ? $t('pos.editDiscount') : '+ ' + $t('pos.discount') }}
             </button>
             <button
               v-if="transactionDiscount.type"
@@ -947,7 +947,7 @@ onMounted(() => {
 
           <div class="flex justify-between items-center text-sm">
             <div class="flex items-center gap-2">
-              <span class="text-gray-500">Tax</span>
+              <span class="text-gray-500">{{ $t('pos.tax') }}</span>
               <input
                 v-model.number="taxRate"
                 type="number"
@@ -961,7 +961,7 @@ onMounted(() => {
             <span>{{ formatCurrency(tax) }}</span>
           </div>
           <div class="flex justify-between text-lg font-bold pt-2 border-t">
-            <span>Total</span>
+            <span>{{ $t('pos.grandTotal') }}</span>
             <span class="text-primary-600">{{ formatCurrency(total) }}</span>
           </div>
         </div>
@@ -974,7 +974,7 @@ onMounted(() => {
             class="btn-primary w-full py-3 text-lg"
           >
             <CreditCardIcon class="h-6 w-6 mr-2" />
-            Pay {{ formatCurrency(total) }}
+            {{ $t('pos.checkout') }} {{ formatCurrency(total) }}
           </button>
           <button
             @click="sellAsDebt"
@@ -982,7 +982,7 @@ onMounted(() => {
             class="w-full py-2 text-sm border-2 border-orange-500 text-orange-600 rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center"
           >
             <DocumentTextIcon class="h-5 w-5 mr-2" />
-            Sell as Debt
+            {{ $t('pos.sellAsDebt') }}
           </button>
         </div>
       </div>
@@ -993,16 +993,16 @@ onMounted(() => {
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showPaymentModal = false"></div>
         <div class="relative bg-white rounded-lg max-w-lg w-full p-6">
-          <h3 class="text-xl font-bold text-gray-900 mb-4">Payment</h3>
+          <h3 class="text-xl font-bold text-gray-900 mb-4">{{ $t('pos.paymentMethod') }}</h3>
 
           <!-- Total and Remaining -->
           <div class="grid grid-cols-2 gap-4 mb-6">
             <div class="text-center p-3 bg-gray-100 rounded-lg">
-              <p class="text-sm text-gray-500">Total</p>
+              <p class="text-sm text-gray-500">{{ $t('total') }}</p>
               <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(total) }}</p>
             </div>
             <div class="text-center p-3 rounded-lg" :class="remainingAmount > 0 ? 'bg-orange-100' : 'bg-green-100'">
-              <p class="text-sm" :class="remainingAmount > 0 ? 'text-orange-600' : 'text-green-600'">Remaining</p>
+              <p class="text-sm" :class="remainingAmount > 0 ? 'text-orange-600' : 'text-green-600'">{{ $t('pos.remaining') }}</p>
               <p class="text-2xl font-bold" :class="remainingAmount > 0 ? 'text-orange-700' : 'text-green-700'">
                 {{ formatCurrency(remainingAmount) }}
               </p>
@@ -1011,7 +1011,7 @@ onMounted(() => {
 
           <!-- Added Payments (Split) -->
           <div v-if="payments.length > 0" class="mb-4">
-            <p class="text-sm font-medium text-gray-700 mb-2">Split Payments:</p>
+            <p class="text-sm font-medium text-gray-700 mb-2">{{ $t('pos.splitPayments') }}:</p>
             <div class="space-y-2">
               <div
                 v-for="(payment, index) in payments"
@@ -1033,7 +1033,7 @@ onMounted(() => {
 
           <!-- Payment Method Selection -->
           <div v-if="remainingAmount > 0" class="space-y-4">
-            <p class="text-sm font-medium text-gray-700">Add Payment:</p>
+            <p class="text-sm font-medium text-gray-700">{{ $t('pos.addPayment') }}:</p>
 
             <div class="grid grid-cols-4 gap-2">
               <button
@@ -1052,12 +1052,12 @@ onMounted(() => {
 
             <!-- Debt warning -->
             <div v-if="currentPayment.method === 'CREDIT' && !cart.customerId" class="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-              <p class="text-sm text-orange-700">Customer is required for debt sales. Please select a customer first.</p>
+              <p class="text-sm text-orange-700">{{ $t('pos.customerRequiredForDebt') }}</p>
             </div>
 
             <!-- Payment Amount -->
             <div>
-              <label class="label">Amount</label>
+              <label class="label">{{ $t('amount') }}</label>
               <input
                 v-model.number="currentPayment.amount"
                 type="number"
@@ -1070,7 +1070,7 @@ onMounted(() => {
 
             <!-- Cash Received -->
             <div v-if="currentPayment.method === 'CASH'">
-              <label class="label">Amount Received</label>
+              <label class="label">{{ $t('pos.received') }}</label>
               <input
                 v-model.number="currentPayment.received"
                 type="number"
@@ -1079,7 +1079,7 @@ onMounted(() => {
                 class="input text-lg text-center"
               />
               <div v-if="change > 0" class="mt-2 p-3 bg-green-50 rounded-lg text-center">
-                <p class="text-sm text-green-600">Change</p>
+                <p class="text-sm text-green-600">{{ $t('pos.change') }}</p>
                 <p class="text-2xl font-bold text-green-700">{{ formatCurrency(change) }}</p>
               </div>
             </div>
@@ -1091,14 +1091,14 @@ onMounted(() => {
               class="w-full py-2 border-2 border-primary-500 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
             >
               <PlusIcon class="h-5 w-5 inline mr-1" />
-              Add Payment
+              {{ $t('pos.addPayment') }}
             </button>
           </div>
 
           <!-- Action Buttons -->
           <div class="flex space-x-3 mt-6">
             <button @click="showPaymentModal = false" class="btn-secondary flex-1">
-              Cancel
+              {{ $t('cancel') }}
             </button>
             <button
               @click="processPayment"
@@ -1106,7 +1106,7 @@ onMounted(() => {
               class="btn-primary flex-1"
             >
               <CheckIcon class="h-5 w-5 mr-2" />
-              Complete Sale
+              {{ $t('pos.completeSale') }}
             </button>
           </div>
         </div>
@@ -1118,7 +1118,7 @@ onMounted(() => {
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showCustomerModal = false"></div>
         <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Select Customer</h3>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">{{ $t('pos.selectCustomer') }}</h3>
 
           <div class="relative mb-4">
             <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -1126,7 +1126,7 @@ onMounted(() => {
               v-model="customerSearch"
               @input="searchCustomers"
               type="text"
-              placeholder="Search customers..."
+              :placeholder="$t('customers.searchPlaceholder')"
               class="input pl-10"
             />
           </div>
@@ -1144,7 +1144,7 @@ onMounted(() => {
           </div>
 
           <button @click="showCustomerModal = false" class="btn-secondary w-full mt-4">
-            Cancel
+            {{ $t('cancel') }}
           </button>
         </div>
       </div>
@@ -1155,30 +1155,30 @@ onMounted(() => {
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showNewCustomerModal = false"></div>
         <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Quick Add Customer</h3>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">{{ $t('pos.quickAddCustomer') }}</h3>
 
           <div class="space-y-4">
             <div>
-              <label class="label">Name *</label>
-              <input v-model="newCustomer.name" type="text" class="input" placeholder="Customer name" />
+              <label class="label">{{ $t('name') }} *</label>
+              <input v-model="newCustomer.name" type="text" class="input" :placeholder="$t('name')" />
             </div>
             <div>
-              <label class="label">Phone</label>
-              <input v-model="newCustomer.phone" type="text" class="input" placeholder="Phone number" />
+              <label class="label">{{ $t('phone') }}</label>
+              <input v-model="newCustomer.phone" type="text" class="input" :placeholder="$t('phone')" />
             </div>
             <div>
-              <label class="label">Email</label>
-              <input v-model="newCustomer.email" type="email" class="input" placeholder="Email address" />
+              <label class="label">{{ $t('customers.form.email') }}</label>
+              <input v-model="newCustomer.email" type="email" class="input" :placeholder="$t('customers.form.email')" />
             </div>
           </div>
 
           <div class="flex space-x-3 mt-6">
             <button @click="showNewCustomerModal = false" class="btn-secondary flex-1">
-              Cancel
+              {{ $t('cancel') }}
             </button>
             <button @click="createQuickCustomer" class="btn-primary flex-1">
               <PlusIcon class="h-5 w-5 mr-2" />
-              Create & Select
+              {{ $t('pos.createAndSelect') }}
             </button>
           </div>
         </div>
@@ -1190,17 +1190,17 @@ onMounted(() => {
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showOpenShiftModal = false"></div>
         <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Smena ochish</h3>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">{{ $t('pos.shifts.openShift') }}</h3>
 
           <div class="space-y-4">
             <div>
-              <label class="label">Terminal</label>
+              <label class="label">{{ $t('pos.shifts.terminal') }}</label>
               <p class="text-sm text-gray-700 font-medium">
                 {{ terminals.find(t => t.id === selectedTerminalId)?.name || terminals.find(t => t.id === selectedTerminalId)?.terminalCode }}
               </p>
             </div>
             <div>
-              <label class="label">Kassadagi boshlang'ich naqd pul</label>
+              <label class="label">{{ $t('pos.shifts.openingBalance') }}</label>
               <input
                 v-model.number="openingCash"
                 type="number"
@@ -1214,11 +1214,11 @@ onMounted(() => {
 
           <div class="flex space-x-3 mt-6">
             <button @click="showOpenShiftModal = false" class="btn-secondary flex-1">
-              Bekor qilish
+              {{ $t('cancel') }}
             </button>
             <button @click="openShift" :disabled="shiftLoading" class="btn-primary flex-1">
               <ClockIcon class="h-5 w-5 mr-2" />
-              {{ shiftLoading ? 'Ochilmoqda...' : 'Smena ochish' }}
+              {{ shiftLoading ? $t('pos.processing') : $t('pos.shifts.openShift') }}
             </button>
           </div>
         </div>
@@ -1230,29 +1230,29 @@ onMounted(() => {
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showCloseShiftModal = false"></div>
         <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Smenani yopish</h3>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">{{ $t('pos.shifts.closeShift') }}</h3>
 
           <div class="space-y-4">
             <div class="p-3 bg-gray-50 rounded-lg space-y-2">
               <div class="flex justify-between text-sm">
-                <span class="text-gray-500">Smena raqami:</span>
+                <span class="text-gray-500">{{ $t('pos.shifts.shiftNumber') }}:</span>
                 <span class="font-medium">{{ currentShift?.shiftNumber }}</span>
               </div>
               <div class="flex justify-between text-sm">
-                <span class="text-gray-500">Boshlang'ich naqd:</span>
+                <span class="text-gray-500">{{ $t('pos.shifts.openingBalance') }}:</span>
                 <span class="font-medium">{{ formatCurrency(currentShift?.openingCash || 0) }}</span>
               </div>
               <div class="flex justify-between text-sm">
-                <span class="text-gray-500">Tranzaksiyalar soni:</span>
+                <span class="text-gray-500">{{ $t('pos.shifts.salesCount') }}:</span>
                 <span class="font-medium">{{ currentShift?.transactionCount || 0 }}</span>
               </div>
               <div class="flex justify-between text-sm">
-                <span class="text-gray-500">Jami sotuvlar:</span>
+                <span class="text-gray-500">{{ $t('pos.shifts.totalSales') }}:</span>
                 <span class="font-medium">{{ formatCurrency(currentShift?.totalSales || 0) }}</span>
               </div>
             </div>
             <div>
-              <label class="label">Kassadagi yakuniy naqd pul</label>
+              <label class="label">{{ $t('pos.shifts.closingBalance') }}</label>
               <input
                 v-model.number="closingCash"
                 type="number"
@@ -1266,11 +1266,11 @@ onMounted(() => {
 
           <div class="flex space-x-3 mt-6">
             <button @click="showCloseShiftModal = false" class="btn-secondary flex-1">
-              Bekor qilish
+              {{ $t('cancel') }}
             </button>
             <button @click="closeShift" :disabled="shiftLoading" class="btn-primary flex-1 !bg-red-600 hover:!bg-red-700">
               <ArrowRightStartOnRectangleIcon class="h-5 w-5 mr-2" />
-              {{ shiftLoading ? 'Yopilmoqda...' : 'Smenani yopish' }}
+              {{ shiftLoading ? $t('pos.processing') : $t('pos.shifts.closeShift') }}
             </button>
           </div>
         </div>
@@ -1284,15 +1284,15 @@ onMounted(() => {
         <div class="relative bg-white rounded-lg max-w-md w-full p-6">
           <h3 class="text-lg font-medium text-gray-900 mb-4">
             <MapPinIcon class="h-5 w-5 inline mr-2 text-orange-500" />
-            Yetkazish manzili
+            {{ $t('pos.deliveryAddress') }}
           </h3>
 
           <div class="space-y-4">
             <!-- Region -->
             <div>
-              <label class="label">Hudud *</label>
+              <label class="label">{{ $t('customers.form.region') }} *</label>
               <select v-model="selectedRegionId" @change="onRegionChange" class="input">
-                <option :value="null">Hududni tanlang</option>
+                <option :value="null">{{ $t('customers.form.selectRegion') }}</option>
                 <option v-for="region in deliveryRegions" :key="region.id" :value="region.id">
                   {{ region.name }}
                 </option>
@@ -1301,22 +1301,22 @@ onMounted(() => {
 
             <!-- Village -->
             <div>
-              <label class="label">Mahalla</label>
+              <label class="label">{{ $t('customers.form.village') }}</label>
               <select v-model="selectedVillageId" class="input" :disabled="!selectedRegionId">
-                <option :value="null">Mahallani tanlang</option>
+                <option :value="null">{{ $t('customers.form.selectVillage') }}</option>
                 <option v-for="village in deliveryVillages" :key="village.id" :value="village.id">
                   {{ village.name }}
                 </option>
               </select>
               <p v-if="selectedRegionId && deliveryVillages.length === 0" class="text-xs text-gray-400 mt-1">
-                Bu hududda mahallalar topilmadi
+                {{ $t('pos.noVillagesFound') }}
               </p>
             </div>
           </div>
 
           <div class="flex space-x-3 mt-6">
             <button @click="showDeliveryModal = false" class="btn-secondary flex-1">
-              Bekor qilish
+              {{ $t('cancel') }}
             </button>
             <button
               @click="confirmDeliveryAddress"
@@ -1324,7 +1324,7 @@ onMounted(() => {
               class="btn-primary flex-1"
             >
               <CheckIcon class="h-5 w-5 mr-2" />
-              Tasdiqlash
+              {{ $t('pos.confirm') }}
             </button>
           </div>
         </div>
@@ -1336,7 +1336,7 @@ onMounted(() => {
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showUomModal = false"></div>
         <div class="relative bg-white rounded-lg max-w-sm w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-1">O'lchov birligini tanlang</h3>
+          <h3 class="text-lg font-medium text-gray-900 mb-1">{{ $t('pos.selectUom') }}</h3>
           <p class="text-sm text-gray-500 mb-4">{{ pendingProduct.name }}</p>
 
           <div class="space-y-2">
@@ -1347,7 +1347,7 @@ onMounted(() => {
             >
               <div class="flex justify-between items-center">
                 <div>
-                  <p class="font-medium text-gray-900">Asosiy birlik</p>
+                  <p class="font-medium text-gray-900">{{ $t('pos.baseUnit') }}</p>
                   <p class="text-xs text-gray-500">1 = 1 (bazaviy)</p>
                 </div>
                 <span class="font-bold text-primary-600">{{ formatCurrency(pendingProduct.sellingPrice) }}</span>
@@ -1376,7 +1376,7 @@ onMounted(() => {
           </div>
 
           <button @click="showUomModal = false" class="btn-secondary w-full mt-4">
-            Bekor qilish
+            {{ $t('cancel') }}
           </button>
         </div>
       </div>
@@ -1388,7 +1388,7 @@ onMounted(() => {
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showDiscountModal = false"></div>
         <div class="relative bg-white rounded-lg max-w-sm w-full p-6">
           <h3 class="text-lg font-medium text-gray-900 mb-4">
-            {{ discountTarget === 'transaction' ? 'Chegirma (umumiy)' : 'Chegirma (mahsulot)' }}
+            {{ discountTarget === 'transaction' ? $t('pos.discountTransaction') : $t('pos.discountItem') }}
           </h3>
 
           <div class="space-y-4">
@@ -1398,20 +1398,20 @@ onMounted(() => {
                 @click="discountForm.type = 'percent'"
                 :class="['flex-1 py-2 text-sm font-medium transition-colors', discountForm.type === 'percent' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50']"
               >
-                Foiz (%)
+                {{ $t('pos.percent') }} (%)
               </button>
               <button
                 @click="discountForm.type = 'amount'"
                 :class="['flex-1 py-2 text-sm font-medium transition-colors', discountForm.type === 'amount' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50']"
               >
-                Summa
+                {{ $t('amount') }}
               </button>
             </div>
 
             <!-- Discount value -->
             <div>
               <label class="label">
-                {{ discountForm.type === 'percent' ? 'Foiz (%)' : 'Summa' }}
+                {{ discountForm.type === 'percent' ? $t('pos.percent') + ' (%)' : $t('amount') }}
               </label>
               <input
                 v-model.number="discountForm.value"
@@ -1438,26 +1438,26 @@ onMounted(() => {
 
             <!-- Reason -->
             <div>
-              <label class="label">Sabab</label>
+              <label class="label">{{ $t('pos.discountReason') }}</label>
               <input
                 v-model="discountForm.reason"
                 type="text"
                 class="input"
-                placeholder="Chegirma sababi..."
+                :placeholder="$t('pos.discountReason')"
               />
             </div>
           </div>
 
           <div class="flex space-x-3 mt-6">
             <button @click="showDiscountModal = false" class="btn-secondary flex-1">
-              Bekor qilish
+              {{ $t('cancel') }}
             </button>
             <button
               @click="applyDiscountFromModal"
               :disabled="discountForm.value <= 0"
               class="btn-primary flex-1"
             >
-              Qo'llash
+              {{ $t('pos.apply') }}
             </button>
           </div>
         </div>

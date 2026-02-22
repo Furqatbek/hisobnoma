@@ -1,8 +1,11 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/api'
 import { ArrowLeftIcon, LockClosedIcon, KeyIcon } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const authStore = useAuthStore()
 
@@ -139,7 +142,7 @@ async function handlePasswordSubmit() {
         <div class="inline-flex items-center justify-center w-14 h-14 bg-primary-600 rounded-2xl mb-3">
           <span class="text-white font-bold text-2xl">H</span>
         </div>
-        <h2 class="text-xl font-bold text-gray-900">Hisobnoma</h2>
+        <h2 class="text-xl font-bold text-gray-900">{{ $t('appName') }}</h2>
       </div>
 
       <!-- Error message -->
@@ -149,14 +152,14 @@ async function handlePasswordSubmit() {
 
       <!-- ==================== STEP 1: User Selection ==================== -->
       <div v-if="step === 'users'">
-        <p class="text-center text-sm text-gray-500 mb-5">Foydalanuvchini tanlang</p>
+        <p class="text-center text-sm text-gray-500 mb-5">{{ $t('auth.selectUser') }}</p>
 
         <div v-if="loadingUsers" class="flex items-center justify-center py-12">
           <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
         </div>
 
         <div v-else-if="users.length === 0" class="text-center py-8 text-gray-500 text-sm">
-          Foydalanuvchilar topilmadi
+          {{ $t('auth.noUsersFound') }}
         </div>
 
         <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
@@ -174,7 +177,7 @@ async function handlePasswordSubmit() {
               <div class="flex items-center justify-center gap-1 mt-0.5">
                 <LockClosedIcon v-if="u.hasPin" class="h-3 w-3 text-green-500" />
                 <KeyIcon v-else class="h-3 w-3 text-gray-400" />
-                <span class="text-[10px] text-gray-400">{{ u.hasPin ? 'PIN' : 'Parol' }}</span>
+                <span class="text-[10px] text-gray-400">{{ u.hasPin ? 'PIN' : $t('auth.password') }}</span>
               </div>
             </div>
           </button>
@@ -186,7 +189,7 @@ async function handlePasswordSubmit() {
             @click="step = 'password'; passwordForm.username = ''; passwordForm.password = ''"
             class="text-sm text-primary-600 hover:text-primary-700 font-medium"
           >
-            Parol bilan kirish
+            {{ $t('auth.loginWithPassword') }}
           </button>
         </div>
       </div>
@@ -200,7 +203,7 @@ async function handlePasswordSubmit() {
           </button>
           <div class="flex-1 text-center">
             <p class="font-semibold text-gray-900">{{ selectedUser.fullName }}</p>
-            <p class="text-xs text-gray-500">PIN kodni kiriting</p>
+            <p class="text-xs text-gray-500">{{ $t('auth.enterPin') }}</p>
           </div>
           <div class="w-9"></div>
         </div>
@@ -240,7 +243,7 @@ async function handlePasswordSubmit() {
             :disabled="authStore.loading"
             class="h-16 text-sm font-medium text-red-500 rounded-xl bg-gray-50 hover:bg-red-50 active:bg-red-100 transition-all select-none disabled:opacity-50"
           >
-            Tozalash
+            {{ $t('clear') }}
           </button>
           <button
             @click="handlePinDigit('0')"
@@ -266,7 +269,7 @@ async function handlePasswordSubmit() {
             @click="switchToPassword"
             class="text-sm text-primary-600 hover:text-primary-700 font-medium"
           >
-            Parol bilan kirish
+            {{ $t('auth.loginWithPassword') }}
           </button>
         </div>
       </div>
@@ -279,26 +282,26 @@ async function handlePasswordSubmit() {
             <ArrowLeftIcon class="h-5 w-5 text-gray-500" />
           </button>
           <div class="flex-1 text-center">
-            <p class="text-sm text-gray-500">Parol bilan kirish</p>
+            <p class="text-sm text-gray-500">{{ $t('auth.loginWithPassword') }}</p>
           </div>
           <div class="w-9"></div>
         </div>
 
         <form @submit.prevent="handlePasswordSubmit" class="space-y-4">
           <div>
-            <label for="username" class="label">Foydalanuvchi</label>
+            <label for="username" class="label">{{ $t('username') }}</label>
             <input
               id="username"
               v-model="passwordForm.username"
               type="text"
               autocomplete="username"
               class="input text-lg py-3"
-              placeholder="Username"
+              :placeholder="$t('username')"
             />
           </div>
 
           <div>
-            <label for="password" class="label">Parol</label>
+            <label for="password" class="label">{{ $t('auth.password') }}</label>
             <div class="relative">
               <input
                 id="password"
@@ -306,7 +309,7 @@ async function handlePasswordSubmit() {
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 class="input text-lg py-3 pr-12"
-                placeholder="Parolingiz"
+                :placeholder="$t('auth.yourPassword')"
               />
               <button
                 type="button"
@@ -338,7 +341,7 @@ async function handlePasswordSubmit() {
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            {{ authStore.loading ? 'Kirish...' : 'Kirish' }}
+            {{ authStore.loading ? $t('auth.signingIn') : $t('auth.login') }}
           </button>
         </form>
       </div>

@@ -1,8 +1,11 @@
 <script setup>
 import { ref, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { authApi } from '@/services/api'
 import { ArrowLeftIcon, PhoneIcon } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const success = ref(false)
@@ -19,14 +22,14 @@ function validate() {
   errors.general = ''
 
   if (!form.phone.trim()) {
-    errors.phone = 'Phone number is required'
+    errors.phone = t('auth.phoneRequired')
     return false
   }
 
   // Basic phone validation
   const phoneRegex = /^\+?[0-9]{9,15}$/
   if (!phoneRegex.test(form.phone.replace(/\s/g, ''))) {
-    errors.phone = 'Please enter a valid phone number'
+    errors.phone = t('auth.invalidPhone')
     return false
   }
 
@@ -44,7 +47,7 @@ async function handleSubmit() {
     success.value = true
   } catch (error) {
     const response = error.response?.data
-    errors.general = response?.message || 'Failed to process request. Please try again.'
+    errors.general = response?.message || t('auth.failedToProcess')
   } finally {
     loading.value = false
   }
@@ -59,23 +62,23 @@ async function handleSubmit() {
         <div class="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
           <span class="text-white font-bold text-3xl">H</span>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900">Forgot Password</h2>
-        <p class="mt-2 text-sm text-gray-600">Enter your phone number to receive a reset code</p>
+        <h2 class="text-2xl font-bold text-gray-900">{{ $t('auth.forgotPasswordTitle') }}</h2>
+        <p class="mt-2 text-sm text-gray-600">{{ $t('auth.forgotPasswordSubtitle') }}</p>
       </div>
 
       <!-- Success message -->
       <div v-if="success" class="text-center">
         <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
           <p class="text-sm text-green-700">
-            If an account exists with this phone number, you will receive a reset code via SMS.
+            {{ $t('auth.resetCodeSent') }}
           </p>
         </div>
         <RouterLink to="/reset-password" class="btn-primary inline-block">
-          Enter Reset Code
+          {{ $t('auth.enterResetCode') }}
         </RouterLink>
         <div class="mt-4">
           <RouterLink to="/login" class="text-sm font-medium text-primary-600 hover:text-primary-500">
-            Back to login
+            {{ $t('auth.backToLogin') }}
           </RouterLink>
         </div>
       </div>
@@ -89,7 +92,7 @@ async function handleSubmit() {
 
         <!-- Phone -->
         <div>
-          <label for="phone" class="label">Phone Number</label>
+          <label for="phone" class="label">{{ $t('auth.phoneNumber') }}</label>
           <div class="relative">
             <PhoneIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
@@ -109,14 +112,14 @@ async function handleSubmit() {
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          {{ loading ? 'Sending...' : 'Send Reset Code' }}
+          {{ loading ? $t('auth.sending') : $t('auth.sendResetCode') }}
         </button>
 
         <!-- Back to login -->
         <div class="text-center">
           <RouterLink to="/login" class="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500">
             <ArrowLeftIcon class="h-4 w-4 mr-1" />
-            Back to login
+            {{ $t('auth.backToLogin') }}
           </RouterLink>
         </div>
       </form>

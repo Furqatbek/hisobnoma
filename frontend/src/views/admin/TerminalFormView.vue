@@ -3,6 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { terminalsApi, warehousesApi } from '@/services/api'
 import { ArrowLeftIcon, ComputerDesktopIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -37,7 +40,7 @@ async function fetchTerminal() {
     }
   } catch (error) {
     console.error('Terminalni yuklashda xatolik:', error)
-    alert('Terminalni yuklashda xatolik yuz berdi')
+    alert(t('admin.terminalForm.loadError'))
     router.push('/admin/terminals')
   } finally {
     loading.value = false
@@ -57,17 +60,17 @@ function validateForm() {
   errors.value = {}
 
   if (!form.value.code?.trim()) {
-    errors.value.code = 'Terminal kodi majburiy'
+    errors.value.code = t('admin.terminalForm.codeRequired')
   } else if (!/^[A-Z0-9_-]+$/i.test(form.value.code)) {
-    errors.value.code = 'Kod faqat harflar, raqamlar, tire va pastki chiziqdan iborat bo\'lishi kerak'
+    errors.value.code = t('admin.terminalForm.codeFormat')
   }
 
   if (!form.value.name?.trim()) {
-    errors.value.name = 'Terminal nomi majburiy'
+    errors.value.name = t('admin.terminalForm.nameRequired')
   }
 
   if (!form.value.locationId) {
-    errors.value.locationId = 'Joylashuv tanlanishi kerak'
+    errors.value.locationId = t('admin.terminalForm.locationRequired')
   }
 
   return Object.keys(errors.value).length === 0
@@ -115,7 +118,7 @@ async function saveTerminal() {
     } else if (error.response?.data?.message) {
       alert(error.response.data.message)
     } else {
-      alert('Terminalni saqlashda xatolik yuz berdi')
+      alert(t('admin.terminalForm.saveError'))
     }
   } finally {
     saving.value = false
@@ -136,10 +139,10 @@ onMounted(() => {
       </button>
       <div>
         <h1 class="text-2xl font-bold text-gray-900">
-          {{ isEdit ? 'Terminalni tahrirlash' : 'Yangi terminal' }}
+          {{ isEdit ? $t('admin.terminalForm.editTerminal') : $t('admin.terminalForm.newTerminal') }}
         </h1>
         <p class="mt-1 text-sm text-gray-500">
-          {{ isEdit ? 'Terminal ma\'lumotlarini yangilash' : 'Yangi POS terminal qo\'shish' }}
+          {{ isEdit ? $t('admin.terminalForm.editSubtitle') : $t('admin.terminalForm.newSubtitle') }}
         </p>
       </div>
     </div>
@@ -153,7 +156,7 @@ onMounted(() => {
         <div class="card-header">
           <div class="flex items-center">
             <ComputerDesktopIcon class="h-6 w-6 text-primary-600 mr-2" />
-            <h3 class="text-lg font-medium">Terminal ma'lumotlari</h3>
+            <h3 class="text-lg font-medium">{{ $t('admin.terminalForm.terminalInfo') }}</h3>
           </div>
         </div>
 
@@ -161,7 +164,7 @@ onMounted(() => {
           <!-- Code -->
           <div>
             <label class="label">
-              Terminal kodi <span class="text-red-500">*</span>
+              {{ $t('admin.terminals.terminalCode') }} <span class="text-red-500">*</span>
             </label>
             <input
               v-model="form.code"
@@ -172,13 +175,13 @@ onMounted(() => {
               :disabled="isEdit"
             />
             <p v-if="errors.code" class="text-sm text-red-500 mt-1">{{ errors.code }}</p>
-            <p v-else class="text-xs text-gray-500 mt-1">Unikal identifikator (masalan: KASSA-01, TERMINAL-A)</p>
+            <p v-else class="text-xs text-gray-500 mt-1">{{ $t('admin.terminalForm.codeHint') }}</p>
           </div>
 
           <!-- Name -->
           <div>
             <label class="label">
-              Terminal nomi <span class="text-red-500">*</span>
+              {{ $t('admin.terminalForm.terminalName') }} <span class="text-red-500">*</span>
             </label>
             <input
               v-model="form.name"
@@ -193,36 +196,36 @@ onMounted(() => {
           <!-- Location -->
           <div>
             <label class="label">
-              Joylashuv <span class="text-red-500">*</span>
+              {{ $t('admin.terminals.location') }} <span class="text-red-500">*</span>
             </label>
             <select
               v-model="form.locationId"
               class="input"
               :class="{ 'border-red-500': errors.locationId }"
             >
-              <option value="">Joylashuvni tanlang</option>
+              <option value="">{{ $t('admin.terminalForm.selectLocation') }}</option>
               <option v-for="location in locations" :key="location.id" :value="location.id">
                 {{ location.name }}
               </option>
             </select>
             <p v-if="errors.locationId" class="text-sm text-red-500 mt-1">{{ errors.locationId }}</p>
-            <p v-else class="text-xs text-gray-500 mt-1">Terminal qaysi do'kon/omborga tegishli</p>
+            <p v-else class="text-xs text-gray-500 mt-1">{{ $t('admin.terminalForm.locationHint') }}</p>
           </div>
 
           <!-- Description -->
           <div>
-            <label class="label">Tavsif</label>
+            <label class="label">{{ $t('description') }}</label>
             <textarea
               v-model="form.description"
               rows="3"
               class="input"
-              placeholder="Terminal haqida qo'shimcha ma'lumot..."
+              :placeholder="$t('admin.terminalForm.descriptionPlaceholder')"
             ></textarea>
           </div>
 
           <!-- Status -->
           <div>
-            <label class="label">Holat</label>
+            <label class="label">{{ $t('status') }}</label>
             <div class="flex items-center space-x-4">
               <label class="flex items-center">
                 <input
@@ -231,7 +234,7 @@ onMounted(() => {
                   value="ACTIVE"
                   class="h-4 w-4 text-primary-600"
                 />
-                <span class="ml-2 text-sm">Faol</span>
+                <span class="ml-2 text-sm">{{ $t('active') }}</span>
               </label>
               <label class="flex items-center">
                 <input
@@ -240,7 +243,7 @@ onMounted(() => {
                   value="INACTIVE"
                   class="h-4 w-4 text-primary-600"
                 />
-                <span class="ml-2 text-sm">Nofaol</span>
+                <span class="ml-2 text-sm">{{ $t('inactive') }}</span>
               </label>
             </div>
           </div>
@@ -248,10 +251,10 @@ onMounted(() => {
 
         <div class="card-footer flex justify-end space-x-3">
           <button @click="router.back()" class="btn-secondary">
-            Bekor qilish
+            {{ $t('cancel') }}
           </button>
           <button @click="saveTerminal" :disabled="saving" class="btn-primary">
-            {{ saving ? 'Saqlanmoqda...' : (isEdit ? 'Yangilash' : 'Saqlash') }}
+            {{ saving ? $t('saving') : (isEdit ? $t('admin.terminalForm.update') : $t('save')) }}
           </button>
         </div>
       </div>

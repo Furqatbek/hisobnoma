@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { stockApi, warehousesApi } from '@/services/api'
 import { MagnifyingGlassIcon, ExclamationTriangleIcon, BuildingStorefrontIcon } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const stockItems = ref([])
 const locations = ref([])
@@ -66,9 +69,9 @@ const lowStockCount = computed(() => stockItems.value.filter(s => s.quantityOnHa
 const outOfStockCount = computed(() => stockItems.value.filter(s => s.quantityOnHand <= 0).length)
 
 function getStockStatus(item) {
-  if (item.quantityOnHand <= 0) return { label: 'Tugagan', class: 'badge-danger' }
-  if (item.belowMinimum) return { label: 'Kam qolgan', class: 'badge-warning' }
-  return { label: 'Mavjud', class: 'badge-success' }
+  if (item.quantityOnHand <= 0) return { label: t('inventory.stock.outOfStock'), class: 'badge-danger' }
+  if (item.belowMinimum) return { label: t('inventory.stock.lowStock'), class: 'badge-warning' }
+  return { label: t('inventory.stock.inStock'), class: 'badge-success' }
 }
 
 function formatQty(val) {
@@ -81,8 +84,8 @@ function formatQty(val) {
 <template>
   <div class="space-y-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Ombordagi zaxira</h1>
-      <p class="mt-1 text-sm text-gray-500">Mahsulotlar zaxirasi ombor bo'yicha</p>
+      <h1 class="text-2xl font-bold text-gray-900">{{ $t('inventory.stock.title') }}</h1>
+      <p class="mt-1 text-sm text-gray-500">{{ $t('inventory.stock.subtitle') }}</p>
     </div>
 
     <!-- Stats -->
@@ -93,7 +96,7 @@ function formatQty(val) {
       >
         <div class="card-body text-center">
           <p class="text-3xl font-bold text-gray-900">{{ totalElements }}</p>
-          <p class="text-sm text-gray-500">Jami yozuvlar</p>
+          <p class="text-sm text-gray-500">{{ $t('totalCount') }}</p>
         </div>
       </button>
       <button
@@ -102,7 +105,7 @@ function formatQty(val) {
       >
         <div class="card-body text-center">
           <p class="text-3xl font-bold text-yellow-600">{{ lowStockCount }}</p>
-          <p class="text-sm text-gray-500">Kam qolgan</p>
+          <p class="text-sm text-gray-500">{{ $t('inventory.stock.lowStock') }}</p>
         </div>
       </button>
       <button
@@ -111,7 +114,7 @@ function formatQty(val) {
       >
         <div class="card-body text-center">
           <p class="text-3xl font-bold text-red-600">{{ outOfStockCount }}</p>
-          <p class="text-sm text-gray-500">Tugagan</p>
+          <p class="text-sm text-gray-500">{{ $t('inventory.stock.outOfStock') }}</p>
         </div>
       </button>
     </div>
@@ -125,7 +128,7 @@ function formatQty(val) {
             v-model="search"
             @input="() => { page = 0; fetchStock() }"
             type="text"
-            placeholder="Mahsulot qidirish..."
+            :placeholder="$t('inventory.stock.searchPlaceholder')"
             class="input pl-10"
           />
         </div>
@@ -135,7 +138,7 @@ function formatQty(val) {
             v-model="selectedLocationId"
             class="input pl-10"
           >
-            <option value="">Barcha omborlar</option>
+            <option value="">{{ $t('inventory.stock.allWarehouses') }}</option>
             <option v-for="loc in locations" :key="loc.id" :value="loc.id">
               {{ loc.name }}
             </option>
@@ -154,13 +157,13 @@ function formatQty(val) {
         <table class="table">
           <thead>
             <tr>
-              <th>Mahsulot</th>
-              <th>SKU</th>
-              <th>Ombor</th>
-              <th class="text-right">Mavjud</th>
-              <th class="text-right">Band</th>
-              <th class="text-right">Erkin</th>
-              <th>Holat</th>
+              <th>{{ $t('inventory.stock.product') }}</th>
+              <th>{{ $t('inventory.products.sku') }}</th>
+              <th>{{ $t('inventory.stock.warehouse') }}</th>
+              <th class="text-right">{{ $t('inventory.stock.available') }}</th>
+              <th class="text-right">{{ $t('inventory.stock.reserved') }}</th>
+              <th class="text-right">{{ $t('inventory.stock.free') }}</th>
+              <th>{{ $t('status') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -191,7 +194,7 @@ function formatQty(val) {
               </td>
             </tr>
             <tr v-if="filteredStock.length === 0">
-              <td colspan="7" class="text-center text-gray-400 py-8">Ma'lumot topilmadi</td>
+              <td colspan="7" class="text-center text-gray-400 py-8">{{ $t('inventory.stock.noStock') }}</td>
             </tr>
           </tbody>
         </table>

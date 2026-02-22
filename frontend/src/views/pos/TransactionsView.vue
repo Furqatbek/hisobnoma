@@ -1,8 +1,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { posApi } from '@/services/api'
 import { EyeIcon, MagnifyingGlassIcon, PrinterIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import ReceiptTemplate from '@/components/ReceiptTemplate.vue'
+
+const { t } = useI18n()
 
 const transactions = ref([])
 const loading = ref(true)
@@ -113,20 +116,20 @@ function getStatusClass(status) {
 
 function getStatusLabel(status) {
   const labels = {
-    'COMPLETED': 'Yakunlangan',
-    'PENDING': 'Kutilmoqda',
-    'VOIDED': 'Bekor qilingan',
-    'IN_PROGRESS': 'Jarayonda'
+    'COMPLETED': t('pos.transactions.completed'),
+    'PENDING': t('pos.transactions.pending'),
+    'VOIDED': t('pos.transactions.voided'),
+    'IN_PROGRESS': t('pos.processing')
   }
   return labels[status] || status
 }
 
 function getPaymentLabel(type) {
   const labels = {
-    'CASH': 'Naqd',
-    'CARD': 'Karta',
-    'CREDIT': 'Nasiya',
-    'MOBILE_PAYMENT': 'Mobil'
+    'CASH': t('pos.cash'),
+    'CARD': t('pos.card'),
+    'CREDIT': t('pos.credit'),
+    'MOBILE_PAYMENT': t('pos.mobile')
   }
   return labels[type] || type
 }
@@ -150,8 +153,8 @@ function handleSearch() {
 <template>
   <div class="space-y-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Sotuv tarixi</h1>
-      <p class="mt-1 text-sm text-gray-500">Barcha tranzaksiyalar ro'yxati</p>
+      <h1 class="text-2xl font-bold text-gray-900">{{ $t('pos.transactions.title') }}</h1>
+      <p class="mt-1 text-sm text-gray-500">{{ $t('pos.transactions.subtitle') }}</p>
     </div>
 
     <!-- Filters -->
@@ -162,19 +165,19 @@ function handleSearch() {
           <input
             v-model="search"
             type="text"
-            placeholder="Qidiruv (chek raqami, mijoz)..."
+            :placeholder="$t('pos.transactions.searchPlaceholder')"
             class="input pl-10"
             @keyup.enter="handleSearch"
           />
         </div>
         <select v-model="dateFilter" @change="fetchTransactions" class="input w-auto">
-          <option value="today">Bugun</option>
-          <option value="week">Shu hafta</option>
-          <option value="month">Shu oy</option>
-          <option value="all">Barchasi</option>
+          <option value="today">{{ $t('pos.transactions.today') }}</option>
+          <option value="week">{{ $t('pos.transactions.thisWeek') }}</option>
+          <option value="month">{{ $t('pos.transactions.thisMonth') }}</option>
+          <option value="all">{{ $t('pos.transactions.all') }}</option>
         </select>
         <button @click="handleSearch" class="btn-primary">
-          Qidirish
+          {{ $t('search') }}
         </button>
       </div>
     </div>
@@ -186,24 +189,24 @@ function handleSearch() {
       </div>
 
       <div v-else-if="transactions.length === 0" class="text-center py-12">
-        <p class="text-gray-500">Tranzaksiyalar topilmadi</p>
+        <p class="text-gray-500">{{ $t('pos.transactions.noTransactions') }}</p>
       </div>
 
       <div v-else class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>Chek №</th>
-              <th>Sana</th>
-              <th>Kassir</th>
-              <th>Mijoz</th>
-              <th>Kassa</th>
-              <th>Mahsulotlar</th>
-              <th class="text-right">Summa</th>
-              <th class="text-right">To'langan</th>
-              <th>Holat</th>
-              <th>To'lov turi</th>
-              <th class="text-right">Amallar</th>
+              <th>{{ $t('pos.transactions.transactionNumber') }}</th>
+              <th>{{ $t('pos.transactions.date') }}</th>
+              <th>{{ $t('pos.transactions.cashier') }}</th>
+              <th>{{ $t('pos.transactions.customer') }}</th>
+              <th>{{ $t('pos.shifts.terminal') }}</th>
+              <th>{{ $t('pos.transactions.items') }}</th>
+              <th class="text-right">{{ $t('amount') }}</th>
+              <th class="text-right">{{ $t('pos.transactions.paid') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th>{{ $t('pos.paymentMethod') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -211,14 +214,14 @@ function handleSearch() {
               <td class="font-mono text-sm">{{ tx.transactionNumber || `#${tx.id}` }}</td>
               <td class="text-sm text-gray-500 whitespace-nowrap">{{ formatDate(tx.createdAt) }}</td>
               <td class="text-sm">{{ tx.cashierName || '-' }}</td>
-              <td>{{ tx.customerName || 'Tashrif buyuruvchi' }}</td>
+              <td>{{ tx.customerName || $t('pos.walkInCustomer') }}</td>
               <td class="text-sm text-gray-500">{{ tx.terminalName || tx.terminalCode || '-' }}</td>
-              <td>{{ tx.lineCount || 0 }} ta</td>
+              <td>{{ tx.lineCount || 0 }} {{ $t('items') }}</td>
               <td class="text-right font-medium whitespace-nowrap">{{ formatCurrency(tx.totalAmount) }}</td>
               <td class="text-right whitespace-nowrap">
                 <span v-if="tx.balanceDue > 0" class="text-orange-600 font-medium">
                   {{ formatCurrency(tx.paidAmount) }}
-                  <span class="text-xs block text-orange-500">qarz: {{ formatCurrency(tx.balanceDue) }}</span>
+                  <span class="text-xs block text-orange-500">{{ $t('pos.transactions.debt') }}: {{ formatCurrency(tx.balanceDue) }}</span>
                 </span>
                 <span v-else class="text-green-600">{{ formatCurrency(tx.paidAmount) }}</span>
               </td>
@@ -249,7 +252,7 @@ function handleSearch() {
                 <button
                   @click="viewTransaction(tx)"
                   class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  title="Ko'rish"
+                  :title="$t('view')"
                 >
                   <EyeIcon class="h-5 w-5" />
                 </button>
@@ -267,18 +270,18 @@ function handleSearch() {
             :disabled="pagination.page === 0"
             class="btn-secondary"
           >
-            Oldingi
+            {{ $t('previous') }}
           </button>
           <span class="text-sm text-gray-500">
-            Sahifa {{ pagination.page + 1 }} / {{ pagination.totalPages }}
-            (Jami: {{ pagination.totalElements }})
+            {{ $t('page') }} {{ pagination.page + 1 }} / {{ pagination.totalPages }}
+            ({{ $t('totalCount') }}: {{ pagination.totalElements }})
           </span>
           <button
             @click="pagination.page++; fetchTransactions()"
             :disabled="pagination.page >= pagination.totalPages - 1"
             class="btn-secondary"
           >
-            Keyingi
+            {{ $t('next') }}
           </button>
         </div>
       </div>
@@ -295,7 +298,7 @@ function handleSearch() {
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
             <h2 class="text-xl font-bold text-gray-900">
-              Tranzaksiya tafsilotlari
+              {{ $t('pos.transactions.transactionDetails') }}
             </h2>
             <p class="text-sm text-gray-500">
               {{ selectedTransaction?.transactionNumber || `#${selectedTransaction?.id}` }}
@@ -308,7 +311,7 @@ function handleSearch() {
               :disabled="loadingDetail"
             >
               <PrinterIcon class="h-5 w-5" />
-              Chop etish
+              {{ $t('print') }}
             </button>
             <button
               @click="closeModal"
@@ -331,11 +334,11 @@ function handleSearch() {
               <!-- Basic Info -->
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="text-sm text-gray-500">Sana</label>
+                  <label class="text-sm text-gray-500">{{ $t('pos.transactions.date') }}</label>
                   <p class="font-medium">{{ formatDate(selectedTransaction.createdAt) }}</p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Holat</label>
+                  <label class="text-sm text-gray-500">{{ $t('status') }}</label>
                   <p>
                     <span :class="['badge', getStatusClass(selectedTransaction.status)]">
                       {{ getStatusLabel(selectedTransaction.status) }}
@@ -343,44 +346,44 @@ function handleSearch() {
                   </p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Mijoz</label>
-                  <p class="font-medium">{{ selectedTransaction.customerName || 'Tashrif buyuruvchi' }}</p>
+                  <label class="text-sm text-gray-500">{{ $t('pos.transactions.customer') }}</label>
+                  <p class="font-medium">{{ selectedTransaction.customerName || $t('pos.walkInCustomer') }}</p>
                   <p v-if="selectedTransaction.customerPhone" class="text-sm text-gray-500">
                     {{ selectedTransaction.customerPhone }}
                   </p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Kassir</label>
+                  <label class="text-sm text-gray-500">{{ $t('pos.transactions.cashier') }}</label>
                   <p class="font-medium">{{ selectedTransaction.cashierName || '-' }}</p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Terminal</label>
+                  <label class="text-sm text-gray-500">{{ $t('pos.shifts.terminal') }}</label>
                   <p class="font-medium">{{ selectedTransaction.terminalName || selectedTransaction.terminalCode || '-' }}</p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Filial</label>
+                  <label class="text-sm text-gray-500">{{ $t('pos.transactions.location') }}</label>
                   <p class="font-medium">{{ selectedTransaction.locationName || '-' }}</p>
                 </div>
               </div>
 
               <!-- Void info -->
               <div v-if="selectedTransaction.status === 'VOIDED' && selectedTransaction.voidReason" class="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p class="text-sm font-medium text-red-800">Bekor qilish sababi:</p>
+                <p class="text-sm font-medium text-red-800">{{ $t('pos.transactions.voidReason') }}:</p>
                 <p class="text-sm text-red-700">{{ selectedTransaction.voidReason }}</p>
                 <p v-if="selectedTransaction.voidedAt" class="text-xs text-red-500 mt-1">{{ formatDate(selectedTransaction.voidedAt) }}</p>
               </div>
 
               <!-- Items -->
               <div>
-                <h3 class="font-semibold text-gray-900 mb-3">Mahsulotlar</h3>
+                <h3 class="font-semibold text-gray-900 mb-3">{{ $t('pos.transactions.items') }}</h3>
                 <div class="bg-gray-50 rounded-lg overflow-hidden">
                   <table class="w-full">
                     <thead class="bg-gray-100">
                       <tr>
-                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Mahsulot</th>
-                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">Soni</th>
-                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">Narxi</th>
-                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">Jami</th>
+                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">{{ $t('pos.transactions.product') }}</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">{{ $t('quantity') }}</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">{{ $t('price') }}</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">{{ $t('total') }}</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -402,19 +405,19 @@ function handleSearch() {
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="space-y-2">
                   <div class="flex justify-between">
-                    <span class="text-gray-600">Oraliq summa:</span>
+                    <span class="text-gray-600">{{ $t('pos.subtotal') }}:</span>
                     <span>{{ formatCurrency(selectedTransaction.subtotal) }} so'm</span>
                   </div>
                   <div class="flex justify-between" v-if="selectedTransaction.discountAmount > 0">
-                    <span class="text-gray-600">Chegirma:</span>
+                    <span class="text-gray-600">{{ $t('pos.discount') }}:</span>
                     <span class="text-green-600">-{{ formatCurrency(selectedTransaction.discountAmount) }} so'm</span>
                   </div>
                   <div class="flex justify-between" v-if="selectedTransaction.taxAmount > 0">
-                    <span class="text-gray-600">Soliq:</span>
+                    <span class="text-gray-600">{{ $t('pos.tax') }}:</span>
                     <span>{{ formatCurrency(selectedTransaction.taxAmount) }} so'm</span>
                   </div>
                   <div class="flex justify-between text-lg font-bold border-t pt-2">
-                    <span>Jami:</span>
+                    <span>{{ $t('total') }}:</span>
                     <span>{{ formatCurrency(selectedTransaction.totalAmount) }} so'm</span>
                   </div>
                 </div>
@@ -422,7 +425,7 @@ function handleSearch() {
 
               <!-- Payments -->
               <div v-if="selectedTransaction.payments?.length">
-                <h3 class="font-semibold text-gray-900 mb-3">To'lovlar</h3>
+                <h3 class="font-semibold text-gray-900 mb-3">{{ $t('pos.transactions.payments') }}</h3>
                 <div class="space-y-2">
                   <div
                     v-for="payment in selectedTransaction.payments"
@@ -436,7 +439,7 @@ function handleSearch() {
                     <span class="font-medium">{{ formatCurrency(payment.amount) }} so'm</span>
                   </div>
                   <div v-if="selectedTransaction.changeAmount > 0" class="flex justify-between items-center px-4 py-2 text-sm text-gray-600">
-                    <span>Qaytim:</span>
+                    <span>{{ $t('pos.change') }}:</span>
                     <span>{{ formatCurrency(selectedTransaction.changeAmount) }} so'm</span>
                   </div>
                 </div>
@@ -444,7 +447,7 @@ function handleSearch() {
 
               <!-- Notes -->
               <div v-if="selectedTransaction.notes" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p class="text-sm font-medium text-yellow-800">Izoh:</p>
+                <p class="text-sm font-medium text-yellow-800">{{ $t('notes') }}:</p>
                 <p class="text-sm text-yellow-700">{{ selectedTransaction.notes }}</p>
               </div>
             </div>
@@ -452,7 +455,7 @@ function handleSearch() {
 
           <!-- Receipt Preview -->
           <div class="w-80 border-l border-gray-200 bg-gray-50 p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
-            <h3 class="font-semibold text-gray-900 mb-4 text-center">Chek ko'rinishi</h3>
+            <h3 class="font-semibold text-gray-900 mb-4 text-center">{{ $t('pos.printReceipt') }}</h3>
             <div class="bg-white shadow-lg rounded-lg overflow-hidden">
               <ReceiptTemplate
                 v-if="selectedTransaction"

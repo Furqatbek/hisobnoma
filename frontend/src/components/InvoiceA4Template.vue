@@ -1,6 +1,9 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useReceiptStore } from '@/stores/receipt'
+
+const { t } = useI18n()
 
 const props = defineProps({
   transaction: {
@@ -30,16 +33,10 @@ function formatDate(dateString) {
   })
 }
 
-const paymentTypeLabels = {
-  CASH: 'Naqd',
-  CARD: 'Karta',
-  CREDIT: 'Nasiya',
-  MOBILE_PAYMENT: 'Mobil to\'lov',
-  TRANSFER: 'O\'tkazma'
-}
-
 function getPaymentLabel(type) {
-  return paymentTypeLabels[type] || type
+  const key = `enums.paymentType.${type}`
+  const translated = t(key)
+  return translated !== key ? translated : type
 }
 
 function printInvoice() {
@@ -63,7 +60,7 @@ function printInvoice() {
   const paymentRows = payments.map(p => `
     <tr>
       <td style="padding: 4px 0;">${getPaymentLabel(p.paymentType)}</td>
-      <td style="padding: 4px 0; text-align: right;">${formatCurrency(p.amount)} so'm</td>
+      <td style="padding: 4px 0; text-align: right;">${formatCurrency(p.amount)} ${t('sum')}</td>
     </tr>
   `).join('')
 
@@ -72,7 +69,7 @@ function printInvoice() {
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Hisob-faktura</title>
+      <title>${t('invoice.title')}</title>
       <style>
         @page {
           size: A4;
@@ -96,14 +93,14 @@ function printInvoice() {
         <div>
           <div style="font-size: 24px; font-weight: bold; color: #111827; margin-bottom: 4px;">${config.value.brandName || ''}</div>
           ${config.value.address ? '<div style="color: #6b7280;">' + config.value.address + '</div>' : ''}
-          ${config.value.phone ? '<div style="color: #6b7280;">Tel: ' + config.value.phone + '</div>' : ''}
+          ${config.value.phone ? '<div style="color: #6b7280;">' + t('phone') + ': ' + config.value.phone + '</div>' : ''}
           ${config.value.website ? '<div style="color: #6b7280;">' + config.value.website + '</div>' : ''}
           ${config.value.taxId ? '<div style="color: #6b7280;">STIR: ' + config.value.taxId + '</div>' : ''}
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 28px; font-weight: bold; color: #111827; text-transform: uppercase; letter-spacing: 2px;">Hisob-faktura</div>
+          <div style="font-size: 28px; font-weight: bold; color: #111827; text-transform: uppercase; letter-spacing: 2px;">${t('invoice.title')}</div>
           <div style="font-size: 16px; color: #4b5563; margin-top: 4px;">${props.transaction.transactionNumber || '#' + props.transaction.id}</div>
-          <div style="color: #6b7280; margin-top: 4px;">Sana: ${formatDate(props.transaction.createdAt)}</div>
+          <div style="color: #6b7280; margin-top: 4px;">${t('invoice.date')}: ${formatDate(props.transaction.createdAt)}</div>
         </div>
       </div>
 
@@ -111,19 +108,19 @@ function printInvoice() {
       <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
         <div style="flex: 1;">
           ${props.transaction.customerName ? `
-            <div style="font-size: 12px; text-transform: uppercase; color: #9ca3af; font-weight: 600; letter-spacing: 1px; margin-bottom: 6px;">Mijoz</div>
+            <div style="font-size: 12px; text-transform: uppercase; color: #9ca3af; font-weight: 600; letter-spacing: 1px; margin-bottom: 6px;">${t('invoice.customer')}</div>
             <div style="font-weight: 600; font-size: 15px;">${props.transaction.customerName}</div>
-            ${props.transaction.customerPhone ? '<div style="color: #6b7280;">Tel: ' + props.transaction.customerPhone + '</div>' : ''}
-          ` : '<div style="color: #9ca3af;">Mijoz ko\'rsatilmagan</div>'}
+            ${props.transaction.customerPhone ? '<div style="color: #6b7280;">' + t('phone') + ': ' + props.transaction.customerPhone + '</div>' : ''}
+          ` : '<div style="color: #9ca3af;">' + t('invoice.customerNotSpecified') + '</div>'}
           ${props.transaction.deliveryRegionName || props.transaction.deliveryVillageName ? `
-            <div style="font-size: 12px; text-transform: uppercase; color: #9ca3af; font-weight: 600; letter-spacing: 1px; margin-bottom: 6px; margin-top: 12px;">Yetkazish manzili</div>
+            <div style="font-size: 12px; text-transform: uppercase; color: #9ca3af; font-weight: 600; letter-spacing: 1px; margin-bottom: 6px; margin-top: 12px;">${t('invoice.deliveryAddress')}</div>
             <div style="font-weight: 600; font-size: 14px;">${[props.transaction.deliveryRegionName, props.transaction.deliveryVillageName].filter(Boolean).join(', ')}</div>
           ` : ''}
         </div>
         <div style="text-align: right;">
-          ${props.transaction.terminalName ? '<div style="color: #6b7280;">Terminal: ' + props.transaction.terminalName + '</div>' : ''}
-          ${props.transaction.locationName ? '<div style="color: #6b7280;">Filial: ' + props.transaction.locationName + '</div>' : ''}
-          ${props.transaction.cashierName ? '<div style="color: #6b7280;">Kassir: ' + props.transaction.cashierName + '</div>' : ''}
+          ${props.transaction.terminalName ? '<div style="color: #6b7280;">' + t('invoice.terminal') + ': ' + props.transaction.terminalName + '</div>' : ''}
+          ${props.transaction.locationName ? '<div style="color: #6b7280;">' + t('invoice.branch') + ': ' + props.transaction.locationName + '</div>' : ''}
+          ${props.transaction.cashierName ? '<div style="color: #6b7280;">' + t('invoice.cashier') + ': ' + props.transaction.cashierName + '</div>' : ''}
         </div>
       </div>
 
@@ -132,10 +129,10 @@ function printInvoice() {
         <thead>
           <tr style="background-color: #111827; color: white;">
             <th style="padding: 10px 12px; text-align: center; font-weight: 600; width: 50px;">№</th>
-            <th style="padding: 10px 12px; text-align: left; font-weight: 600;">Mahsulot</th>
-            <th style="padding: 10px 12px; text-align: center; font-weight: 600; width: 80px;">Miqdor</th>
-            <th style="padding: 10px 12px; text-align: right; font-weight: 600; width: 130px;">Narx</th>
-            <th style="padding: 10px 12px; text-align: right; font-weight: 600; width: 140px;">Summa</th>
+            <th style="padding: 10px 12px; text-align: left; font-weight: 600;">${t('invoice.product')}</th>
+            <th style="padding: 10px 12px; text-align: center; font-weight: 600; width: 80px;">${t('invoice.qty')}</th>
+            <th style="padding: 10px 12px; text-align: right; font-weight: 600; width: 130px;">${t('invoice.price')}</th>
+            <th style="padding: 10px 12px; text-align: right; font-weight: 600; width: 140px;">${t('invoice.amount')}</th>
           </tr>
         </thead>
         <tbody>
@@ -148,25 +145,25 @@ function printInvoice() {
         <table style="width: 300px; border-collapse: collapse;">
           ${props.transaction.subtotal ? `
             <tr>
-              <td style="padding: 6px 0; color: #6b7280;">Oraliq summa:</td>
-              <td style="padding: 6px 0; text-align: right;">${formatCurrency(props.transaction.subtotal)} so'm</td>
+              <td style="padding: 6px 0; color: #6b7280;">${t('invoice.subtotal')}:</td>
+              <td style="padding: 6px 0; text-align: right;">${formatCurrency(props.transaction.subtotal)} ${t('sum')}</td>
             </tr>
           ` : ''}
           ${props.transaction.discountAmount > 0 ? `
             <tr>
-              <td style="padding: 6px 0; color: #6b7280;">Chegirma:</td>
-              <td style="padding: 6px 0; text-align: right; color: #dc2626;">-${formatCurrency(props.transaction.discountAmount)} so'm</td>
+              <td style="padding: 6px 0; color: #6b7280;">${t('invoice.discount')}:</td>
+              <td style="padding: 6px 0; text-align: right; color: #dc2626;">-${formatCurrency(props.transaction.discountAmount)} ${t('sum')}</td>
             </tr>
           ` : ''}
           ${props.transaction.taxAmount > 0 ? `
             <tr>
-              <td style="padding: 6px 0; color: #6b7280;">Soliq:</td>
-              <td style="padding: 6px 0; text-align: right;">${formatCurrency(props.transaction.taxAmount)} so'm</td>
+              <td style="padding: 6px 0; color: #6b7280;">${t('invoice.tax')}:</td>
+              <td style="padding: 6px 0; text-align: right;">${formatCurrency(props.transaction.taxAmount)} ${t('sum')}</td>
             </tr>
           ` : ''}
           <tr style="border-top: 2px solid #111827;">
-            <td style="padding: 12px 0; font-size: 18px; font-weight: bold;">JAMI:</td>
-            <td style="padding: 12px 0; text-align: right; font-size: 18px; font-weight: bold;">${formatCurrency(props.transaction.totalAmount)} so'm</td>
+            <td style="padding: 12px 0; font-size: 18px; font-weight: bold;">${t('invoice.grandTotal')}:</td>
+            <td style="padding: 12px 0; text-align: right; font-size: 18px; font-weight: bold;">${formatCurrency(props.transaction.totalAmount)} ${t('sum')}</td>
           </tr>
         </table>
       </div>
@@ -174,13 +171,13 @@ function printInvoice() {
       <!-- Payments -->
       ${payments.length > 0 ? `
         <div style="margin-bottom: 24px; padding: 16px; background: #f9fafb; border-radius: 8px;">
-          <div style="font-size: 12px; text-transform: uppercase; color: #9ca3af; font-weight: 600; letter-spacing: 1px; margin-bottom: 8px;">To'lov ma'lumotlari</div>
+          <div style="font-size: 12px; text-transform: uppercase; color: #9ca3af; font-weight: 600; letter-spacing: 1px; margin-bottom: 8px;">${t('invoice.paymentDetails')}</div>
           <table style="width: 300px; border-collapse: collapse;">
             ${paymentRows}
             ${props.transaction.changeAmount > 0 ? `
               <tr>
-                <td style="padding: 4px 0; color: #6b7280;">Qaytim:</td>
-                <td style="padding: 4px 0; text-align: right;">${formatCurrency(props.transaction.changeAmount)} so'm</td>
+                <td style="padding: 4px 0; color: #6b7280;">${t('invoice.change')}:</td>
+                <td style="padding: 4px 0; text-align: right;">${formatCurrency(props.transaction.changeAmount)} ${t('sum')}</td>
               </tr>
             ` : ''}
           </table>
@@ -191,30 +188,30 @@ function printInvoice() {
       <div style="display: flex; justify-content: space-between; margin-top: 48px; padding-top: 24px;">
         <!-- Seller -->
         <div style="width: 45%;">
-          <div style="font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 600; letter-spacing: 1px; margin-bottom: 16px;">Topshirdi (Sotuvchi)</div>
+          <div style="font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 600; letter-spacing: 1px; margin-bottom: 16px;">${t('invoice.sellerHandedOver')}</div>
           <div style="margin-bottom: 20px;">
-            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">F.I.O.</div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">${t('invoice.fullName')}</div>
             <div style="border-bottom: 1px solid #111827; min-height: 24px; padding-bottom: 2px; font-size: 14px;">
               ${props.transaction.cashierName || ''}
             </div>
           </div>
           <div>
-            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">Imzo</div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">${t('invoice.signature')}</div>
             <div style="border-bottom: 1px solid #111827; min-height: 40px;"></div>
           </div>
         </div>
 
         <!-- Receiver -->
         <div style="width: 45%;">
-          <div style="font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 600; letter-spacing: 1px; margin-bottom: 16px;">Qabul qildi (Xaridor)</div>
+          <div style="font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 600; letter-spacing: 1px; margin-bottom: 16px;">${t('invoice.buyerReceived')}</div>
           <div style="margin-bottom: 20px;">
-            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">F.I.O.</div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">${t('invoice.fullName')}</div>
             <div style="border-bottom: 1px solid #111827; min-height: 24px; padding-bottom: 2px; font-size: 14px;">
               ${props.transaction.customerName || ''}
             </div>
           </div>
           <div>
-            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">Imzo</div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">${t('invoice.signature')}</div>
             <div style="border-bottom: 1px solid #111827; min-height: 40px;"></div>
           </div>
         </div>
@@ -224,7 +221,7 @@ function printInvoice() {
       <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 12px;">
         <div style="font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 4px;">${config.value.footerText || ''}</div>
         ${config.value.website ? '<div>' + config.value.website + '</div>' : ''}
-        <div style="margin-top: 8px;">Chop etilgan: ${formatDate(new Date().toISOString())}</div>
+        <div style="margin-top: 8px;">${t('receipt.printedAt')}: ${formatDate(new Date().toISOString())}</div>
       </div>
     </body>
     </html>
@@ -249,11 +246,11 @@ defineExpose({ printInvoice })
       <div>
         <div class="company-name">{{ config.brandName }}</div>
         <div class="company-info" v-if="config.address">{{ config.address }}</div>
-        <div class="company-info" v-if="config.phone">Tel: {{ config.phone }}</div>
+        <div class="company-info" v-if="config.phone">{{ $t('phone') }}: {{ config.phone }}</div>
         <div class="company-info" v-if="config.taxId">STIR: {{ config.taxId }}</div>
       </div>
       <div class="invoice-title-block">
-        <div class="invoice-title">Hisob-faktura</div>
+        <div class="invoice-title">{{ $t('invoice.title') }}</div>
         <div class="invoice-number">{{ transaction.transactionNumber || `#${transaction.id}` }}</div>
         <div class="invoice-date">{{ formatDate(transaction.createdAt) }}</div>
       </div>
@@ -261,14 +258,14 @@ defineExpose({ printInvoice })
 
     <!-- Customer -->
     <div class="customer-section" v-if="transaction.customerName">
-      <div class="section-label">Mijoz</div>
+      <div class="section-label">{{ $t('invoice.customer') }}</div>
       <div class="customer-name">{{ transaction.customerName }}</div>
-      <div class="customer-detail" v-if="transaction.customerPhone">Tel: {{ transaction.customerPhone }}</div>
+      <div class="customer-detail" v-if="transaction.customerPhone">{{ $t('phone') }}: {{ transaction.customerPhone }}</div>
     </div>
 
     <!-- Delivery -->
     <div class="customer-section" v-if="transaction.deliveryRegionName || transaction.deliveryVillageName">
-      <div class="section-label">Yetkazish manzili</div>
+      <div class="section-label">{{ $t('invoice.deliveryAddress') }}</div>
       <div class="customer-name">{{ [transaction.deliveryRegionName, transaction.deliveryVillageName].filter(Boolean).join(', ') }}</div>
     </div>
 
@@ -277,10 +274,10 @@ defineExpose({ printInvoice })
       <thead>
         <tr>
           <th class="th-num">№</th>
-          <th class="th-name">Mahsulot</th>
-          <th class="th-qty">Miqdor</th>
-          <th class="th-price">Narx</th>
-          <th class="th-total">Summa</th>
+          <th class="th-name">{{ $t('invoice.product') }}</th>
+          <th class="th-qty">{{ $t('invoice.qty') }}</th>
+          <th class="th-price">{{ $t('invoice.price') }}</th>
+          <th class="th-total">{{ $t('invoice.amount') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -297,41 +294,41 @@ defineExpose({ printInvoice })
     <!-- Totals -->
     <div class="totals-section">
       <div class="total-row grand-total">
-        <span>JAMI:</span>
-        <span>{{ formatCurrency(transaction.totalAmount) }} so'm</span>
+        <span>{{ $t('invoice.grandTotal') }}:</span>
+        <span>{{ formatCurrency(transaction.totalAmount) }} {{ $t('sum') }}</span>
       </div>
     </div>
 
     <!-- Payments -->
     <div class="payments-section" v-if="transaction.payments?.length">
-      <div class="section-label">To'lov</div>
+      <div class="section-label">{{ $t('invoice.payment') }}</div>
       <div class="payment-row" v-for="(payment, index) in transaction.payments" :key="index">
         <span>{{ getPaymentLabel(payment.paymentType) }}:</span>
-        <span>{{ formatCurrency(payment.amount) }} so'm</span>
+        <span>{{ formatCurrency(payment.amount) }} {{ $t('sum') }}</span>
       </div>
     </div>
 
     <!-- Signatures -->
     <div class="signatures-section">
       <div class="signature-block">
-        <div class="signature-title">Topshirdi (Sotuvchi)</div>
+        <div class="signature-title">{{ $t('invoice.sellerHandedOver') }}</div>
         <div class="signature-field">
-          <div class="signature-label">F.I.O.</div>
+          <div class="signature-label">{{ $t('invoice.fullName') }}</div>
           <div class="signature-line">{{ transaction.cashierName || '' }}</div>
         </div>
         <div class="signature-field">
-          <div class="signature-label">Imzo</div>
+          <div class="signature-label">{{ $t('invoice.signature') }}</div>
           <div class="signature-line signature-line-tall"></div>
         </div>
       </div>
       <div class="signature-block">
-        <div class="signature-title">Qabul qildi (Xaridor)</div>
+        <div class="signature-title">{{ $t('invoice.buyerReceived') }}</div>
         <div class="signature-field">
-          <div class="signature-label">F.I.O.</div>
+          <div class="signature-label">{{ $t('invoice.fullName') }}</div>
           <div class="signature-line">{{ transaction.customerName || '' }}</div>
         </div>
         <div class="signature-field">
-          <div class="signature-label">Imzo</div>
+          <div class="signature-label">{{ $t('invoice.signature') }}</div>
           <div class="signature-line signature-line-tall"></div>
         </div>
       </div>

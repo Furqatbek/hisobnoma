@@ -42,94 +42,94 @@ const expandedMenus = ref([])
 
 const navigation = computed(() => [
   {
-    name: 'Dashboard',
+    name: t('nav.dashboard'),
     href: '/dashboard',
     icon: HomeIcon,
     current: route.path === '/dashboard'
   },
   {
-    name: 'Inventory',
+    name: t('nav.inventory'),
     icon: CubeIcon,
     key: 'inventory',
     children: [
-      { name: 'Products', href: '/inventory/products', icon: TagIcon },
-      { name: 'Categories', href: '/inventory/categories', icon: ArchiveBoxIcon },
-      { name: 'Brands', href: '/inventory/brands', icon: BuildingStorefrontIcon },
-      { name: 'Stock', href: '/inventory/stock', icon: ClipboardDocumentListIcon },
-      { name: 'Warehouses', href: '/inventory/warehouses', icon: BuildingStorefrontIcon },
-      { name: 'Units of Measure', href: '/inventory/uom', icon: TagIcon }
+      { name: t('nav.products'), href: '/inventory/products', icon: TagIcon },
+      { name: t('nav.categories'), href: '/inventory/categories', icon: ArchiveBoxIcon },
+      { name: t('nav.brands'), href: '/inventory/brands', icon: BuildingStorefrontIcon },
+      { name: t('nav.stock'), href: '/inventory/stock', icon: ClipboardDocumentListIcon },
+      { name: t('nav.warehouses'), href: '/inventory/warehouses', icon: BuildingStorefrontIcon },
+      { name: t('nav.unitsOfMeasure'), href: '/inventory/uom', icon: TagIcon }
     ]
   },
   {
-    name: 'Sotuv (POS)',
+    name: t('nav.pos'),
     icon: ShoppingCartIcon,
     key: 'pos',
     children: [
-      { name: 'Kassa', href: '/pos', icon: ShoppingCartIcon },
-      { name: 'Sotuv tarixi', href: '/pos/transactions', icon: ClockIcon },
-      { name: 'Smenalar', href: '/pos/shifts', icon: ClipboardDocumentListIcon }
+      { name: t('nav.cashRegister'), href: '/pos', icon: ShoppingCartIcon },
+      { name: t('nav.salesHistory'), href: '/pos/transactions', icon: ClockIcon },
+      { name: t('nav.shifts'), href: '/pos/shifts', icon: ClipboardDocumentListIcon }
     ]
   },
   {
-    name: 'Customers',
+    name: t('nav.customers'),
     href: '/customers',
     icon: UsersIcon,
     current: route.path.startsWith('/customers')
   },
   {
-    name: 'Purchases',
+    name: t('nav.purchases'),
     icon: TruckIcon,
     key: 'purchases',
     children: [
-      { name: 'Suppliers', href: '/purchases/suppliers', icon: UserGroupIcon },
-      { name: 'Purchase Orders', href: '/purchases/orders', icon: DocumentTextIcon }
+      { name: t('nav.suppliers'), href: '/purchases/suppliers', icon: UserGroupIcon },
+      { name: t('nav.purchaseOrders'), href: '/purchases/orders', icon: DocumentTextIcon }
     ]
   },
   {
-    name: 'Moliya',
+    name: t('nav.finance'),
     icon: BanknotesIcon,
     key: 'finance',
     children: [
-      { name: 'Qarzdorlar', href: '/finance/debtors', icon: UsersIcon },
-      { name: 'To\'lovlar', href: '/finance/payments', icon: BanknotesIcon },
-      { name: 'Xarajatlar', href: '/finance/expenses', icon: CurrencyDollarIcon }
+      { name: t('nav.debtors'), href: '/finance/debtors', icon: UsersIcon },
+      { name: t('nav.payments'), href: '/finance/payments', icon: BanknotesIcon },
+      { name: t('nav.expenses'), href: '/finance/expenses', icon: CurrencyDollarIcon }
     ]
   },
   {
-    name: 'Xodimlar (HR)',
+    name: t('nav.hr'),
     icon: BriefcaseIcon,
     key: 'hr',
     children: [
-      { name: 'Xodimlar', href: '/hr/employees', icon: UserGroupIcon },
-      { name: "Bo'limlar", href: '/hr/departments', icon: BuildingStorefrontIcon },
-      { name: 'Lavozimlar', href: '/hr/positions', icon: BriefcaseIcon },
-      { name: 'Ish haqi', href: '/hr/salary', icon: BanknotesIcon }
+      { name: t('nav.employees'), href: '/hr/employees', icon: UserGroupIcon },
+      { name: t('nav.departments'), href: '/hr/departments', icon: BuildingStorefrontIcon },
+      { name: t('nav.positions'), href: '/hr/positions', icon: BriefcaseIcon },
+      { name: t('nav.salary'), href: '/hr/salary', icon: BanknotesIcon }
     ]
   },
   {
-    name: 'Reports',
+    name: t('nav.reports'),
     icon: ChartBarIcon,
     key: 'reports',
     children: [
-      { name: 'Sales Report', href: '/reports/sales', icon: CurrencyDollarIcon },
-      { name: 'Inventory Report', href: '/reports/inventory', icon: ClipboardDocumentListIcon },
-      { name: 'Financial Report', href: '/reports/financial', icon: DocumentTextIcon },
-      { name: 'Ish haqi hisoboti', href: '/reports/salary', icon: BanknotesIcon }
+      { name: t('nav.salesReport'), href: '/reports/sales', icon: CurrencyDollarIcon },
+      { name: t('nav.inventoryReport'), href: '/reports/inventory', icon: ClipboardDocumentListIcon },
+      { name: t('nav.financialReport'), href: '/reports/financial', icon: DocumentTextIcon },
+      { name: t('nav.salaryReport'), href: '/reports/salary', icon: BanknotesIcon }
     ]
   },
   {
-    name: 'Admin',
+    name: t('nav.admin'),
     icon: ShieldCheckIcon,
     key: 'admin',
     children: [
-      { name: 'Foydalanuvchilar', href: '/admin/users', icon: UserGroupIcon },
-      { name: 'Rollar va ruxsatlar', href: '/admin/roles', icon: KeyIcon },
-      { name: 'POS Terminallar', href: '/admin/terminals', icon: ComputerDesktopIcon },
-      { name: 'Hududlar', href: '/admin/regions', icon: MapIcon },
-      { name: 'Mahallalar', href: '/admin/villages', icon: MapPinIcon },
-      { name: 'Telegram bot', href: '/admin/telegram', icon: PaperAirplaneIcon },
-      { name: 'Sozlamalar', href: '/admin/settings', icon: Cog6ToothIcon },
-      { name: 'Audit jurnali', href: '/admin/audit-logs', icon: DocumentTextIcon }
+      { name: t('nav.users'), href: '/admin/users', icon: UserGroupIcon },
+      { name: t('nav.rolesAndPermissions'), href: '/admin/roles', icon: KeyIcon },
+      { name: t('nav.terminals'), href: '/admin/terminals', icon: ComputerDesktopIcon },
+      { name: t('nav.regions'), href: '/admin/regions', icon: MapIcon },
+      { name: t('nav.villages'), href: '/admin/villages', icon: MapPinIcon },
+      { name: t('nav.telegramBot'), href: '/admin/telegram', icon: PaperAirplaneIcon },
+      { name: t('nav.settings'), href: '/admin/settings', icon: Cog6ToothIcon },
+      { name: t('nav.auditLog'), href: '/admin/audit-logs', icon: DocumentTextIcon }
     ]
   }
 ])
@@ -183,7 +183,7 @@ watchEffect(() => {
           <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
             <span class="text-white font-bold text-lg">H</span>
           </div>
-          <span class="text-xl font-bold text-gray-900">Hisobnoma</span>
+          <span class="text-xl font-bold text-gray-900">{{ $t('appName') }}</span>
         </RouterLink>
         <button
           class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500"
@@ -296,7 +296,7 @@ watchEffect(() => {
           <button
             @click="authStore.logout()"
             class="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-            title="Logout"
+            :title="$t('logout')"
           >
             <ArrowRightOnRectangleIcon class="h-5 w-5" />
           </button>
@@ -318,7 +318,7 @@ watchEffect(() => {
 
           <div class="flex-1 flex justify-end items-center space-x-4">
             <span class="text-sm text-gray-500">
-              {{ new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}
+              {{ new Date().toLocaleDateString('uz-UZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}
             </span>
           </div>
         </div>

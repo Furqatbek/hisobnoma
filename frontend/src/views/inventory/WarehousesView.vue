@@ -1,7 +1,10 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { warehousesApi } from '@/services/api'
 import { PlusIcon, PencilIcon, TrashIcon, BuildingStorefrontIcon } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const warehouses = ref([])
 const loading = ref(true)
@@ -62,11 +65,11 @@ function openModal(warehouse = null) {
 
 async function saveWarehouse() {
   if (!form.name?.trim()) {
-    errors.name = 'Name is required'
+    errors.name = t('inventory.warehouses.nameRequired')
     return
   }
   if (!form.code?.trim()) {
-    errors.code = 'Code is required'
+    errors.code = t('required')
     return
   }
 
@@ -79,12 +82,12 @@ async function saveWarehouse() {
     showModal.value = false
     fetchWarehouses()
   } catch (error) {
-    errors.general = error.response?.data?.message || 'Failed to save'
+    errors.general = error.response?.data?.message || t('failedToSave')
   }
 }
 
 async function deleteWarehouse(warehouse) {
-  if (!confirm(`Delete "${warehouse.name}"?`)) return
+  if (!confirm(t('inventory.warehouses.confirmDelete', { name: warehouse.name }))) return
   try {
     await warehousesApi.delete(warehouse.id)
     fetchWarehouses()
@@ -98,12 +101,12 @@ async function deleteWarehouse(warehouse) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Warehouses</h1>
-        <p class="mt-1 text-sm text-gray-500">Manage storage locations</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('inventory.warehouses.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('inventory.warehouses.subtitle') }}</p>
       </div>
       <button @click="openModal()" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Add Warehouse
+        {{ $t('inventory.warehouses.addWarehouse') }}
       </button>
     </div>
 
@@ -114,7 +117,7 @@ async function deleteWarehouse(warehouse) {
 
       <div v-else-if="warehouses.length === 0" class="text-center py-12">
         <BuildingStorefrontIcon class="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p class="text-gray-500">No warehouses yet</p>
+        <p class="text-gray-500">{{ $t('inventory.warehouses.noWarehouses') }}</p>
       </div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
@@ -142,9 +145,9 @@ async function deleteWarehouse(warehouse) {
           </div>
           <div class="mt-3 flex items-center space-x-2">
             <span :class="['badge', warehouse.active ? 'badge-success' : 'badge-danger']">
-              {{ warehouse.active ? 'Active' : 'Inactive' }}
+              {{ warehouse.active ? $t('active') : $t('inactive') }}
             </span>
-            <span v-if="warehouse.isDefault" class="badge badge-info">Default</span>
+            <span v-if="warehouse.isDefault" class="badge badge-info">{{ $t('inventory.warehouses.isDefault') }}</span>
           </div>
         </div>
       </div>
@@ -156,20 +159,20 @@ async function deleteWarehouse(warehouse) {
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showModal = false"></div>
         <div class="relative bg-white rounded-lg max-w-md w-full p-6">
           <h3 class="text-lg font-medium text-gray-900 mb-4">
-            {{ editingWarehouse ? 'Edit Warehouse' : 'New Warehouse' }}
+            {{ editingWarehouse ? $t('inventory.warehouses.editWarehouse') : $t('inventory.warehouses.newWarehouse') }}
           </h3>
 
           <div class="space-y-4">
             <div>
-              <label class="label">Name *</label>
+              <label class="label">{{ $t('name') }} *</label>
               <input v-model="form.name" type="text" :class="[errors.name ? 'input-error' : 'input']" />
             </div>
             <div>
-              <label class="label">Code *</label>
+              <label class="label">{{ $t('code') }} *</label>
               <input v-model="form.code" type="text" :class="[errors.code ? 'input-error' : 'input']" />
             </div>
             <div>
-              <label class="label">Type *</label>
+              <label class="label">{{ $t('inventory.warehouses.type') }} *</label>
               <select v-model="form.locationType" class="input">
                 <option v-for="type in locationTypes" :key="type.value" :value="type.value">
                   {{ type.label }}
@@ -177,28 +180,28 @@ async function deleteWarehouse(warehouse) {
               </select>
             </div>
             <div>
-              <label class="label">Address</label>
+              <label class="label">{{ $t('inventory.warehouses.address') }}</label>
               <textarea v-model="form.address" rows="2" class="input"></textarea>
             </div>
             <div>
-              <label class="label">Phone</label>
+              <label class="label">{{ $t('phone') }}</label>
               <input v-model="form.phone" type="text" class="input" />
             </div>
             <div class="flex space-x-4">
               <label class="flex items-center">
                 <input v-model="form.active" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-                <span class="ml-2 text-sm">Active</span>
+                <span class="ml-2 text-sm">{{ $t('active') }}</span>
               </label>
               <label class="flex items-center">
                 <input v-model="form.isDefault" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-                <span class="ml-2 text-sm">Default</span>
+                <span class="ml-2 text-sm">{{ $t('inventory.warehouses.isDefault') }}</span>
               </label>
             </div>
           </div>
 
           <div class="mt-6 flex justify-end space-x-3">
-            <button @click="showModal = false" class="btn-secondary">Cancel</button>
-            <button @click="saveWarehouse" class="btn-primary">Save</button>
+            <button @click="showModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
+            <button @click="saveWarehouse" class="btn-primary">{{ $t('save') }}</button>
           </div>
         </div>
       </div>

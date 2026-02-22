@@ -1,8 +1,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { purchaseOrdersApi } from '@/services/api'
 import { ArrowLeftIcon, CheckIcon, XMarkIcon, TruckIcon } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -27,17 +30,17 @@ async function approveOrder() {
     await purchaseOrdersApi.approve(order.value.id)
     await loadOrder()
   } catch (error) {
-    alert('Failed to approve order')
+    alert(t('purchases.orders.failedToApprove'))
   }
 }
 
 async function cancelOrder() {
-  if (!confirm('Cancel this order?')) return
+  if (!confirm(t('purchases.orders.confirmCancel'))) return
   try {
     await purchaseOrdersApi.cancel(order.value.id)
     await loadOrder()
   } catch (error) {
-    alert('Failed to cancel order')
+    alert(t('purchases.orders.failedToCancel'))
   }
 }
 
@@ -46,7 +49,7 @@ async function receiveOrder() {
     await purchaseOrdersApi.receive(order.value.id)
     await loadOrder()
   } catch (error) {
-    alert('Failed to receive order')
+    alert(t('purchases.orders.failedToReceive'))
   }
 }
 
@@ -72,15 +75,7 @@ function getStatusClass(status) {
 }
 
 function getStatusLabel(status) {
-  const labels = {
-    'DRAFT': 'Qoralama',
-    'PENDING': 'Kutilmoqda',
-    'APPROVED': 'Tasdiqlangan',
-    'PARTIAL': 'Qisman qabul',
-    'RECEIVED': 'Qabul qilingan',
-    'CANCELLED': 'Bekor qilingan'
-  }
-  return labels[status] || status
+  return t(`enums.purchaseOrderStatus.${status}`)
 }
 </script>
 
@@ -93,9 +88,9 @@ function getStatusLabel(status) {
         </button>
         <div>
           <h1 class="text-2xl font-bold text-gray-900">
-            Purchase Order {{ order?.poNumber || `#${route.params.id}` }}
+            {{ $t('purchases.orders.orderDetails') }} {{ order?.poNumber || `#${route.params.id}` }}
           </h1>
-          <p v-if="order" class="text-sm text-gray-500">Created {{ formatDate(order.createdAt) }}</p>
+          <p v-if="order" class="text-sm text-gray-500">{{ formatDate(order.createdAt) }}</p>
         </div>
       </div>
 
@@ -106,7 +101,7 @@ function getStatusLabel(status) {
           class="btn-success"
         >
           <CheckIcon class="h-5 w-5 mr-2" />
-          Tasdiqlash
+          {{ $t('purchases.orders.approve') }}
         </button>
         <button
           v-if="['APPROVED', 'PARTIAL'].includes(order.status)"
@@ -114,7 +109,7 @@ function getStatusLabel(status) {
           class="btn-primary"
         >
           <TruckIcon class="h-5 w-5 mr-2" />
-          Qabul qilish
+          {{ $t('purchases.orders.receive') }}
         </button>
         <button
           v-if="['DRAFT', 'PENDING', 'APPROVED'].includes(order.status)"
@@ -122,7 +117,7 @@ function getStatusLabel(status) {
           class="btn-danger"
         >
           <XMarkIcon class="h-5 w-5 mr-2" />
-          Bekor qilish
+          {{ $t('purchases.orders.cancelOrder') }}
         </button>
       </div>
     </div>
@@ -136,27 +131,27 @@ function getStatusLabel(status) {
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Status</p>
+            <p class="text-sm text-gray-500">{{ $t('status') }}</p>
             <span :class="['badge mt-1', getStatusClass(order.status)]">{{ getStatusLabel(order.status) }}</span>
           </div>
         </div>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Vendor</p>
+            <p class="text-sm text-gray-500">{{ $t('purchases.orders.supplier') }}</p>
             <p class="font-medium mt-1">{{ order.vendorName || '-' }}</p>
             <p class="text-xs text-gray-400">{{ order.vendorCode }}</p>
           </div>
         </div>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Location</p>
+            <p class="text-sm text-gray-500">{{ $t('purchases.orderForm.location') }}</p>
             <p class="font-medium mt-1">{{ order.locationName || '-' }}</p>
             <p class="text-xs text-gray-400">{{ order.locationCode }}</p>
           </div>
         </div>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Total Amount</p>
+            <p class="text-sm text-gray-500">{{ $t('purchases.orderForm.totalAmount') }}</p>
             <p class="text-2xl font-bold text-primary-600 mt-1">{{ formatCurrency(order.totalAmount) }} {{ order.currency }}</p>
           </div>
         </div>
@@ -167,19 +162,19 @@ function getStatusLabel(status) {
         <div class="card-body">
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <p class="text-gray-500">Order Date</p>
+              <p class="text-gray-500">{{ $t('purchases.orderForm.orderDate') }}</p>
               <p class="font-medium">{{ formatDate(order.orderDate) }}</p>
             </div>
             <div>
-              <p class="text-gray-500">Expected Date</p>
+              <p class="text-gray-500">{{ $t('purchases.orderForm.expectedDate') }}</p>
               <p class="font-medium">{{ formatDate(order.expectedDate) }}</p>
             </div>
             <div>
-              <p class="text-gray-500">Payment Terms</p>
+              <p class="text-gray-500">{{ $t('purchases.orderForm.paymentTerms') }}</p>
               <p class="font-medium">{{ order.paymentTerms || '-' }}</p>
             </div>
             <div>
-              <p class="text-gray-500">Currency</p>
+              <p class="text-gray-500">{{ $t('purchases.orderForm.currency') }}</p>
               <p class="font-medium">{{ order.currency }}</p>
             </div>
           </div>
@@ -189,20 +184,20 @@ function getStatusLabel(status) {
       <!-- Items -->
       <div class="card">
         <div class="card-header">
-          <h3 class="text-lg font-medium">Order Items</h3>
+          <h3 class="text-lg font-medium">{{ $t('purchases.orderForm.orderItems') }}</h3>
         </div>
         <div class="table-container">
           <table class="table">
             <thead>
               <tr>
                 <th>#</th>
-                <th>Product</th>
-                <th>UOM</th>
-                <th class="text-right">Quantity</th>
-                <th class="text-right">Received</th>
-                <th class="text-right">Pending</th>
-                <th class="text-right">Unit Price</th>
-                <th class="text-right">Line Total</th>
+                <th>{{ $t('purchases.orderForm.product') }}</th>
+                <th>{{ $t('purchases.orderForm.uom') }}</th>
+                <th class="text-right">{{ $t('quantity') }}</th>
+                <th class="text-right">{{ $t('purchases.orderForm.received') }}</th>
+                <th class="text-right">{{ $t('purchases.orderForm.pending') }}</th>
+                <th class="text-right">{{ $t('purchases.orderForm.unitPrice') }}</th>
+                <th class="text-right">{{ $t('purchases.orderForm.lineTotal') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -228,23 +223,23 @@ function getStatusLabel(status) {
           <div class="flex justify-end">
             <div class="w-64 space-y-2 text-sm">
               <div class="flex justify-between">
-                <span class="text-gray-500">Subtotal</span>
+                <span class="text-gray-500">{{ $t('purchases.orders.subtotal') }}</span>
                 <span class="font-medium">{{ formatCurrency(order.subtotal) }}</span>
               </div>
               <div v-if="order.discountAmount > 0" class="flex justify-between text-red-600">
-                <span>Discount</span>
+                <span>{{ $t('purchases.orderForm.discount') }}</span>
                 <span>-{{ formatCurrency(order.discountAmount) }}</span>
               </div>
               <div v-if="order.taxAmount > 0" class="flex justify-between">
-                <span class="text-gray-500">Tax</span>
+                <span class="text-gray-500">{{ $t('purchases.orderForm.tax') }}</span>
                 <span>{{ formatCurrency(order.taxAmount) }}</span>
               </div>
               <div v-if="order.shippingAmount > 0" class="flex justify-between">
-                <span class="text-gray-500">Shipping</span>
+                <span class="text-gray-500">{{ $t('purchases.orderForm.shipping') }}</span>
                 <span>{{ formatCurrency(order.shippingAmount) }}</span>
               </div>
               <div class="flex justify-between pt-2 border-t font-bold text-base">
-                <span>Total</span>
+                <span>{{ $t('total') }}</span>
                 <span>{{ formatCurrency(order.totalAmount) }} {{ order.currency }}</span>
               </div>
             </div>
@@ -255,15 +250,15 @@ function getStatusLabel(status) {
       <!-- Notes -->
       <div v-if="order.notes || order.internalNotes" class="card">
         <div class="card-header">
-          <h3 class="text-lg font-medium">Notes</h3>
+          <h3 class="text-lg font-medium">{{ $t('notes') }}</h3>
         </div>
         <div class="card-body space-y-3">
           <div v-if="order.notes">
-            <p class="text-sm text-gray-500">Notes</p>
+            <p class="text-sm text-gray-500">{{ $t('notes') }}</p>
             <p class="mt-1">{{ order.notes }}</p>
           </div>
           <div v-if="order.internalNotes">
-            <p class="text-sm text-gray-500">Internal Notes</p>
+            <p class="text-sm text-gray-500">{{ $t('purchases.orderForm.internalNotes') }}</p>
             <p class="mt-1">{{ order.internalNotes }}</p>
           </div>
         </div>

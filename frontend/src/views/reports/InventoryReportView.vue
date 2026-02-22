@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { reportsApi } from '@/services/api'
 import { ArrowDownTrayIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const loading = ref(true)
 const report = ref(null)
 const filter = ref('all') // all, low, out
@@ -59,9 +61,9 @@ function getStatusClass(status) {
 }
 
 function getStatusLabel(status) {
-  if (status === 'OUT_OF_STOCK') return 'Tugagan'
-  if (status === 'LOW_STOCK') return 'Kam qolgan'
-  return 'Mavjud'
+  if (status === 'OUT_OF_STOCK') return t('reports.inventory.outOfStock')
+  if (status === 'LOW_STOCK') return t('reports.inventory.lowStock')
+  return t('reports.inventory.inStock')
 }
 </script>
 
@@ -69,12 +71,12 @@ function getStatusLabel(status) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Ombor hisoboti</h1>
-        <p class="mt-1 text-sm text-gray-500">Zaxira darajasi va baholash</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('reports.inventory.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('reports.inventory.subtitle') }}</p>
       </div>
       <button @click="exportReport" class="btn-secondary">
         <ArrowDownTrayIcon class="h-5 w-5 mr-2" />
-        Eksport
+        {{ $t('export') }}
       </button>
     </div>
 
@@ -90,10 +92,10 @@ function getStatusLabel(status) {
           :class="['card cursor-pointer transition-all text-left', filter === 'all' ? 'ring-2 ring-primary-500' : '']"
         >
           <div class="card-body">
-            <p class="text-sm text-gray-500">Jami mahsulotlar</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.inventory.totalProducts') }}</p>
             <p class="text-2xl font-bold">{{ report.summary?.totalSkus || 0 }}</p>
             <p v-if="report.summary?.totalQuantity" class="text-xs text-gray-400 mt-1">
-              {{ formatQty(report.summary.totalQuantity) }} dona
+              {{ formatQty(report.summary.totalQuantity) }} {{ $t('reports.sales.pcs') }}
             </p>
           </div>
         </button>
@@ -102,7 +104,7 @@ function getStatusLabel(status) {
           :class="['card cursor-pointer transition-all text-left', filter === 'low' ? 'ring-2 ring-yellow-500' : '']"
         >
           <div class="card-body">
-            <p class="text-sm text-gray-500">Kam qolgan</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.inventory.lowStockCount') }}</p>
             <p class="text-2xl font-bold text-yellow-600">{{ report.summary?.lowStockCount || 0 }}</p>
           </div>
         </button>
@@ -111,13 +113,13 @@ function getStatusLabel(status) {
           :class="['card cursor-pointer transition-all text-left', filter === 'out' ? 'ring-2 ring-red-500' : '']"
         >
           <div class="card-body">
-            <p class="text-sm text-gray-500">Tugagan</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.inventory.outOfStockCount') }}</p>
             <p class="text-2xl font-bold text-red-600">{{ report.summary?.outOfStockCount || 0 }}</p>
           </div>
         </button>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Umumiy qiymat</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.inventory.totalValue') }}</p>
             <p class="text-2xl font-bold text-primary-600">{{ formatCurrency(report.summary?.totalValue) }}</p>
           </div>
         </div>
@@ -127,22 +129,22 @@ function getStatusLabel(status) {
       <div class="card">
         <div class="card-header">
           <h3 class="text-lg font-medium">
-            {{ filter === 'all' ? 'Barcha mahsulotlar' : filter === 'low' ? 'Kam qolgan mahsulotlar' : 'Tugagan mahsulotlar' }}
+            {{ filter === 'all' ? $t('reports.inventory.allProducts') : filter === 'low' ? $t('reports.inventory.lowStockProducts') : $t('reports.inventory.outOfStockProducts') }}
           </h3>
         </div>
         <div v-if="filteredItems.length" class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Mahsulot</th>
-                <th>SKU</th>
-                <th>Joylashuv</th>
-                <th class="text-right">Mavjud</th>
-                <th class="text-right">Band</th>
-                <th class="text-right">Erkin</th>
-                <th class="text-right">Min. daraja</th>
-                <th class="text-right">Qiymat</th>
-                <th>Holat</th>
+                <th>{{ $t('reports.inventory.product') }}</th>
+                <th>{{ $t('reports.inventory.sku') }}</th>
+                <th>{{ $t('reports.inventory.location') }}</th>
+                <th class="text-right">{{ $t('reports.inventory.available') }}</th>
+                <th class="text-right">{{ $t('reports.inventory.reserved') }}</th>
+                <th class="text-right">{{ $t('reports.inventory.free') }}</th>
+                <th class="text-right">{{ $t('reports.inventory.minLevel') }}</th>
+                <th class="text-right">{{ $t('reports.inventory.value') }}</th>
+                <th>{{ $t('status') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -177,7 +179,7 @@ function getStatusLabel(status) {
           </table>
         </div>
         <div v-else class="card-body text-center text-gray-500">
-          Ma'lumot yo'q
+          {{ $t('noData') }}
         </div>
       </div>
     </template>

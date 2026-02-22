@@ -2,6 +2,8 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { salaryApi, advancesApi, employeesApi } from '@/services/api'
 import { PlusIcon, CheckCircleIcon, XCircleIcon, XMarkIcon, BanknotesIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const records = ref([])
 const advances = ref([])
@@ -43,10 +45,12 @@ const totalAdvances = computed(() => {
     .reduce((sum, a) => sum + (a.amount || 0), 0)
 })
 
-const months = [
-  'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
-  'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'
-]
+const months = computed(() => [
+  t('hr.salary.months.1'), t('hr.salary.months.2'), t('hr.salary.months.3'),
+  t('hr.salary.months.4'), t('hr.salary.months.5'), t('hr.salary.months.6'),
+  t('hr.salary.months.7'), t('hr.salary.months.8'), t('hr.salary.months.9'),
+  t('hr.salary.months.10'), t('hr.salary.months.11'), t('hr.salary.months.12')
+])
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ').format(value || 0)
@@ -65,11 +69,11 @@ function statusBadge(status) {
 
 function statusLabel(status) {
   switch (status) {
-    case 'PAID': return "To'langan"
-    case 'PENDING': return 'Kutilmoqda'
-    case 'CANCELLED': return 'Bekor qilingan'
-    case 'GIVEN': return 'Berilgan'
-    case 'DEDUCTED': return 'Hisobdan chiqarilgan'
+    case 'PAID': return t('hr.salary.paid')
+    case 'PENDING': return t('hr.salary.pending')
+    case 'CANCELLED': return t('hr.salary.cancelled')
+    case 'GIVEN': return t('enums.salaryStatus.GIVEN')
+    case 'DEDUCTED': return t('enums.salaryStatus.DEDUCTED')
     default: return status
   }
 }
@@ -132,7 +136,7 @@ async function handleSave() {
     await loadData()
   } catch (error) {
     console.error('Failed to save:', error)
-    alert(error.response?.data?.message || 'Xatolik yuz berdi')
+    alert(error.response?.data?.message || t('noData'))
   } finally {
     saving.value = false
   }
@@ -147,39 +151,39 @@ async function handleAdvanceSave() {
     await loadData()
   } catch (error) {
     console.error('Failed to save advance:', error)
-    alert(error.response?.data?.message || 'Xatolik yuz berdi')
+    alert(error.response?.data?.message || t('noData'))
   } finally {
     saving.value = false
   }
 }
 
 async function handlePay(id) {
-  if (!confirm("To'lovni tasdiqlaysizmi? Avanslar avtomatik hisobdan chiqariladi.")) return
+  if (!confirm(t('hr.salary.markPaid'))) return
   try {
     await salaryApi.markPaid(id)
     await loadData()
   } catch (error) {
-    alert(error.response?.data?.message || 'Xatolik')
+    alert(error.response?.data?.message || t('noData'))
   }
 }
 
 async function handleCancel(id) {
-  if (!confirm('Bekor qilmoqchimisiz?')) return
+  if (!confirm(t('cancel'))) return
   try {
     await salaryApi.cancel(id)
     await loadData()
   } catch (error) {
-    alert(error.response?.data?.message || 'Xatolik')
+    alert(error.response?.data?.message || t('noData'))
   }
 }
 
 async function handleCancelAdvance(id) {
-  if (!confirm('Avansni bekor qilmoqchimisiz?')) return
+  if (!confirm(t('cancel'))) return
   try {
     await advancesApi.cancel(id)
     await loadData()
   } catch (error) {
-    alert(error.response?.data?.message || 'Xatolik')
+    alert(error.response?.data?.message || t('noData'))
   }
 }
 
@@ -190,15 +194,15 @@ onMounted(loadData)
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Ish haqi</h1>
-        <p class="mt-1 text-sm text-gray-500">Oylik maosh hisoblash, avans va to'lash</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('hr.salary.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('hr.salary.subtitle') }}</p>
       </div>
       <div class="flex gap-2">
         <button @click="openAdvanceCreate" class="btn-secondary">
-          <BanknotesIcon class="h-5 w-5 mr-2" /> Avans berish
+          <BanknotesIcon class="h-5 w-5 mr-2" /> {{ $t('hr.salary.pay') }}
         </button>
         <button @click="openCreate" class="btn-primary">
-          <PlusIcon class="h-5 w-5 mr-2" /> Maosh hisoblash
+          <PlusIcon class="h-5 w-5 mr-2" /> {{ $t('hr.salary.generate') }}
         </button>
       </div>
     </div>
@@ -208,16 +212,16 @@ onMounted(loadData)
       <div class="card-body">
         <div class="flex items-end gap-4">
           <div>
-            <label class="label">Yil</label>
+            <label class="label">{{ $t('hr.salary.year') }}</label>
             <input v-model.number="filterYear" type="number" min="2020" max="2030" class="input w-28" />
           </div>
           <div>
-            <label class="label">Oy</label>
+            <label class="label">{{ $t('hr.salary.month') }}</label>
             <select v-model.number="filterMonth" class="input w-40">
               <option v-for="(m, i) in months" :key="i" :value="i + 1">{{ m }}</option>
             </select>
           </div>
-          <button @click="loadData" class="btn-primary">Ko'rsatish</button>
+          <button @click="loadData" class="btn-primary">{{ $t('apply') }}</button>
         </div>
       </div>
     </div>
@@ -230,9 +234,9 @@ onMounted(loadData)
       <!-- Advances section -->
       <div v-if="advances.length > 0" class="card">
         <div class="card-header flex items-center justify-between">
-          <h3 class="text-lg font-medium">Avanslar</h3>
+          <h3 class="text-lg font-medium">{{ $t('hr.salary.pay') }}</h3>
           <div class="text-sm">
-            Berilgan avanslar jami:
+            {{ $t('hr.salary.totalSalary') }}:
             <span class="font-semibold text-blue-600">{{ formatCurrency(totalAdvances) }}</span>
           </div>
         </div>
@@ -241,12 +245,12 @@ onMounted(loadData)
             <table class="table">
               <thead>
                 <tr>
-                  <th>Xodim</th>
-                  <th>Kod</th>
-                  <th>Sana</th>
-                  <th class="text-right">Summa</th>
-                  <th>Holat</th>
-                  <th>Amallar</th>
+                  <th>{{ $t('hr.salary.employee') }}</th>
+                  <th>{{ $t('code') }}</th>
+                  <th>{{ $t('hr.employees.hireDate') }}</th>
+                  <th class="text-right">{{ $t('amount') }}</th>
+                  <th>{{ $t('status') }}</th>
+                  <th>{{ $t('actions') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -260,7 +264,7 @@ onMounted(loadData)
                   </td>
                   <td>
                     <button v-if="adv.status === 'GIVEN'" @click="handleCancelAdvance(adv.id)"
-                      class="text-red-600 hover:text-red-800" title="Bekor qilish">
+                      class="text-red-600 hover:text-red-800" :title="$t('cancel')">
                       <XCircleIcon class="h-5 w-5" />
                     </button>
                     <span v-else class="text-gray-400 text-sm">-</span>
@@ -275,26 +279,26 @@ onMounted(loadData)
       <!-- Salary records -->
       <div class="card">
         <div class="card-header">
-          <h3 class="text-lg font-medium">Ish haqi yozuvlari</h3>
+          <h3 class="text-lg font-medium">{{ $t('hr.salary.title') }}</h3>
         </div>
         <div class="card-body">
           <div v-if="records.length === 0" class="text-center py-12 text-gray-500">
-            Bu davr uchun yozuvlar topilmadi
+            {{ $t('hr.salary.noRecords') }}
           </div>
           <div v-else class="table-container">
             <table class="table">
               <thead>
                 <tr>
-                  <th>Xodim</th>
-                  <th>Kod</th>
-                  <th class="text-right">Asosiy</th>
-                  <th class="text-right">Bonus</th>
-                  <th class="text-right">Ushlanma</th>
-                  <th class="text-right">Jami</th>
-                  <th class="text-right">Avans</th>
-                  <th class="text-right">To'lash</th>
-                  <th>Holat</th>
-                  <th>Amallar</th>
+                  <th>{{ $t('hr.salary.employee') }}</th>
+                  <th>{{ $t('code') }}</th>
+                  <th class="text-right">{{ $t('hr.salary.base') }}</th>
+                  <th class="text-right">{{ $t('hr.salary.bonus') }}</th>
+                  <th class="text-right">{{ $t('hr.salary.deduction') }}</th>
+                  <th class="text-right">{{ $t('hr.salary.netSalary') }}</th>
+                  <th class="text-right">{{ $t('hr.salary.pay') }}</th>
+                  <th class="text-right">{{ $t('hr.salary.totalPaid') }}</th>
+                  <th>{{ $t('status') }}</th>
+                  <th>{{ $t('actions') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -318,10 +322,10 @@ onMounted(loadData)
                   </td>
                   <td>
                     <div class="flex items-center gap-2" v-if="rec.status === 'PENDING'">
-                      <button @click="handlePay(rec.id)" class="text-green-600 hover:text-green-800" title="To'lash">
+                      <button @click="handlePay(rec.id)" class="text-green-600 hover:text-green-800" :title="$t('hr.salary.pay')">
                         <CheckCircleIcon class="h-5 w-5" />
                       </button>
-                      <button @click="handleCancel(rec.id)" class="text-red-600 hover:text-red-800" title="Bekor qilish">
+                      <button @click="handleCancel(rec.id)" class="text-red-600 hover:text-red-800" :title="$t('cancel')">
                         <XCircleIcon class="h-5 w-5" />
                       </button>
                     </div>
@@ -339,14 +343,14 @@ onMounted(loadData)
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
         <div class="flex items-center justify-between px-6 py-4 border-b">
-          <h3 class="text-lg font-medium">Maosh hisoblash</h3>
+          <h3 class="text-lg font-medium">{{ $t('hr.salary.generate') }}</h3>
           <button @click="showModal = false"><XMarkIcon class="h-5 w-5 text-gray-400" /></button>
         </div>
         <form @submit.prevent="handleSave" class="p-6 space-y-4">
           <div>
-            <label class="label">Xodim *</label>
+            <label class="label">{{ $t('hr.salary.employee') }} *</label>
             <select v-model="form.employeeId" @change="onEmployeeSelect" class="input">
-              <option :value="null">Tanlang</option>
+              <option :value="null">{{ $t('hr.employeeForm.selectDepartment') }}</option>
               <option v-for="e in employees" :key="e.id" :value="e.id">
                 {{ e.fullName }} ({{ e.employeeCode }})
               </option>
@@ -354,42 +358,42 @@ onMounted(loadData)
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="label">Yil</label>
+              <label class="label">{{ $t('hr.salary.year') }}</label>
               <input v-model.number="form.periodYear" type="number" class="input" />
             </div>
             <div>
-              <label class="label">Oy</label>
+              <label class="label">{{ $t('hr.salary.month') }}</label>
               <select v-model.number="form.periodMonth" class="input">
                 <option v-for="(m, i) in months" :key="i" :value="i + 1">{{ m }}</option>
               </select>
             </div>
           </div>
           <div>
-            <label class="label">Asosiy maosh *</label>
+            <label class="label">{{ $t('hr.salary.base') }} *</label>
             <input v-model.number="form.baseAmount" type="number" step="1000" min="0" class="input" />
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="label">Bonus</label>
+              <label class="label">{{ $t('hr.salary.bonus') }}</label>
               <input v-model.number="form.bonusAmount" type="number" step="1000" min="0" class="input" />
             </div>
             <div>
-              <label class="label">Ushlanma</label>
+              <label class="label">{{ $t('hr.salary.deduction') }}</label>
               <input v-model.number="form.deductionAmount" type="number" step="1000" min="0" class="input" />
             </div>
           </div>
           <div class="p-3 bg-gray-50 rounded-lg text-center">
-            <span class="text-sm text-gray-500">Jami:</span>
+            <span class="text-sm text-gray-500">{{ $t('total') }}:</span>
             <span class="ml-2 text-lg font-semibold">{{ formatCurrency(netAmount) }}</span>
           </div>
           <div>
-            <label class="label">Izoh</label>
+            <label class="label">{{ $t('notes') }}</label>
             <textarea v-model="form.notes" rows="2" class="input"></textarea>
           </div>
           <div class="flex justify-end gap-3 pt-4">
-            <button type="button" @click="showModal = false" class="btn-secondary">Bekor qilish</button>
+            <button type="button" @click="showModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
             <button type="submit" :disabled="saving" class="btn-primary">
-              {{ saving ? 'Saqlanmoqda...' : 'Saqlash' }}
+              {{ saving ? $t('saving') : $t('save') }}
             </button>
           </div>
         </form>
@@ -400,14 +404,14 @@ onMounted(loadData)
     <div v-if="showAdvanceModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
         <div class="flex items-center justify-between px-6 py-4 border-b">
-          <h3 class="text-lg font-medium">Avans berish</h3>
+          <h3 class="text-lg font-medium">{{ $t('hr.salary.pay') }}</h3>
           <button @click="showAdvanceModal = false"><XMarkIcon class="h-5 w-5 text-gray-400" /></button>
         </div>
         <form @submit.prevent="handleAdvanceSave" class="p-6 space-y-4">
           <div>
-            <label class="label">Xodim *</label>
+            <label class="label">{{ $t('hr.salary.employee') }} *</label>
             <select v-model="advanceForm.employeeId" class="input">
-              <option :value="null">Tanlang</option>
+              <option :value="null">{{ $t('hr.employeeForm.selectDepartment') }}</option>
               <option v-for="e in employees" :key="e.id" :value="e.id">
                 {{ e.fullName }} ({{ e.employeeCode }})
               </option>
@@ -415,28 +419,28 @@ onMounted(loadData)
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="label">Yil</label>
+              <label class="label">{{ $t('hr.salary.year') }}</label>
               <input v-model.number="advanceForm.periodYear" type="number" class="input" />
             </div>
             <div>
-              <label class="label">Oy</label>
+              <label class="label">{{ $t('hr.salary.month') }}</label>
               <select v-model.number="advanceForm.periodMonth" class="input">
                 <option v-for="(m, i) in months" :key="i" :value="i + 1">{{ m }}</option>
               </select>
             </div>
           </div>
           <div>
-            <label class="label">Avans summasi *</label>
+            <label class="label">{{ $t('amount') }} *</label>
             <input v-model.number="advanceForm.amount" type="number" step="1000" min="0" class="input" />
           </div>
           <div>
-            <label class="label">Izoh</label>
+            <label class="label">{{ $t('notes') }}</label>
             <textarea v-model="advanceForm.notes" rows="2" class="input"></textarea>
           </div>
           <div class="flex justify-end gap-3 pt-4">
-            <button type="button" @click="showAdvanceModal = false" class="btn-secondary">Bekor qilish</button>
+            <button type="button" @click="showAdvanceModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
             <button type="submit" :disabled="saving" class="btn-primary">
-              {{ saving ? 'Saqlanmoqda...' : 'Avans berish' }}
+              {{ saving ? $t('saving') : $t('hr.salary.pay') }}
             </button>
           </div>
         </form>

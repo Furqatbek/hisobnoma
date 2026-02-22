@@ -8,6 +8,9 @@ import {
   MagnifyingGlassIcon,
   MapPinIcon
 } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const villages = ref([])
 const loading = ref(false)
@@ -37,13 +40,13 @@ async function fetchVillages(page = 0) {
 }
 
 async function deleteVillage(village) {
-  if (!confirm(`"${village.name}" mahallani o'chirishni xohlaysizmi?`)) return
+  if (!confirm(t('admin.villages.confirmDelete', { name: village.name }))) return
 
   try {
     await deliveryVillagesApi.delete(village.id)
     fetchVillages(currentPage.value)
   } catch (error) {
-    alert(error.response?.data?.message || 'O\'chirishda xatolik yuz berdi')
+    alert(error.response?.data?.message || t('admin.villages.deleteError'))
   }
 }
 
@@ -59,12 +62,12 @@ onMounted(() => fetchVillages())
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Mahallalar</h1>
-        <p class="text-sm text-gray-500 mt-1">Hududlar ichidagi mahallalarni boshqaring</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('admin.villages.title') }}</h1>
+        <p class="text-sm text-gray-500 mt-1">{{ $t('admin.villages.subtitle') }}</p>
       </div>
       <router-link to="/admin/villages/new" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Yangi mahalla
+        {{ $t('admin.villages.newVillage') }}
       </router-link>
     </div>
 
@@ -77,7 +80,7 @@ onMounted(() => fetchVillages())
             v-model="searchQuery"
             @input="handleSearch"
             type="text"
-            placeholder="Mahalla nomi yoki kodi bo'yicha qidirish..."
+            :placeholder="$t('admin.villages.searchPlaceholder')"
             class="input pl-10"
           />
         </div>
@@ -90,21 +93,21 @@ onMounted(() => fetchVillages())
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nomi</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hudud</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kod</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Holat</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amallar</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('name') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('admin.villages.region') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('code') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('status') }}</th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="loading">
-              <td colspan="5" class="px-6 py-8 text-center text-gray-500">Yuklanmoqda...</td>
+              <td colspan="5" class="px-6 py-8 text-center text-gray-500">{{ $t('loading') }}</td>
             </tr>
             <tr v-else-if="villages.length === 0">
               <td colspan="5" class="px-6 py-8 text-center text-gray-500">
                 <MapPinIcon class="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                <p>Mahallalar topilmadi</p>
+                <p>{{ $t('admin.villages.noVillages') }}</p>
               </td>
             </tr>
             <tr v-for="village in villages" :key="village.id" class="hover:bg-gray-50">
@@ -125,7 +128,7 @@ onMounted(() => fetchVillages())
                     village.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   ]"
                 >
-                  {{ village.active ? 'Faol' : 'Nofaol' }}
+                  {{ village.active ? $t('active') : $t('inactive') }}
                 </span>
               </td>
               <td class="px-6 py-4 text-right space-x-2">
@@ -150,7 +153,7 @@ onMounted(() => fetchVillages())
       <!-- Pagination -->
       <div v-if="totalPages > 1" class="px-6 py-3 border-t flex items-center justify-between">
         <p class="text-sm text-gray-500">
-          Jami: {{ totalElements }} ta mahalla
+          {{ $t('admin.villages.totalVillages') }}: {{ totalElements }}
         </p>
         <div class="flex gap-2">
           <button
@@ -158,14 +161,14 @@ onMounted(() => fetchVillages())
             :disabled="currentPage === 0"
             class="btn-secondary text-sm py-1 px-3"
           >
-            Oldingi
+            {{ $t('previous') }}
           </button>
           <button
             @click="fetchVillages(currentPage + 1)"
             :disabled="currentPage >= totalPages - 1"
             class="btn-secondary text-sm py-1 px-3"
           >
-            Keyingi
+            {{ $t('next') }}
           </button>
         </div>
       </div>

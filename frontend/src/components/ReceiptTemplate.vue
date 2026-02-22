@@ -1,7 +1,10 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useReceiptStore } from '@/stores/receipt'
 import InvoiceA4Template from '@/components/InvoiceA4Template.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   transaction: {
@@ -39,16 +42,10 @@ function formatDate(dateString) {
   })
 }
 
-const paymentTypeLabels = {
-  CASH: 'Naqd',
-  CARD: 'Karta',
-  CREDIT: 'Nasiya',
-  MOBILE_PAYMENT: 'Mobil',
-  TRANSFER: "O'tkazma"
-}
-
 function getPaymentLabel(type) {
-  return paymentTypeLabels[type] || type
+  const key = `enums.paymentType.${type}`
+  const translated = t(key)
+  return translated !== key ? translated : type
 }
 
 function getPrintCSS(paperWidth) {
@@ -239,7 +236,7 @@ function printReceipt() {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Chek</title>
+  <title>${t('receipt.receiptNumber')}</title>
   <style>${getPrintCSS(paperWidth)}</style>
 </head>
 <body>${printContent}</body>
@@ -266,37 +263,37 @@ defineExpose({ printReceipt })
     <div class="rc-header">
       <div class="rc-brand">{{ config.brandName }}</div>
       <div class="rc-header-line" v-if="config.address">{{ config.address }}</div>
-      <div class="rc-header-line" v-if="config.phone">Tel: {{ config.phone }}</div>
+      <div class="rc-header-line" v-if="config.phone">{{ $t('phone') }}: {{ config.phone }}</div>
       <div class="rc-header-line" v-if="config.taxId">STIR: {{ config.taxId }}</div>
     </div>
 
     <!-- Transaction Meta -->
     <div class="rc-meta">
       <div class="rc-meta-row">
-        <span class="rc-meta-label">Chek №:</span>
+        <span class="rc-meta-label">{{ $t('receipt.receiptNumber') }}:</span>
         <span class="rc-meta-value">{{ transaction.transactionNumber || transaction.orderNumber || `#${transaction.id}` }}</span>
       </div>
       <div class="rc-meta-row">
-        <span class="rc-meta-label">Sana:</span>
+        <span class="rc-meta-label">{{ $t('receipt.date') }}:</span>
         <span class="rc-meta-value">{{ formatDate(transaction.createdAt || transaction.orderDate) }}</span>
       </div>
       <div class="rc-meta-row" v-if="transaction.terminalName">
-        <span class="rc-meta-label">Kassa:</span>
+        <span class="rc-meta-label">{{ $t('receipt.terminal') }}:</span>
         <span class="rc-meta-value">{{ transaction.terminalName }}</span>
       </div>
       <div class="rc-meta-row" v-if="transaction.cashierName">
-        <span class="rc-meta-label">Kassir:</span>
+        <span class="rc-meta-label">{{ $t('receipt.cashier') }}:</span>
         <span class="rc-meta-value">{{ transaction.cashierName }}</span>
       </div>
       <div class="rc-meta-row" v-if="transaction.customerName">
-        <span class="rc-meta-label">Mijoz:</span>
+        <span class="rc-meta-label">{{ $t('receipt.customer') }}:</span>
         <span class="rc-meta-value">
           {{ transaction.customerName }}
           <span v-if="transaction.customerPhone" style="font-size: 9px;"> ({{ transaction.customerPhone }})</span>
         </span>
       </div>
       <div class="rc-meta-row" v-if="transaction.deliveryRegionName || transaction.deliveryVillageName">
-        <span class="rc-meta-label">Yetkazish:</span>
+        <span class="rc-meta-label">{{ $t('receipt.delivery') }}:</span>
         <span class="rc-meta-value">{{ [transaction.deliveryRegionName, transaction.deliveryVillageName].filter(Boolean).join(', ') }}</span>
       </div>
     </div>
@@ -305,11 +302,11 @@ defineExpose({ printReceipt })
     <table class="rc-items">
       <thead>
         <tr>
-          <th class="col-num">№</th>
-          <th class="col-name">Mahsulot</th>
-          <th class="col-qty">Soni</th>
-          <th class="col-price">Narx</th>
-          <th class="col-total">Summa</th>
+          <th class="col-num">{{ $t('receipt.product').charAt(0) === '#' ? '#' : '№' }}</th>
+          <th class="col-name">{{ $t('receipt.product') }}</th>
+          <th class="col-qty">{{ $t('receipt.qty') }}</th>
+          <th class="col-price">{{ $t('receipt.price') }}</th>
+          <th class="col-total">{{ $t('receipt.amount') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -326,34 +323,34 @@ defineExpose({ printReceipt })
     <!-- Totals -->
     <div class="rc-totals" v-if="(transaction.subtotal && transaction.subtotal !== transaction.totalAmount) || transaction.discountAmount > 0 || transaction.taxAmount > 0">
       <div class="rc-total-row" v-if="transaction.subtotal && transaction.subtotal !== transaction.totalAmount">
-        <span class="label">Oraliq summa:</span>
+        <span class="label">{{ $t('receipt.subtotal') }}:</span>
         <span class="value">{{ formatCurrency(transaction.subtotal) }}</span>
       </div>
       <div class="rc-total-row" v-if="transaction.discountAmount > 0">
-        <span class="label">Chegirma:</span>
+        <span class="label">{{ $t('receipt.discount') }}:</span>
         <span class="value">-{{ formatCurrency(transaction.discountAmount) }}</span>
       </div>
       <div class="rc-total-row" v-if="transaction.taxAmount > 0">
-        <span class="label">Soliq:</span>
+        <span class="label">{{ $t('receipt.tax') }}:</span>
         <span class="value">{{ formatCurrency(transaction.taxAmount) }}</span>
       </div>
     </div>
 
     <!-- Grand Total -->
     <div class="rc-grand">
-      <div class="rc-grand-label">JAMI</div>
-      <div class="rc-grand-amount">{{ formatCurrency(transaction.totalAmount || transaction.total) }} so'm</div>
+      <div class="rc-grand-label">{{ $t('receipt.grandTotal') }}</div>
+      <div class="rc-grand-amount">{{ formatCurrency(transaction.totalAmount || transaction.total) }} {{ $t('sum') }}</div>
     </div>
 
     <!-- Payments -->
     <div v-if="transaction.payments?.length" class="rc-payments">
       <div class="rc-pay-row" v-for="(payment, index) in transaction.payments" :key="index">
         <span>{{ getPaymentLabel(payment.paymentType || payment.type) }}:</span>
-        <span>{{ formatCurrency(payment.amount) }} so'm</span>
+        <span>{{ formatCurrency(payment.amount) }} {{ $t('sum') }}</span>
       </div>
       <div class="rc-pay-row" v-if="transaction.changeAmount > 0">
-        <span>Qaytim:</span>
-        <span>{{ formatCurrency(transaction.changeAmount) }} so'm</span>
+        <span>{{ $t('receipt.change') }}:</span>
+        <span>{{ formatCurrency(transaction.changeAmount) }} {{ $t('sum') }}</span>
       </div>
     </div>
 

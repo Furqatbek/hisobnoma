@@ -3,6 +3,9 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { deliveryRegionsApi } from '@/services/api'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -34,7 +37,7 @@ async function fetchRegion() {
     })
   } catch (error) {
     console.error('Failed to fetch region:', error)
-    alert('Hududni yuklashda xatolik')
+    alert(t('admin.regions.loadError'))
     router.push('/admin/regions')
   } finally {
     loading.value = false
@@ -43,7 +46,7 @@ async function fetchRegion() {
 
 function validate() {
   Object.keys(errors).forEach(key => delete errors[key])
-  if (!form.name?.trim()) errors.name = 'Hudud nomi kiritilishi shart'
+  if (!form.name?.trim()) errors.name = t('admin.regionForm.nameRequired')
   return Object.keys(errors).length === 0
 }
 
@@ -59,7 +62,7 @@ async function handleSubmit() {
     }
     router.push('/admin/regions')
   } catch (error) {
-    const msg = error.response?.data?.message || 'Saqlashda xatolik yuz berdi'
+    const msg = error.response?.data?.message || t('admin.regionForm.saveError')
     alert(msg)
   } finally {
     saving.value = false
@@ -82,54 +85,54 @@ onMounted(() => {
       </router-link>
       <div>
         <h1 class="text-2xl font-bold text-gray-900">
-          {{ isEdit ? 'Hududni tahrirlash' : 'Yangi hudud qo\'shish' }}
+          {{ isEdit ? $t('admin.regionForm.editRegion') : $t('admin.regionForm.newRegion') }}
         </h1>
       </div>
     </div>
 
-    <div v-if="loading" class="card p-8 text-center text-gray-500">Yuklanmoqda...</div>
+    <div v-if="loading" class="card p-8 text-center text-gray-500">{{ $t('loading') }}</div>
 
     <form v-else @submit.prevent="handleSubmit" class="card">
       <div class="card-body space-y-6">
         <!-- Name -->
         <div>
-          <label class="label">Nomi *</label>
-          <input v-model="form.name" type="text" class="input" placeholder="Hudud nomi" />
+          <label class="label">{{ $t('admin.regionForm.regionName') }} *</label>
+          <input v-model="form.name" type="text" class="input" :placeholder="$t('admin.regionForm.regionNamePlaceholder')" />
           <p v-if="errors.name" class="text-sm text-red-600 mt-1">{{ errors.name }}</p>
         </div>
 
         <!-- Code -->
         <div>
-          <label class="label">Kod</label>
-          <input v-model="form.code" type="text" class="input" placeholder="Hudud kodi (ixtiyoriy)" />
+          <label class="label">{{ $t('admin.regionForm.regionCode') }}</label>
+          <input v-model="form.code" type="text" class="input" :placeholder="$t('admin.regionForm.regionCodePlaceholder')" />
         </div>
 
         <!-- Description -->
         <div>
-          <label class="label">Tavsif</label>
-          <textarea v-model="form.description" class="input" rows="3" placeholder="Hudud haqida ma'lumot"></textarea>
+          <label class="label">{{ $t('admin.regionForm.regionDescription') }}</label>
+          <textarea v-model="form.description" class="input" rows="3" :placeholder="$t('admin.regionForm.regionDescriptionPlaceholder')"></textarea>
         </div>
 
         <!-- Sort Order -->
         <div>
-          <label class="label">Tartib raqami</label>
+          <label class="label">{{ $t('admin.regionForm.sortOrder') }}</label>
           <input v-model.number="form.sortOrder" type="number" class="input" min="0" />
         </div>
 
         <!-- Active -->
         <div class="flex items-center">
           <input v-model="form.active" type="checkbox" class="h-4 w-4 text-primary-600 border-gray-300 rounded" />
-          <label class="ml-2 text-sm text-gray-700">Faol</label>
+          <label class="ml-2 text-sm text-gray-700">{{ $t('active') }}</label>
         </div>
       </div>
 
       <!-- Actions -->
       <div class="card-footer flex justify-end space-x-3">
         <router-link to="/admin/regions" class="btn-secondary">
-          Bekor qilish
+          {{ $t('cancel') }}
         </router-link>
         <button type="submit" :disabled="saving" class="btn-primary">
-          {{ saving ? 'Saqlanmoqda...' : (isEdit ? 'Saqlash' : 'Yaratish') }}
+          {{ saving ? $t('saving') : (isEdit ? $t('save') : $t('admin.regionForm.create')) }}
         </button>
       </div>
     </form>

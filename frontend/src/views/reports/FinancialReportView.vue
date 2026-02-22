@@ -1,8 +1,10 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { reportsApi } from '@/services/api'
 import { ArrowDownTrayIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const loading = ref(true)
 const trialBalance = ref(null)
 const incomeStatement = ref(null)
@@ -64,12 +66,12 @@ function formatCurrency(value) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Moliyaviy hisobot</h1>
-        <p class="mt-1 text-sm text-gray-500">Daromad, xarajatlar va balans tahlili</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('reports.financial.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('reports.financial.subtitle') }}</p>
       </div>
       <button @click="exportReport" class="btn-secondary">
         <ArrowDownTrayIcon class="h-5 w-5 mr-2" />
-        Eksport
+        {{ $t('export') }}
       </button>
     </div>
 
@@ -77,14 +79,14 @@ function formatCurrency(value) {
     <div class="card">
       <div class="card-body flex flex-wrap gap-4 items-end">
         <div>
-          <label class="label">Boshlanish sanasi</label>
+          <label class="label">{{ $t('reports.financial.startDate') }}</label>
           <input v-model="filters.startDate" type="date" class="input" />
         </div>
         <div>
-          <label class="label">Tugash sanasi</label>
+          <label class="label">{{ $t('reports.financial.endDate') }}</label>
           <input v-model="filters.endDate" type="date" class="input" />
         </div>
-        <button @click="fetchReport" class="btn-primary">Qo'llash</button>
+        <button @click="fetchReport" class="btn-primary">{{ $t('apply') }}</button>
       </div>
     </div>
 
@@ -99,7 +101,7 @@ function formatCurrency(value) {
           <div class="card-body">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm text-gray-500">Daromad</p>
+                <p class="text-sm text-gray-500">{{ $t('reports.financial.revenue') }}</p>
                 <p class="text-2xl font-bold text-green-600">{{ formatCurrency(incomeStatement.summary.totalRevenue) }}</p>
               </div>
               <ArrowTrendingUpIcon class="h-8 w-8 text-green-400" />
@@ -110,7 +112,7 @@ function formatCurrency(value) {
           <div class="card-body">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm text-gray-500">Xarajatlar</p>
+                <p class="text-sm text-gray-500">{{ $t('reports.financial.expensesTotal') }}</p>
                 <p class="text-2xl font-bold text-red-600">{{ formatCurrency(incomeStatement.summary.totalExpenses) }}</p>
               </div>
               <ArrowTrendingDownIcon class="h-8 w-8 text-red-400" />
@@ -121,14 +123,14 @@ function formatCurrency(value) {
           <div class="card-body">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm text-gray-500">Sof foyda</p>
+                <p class="text-sm text-gray-500">{{ $t('reports.financial.netProfit') }}</p>
                 <p class="text-2xl font-bold" :class="incomeStatement.summary.netIncome >= 0 ? 'text-primary-600' : 'text-red-600'">
                   {{ formatCurrency(incomeStatement.summary.netIncome) }}
                 </p>
               </div>
             </div>
             <p v-if="incomeStatement.summary.totalRevenue > 0" class="text-sm text-gray-500 mt-2">
-              Margina: {{ ((incomeStatement.summary.netIncome / incomeStatement.summary.totalRevenue) * 100).toFixed(1) }}%
+              {{ $t('reports.financial.margin') }}: {{ ((incomeStatement.summary.netIncome / incomeStatement.summary.totalRevenue) * 100).toFixed(1) }}%
             </p>
           </div>
         </div>
@@ -136,16 +138,16 @@ function formatCurrency(value) {
           <div class="card-body">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm text-gray-500">Balans holati</p>
+                <p class="text-sm text-gray-500">{{ $t('reports.financial.balanceStatus') }}</p>
                 <p class="text-lg font-bold" :class="trialBalance.totals?.isBalanced ? 'text-green-600' : 'text-red-600'">
-                  {{ trialBalance.totals?.isBalanced ? 'Balans to\'g\'ri' : 'Balans noto\'g\'ri' }}
+                  {{ trialBalance.totals?.isBalanced ? $t('reports.financial.balanceCorrect') : $t('reports.financial.balanceIncorrect') }}
                 </p>
               </div>
               <CheckCircleIcon v-if="trialBalance.totals?.isBalanced" class="h-8 w-8 text-green-400" />
               <ExclamationTriangleIcon v-else class="h-8 w-8 text-red-400" />
             </div>
             <p v-if="trialBalance.totals?.difference > 0" class="text-sm text-red-500 mt-2">
-              Farq: {{ formatCurrency(trialBalance.totals.difference) }}
+              {{ $t('reports.financial.difference') }}: {{ formatCurrency(trialBalance.totals.difference) }}
             </p>
           </div>
         </div>
@@ -156,15 +158,15 @@ function formatCurrency(value) {
         <!-- Revenue breakdown -->
         <div class="card">
           <div class="card-header bg-green-50">
-            <h3 class="text-lg font-medium text-green-800">Daromadlar</h3>
+            <h3 class="text-lg font-medium text-green-800">{{ $t('reports.financial.revenues') }}</h3>
           </div>
           <div v-if="incomeStatement.revenueItems?.length" class="table-container">
             <table class="table">
               <thead>
                 <tr>
-                  <th>Kod</th>
-                  <th>Hisob nomi</th>
-                  <th class="text-right">Summa</th>
+                  <th>{{ $t('reports.financial.accountCode') }}</th>
+                  <th>{{ $t('reports.financial.accountName') }}</th>
+                  <th class="text-right">{{ $t('amount') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200">
@@ -176,27 +178,27 @@ function formatCurrency(value) {
               </tbody>
               <tfoot class="border-t-2 border-gray-300">
                 <tr class="font-bold">
-                  <td colspan="2">Jami daromad</td>
+                  <td colspan="2">{{ $t('reports.financial.totalRevenue') }}</td>
                   <td class="text-right text-green-600">{{ formatCurrency(incomeStatement.summary.totalRevenue) }}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
-          <div v-else class="card-body text-center text-gray-500">Daromad yo'q</div>
+          <div v-else class="card-body text-center text-gray-500">{{ $t('reports.financial.noRevenue') }}</div>
         </div>
 
         <!-- Expense breakdown -->
         <div class="card">
           <div class="card-header bg-red-50">
-            <h3 class="text-lg font-medium text-red-800">Xarajatlar</h3>
+            <h3 class="text-lg font-medium text-red-800">{{ $t('reports.financial.expensesList') }}</h3>
           </div>
           <div v-if="incomeStatement.expenseItems?.length" class="table-container">
             <table class="table">
               <thead>
                 <tr>
-                  <th>Kod</th>
-                  <th>Hisob nomi</th>
-                  <th class="text-right">Summa</th>
+                  <th>{{ $t('reports.financial.accountCode') }}</th>
+                  <th>{{ $t('reports.financial.accountName') }}</th>
+                  <th class="text-right">{{ $t('amount') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200">
@@ -208,13 +210,13 @@ function formatCurrency(value) {
               </tbody>
               <tfoot class="border-t-2 border-gray-300">
                 <tr class="font-bold">
-                  <td colspan="2">Jami xarajat</td>
+                  <td colspan="2">{{ $t('reports.financial.expensesTotal') }}</td>
                   <td class="text-right text-red-600">{{ formatCurrency(incomeStatement.summary.totalExpenses) }}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
-          <div v-else class="card-body text-center text-gray-500">Xarajat yo'q</div>
+          <div v-else class="card-body text-center text-gray-500">{{ $t('reports.financial.noExpenses') }}</div>
         </div>
       </div>
 
@@ -222,32 +224,32 @@ function formatCurrency(value) {
       <div v-if="arAging || apAging" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div v-if="arAging" class="card">
           <div class="card-header bg-green-50">
-            <h3 class="text-lg font-medium text-green-800">Debitorlik qarzlari</h3>
+            <h3 class="text-lg font-medium text-green-800">{{ $t('reports.financial.receivables') }}</h3>
           </div>
           <div class="card-body">
             <div class="text-center py-4">
               <p class="text-3xl font-bold text-green-600">{{ formatCurrency(arAging.summary?.totalOutstanding) }}</p>
-              <p class="text-sm text-gray-500 mt-2">{{ arAging.summary?.totalAccounts || 0 }} ta mijozdan</p>
+              <p class="text-sm text-gray-500 mt-2">{{ $t('reports.financial.fromCustomers', { count: arAging.summary?.totalAccounts || 0 }) }}</p>
             </div>
             <div v-if="arAging.summary" class="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4">
               <div class="text-center p-2 bg-gray-50 rounded">
-                <p class="text-xs text-gray-500">Joriy</p>
+                <p class="text-xs text-gray-500">{{ $t('reports.financial.current') }}</p>
                 <p class="font-medium text-sm">{{ formatCurrency(arAging.summary.current) }}</p>
               </div>
               <div class="text-center p-2 bg-yellow-50 rounded">
-                <p class="text-xs text-gray-500">1-30 kun</p>
+                <p class="text-xs text-gray-500">{{ $t('reports.financial.days1to30') }}</p>
                 <p class="font-medium text-sm">{{ formatCurrency(arAging.summary.days1to30) }}</p>
               </div>
               <div class="text-center p-2 bg-orange-50 rounded">
-                <p class="text-xs text-gray-500">31-60 kun</p>
+                <p class="text-xs text-gray-500">{{ $t('reports.financial.days31to60') }}</p>
                 <p class="font-medium text-sm">{{ formatCurrency(arAging.summary.days31to60) }}</p>
               </div>
               <div class="text-center p-2 bg-red-50 rounded">
-                <p class="text-xs text-gray-500">61-90 kun</p>
+                <p class="text-xs text-gray-500">{{ $t('reports.financial.days61to90') }}</p>
                 <p class="font-medium text-sm">{{ formatCurrency(arAging.summary.days61to90) }}</p>
               </div>
               <div class="text-center p-2 bg-red-100 rounded">
-                <p class="text-xs text-gray-500">90+ kun</p>
+                <p class="text-xs text-gray-500">{{ $t('reports.financial.days90plus') }}</p>
                 <p class="font-medium text-sm">{{ formatCurrency(arAging.summary.over90Days) }}</p>
               </div>
             </div>
@@ -256,32 +258,32 @@ function formatCurrency(value) {
 
         <div v-if="apAging" class="card">
           <div class="card-header bg-red-50">
-            <h3 class="text-lg font-medium text-red-800">Kreditorlik qarzlari</h3>
+            <h3 class="text-lg font-medium text-red-800">{{ $t('reports.financial.payables') }}</h3>
           </div>
           <div class="card-body">
             <div class="text-center py-4">
               <p class="text-3xl font-bold text-red-600">{{ formatCurrency(apAging.summary?.totalOutstanding) }}</p>
-              <p class="text-sm text-gray-500 mt-2">{{ apAging.summary?.totalAccounts || 0 }} ta yetkazuvchiga</p>
+              <p class="text-sm text-gray-500 mt-2">{{ $t('reports.financial.toSuppliers', { count: apAging.summary?.totalAccounts || 0 }) }}</p>
             </div>
             <div v-if="apAging.summary" class="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4">
               <div class="text-center p-2 bg-gray-50 rounded">
-                <p class="text-xs text-gray-500">Joriy</p>
+                <p class="text-xs text-gray-500">{{ $t('reports.financial.current') }}</p>
                 <p class="font-medium text-sm">{{ formatCurrency(apAging.summary.current) }}</p>
               </div>
               <div class="text-center p-2 bg-yellow-50 rounded">
-                <p class="text-xs text-gray-500">1-30 kun</p>
+                <p class="text-xs text-gray-500">{{ $t('reports.financial.days1to30') }}</p>
                 <p class="font-medium text-sm">{{ formatCurrency(apAging.summary.days1to30) }}</p>
               </div>
               <div class="text-center p-2 bg-orange-50 rounded">
-                <p class="text-xs text-gray-500">31-60 kun</p>
+                <p class="text-xs text-gray-500">{{ $t('reports.financial.days31to60') }}</p>
                 <p class="font-medium text-sm">{{ formatCurrency(apAging.summary.days31to60) }}</p>
               </div>
               <div class="text-center p-2 bg-red-50 rounded">
-                <p class="text-xs text-gray-500">61-90 kun</p>
+                <p class="text-xs text-gray-500">{{ $t('reports.financial.days61to90') }}</p>
                 <p class="font-medium text-sm">{{ formatCurrency(apAging.summary.days61to90) }}</p>
               </div>
               <div class="text-center p-2 bg-red-100 rounded">
-                <p class="text-xs text-gray-500">90+ kun</p>
+                <p class="text-xs text-gray-500">{{ $t('reports.financial.days90plus') }}</p>
                 <p class="font-medium text-sm">{{ formatCurrency(apAging.summary.over90Days) }}</p>
               </div>
             </div>
@@ -292,7 +294,7 @@ function formatCurrency(value) {
       <!-- Trial Balance Table -->
       <div class="card">
         <div class="card-header flex items-center justify-between">
-          <h3 class="text-lg font-medium">Sinov balansi</h3>
+          <h3 class="text-lg font-medium">{{ $t('reports.financial.trialBalance') }}</h3>
           <div v-if="trialBalance.metadata" class="text-sm text-gray-500">
             <span v-if="trialBalance.metadata.fiscalYear">{{ trialBalance.metadata.fiscalYear }}</span>
             <span v-if="trialBalance.metadata.period"> / {{ trialBalance.metadata.period }}</span>
@@ -302,11 +304,11 @@ function formatCurrency(value) {
           <table class="table">
             <thead>
               <tr>
-                <th>Kod</th>
-                <th>Hisob nomi</th>
-                <th>Turi</th>
-                <th class="text-right">Debet</th>
-                <th class="text-right">Kredit</th>
+                <th>{{ $t('reports.financial.accountCode') }}</th>
+                <th>{{ $t('reports.financial.accountName') }}</th>
+                <th>{{ $t('reports.financial.type') }}</th>
+                <th class="text-right">{{ $t('reports.financial.debit') }}</th>
+                <th class="text-right">{{ $t('reports.financial.credit') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -332,7 +334,7 @@ function formatCurrency(value) {
             </tbody>
             <tfoot v-if="trialBalance.totals" class="border-t-2 border-gray-300">
               <tr class="font-bold">
-                <td colspan="3">Jami</td>
+                <td colspan="3">{{ $t('total') }}</td>
                 <td class="text-right">{{ formatCurrency(trialBalance.totals.totalDebits) }}</td>
                 <td class="text-right">{{ formatCurrency(trialBalance.totals.totalCredits) }}</td>
               </tr>
@@ -340,26 +342,26 @@ function formatCurrency(value) {
           </table>
         </div>
         <div v-else class="card-body text-center text-gray-500">
-          Hisob ma'lumotlari yo'q
+          {{ $t('reports.financial.noAccountData') }}
         </div>
       </div>
 
       <!-- AR Aging Details -->
       <div v-if="arAging?.details?.length" class="card">
         <div class="card-header">
-          <h3 class="text-lg font-medium">Debitorlik tafsiloti</h3>
+          <h3 class="text-lg font-medium">{{ $t('reports.financial.receivablesDetail') }}</h3>
         </div>
         <div class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Mijoz</th>
-                <th class="text-right">Jami</th>
-                <th class="text-right">Joriy</th>
-                <th class="text-right">1-30</th>
-                <th class="text-right">31-60</th>
-                <th class="text-right">61-90</th>
-                <th class="text-right">90+</th>
+                <th>{{ $t('customer') }}</th>
+                <th class="text-right">{{ $t('total') }}</th>
+                <th class="text-right">{{ $t('reports.financial.current') }}</th>
+                <th class="text-right">{{ $t('reports.financial.days1to30') }}</th>
+                <th class="text-right">{{ $t('reports.financial.days31to60') }}</th>
+                <th class="text-right">{{ $t('reports.financial.days61to90') }}</th>
+                <th class="text-right">{{ $t('reports.financial.days90plus') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -383,19 +385,19 @@ function formatCurrency(value) {
       <!-- AP Aging Details -->
       <div v-if="apAging?.details?.length" class="card">
         <div class="card-header">
-          <h3 class="text-lg font-medium">Kreditorlik tafsiloti</h3>
+          <h3 class="text-lg font-medium">{{ $t('reports.financial.payablesDetail') }}</h3>
         </div>
         <div class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Yetkazuvchi</th>
-                <th class="text-right">Jami</th>
-                <th class="text-right">Joriy</th>
-                <th class="text-right">1-30</th>
-                <th class="text-right">31-60</th>
-                <th class="text-right">61-90</th>
-                <th class="text-right">90+</th>
+                <th>{{ $t('supplier') }}</th>
+                <th class="text-right">{{ $t('total') }}</th>
+                <th class="text-right">{{ $t('reports.financial.current') }}</th>
+                <th class="text-right">{{ $t('reports.financial.days1to30') }}</th>
+                <th class="text-right">{{ $t('reports.financial.days31to60') }}</th>
+                <th class="text-right">{{ $t('reports.financial.days61to90') }}</th>
+                <th class="text-right">{{ $t('reports.financial.days90plus') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">

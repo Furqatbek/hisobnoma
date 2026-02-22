@@ -2,6 +2,9 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { telegramApi } from '@/services/api'
 import { PaperAirplaneIcon, UserGroupIcon, SignalIcon, XMarkIcon, Cog6ToothIcon, CheckCircleIcon, LinkIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const loading = ref(true)
 const botInfo = ref(null)
@@ -59,14 +62,14 @@ async function generateMyCode() {
     myTelegram.linkCode = res.data.code
     myTelegram.botUsername = res.data.botUsername
   } catch (e) {
-    error.value = e.response?.data?.message || 'Kod yaratishda xatolik'
+    error.value = e.response?.data?.message || t('admin.telegram.codeGenerateError')
   } finally {
     myTelegram.generatingCode = false
   }
 }
 
 async function unlinkMyTelegram() {
-  if (!confirm('Telegram akkauntni uzmoqchimisiz?')) return
+  if (!confirm(t('admin.telegram.confirmUnlink'))) return
   myTelegram.unlinking = true
   try {
     await telegramApi.unlink()
@@ -75,7 +78,7 @@ async function unlinkMyTelegram() {
     myTelegram.linkCode = ''
     await loadData() // refresh connected users list
   } catch (e) {
-    error.value = e.response?.data?.message || 'Uzishda xatolik'
+    error.value = e.response?.data?.message || t('admin.telegram.unlinkError')
   } finally {
     myTelegram.unlinking = false
   }
@@ -97,7 +100,7 @@ async function loadData() {
     settingsForm.botUsername = settingsRes.data.botUsername || 'hisobnoma_bot'
     settingsLoaded.value = true
   } catch (e) {
-    error.value = e.response?.data?.message || 'Ma\'lumotlarni yuklashda xatolik'
+    error.value = e.response?.data?.message || t('admin.telegram.dataLoadError')
   } finally {
     loading.value = false
   }
@@ -115,14 +118,14 @@ async function saveSettings() {
     })
     if (res.data.saved) {
       if (res.data.valid === false) {
-        error.value = res.data.error || 'Token noto\'g\'ri'
+        error.value = res.data.error || t('admin.telegram.invalidToken')
       } else {
-        successMsg.value = 'Sozlamalar saqlandi' + (res.data.botName ? ` — Bot: ${res.data.botName}` : '')
+        successMsg.value = t('admin.telegram.settingsSaved') + (res.data.botName ? ` — Bot: ${res.data.botName}` : '')
       }
     }
     await loadData()
   } catch (e) {
-    error.value = e.response?.data?.message || 'Saqlashda xatolik'
+    error.value = e.response?.data?.message || t('admin.telegram.saveError')
   } finally {
     savingSettings.value = false
   }
@@ -154,30 +157,30 @@ async function handleSend() {
         title: sendForm.title,
         message: sendForm.message
       })
-      successMsg.value = `Xabar ${sendTarget.value.fullName} ga yuborildi`
+      successMsg.value = t('admin.telegram.messageSentTo', { name: sendTarget.value.fullName })
     } else {
       const res = await telegramApi.broadcast({
         title: sendForm.title,
         message: sendForm.message
       })
-      successMsg.value = `Xabar ${res.data.recipientCount} foydalanuvchiga yuborildi`
+      successMsg.value = t('admin.telegram.messageBroadcast', { count: res.data.recipientCount })
     }
     showSendModal.value = false
   } catch (e) {
-    error.value = e.response?.data?.error || e.response?.data?.message || 'Xabar yuborishda xatolik'
+    error.value = e.response?.data?.error || e.response?.data?.message || t('admin.telegram.sendError')
   } finally {
     sending.value = false
   }
 }
 
 async function unlinkUser(user) {
-  if (!confirm(`${user.fullName} ning Telegram ulanishini uzmoqchimisiz?`)) return
+  if (!confirm(t('admin.telegram.confirmUnlinkUser', { name: user.fullName }))) return
   try {
     await telegramApi.adminUnlinkUser(user.id)
     users.value = users.value.filter(u => u.id !== user.id)
-    successMsg.value = `${user.fullName} uzildi`
+    successMsg.value = t('admin.telegram.userUnlinked', { name: user.fullName })
   } catch (e) {
-    error.value = e.response?.data?.message || 'Uzishda xatolik'
+    error.value = e.response?.data?.message || t('admin.telegram.unlinkError')
   }
 }
 
@@ -191,8 +194,8 @@ function formatDate(dateStr) {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Telegram bot boshqaruvi</h1>
-        <p class="mt-1 text-sm text-gray-500">Bot sozlamalari, ulangan foydalanuvchilar va xabar yuborish</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('admin.telegram.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('admin.telegram.subtitle') }}</p>
       </div>
       <button
         v-if="!loading && botConnected && users.length > 0"
@@ -200,7 +203,7 @@ function formatDate(dateStr) {
         class="btn-primary inline-flex items-center gap-2"
       >
         <PaperAirplaneIcon class="h-4 w-4" />
-        Hammaga xabar
+        {{ $t('admin.telegram.broadcastAll') }}
       </button>
     </div>
 
@@ -224,14 +227,14 @@ function formatDate(dateStr) {
       <div class="card">
         <div class="card-header flex items-center gap-2">
           <Cog6ToothIcon class="h-5 w-5 text-gray-500" />
-          <h3 class="text-lg font-medium">Bot sozlamalari</h3>
+          <h3 class="text-lg font-medium">{{ $t('admin.telegram.botSettings') }}</h3>
         </div>
         <div class="card-body space-y-4">
           <!-- Enable toggle -->
           <div class="flex items-center justify-between">
             <div>
-              <p class="font-medium text-gray-900">Telegram botni yoqish</p>
-              <p class="text-sm text-gray-500">Yoqilganda bot xabarlarni qabul qiladi va bildirishnomalar yuboradi</p>
+              <p class="font-medium text-gray-900">{{ $t('admin.telegram.enableBot') }}</p>
+              <p class="text-sm text-gray-500">{{ $t('admin.telegram.enableBotDescription') }}</p>
             </div>
             <button
               @click="settingsForm.enabled = !settingsForm.enabled"
@@ -251,17 +254,17 @@ function formatDate(dateStr) {
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="label">Bot Token</label>
+              <label class="label">{{ $t('admin.telegram.botToken') }}</label>
               <input
                 v-model="settingsForm.botToken"
                 type="text"
                 class="input font-mono text-sm"
                 placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
               />
-              <p class="mt-1 text-xs text-gray-400">@BotFather dan olingan token</p>
+              <p class="mt-1 text-xs text-gray-400">{{ $t('admin.telegram.botTokenHint') }}</p>
             </div>
             <div>
-              <label class="label">Bot username</label>
+              <label class="label">{{ $t('admin.telegram.botUsername') }}</label>
               <div class="flex">
                 <span class="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-300 rounded-l-lg text-gray-500 text-sm">@</span>
                 <input
@@ -281,7 +284,7 @@ function formatDate(dateStr) {
               class="btn-primary inline-flex items-center gap-2"
             >
               <CheckCircleIcon class="h-4 w-4" />
-              {{ savingSettings ? 'Saqlanmoqda...' : 'Saqlash' }}
+              {{ savingSettings ? $t('saving') : $t('save') }}
             </button>
           </div>
         </div>
@@ -291,7 +294,7 @@ function formatDate(dateStr) {
       <div class="card">
         <div class="card-header flex items-center gap-2">
           <LinkIcon class="h-5 w-5 text-gray-500" />
-          <h3 class="text-lg font-medium">Mening Telegram akkauntim</h3>
+          <h3 class="text-lg font-medium">{{ $t('admin.telegram.myAccount') }}</h3>
         </div>
         <div class="card-body">
           <div v-if="myTelegram.loading" class="flex items-center justify-center py-4">
@@ -303,9 +306,9 @@ function formatDate(dateStr) {
             <div class="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
               <span class="inline-block w-3 h-3 rounded-full bg-green-500"></span>
               <div>
-                <p class="font-medium text-green-800">Telegram ulangan</p>
+                <p class="font-medium text-green-800">{{ $t('admin.telegram.linked') }}</p>
                 <p v-if="myTelegram.linkedAt" class="text-sm text-green-600">
-                  Ulangan sana: {{ formatDate(myTelegram.linkedAt) }}
+                  {{ $t('admin.telegram.linkedDate') }}: {{ formatDate(myTelegram.linkedAt) }}
                 </p>
               </div>
             </div>
@@ -314,28 +317,28 @@ function formatDate(dateStr) {
               :disabled="myTelegram.unlinking"
               class="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50"
             >
-              {{ myTelegram.unlinking ? 'Uzilmoqda...' : 'Telegramni uzish' }}
+              {{ myTelegram.unlinking ? $t('admin.telegram.unlinking') : $t('admin.telegram.unlinkTelegram') }}
             </button>
           </div>
 
           <!-- Not linked state -->
           <div v-else class="space-y-4">
             <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p class="font-medium text-blue-800 mb-2">Telegram botga ulanish</p>
+              <p class="font-medium text-blue-800 mb-2">{{ $t('admin.telegram.connectToBot') }}</p>
               <ol class="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-                <li>"Kod olish" tugmasini bosing</li>
-                <li>Telegramda <b>@{{ myTelegram.botUsername || settingsForm.botUsername || 'hisobnoma_bot' }}</b> botni oching</li>
-                <li>Olingan 6 raqamli kodni botga yuboring</li>
+                <li>{{ $t('admin.telegram.step1') }}</li>
+                <li>{{ $t('admin.telegram.step2') }} <b>@{{ myTelegram.botUsername || settingsForm.botUsername || 'hisobnoma_bot' }}</b></li>
+                <li>{{ $t('admin.telegram.step3') }}</li>
               </ol>
             </div>
 
             <!-- Link code display -->
             <div v-if="myTelegram.linkCode" class="text-center space-y-3">
-              <p class="text-sm text-gray-600">Ushbu kodni Telegram botga yuboring:</p>
+              <p class="text-sm text-gray-600">{{ $t('admin.telegram.sendCodeToBot') }}</p>
               <div class="inline-block px-8 py-4 bg-gray-900 rounded-xl">
                 <span class="text-3xl font-mono font-bold text-white tracking-widest">{{ myTelegram.linkCode }}</span>
               </div>
-              <p class="text-xs text-gray-400">Kod 10 daqiqa amal qiladi</p>
+              <p class="text-xs text-gray-400">{{ $t('admin.telegram.codeExpiry') }}</p>
               <div>
                 <a
                   :href="'https://t.me/' + (myTelegram.botUsername || settingsForm.botUsername || 'hisobnoma_bot')"
@@ -343,7 +346,7 @@ function formatDate(dateStr) {
                   class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg"
                 >
                   <PaperAirplaneIcon class="h-4 w-4" />
-                  Telegram botni ochish
+                  {{ $t('admin.telegram.openBot') }}
                 </a>
               </div>
             </div>
@@ -353,7 +356,7 @@ function formatDate(dateStr) {
               :disabled="myTelegram.generatingCode"
               class="btn-primary"
             >
-              {{ myTelegram.generatingCode ? 'Yaratilmoqda...' : (myTelegram.linkCode ? 'Yangi kod olish' : 'Kod olish') }}
+              {{ myTelegram.generatingCode ? $t('admin.telegram.generating') : (myTelegram.linkCode ? $t('admin.telegram.getNewCode') : $t('admin.telegram.getCode')) }}
             </button>
           </div>
         </div>
@@ -368,9 +371,9 @@ function formatDate(dateStr) {
                 <SignalIcon class="h-6 w-6" :class="botConnected ? 'text-green-600' : 'text-red-600'" />
               </div>
               <div>
-                <p class="text-sm text-gray-500">Bot holati</p>
+                <p class="text-sm text-gray-500">{{ $t('admin.telegram.botStatus') }}</p>
                 <p class="text-lg font-bold" :class="botConnected ? 'text-green-600' : 'text-red-600'">
-                  {{ botConnected ? 'Ulangan' : 'Ulanmagan' }}
+                  {{ botConnected ? $t('admin.telegram.connected') : $t('admin.telegram.disconnected') }}
                 </p>
                 <p v-if="botInfo.botName" class="text-xs text-gray-400">{{ botInfo.botName }}</p>
               </div>
@@ -383,13 +386,13 @@ function formatDate(dateStr) {
                 <PaperAirplaneIcon class="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p class="text-sm text-gray-500">Bot username</p>
+                <p class="text-sm text-gray-500">{{ $t('admin.telegram.botUsername') }}</p>
                 <p class="text-lg font-bold text-gray-900">@{{ botInfo.botUsername }}</p>
                 <a
                   :href="'https://t.me/' + botInfo.botUsername"
                   target="_blank"
                   class="text-xs text-blue-600 hover:underline"
-                >Telegramda ochish</a>
+                >{{ $t('admin.telegram.openInTelegram') }}</a>
               </div>
             </div>
           </div>
@@ -400,11 +403,11 @@ function formatDate(dateStr) {
                 <UserGroupIcon class="h-6 w-6 text-purple-600" />
               </div>
               <div>
-                <p class="text-sm text-gray-500">Ulangan foydalanuvchilar</p>
+                <p class="text-sm text-gray-500">{{ $t('admin.telegram.connectedUsers') }}</p>
                 <p class="text-lg font-bold text-gray-900">
                   {{ botInfo.connectedUsers }} / {{ botInfo.totalUsers }}
                 </p>
-                <p class="text-xs text-gray-400">jami foydalanuvchilardan</p>
+                <p class="text-xs text-gray-400">{{ $t('admin.telegram.ofTotalUsers') }}</p>
               </div>
             </div>
           </div>
@@ -413,25 +416,25 @@ function formatDate(dateStr) {
         <!-- Connected Users Table -->
         <div class="card">
           <div class="card-header flex items-center justify-between">
-            <h3 class="text-lg font-medium">Ulangan foydalanuvchilar</h3>
+            <h3 class="text-lg font-medium">{{ $t('admin.telegram.connectedUsers') }}</h3>
             <span class="text-sm text-gray-500">{{ users.length }} ta</span>
           </div>
           <div v-if="users.length === 0" class="card-body">
             <div class="text-center py-8 text-gray-500">
               <UserGroupIcon class="h-12 w-12 mx-auto text-gray-300 mb-3" />
-              <p>Hali hech kim Telegramga ulanmagan</p>
-              <p class="text-sm mt-1">Foydalanuvchilar Sozlamalar > Telegram orqali ulana oladi</p>
+              <p>{{ $t('admin.telegram.noConnectedUsers') }}</p>
+              <p class="text-sm mt-1">{{ $t('admin.telegram.usersCanConnect') }}</p>
             </div>
           </div>
           <div v-else class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Foydalanuvchi</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefon</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ulangan sana</th>
-                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amallar</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('admin.telegram.user') }}</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('admin.telegram.username') }}</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('phone') }}</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('admin.telegram.linkedDate') }}</th>
+                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('actions') }}</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
@@ -451,11 +454,11 @@ function formatDate(dateStr) {
                     <button
                       @click="openSendToUser(user)"
                       class="text-sm text-blue-600 hover:text-blue-800"
-                    >Xabar</button>
+                    >{{ $t('admin.telegram.message') }}</button>
                     <button
                       @click="unlinkUser(user)"
                       class="text-sm text-red-600 hover:text-red-800"
-                    >Uzish</button>
+                    >{{ $t('admin.telegram.unlink') }}</button>
                   </td>
                 </tr>
               </tbody>
@@ -472,7 +475,7 @@ function formatDate(dateStr) {
         <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-6 space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold text-gray-900">
-              {{ sendTarget ? `Xabar: ${sendTarget.fullName}` : 'Barcha foydalanuvchilarga xabar' }}
+              {{ sendTarget ? $t('admin.telegram.messageTo', { name: sendTarget.fullName }) : $t('admin.telegram.messageToAll') }}
             </h3>
             <button @click="showSendModal = false" class="text-gray-400 hover:text-gray-600">
               <XMarkIcon class="h-5 w-5" />
@@ -481,28 +484,28 @@ function formatDate(dateStr) {
 
           <div v-if="!sendTarget" class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p class="text-sm text-yellow-700">
-              Bu xabar Telegramga ulangan barcha <b>{{ users.length }}</b> foydalanuvchiga yuboriladi.
+              {{ $t('admin.telegram.broadcastWarning', { count: users.length }) }}
             </p>
           </div>
 
           <div>
-            <label class="label">Sarlavha</label>
-            <input v-model="sendForm.title" type="text" class="input" placeholder="Xabar sarlavhasi" />
+            <label class="label">{{ $t('admin.telegram.messageTitle') }}</label>
+            <input v-model="sendForm.title" type="text" class="input" :placeholder="$t('admin.telegram.messageTitlePlaceholder')" />
           </div>
           <div>
-            <label class="label">Xabar matni</label>
-            <textarea v-model="sendForm.message" rows="4" class="input" placeholder="Xabar matni..."></textarea>
+            <label class="label">{{ $t('admin.telegram.messageBody') }}</label>
+            <textarea v-model="sendForm.message" rows="4" class="input" :placeholder="$t('admin.telegram.messageBodyPlaceholder')"></textarea>
           </div>
 
           <div class="flex justify-end gap-3 pt-2">
-            <button @click="showSendModal = false" class="btn-secondary">Bekor qilish</button>
+            <button @click="showSendModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
             <button
               @click="handleSend"
               :disabled="sending || !sendForm.title.trim() || !sendForm.message.trim()"
               class="btn-primary inline-flex items-center gap-2"
             >
               <PaperAirplaneIcon class="h-4 w-4" />
-              {{ sending ? 'Yuborilmoqda...' : 'Yuborish' }}
+              {{ sending ? $t('admin.telegram.sending') : $t('admin.telegram.send') }}
             </button>
           </div>
         </div>

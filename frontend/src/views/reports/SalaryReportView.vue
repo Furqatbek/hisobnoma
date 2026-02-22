@@ -1,19 +1,16 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { reportsApi } from '@/services/api'
 import { BanknotesIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const loading = ref(true)
 const report = ref(null)
 
 const now = new Date()
 const filterYear = ref(now.getFullYear())
 const filterMonth = ref(now.getMonth() + 1)
-
-const months = [
-  'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
-  'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'
-]
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ').format(value || 0)
@@ -29,12 +26,9 @@ function statusBadge(status) {
 }
 
 function statusLabel(status) {
-  switch (status) {
-    case 'PAID': return "To'langan"
-    case 'PENDING': return 'Kutilmoqda'
-    case 'CANCELLED': return 'Bekor qilingan'
-    default: return status
-  }
+  const key = `enums.salaryStatus.${status}`
+  const translated = t(key)
+  return translated !== key ? translated : status
 }
 
 async function fetchReport() {
@@ -56,8 +50,8 @@ onMounted(fetchReport)
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Ish haqi hisoboti</h1>
-        <p class="mt-1 text-sm text-gray-500">Oylik ish haqi xarajatlari va to'lovlar</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('reports.salary.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('reports.salary.subtitle') }}</p>
       </div>
     </div>
 
@@ -65,16 +59,16 @@ onMounted(fetchReport)
     <div class="card">
       <div class="card-body flex flex-wrap gap-4 items-end">
         <div>
-          <label class="label">Yil</label>
+          <label class="label">{{ $t('year') }}</label>
           <input v-model.number="filterYear" type="number" min="2020" max="2030" class="input w-28" />
         </div>
         <div>
-          <label class="label">Oy</label>
+          <label class="label">{{ $t('month') }}</label>
           <select v-model.number="filterMonth" class="input w-40">
-            <option v-for="(m, i) in months" :key="i" :value="i + 1">{{ m }}</option>
+            <option v-for="m in 12" :key="m" :value="m">{{ $t(`months.${m}`) }}</option>
           </select>
         </div>
-        <button @click="fetchReport" class="btn-primary">Qo'llash</button>
+        <button @click="fetchReport" class="btn-primary">{{ $t('apply') }}</button>
       </div>
     </div>
 
@@ -89,19 +83,19 @@ onMounted(fetchReport)
           <div class="card-body">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm text-gray-500">Jami ish haqi</p>
+                <p class="text-sm text-gray-500">{{ $t('reports.salary.totalSalary') }}</p>
                 <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(report.summary?.totalNet) }}</p>
               </div>
               <BanknotesIcon class="h-8 w-8 text-primary-400" />
             </div>
-            <p class="text-sm text-gray-500 mt-2">{{ report.summary?.totalEmployees || 0 }} ta xodim</p>
+            <p class="text-sm text-gray-500 mt-2">{{ report.summary?.totalEmployees || 0 }} {{ $t('items') }} {{ $t('reports.salary.employee').toLowerCase?.() || '' }}</p>
           </div>
         </div>
         <div class="card">
           <div class="card-body">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm text-gray-500">To'langan</p>
+                <p class="text-sm text-gray-500">{{ $t('reports.salary.totalPaid') }}</p>
                 <p class="text-2xl font-bold text-green-600">{{ report.summary?.paidCount || 0 }}</p>
               </div>
               <CheckCircleIcon class="h-8 w-8 text-green-400" />
@@ -112,7 +106,7 @@ onMounted(fetchReport)
           <div class="card-body">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm text-gray-500">Kutilmoqda</p>
+                <p class="text-sm text-gray-500">{{ $t('reports.salary.totalPending') }}</p>
                 <p class="text-2xl font-bold text-yellow-600">{{ report.summary?.pendingCount || 0 }}</p>
               </div>
               <ClockIcon class="h-8 w-8 text-yellow-400" />
@@ -123,13 +117,13 @@ onMounted(fetchReport)
           <div class="card-body">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm text-gray-500">Asosiy maosh</p>
+                <p class="text-sm text-gray-500">{{ $t('reports.salary.baseSalary') }}</p>
                 <p class="text-2xl font-bold text-gray-700">{{ formatCurrency(report.summary?.totalBase) }}</p>
               </div>
             </div>
             <div class="text-sm text-gray-500 mt-2">
-              <span class="text-green-600">+{{ formatCurrency(report.summary?.totalBonus) }}</span> bonus,
-              <span class="text-red-600">-{{ formatCurrency(report.summary?.totalDeductions) }}</span> ushlanma
+              <span class="text-green-600">+{{ formatCurrency(report.summary?.totalBonus) }}</span> {{ $t('reports.salary.bonusTotal') }},
+              <span class="text-red-600">-{{ formatCurrency(report.summary?.totalDeductions) }}</span> {{ $t('reports.salary.deductionTotal') }}
             </div>
           </div>
         </div>
@@ -138,17 +132,17 @@ onMounted(fetchReport)
       <!-- Department Breakdown -->
       <div v-if="report.byDepartment?.length" class="card">
         <div class="card-header">
-          <h3 class="text-lg font-medium">Bo'limlar bo'yicha</h3>
+          <h3 class="text-lg font-medium">{{ $t('reports.salary.byDepartment') }}</h3>
         </div>
         <div class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Bo'lim</th>
-                <th class="text-right">Xodimlar</th>
-                <th class="text-right">Asosiy maosh</th>
-                <th class="text-right">Jami to'lov</th>
-                <th class="text-right">Ulushi</th>
+                <th>{{ $t('reports.salary.department') }}</th>
+                <th class="text-right">{{ $t('reports.salary.employeesCount') }}</th>
+                <th class="text-right">{{ $t('reports.salary.baseSalary') }}</th>
+                <th class="text-right">{{ $t('reports.salary.totalPayment') }}</th>
+                <th class="text-right">{{ $t('reports.salary.share') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -174,20 +168,20 @@ onMounted(fetchReport)
       <!-- Employee Details -->
       <div class="card">
         <div class="card-header">
-          <h3 class="text-lg font-medium">Xodimlar tafsiloti</h3>
+          <h3 class="text-lg font-medium">{{ $t('reports.salary.employeeDetails') }}</h3>
         </div>
         <div v-if="report.employees?.length" class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Xodim</th>
-                <th>Bo'lim</th>
-                <th class="text-right">Asosiy</th>
-                <th class="text-right">Bonus</th>
-                <th class="text-right">Ushlanma</th>
-                <th class="text-right">Jami</th>
-                <th>Holat</th>
-                <th>Moliya</th>
+                <th>{{ $t('reports.salary.employee') }}</th>
+                <th>{{ $t('reports.salary.department') }}</th>
+                <th class="text-right">{{ $t('reports.salary.base') }}</th>
+                <th class="text-right">{{ $t('reports.salary.bonus') }}</th>
+                <th class="text-right">{{ $t('reports.salary.deduction') }}</th>
+                <th class="text-right">{{ $t('total') }}</th>
+                <th>{{ $t('status') }}</th>
+                <th>{{ $t('reports.salary.financeStatus') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -205,11 +199,11 @@ onMounted(fetchReport)
                   <span :class="['badge', statusBadge(emp.status)]">{{ statusLabel(emp.status) }}</span>
                 </td>
                 <td>
-                  <span v-if="emp.glJournalEntryId" class="text-green-600 text-sm" title="Moliyaviy tizimda qayd etilgan">
-                    <CheckCircleIcon class="h-4 w-4 inline" /> Qayd etilgan
+                  <span v-if="emp.glJournalEntryId" class="text-green-600 text-sm" :title="$t('reports.salary.recorded')">
+                    <CheckCircleIcon class="h-4 w-4 inline" /> {{ $t('reports.salary.recorded') }}
                   </span>
                   <span v-else-if="emp.status === 'PAID'" class="text-red-500 text-sm">
-                    <XCircleIcon class="h-4 w-4 inline" /> Qayd etilmagan
+                    <XCircleIcon class="h-4 w-4 inline" /> {{ $t('reports.salary.notRecorded') }}
                   </span>
                   <span v-else class="text-gray-400 text-sm">-</span>
                 </td>
@@ -218,7 +212,7 @@ onMounted(fetchReport)
           </table>
         </div>
         <div v-else class="card-body text-center text-gray-500">
-          Bu davr uchun ish haqi yozuvlari topilmadi
+          {{ $t('reports.salary.noRecords') }}
         </div>
       </div>
     </template>

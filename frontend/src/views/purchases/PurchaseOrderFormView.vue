@@ -1,9 +1,11 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { purchaseOrdersApi, suppliersApi, productsApi, locationsApi } from '@/services/api'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const router = useRouter()
 const saving = ref(false)
 const suppliers = ref([])
@@ -86,14 +88,14 @@ function removeItem(index) {
 function validate() {
   Object.keys(errors).forEach(key => delete errors[key])
 
-  if (!form.vendorId) errors.vendorId = 'Vendor is required'
-  if (!form.locationId) errors.locationId = 'Receiving location is required'
-  if (!form.orderDate) errors.orderDate = 'Order date is required'
-  if (form.lines.length === 0) errors.lines = 'At least one product is required'
+  if (!form.vendorId) errors.vendorId = t('purchases.orderForm.supplierRequired')
+  if (!form.locationId) errors.locationId = t('purchases.orderForm.warehouseRequired')
+  if (!form.orderDate) errors.orderDate = t('required')
+  if (form.lines.length === 0) errors.lines = t('purchases.orderForm.itemsRequired')
 
   // Validate line items
   form.lines.forEach((line, index) => {
-    if (!line.uomId) errors[`line_${index}_uom`] = 'UOM is required'
+    if (!line.uomId) errors[`line_${index}_uom`] = t('required')
   })
 
   return Object.keys(errors).length === 0
@@ -137,9 +139,9 @@ async function handleSubmit() {
           errors[err.field] = err.message
         }
       })
-      errors.general = 'Please fix the errors below'
+      errors.general = t('fixErrors')
     } else {
-      errors.general = response?.message || 'Failed to create order'
+      errors.general = response?.message || t('failedToSave')
     }
   } finally {
     saving.value = false
@@ -157,7 +159,7 @@ function formatCurrency(value) {
       <button @click="router.back()" class="p-2 hover:bg-gray-100 rounded-lg">
         <ArrowLeftIcon class="h-5 w-5 text-gray-500" />
       </button>
-      <h1 class="text-2xl font-bold text-gray-900">New Purchase Order</h1>
+      <h1 class="text-2xl font-bold text-gray-900">{{ $t('purchases.orderForm.newOrder') }}</h1>
     </div>
 
     <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -168,93 +170,93 @@ function formatCurrency(value) {
 
       <!-- Order Info -->
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Order Information</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">{{ $t('purchases.orderForm.basicInfo') }}</h3></div>
         <div class="card-body grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label class="label">Vendor/Supplier *</label>
+            <label class="label">{{ $t('purchases.orders.supplier') }} *</label>
             <select v-model="form.vendorId" :class="[errors.vendorId ? 'input-error' : 'input']">
-              <option :value="null">Select vendor</option>
+              <option :value="null">{{ $t('purchases.orderForm.selectSupplier') }}</option>
               <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
             <p v-if="errors.vendorId" class="mt-1 text-sm text-red-600">{{ errors.vendorId }}</p>
           </div>
           <div>
-            <label class="label">Receiving Location *</label>
+            <label class="label">{{ $t('purchases.orders.warehouse') }} *</label>
             <select v-model="form.locationId" :class="[errors.locationId ? 'input-error' : 'input']">
-              <option :value="null">Select location</option>
+              <option :value="null">{{ $t('purchases.orderForm.selectWarehouse') }}</option>
               <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
             </select>
             <p v-if="errors.locationId" class="mt-1 text-sm text-red-600">{{ errors.locationId }}</p>
           </div>
           <div>
-            <label class="label">Order Date *</label>
+            <label class="label">{{ $t('purchases.orderForm.orderDate') }} *</label>
             <input v-model="form.orderDate" type="date" :class="[errors.orderDate ? 'input-error' : 'input']" />
             <p v-if="errors.orderDate" class="mt-1 text-sm text-red-600">{{ errors.orderDate }}</p>
           </div>
           <div>
-            <label class="label">Expected Delivery Date</label>
+            <label class="label">{{ $t('purchases.orderForm.expectedDate') }}</label>
             <input v-model="form.expectedDate" type="date" class="input" />
           </div>
           <div>
-            <label class="label">Currency</label>
+            <label class="label">{{ $t('purchases.orderForm.currency') }}</label>
             <select v-model="form.currency" class="input">
-              <option value="UZS">UZS - Uzbek Som</option>
-              <option value="USD">USD - US Dollar</option>
-              <option value="EUR">EUR - Euro</option>
-              <option value="RUB">RUB - Russian Ruble</option>
+              <option value="UZS">UZS</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="RUB">RUB</option>
             </select>
           </div>
           <div>
-            <label class="label">Vendor Reference</label>
-            <input v-model="form.vendorReference" type="text" class="input" placeholder="Vendor's order/quote number" />
+            <label class="label">{{ $t('purchases.orderForm.vendorReference') }}</label>
+            <input v-model="form.vendorReference" type="text" class="input" :placeholder="$t('purchases.orderForm.vendorReference')" />
           </div>
         </div>
       </div>
 
       <!-- Shipping & Payment -->
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Shipping & Payment</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">{{ $t('purchases.orderForm.shippingAndPayment') }}</h3></div>
         <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label class="label">Payment Terms</label>
+            <label class="label">{{ $t('purchases.orderForm.paymentTerms') }}</label>
             <select v-model="form.paymentTerms" class="input">
-              <option value="">Select payment terms</option>
-              <option value="PREPAID">Prepaid</option>
+              <option value="">{{ $t('purchases.orderForm.selectPaymentTerms') }}</option>
+              <option value="PREPAID">{{ $t('purchases.orderForm.prepaid') }}</option>
               <option value="NET15">Net 15</option>
               <option value="NET30">Net 30</option>
               <option value="NET60">Net 60</option>
-              <option value="COD">Cash on Delivery</option>
+              <option value="COD">{{ $t('purchases.orderForm.cod') }}</option>
             </select>
           </div>
           <div>
-            <label class="label">Shipping Method</label>
-            <input v-model="form.shippingMethod" type="text" class="input" placeholder="e.g., Ground, Express" />
+            <label class="label">{{ $t('purchases.orderForm.shippingMethod') }}</label>
+            <input v-model="form.shippingMethod" type="text" class="input" :placeholder="$t('purchases.orderForm.shippingMethod')" />
           </div>
           <div class="md:col-span-2">
-            <label class="label">Shipping Address</label>
-            <textarea v-model="form.shippingAddress" rows="2" class="input" placeholder="Delivery address"></textarea>
+            <label class="label">{{ $t('purchases.orderForm.shippingAddress') }}</label>
+            <textarea v-model="form.shippingAddress" rows="2" class="input" :placeholder="$t('address')"></textarea>
           </div>
         </div>
       </div>
 
       <!-- Notes -->
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Notes</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">{{ $t('notes') }}</h3></div>
         <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label class="label">Notes (visible to vendor)</label>
-            <textarea v-model="form.notes" rows="3" class="input" placeholder="Notes for the vendor"></textarea>
+            <label class="label">{{ $t('purchases.orderForm.notes') }}</label>
+            <textarea v-model="form.notes" rows="3" class="input" :placeholder="$t('notes')"></textarea>
           </div>
           <div>
-            <label class="label">Internal Notes</label>
-            <textarea v-model="form.internalNotes" rows="3" class="input" placeholder="Internal notes (not visible to vendor)"></textarea>
+            <label class="label">{{ $t('purchases.orderForm.internalNotes') }}</label>
+            <textarea v-model="form.internalNotes" rows="3" class="input" :placeholder="$t('purchases.orderForm.internalNotes')"></textarea>
           </div>
         </div>
       </div>
 
       <!-- Products -->
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Products</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">{{ $t('purchases.orders.productsCount') }}</h3></div>
         <div class="card-body">
           <!-- Error for lines -->
           <div v-if="errors.lines" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -268,7 +270,7 @@ function formatCurrency(value) {
               v-model="productSearch"
               @input="searchProducts"
               type="text"
-              placeholder="Search products to add..."
+              :placeholder="$t('purchases.orderForm.selectProduct')"
               class="input pl-10"
             />
           </div>
@@ -284,7 +286,7 @@ function formatCurrency(value) {
             >
               <div>
                 <div class="font-medium">{{ product.name }}</div>
-                <div class="text-sm text-gray-500">{{ product.sku }} | UOM: {{ product.baseUom?.name || 'N/A' }}</div>
+                <div class="text-sm text-gray-500">{{ product.sku }} | {{ $t('purchases.orderForm.uom') }}: {{ product.baseUom?.name || '-' }}</div>
               </div>
               <div class="text-right">
                 <div class="font-medium">{{ formatCurrency(product.costPrice) }}</div>
@@ -297,11 +299,11 @@ function formatCurrency(value) {
             <table class="table">
               <thead>
                 <tr>
-                  <th>Product</th>
-                  <th class="text-center">Qty</th>
-                  <th class="text-center">UOM</th>
-                  <th class="text-right">Unit Price</th>
-                  <th class="text-right">Subtotal</th>
+                  <th>{{ $t('purchases.orderForm.product') }}</th>
+                  <th class="text-center">{{ $t('quantity') }}</th>
+                  <th class="text-center">{{ $t('purchases.orderForm.uom') }}</th>
+                  <th class="text-right">{{ $t('purchases.orderForm.unitPrice') }}</th>
+                  <th class="text-right">{{ $t('purchases.orderForm.lineTotal') }}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -341,7 +343,7 @@ function formatCurrency(value) {
               </tbody>
               <tfoot>
                 <tr class="bg-gray-50">
-                  <td colspan="4" class="text-right font-medium">Total:</td>
+                  <td colspan="4" class="text-right font-medium">{{ $t('total') }}:</td>
                   <td class="text-right text-lg font-bold text-primary-600">{{ formatCurrency(total) }}</td>
                   <td></td>
                 </tr>
@@ -350,15 +352,15 @@ function formatCurrency(value) {
           </div>
 
           <div v-else class="text-center py-8 text-gray-500">
-            Search and add products to this order
+            {{ $t('purchases.orderForm.noItems') }}
           </div>
         </div>
       </div>
 
       <div class="flex justify-end space-x-3">
-        <button type="button" @click="router.back()" class="btn-secondary">Cancel</button>
+        <button type="button" @click="router.back()" class="btn-secondary">{{ $t('cancel') }}</button>
         <button type="submit" :disabled="saving" class="btn-primary">
-          {{ saving ? 'Creating...' : 'Create Order' }}
+          {{ saving ? $t('saving') : $t('save') }}
         </button>
       </div>
     </form>

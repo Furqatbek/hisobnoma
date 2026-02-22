@@ -215,37 +215,37 @@ function toggleRole(roleCode) {
             <p v-if="errors.username" class="mt-1 text-sm text-red-600">{{ errors.username }}</p>
           </div>
           <div>
-            <label class="label">{{ isEdit ? 'New Password (leave blank to keep)' : 'Password *' }}</label>
+            <label class="label">{{ isEdit ? $t('admin.userForm.newPassword') : $t('admin.userForm.password') + ' *' }}</label>
             <input v-model="form.password" type="password" :class="[errors.password ? 'input-error' : 'input']" />
             <p v-if="errors.password" class="mt-1 text-sm text-red-600">{{ errors.password }}</p>
           </div>
           <div>
-            <label class="label">First Name</label>
+            <label class="label">{{ $t('admin.userForm.firstName') }}</label>
             <input v-model="form.firstName" type="text" class="input" />
           </div>
           <div>
-            <label class="label">Last Name</label>
+            <label class="label">{{ $t('admin.userForm.lastName') }}</label>
             <input v-model="form.lastName" type="text" class="input" />
           </div>
           <div>
-            <label class="label">Phone</label>
+            <label class="label">{{ $t('phone') }}</label>
             <input v-model="form.phone" type="tel" :class="[errors.phone ? 'input-error' : 'input']" placeholder="+998901234567" />
             <p v-if="errors.phone" class="mt-1 text-sm text-red-600">{{ errors.phone }}</p>
           </div>
           <div class="flex items-center">
             <label class="flex items-center">
               <input v-model="form.enabled" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-              <span class="ml-2 text-sm">Account Enabled</span>
+              <span class="ml-2 text-sm">{{ $t('admin.userForm.accountEnabled') }}</span>
             </label>
           </div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Rollar</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">{{ $t('admin.users.roles') }}</h3></div>
         <div class="card-body">
           <div v-if="availableRoles.length === 0" class="text-gray-500 text-center py-4">
-            Rollar yuklanmoqda...
+            {{ $t('admin.userForm.rolesLoading') }}
           </div>
           <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <button
@@ -263,7 +263,7 @@ function toggleRole(roleCode) {
               <p class="font-medium">{{ role.name }}</p>
               <p class="text-xs text-gray-500 mt-1">{{ role.code }}</p>
               <p v-if="role.description" class="text-xs text-gray-400 mt-1">{{ role.description }}</p>
-              <span v-if="role.systemRole" class="inline-block mt-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">Tizim</span>
+              <span v-if="role.systemRole" class="inline-block mt-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">{{ $t('admin.roles.system') }}</span>
             </button>
           </div>
         </div>
@@ -275,15 +275,15 @@ function toggleRole(roleCode) {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <LockClosedIcon class="h-5 w-5 text-gray-500" />
-              <h3 class="text-lg font-medium">PIN kod</h3>
+              <h3 class="text-lg font-medium">{{ $t('admin.userForm.pinCode') }}</h3>
             </div>
-            <span v-if="userHasPin" class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">PIN o'rnatilgan</span>
-            <span v-else class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-500 rounded-full">PIN o'rnatilmagan</span>
+            <span v-if="userHasPin" class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">{{ $t('admin.userForm.pinSet') }}</span>
+            <span v-else class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-500 rounded-full">{{ $t('admin.userForm.pinNotSet') }}</span>
           </div>
         </div>
         <div class="card-body">
           <p class="text-sm text-gray-500 mb-4">
-            PIN kod POS tizimida tezkor kirish uchun ishlatiladi. 4 ta raqam kiriting.
+            {{ $t('admin.userForm.pinDescription') }}
           </p>
 
           <!-- PIN success/error messages -->
@@ -325,7 +325,7 @@ function toggleRole(roleCode) {
               :disabled="pinSaving"
               class="h-14 text-xs font-medium text-red-500 rounded-xl bg-gray-50 hover:bg-red-50 active:bg-red-100 transition-all select-none disabled:opacity-50"
             >
-              Tozalash
+              {{ $t('admin.userForm.clear') }}
             </button>
             <button
               type="button"
@@ -355,7 +355,7 @@ function toggleRole(roleCode) {
               :disabled="pinSaving || pinInput.length !== 4"
               class="btn-primary px-6"
             >
-              {{ pinSaving ? 'Saqlanmoqda...' : 'PIN o\'rnatish' }}
+              {{ pinSaving ? $t('saving') : $t('admin.userForm.setPin') }}
             </button>
             <button
               v-if="userHasPin"
@@ -364,16 +364,16 @@ function toggleRole(roleCode) {
               :disabled="pinSaving"
               class="btn-secondary px-6 text-red-600 hover:text-red-700"
             >
-              PIN o'chirish
+              {{ $t('admin.userForm.clearPin') }}
             </button>
           </div>
         </div>
       </div>
 
       <div class="flex justify-end space-x-3">
-        <button type="button" @click="router.back()" class="btn-secondary">Cancel</button>
+        <button type="button" @click="router.back()" class="btn-secondary">{{ $t('cancel') }}</button>
         <button type="submit" :disabled="saving" class="btn-primary">
-          {{ saving ? 'Saving...' : (isEdit ? 'Update' : 'Create') }}
+          {{ saving ? $t('saving') : (isEdit ? $t('admin.userForm.update') : $t('admin.userForm.create')) }}
         </button>
       </div>
     </form>

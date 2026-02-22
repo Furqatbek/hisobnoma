@@ -3,6 +3,8 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { employeesApi, departmentsApi, positionsApi, usersApi } from '@/services/api'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -61,10 +63,10 @@ onMounted(async () => {
 
 function validate() {
   Object.keys(errors).forEach(key => delete errors[key])
-  if (!form.employeeCode?.trim()) errors.employeeCode = 'Kod kiritilishi shart'
-  if (!form.firstName?.trim()) errors.firstName = 'Ism kiritilishi shart'
-  if (!form.lastName?.trim()) errors.lastName = 'Familiya kiritilishi shart'
-  if (!form.hireDate) errors.hireDate = 'Ishga kirgan sana kiritilishi shart'
+  if (!form.employeeCode?.trim()) errors.employeeCode = t('hr.employeeForm.nameRequired')
+  if (!form.firstName?.trim()) errors.firstName = t('hr.employeeForm.nameRequired')
+  if (!form.lastName?.trim()) errors.lastName = t('hr.employeeForm.lastNameRequired')
+  if (!form.hireDate) errors.hireDate = t('hr.employeeForm.nameRequired')
   return Object.keys(errors).length === 0
 }
 
@@ -98,7 +100,7 @@ async function handleSubmit() {
       </button>
       <div>
         <h1 class="text-2xl font-bold text-gray-900">
-          {{ isEdit ? 'Xodimni tahrirlash' : 'Yangi xodim' }}
+          {{ isEdit ? $t('hr.employeeForm.editEmployee') : $t('hr.employeeForm.newEmployee') }}
         </h1>
       </div>
     </div>
@@ -114,27 +116,27 @@ async function handleSubmit() {
 
       <!-- Personal Info -->
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Shaxsiy ma'lumotlar</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">{{ $t('hr.employeeForm.personalInfo') }}</h3></div>
         <div class="card-body grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label class="label">Xodim kodi *</label>
+            <label class="label">{{ $t('hr.employeeForm.employeeCode') }} *</label>
             <input v-model="form.employeeCode" type="text" :class="[errors.employeeCode ? 'input-error' : 'input']" :disabled="isEdit" />
             <p v-if="errors.employeeCode" class="mt-1 text-sm text-red-600">{{ errors.employeeCode }}</p>
           </div>
           <div>
-            <label class="label">Familiya *</label>
+            <label class="label">{{ $t('hr.employeeForm.lastName') }} *</label>
             <input v-model="form.lastName" type="text" :class="[errors.lastName ? 'input-error' : 'input']" />
           </div>
           <div>
-            <label class="label">Ism *</label>
+            <label class="label">{{ $t('hr.employeeForm.firstName') }} *</label>
             <input v-model="form.firstName" type="text" :class="[errors.firstName ? 'input-error' : 'input']" />
           </div>
           <div>
-            <label class="label">Otasining ismi</label>
+            <label class="label">{{ $t('hr.employeeForm.middleName') }}</label>
             <input v-model="form.middleName" type="text" class="input" />
           </div>
           <div>
-            <label class="label">Telefon</label>
+            <label class="label">{{ $t('phone') }}</label>
             <input v-model="form.phone" type="text" class="input" />
           </div>
           <div>
@@ -142,19 +144,19 @@ async function handleSubmit() {
             <input v-model="form.email" type="email" class="input" />
           </div>
           <div>
-            <label class="label">Tug'ilgan sana</label>
+            <label class="label">{{ $t('hr.employeeForm.birthDate') }}</label>
             <input v-model="form.dateOfBirth" type="date" class="input" />
           </div>
           <div>
-            <label class="label">Jinsi</label>
+            <label class="label">{{ $t('hr.employeeForm.gender') }}</label>
             <select v-model="form.gender" class="input">
-              <option value="">Tanlang</option>
-              <option value="MALE">Erkak</option>
-              <option value="FEMALE">Ayol</option>
+              <option value="">{{ $t('hr.employeeForm.selectGender') }}</option>
+              <option value="MALE">{{ $t('hr.employeeForm.male') }}</option>
+              <option value="FEMALE">{{ $t('hr.employeeForm.female') }}</option>
             </select>
           </div>
           <div class="md:col-span-3">
-            <label class="label">Manzil</label>
+            <label class="label">{{ $t('address') }}</label>
             <textarea v-model="form.address" rows="2" class="input"></textarea>
           </div>
         </div>
@@ -162,48 +164,48 @@ async function handleSubmit() {
 
       <!-- Work Info -->
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Ish ma'lumotlari</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">{{ $t('hr.employeeForm.employmentInfo') }}</h3></div>
         <div class="card-body grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label class="label">Ishga kirgan sana *</label>
+            <label class="label">{{ $t('hr.employees.hireDate') }} *</label>
             <input v-model="form.hireDate" type="date" :class="[errors.hireDate ? 'input-error' : 'input']" />
           </div>
           <div>
-            <label class="label">Bo'lim</label>
+            <label class="label">{{ $t('hr.employees.department') }}</label>
             <select v-model="form.departmentId" class="input">
-              <option :value="null">Tanlang</option>
+              <option :value="null">{{ $t('hr.employeeForm.selectDepartment') }}</option>
               <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
             </select>
           </div>
           <div>
-            <label class="label">Lavozim</label>
+            <label class="label">{{ $t('hr.employees.position') }}</label>
             <select v-model="form.positionId" class="input">
-              <option :value="null">Tanlang</option>
+              <option :value="null">{{ $t('hr.employeeForm.selectPosition') }}</option>
               <option v-for="p in positions" :key="p.id" :value="p.id">{{ p.name }}</option>
             </select>
           </div>
           <div>
-            <label class="label">Oylik maosh</label>
+            <label class="label">{{ $t('hr.employees.baseSalary') }}</label>
             <input v-model.number="form.currentSalary" type="number" step="1000" min="0" class="input" />
           </div>
           <div>
-            <label class="label">Foydalanuvchi hisobi</label>
+            <label class="label">{{ $t('hr.employeeForm.contactInfo') }}</label>
             <select v-model="form.userId" class="input">
-              <option :value="null">Bog'lanmagan</option>
+              <option :value="null">{{ $t('noData') }}</option>
               <option v-for="u in users" :key="u.id" :value="u.id">{{ u.username }} ({{ u.firstName }} {{ u.lastName }})</option>
             </select>
           </div>
           <div class="md:col-span-3">
-            <label class="label">Izoh</label>
+            <label class="label">{{ $t('notes') }}</label>
             <textarea v-model="form.notes" rows="2" class="input"></textarea>
           </div>
         </div>
       </div>
 
       <div class="flex justify-end space-x-3">
-        <button type="button" @click="router.back()" class="btn-secondary">Bekor qilish</button>
+        <button type="button" @click="router.back()" class="btn-secondary">{{ $t('cancel') }}</button>
         <button type="submit" :disabled="saving" class="btn-primary">
-          {{ saving ? 'Saqlanmoqda...' : (isEdit ? 'Yangilash' : 'Yaratish') }}
+          {{ saving ? $t('saving') : $t('save') }}
         </button>
       </div>
     </form>

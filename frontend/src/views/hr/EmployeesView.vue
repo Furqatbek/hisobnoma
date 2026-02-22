@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { employeesApi } from '@/services/api'
 import { PlusIcon, PencilSquareIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const employees = ref([])
 const loading = ref(true)
@@ -46,9 +48,9 @@ function statusBadge(status) {
 
 function statusLabel(status) {
   switch (status) {
-    case 'ACTIVE': return 'Faol'
-    case 'ON_LEAVE': return 'Ta\'tilda'
-    case 'TERMINATED': return 'Ishdan bo\'shagan'
+    case 'ACTIVE': return t('active')
+    case 'ON_LEAVE': return t('enums.employeeStatus.ON_LEAVE')
+    case 'TERMINATED': return t('enums.employeeStatus.TERMINATED')
     default: return status
   }
 }
@@ -64,12 +66,12 @@ onMounted(loadEmployees)
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Xodimlar</h1>
-        <p class="mt-1 text-sm text-gray-500">Xodimlar ro'yxati va boshqaruvi</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('hr.employees.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('hr.employees.subtitle') }}</p>
       </div>
       <RouterLink to="/hr/employees/new" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Yangi xodim
+        {{ $t('hr.employees.addEmployee') }}
       </RouterLink>
     </div>
 
@@ -82,11 +84,11 @@ onMounted(loadEmployees)
               v-model="searchQuery"
               @keyup.enter="handleSearch"
               type="text"
-              placeholder="Qidirish (ism, kod)..."
+              :placeholder="$t('hr.employees.searchPlaceholder')"
               class="input pl-10"
             />
           </div>
-          <button @click="handleSearch" class="btn-secondary">Qidirish</button>
+          <button @click="handleSearch" class="btn-secondary">{{ $t('search') }}</button>
         </div>
 
         <div v-if="loading" class="flex items-center justify-center h-32">
@@ -94,21 +96,21 @@ onMounted(loadEmployees)
         </div>
 
         <div v-else-if="employees.length === 0" class="text-center py-12 text-gray-500">
-          Xodimlar topilmadi
+          {{ $t('hr.employees.noEmployees') }}
         </div>
 
         <div v-else class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Kod</th>
-                <th>F.I.O</th>
-                <th>Bo'lim</th>
-                <th>Lavozim</th>
-                <th>Telefon</th>
-                <th>Oylik</th>
-                <th>Holat</th>
-                <th>Amallar</th>
+                <th>{{ $t('code') }}</th>
+                <th>{{ $t('hr.employees.employee') }}</th>
+                <th>{{ $t('hr.employees.department') }}</th>
+                <th>{{ $t('hr.employees.position') }}</th>
+                <th>{{ $t('phone') }}</th>
+                <th>{{ $t('hr.employees.baseSalary') }}</th>
+                <th>{{ $t('status') }}</th>
+                <th>{{ $t('actions') }}</th>
               </tr>
             </thead>
             <tbody>

@@ -1,8 +1,10 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { reportsApi } from '@/services/api'
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const loading = ref(true)
 const report = ref(null)
 
@@ -61,16 +63,10 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('uz-UZ', { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 
-const paymentLabels = {
-  'CASH': 'Naqd',
-  'CARD': 'Karta',
-  'CREDIT': 'Nasiya',
-  'MOBILE_PAYMENT': 'Mobil',
-  'TRANSFER': "O'tkazma"
-}
-
 function getPaymentLabel(method) {
-  return paymentLabels[method] || method
+  const key = `enums.paymentType.${method}`
+  const translated = t(key)
+  return translated !== key ? translated : method
 }
 </script>
 
@@ -78,12 +74,12 @@ function getPaymentLabel(method) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Sotuv hisoboti</h1>
-        <p class="mt-1 text-sm text-gray-500">Sotuv ko'rsatkichlarini tahlil qiling</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('reports.sales.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('reports.sales.subtitle') }}</p>
       </div>
       <button @click="exportReport" class="btn-secondary">
         <ArrowDownTrayIcon class="h-5 w-5 mr-2" />
-        Eksport
+        {{ $t('export') }}
       </button>
     </div>
 
@@ -91,15 +87,15 @@ function getPaymentLabel(method) {
     <div class="card">
       <div class="card-body flex flex-wrap gap-4 items-end">
         <div>
-          <label class="label">Boshlanish sanasi</label>
+          <label class="label">{{ $t('reports.sales.startDate') }}</label>
           <input v-model="filters.startDate" type="date" class="input" />
         </div>
         <div>
-          <label class="label">Tugash sanasi</label>
+          <label class="label">{{ $t('reports.sales.endDate') }}</label>
           <input v-model="filters.endDate" type="date" class="input" />
         </div>
         <button @click="fetchReport" class="btn-primary">
-          Qo'llash
+          {{ $t('apply') }}
         </button>
       </div>
     </div>
@@ -113,28 +109,28 @@ function getPaymentLabel(method) {
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Sof sotuv</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.sales.netSales') }}</p>
             <p class="text-2xl font-bold text-primary-600">{{ formatCurrency(report.summary?.netSales) }}</p>
             <p v-if="report.summary?.grossSales > report.summary?.netSales" class="text-xs text-gray-400 mt-1">
-              Yalpi: {{ formatCurrency(report.summary?.grossSales) }}
+              {{ $t('reports.sales.grossSales') }}: {{ formatCurrency(report.summary?.grossSales) }}
             </p>
           </div>
         </div>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Tranzaksiyalar</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.sales.transactionsCount') }}</p>
             <p class="text-2xl font-bold">{{ formatNumber(report.summary?.transactionCount) }}</p>
           </div>
         </div>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">O'rtacha chek</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.sales.averageCheck') }}</p>
             <p class="text-2xl font-bold">{{ formatCurrency(report.summary?.averageTransactionValue) }}</p>
           </div>
         </div>
         <div class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Sotilgan mahsulotlar</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.sales.soldProducts') }}</p>
             <p class="text-2xl font-bold">{{ formatNumber(report.summary?.itemsSold) }}</p>
           </div>
         </div>
@@ -144,25 +140,25 @@ function getPaymentLabel(method) {
       <div v-if="report.summary?.discounts > 0 || report.summary?.returns > 0 || report.summary?.grossProfit" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div v-if="report.summary?.discounts > 0" class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Chegirmalar</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.sales.discounts') }}</p>
             <p class="text-2xl font-bold text-orange-600">-{{ formatCurrency(report.summary.discounts) }}</p>
           </div>
         </div>
         <div v-if="report.summary?.returns > 0" class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Qaytarishlar</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.sales.returns') }}</p>
             <p class="text-2xl font-bold text-red-600">-{{ formatCurrency(report.summary.returns) }}</p>
           </div>
         </div>
         <div v-if="report.summary?.grossProfit != null" class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Yalpi foyda</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.sales.grossProfit') }}</p>
             <p class="text-2xl font-bold text-green-600">{{ formatCurrency(report.summary.grossProfit) }}</p>
           </div>
         </div>
         <div v-if="report.summary?.grossMarginPercent != null" class="card">
           <div class="card-body">
-            <p class="text-sm text-gray-500">Foyda margini</p>
+            <p class="text-sm text-gray-500">{{ $t('reports.sales.profitMargin') }}</p>
             <p class="text-2xl font-bold text-green-600">{{ Number(report.summary.grossMarginPercent).toFixed(1) }}%</p>
           </div>
         </div>
@@ -172,7 +168,7 @@ function getPaymentLabel(method) {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="card">
           <div class="card-header">
-            <h3 class="text-lg font-medium">Top mahsulotlar</h3>
+            <h3 class="text-lg font-medium">{{ $t('reports.sales.topProducts') }}</h3>
           </div>
           <div class="card-body">
             <div v-if="report.topProducts?.length" class="space-y-3">
@@ -192,17 +188,17 @@ function getPaymentLabel(method) {
                 </div>
                 <div class="text-right">
                   <span class="font-medium">{{ formatCurrency(product.netSales) }}</span>
-                  <span class="text-xs text-gray-400 ml-1">({{ product.quantitySold }} dona)</span>
+                  <span class="text-xs text-gray-400 ml-1">({{ product.quantitySold }} {{ $t('reports.sales.pcs') }})</span>
                 </div>
               </div>
             </div>
-            <p v-else class="text-gray-500 text-center py-4">Ma'lumot yo'q</p>
+            <p v-else class="text-gray-500 text-center py-4">{{ $t('noData') }}</p>
           </div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <h3 class="text-lg font-medium">To'lov turlari bo'yicha</h3>
+            <h3 class="text-lg font-medium">{{ $t('reports.sales.byPaymentType') }}</h3>
           </div>
           <div class="card-body">
             <div v-if="report.byPaymentMethod?.length" class="space-y-3">
@@ -217,11 +213,11 @@ function getPaymentLabel(method) {
                 </div>
                 <div class="text-right">
                   <span class="font-medium">{{ formatCurrency(item.amount) }}</span>
-                  <span class="text-sm text-gray-500 ml-2">({{ item.transactionCount }} ta)</span>
+                  <span class="text-sm text-gray-500 ml-2">({{ item.transactionCount }} {{ $t('items') }})</span>
                 </div>
               </div>
             </div>
-            <p v-else class="text-gray-500 text-center py-4">Ma'lumot yo'q</p>
+            <p v-else class="text-gray-500 text-center py-4">{{ $t('noData') }}</p>
           </div>
         </div>
       </div>
@@ -229,17 +225,17 @@ function getPaymentLabel(method) {
       <!-- Daily Breakdown -->
       <div class="card">
         <div class="card-header">
-          <h3 class="text-lg font-medium">Kunlik taqsimot</h3>
+          <h3 class="text-lg font-medium">{{ $t('reports.sales.dailyBreakdown') }}</h3>
         </div>
         <div v-if="report.dailyBreakdown?.length" class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Sana</th>
-                <th>Hafta kuni</th>
-                <th class="text-right">Tranzaksiyalar</th>
-                <th class="text-right">Sof sotuv</th>
-                <th class="text-right">O'rtacha chek</th>
+                <th>{{ $t('date') }}</th>
+                <th>{{ $t('reports.sales.weekday') }}</th>
+                <th class="text-right">{{ $t('reports.sales.transactionsCount') }}</th>
+                <th class="text-right">{{ $t('reports.sales.netSales') }}</th>
+                <th class="text-right">{{ $t('reports.sales.averageCheck') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -254,29 +250,29 @@ function getPaymentLabel(method) {
           </table>
         </div>
         <div v-else class="card-body text-center text-gray-500">
-          Taqsimot ma'lumotlari yo'q
+          {{ $t('reports.sales.noBreakdownData') }}
         </div>
       </div>
 
       <!-- Category Breakdown -->
       <div v-if="report.byCategory?.length" class="card">
         <div class="card-header">
-          <h3 class="text-lg font-medium">Kategoriya bo'yicha</h3>
+          <h3 class="text-lg font-medium">{{ $t('reports.sales.byCategory') }}</h3>
         </div>
         <div class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Kategoriya</th>
-                <th class="text-right">Sotilgan</th>
-                <th class="text-right">Sof sotuv</th>
-                <th class="text-right">Ulushi</th>
+                <th>{{ $t('reports.sales.category') }}</th>
+                <th class="text-right">{{ $t('reports.sales.soldCount') }}</th>
+                <th class="text-right">{{ $t('reports.sales.netSales') }}</th>
+                <th class="text-right">{{ $t('reports.sales.share') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
               <tr v-for="cat in report.byCategory" :key="cat.categoryId">
                 <td class="font-medium">{{ cat.categoryName }}</td>
-                <td class="text-right">{{ cat.itemsSold }} ta</td>
+                <td class="text-right">{{ cat.itemsSold }} {{ $t('items') }}</td>
                 <td class="text-right font-medium">{{ formatCurrency(cat.netSales) }}</td>
                 <td class="text-right text-gray-500">{{ Number(cat.percentOfTotal).toFixed(1) }}%</td>
               </tr>

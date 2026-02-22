@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { expensesApi, suppliersApi, journalEntriesApi } from '@/services/api'
 import {
   PlusIcon,
@@ -14,6 +15,7 @@ import {
   UserGroupIcon
 } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const activeTab = ref('invoices') // 'invoices' or 'salary'
 
 // AP Invoices state
@@ -180,24 +182,12 @@ function getStatusClass(status) {
 }
 
 function getStatusLabel(status) {
-  const labels = {
-    'DRAFT': 'Qoralama',
-    'PENDING_APPROVAL': 'Tasdiqlanmoqda',
-    'APPROVED': 'Tasdiqlangan',
-    'PARTIALLY_PAID': 'Qisman to\'langan',
-    'PAID': 'To\'langan',
-    'ON_HOLD': 'Kutish',
-    'CANCELLED': 'Bekor qilingan',
-    'REJECTED': 'Rad etilgan',
-    'POSTED': 'Kiritilgan',
-    'REVERSED': 'Qaytarilgan'
-  }
-  return labels[status] || status
+  return t(`enums.apInvoiceStatus.${status}`, status)
 }
 
 function getEntryTypeLabel(entry) {
-  if (entry.referenceType === 'SALARY_ADVANCE') return 'Avans'
-  if (entry.referenceType === 'SALARY_PAYMENT') return 'Ish haqi'
+  if (entry.referenceType === 'SALARY_ADVANCE') return t('finance.expenses.advance')
+  if (entry.referenceType === 'SALARY_PAYMENT') return t('finance.expenses.salaryType')
   return entry.referenceType || '-'
 }
 
@@ -223,12 +213,12 @@ function isOverdue(expense) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Xarajatlar</h1>
-        <p class="mt-1 text-sm text-gray-500">Yetkazib beruvchi hisob-fakturalari, ish haqi va avanslar</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('finance.expenses.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('finance.expenses.subtitle') }}</p>
       </div>
       <RouterLink to="/finance/expenses/new" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Yangi xarajat
+        {{ $t('finance.expenses.newExpense') }}
       </RouterLink>
     </div>
 
@@ -238,8 +228,8 @@ function isOverdue(expense) {
         <div class="card-body">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-500">Jami to'lanishi kerak</p>
-              <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(totalPayable) }} so'm</p>
+              <p class="text-sm text-gray-500">{{ $t('finance.expenses.totalPayable') }}</p>
+              <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(totalPayable) }} {{ $t('sum') }}</p>
             </div>
             <div class="p-3 bg-primary-100 rounded-full">
               <BanknotesIcon class="h-6 w-6 text-primary-600" />
@@ -251,8 +241,8 @@ function isOverdue(expense) {
         <div class="card-body">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-500">Muddati o'tgan</p>
-              <p class="text-2xl font-bold text-red-600">{{ formatCurrency(overdueBalance) }} so'm</p>
+              <p class="text-sm text-gray-500">{{ $t('finance.expenses.overdueCount') }}</p>
+              <p class="text-2xl font-bold text-red-600">{{ formatCurrency(overdueBalance) }} {{ $t('sum') }}</p>
             </div>
             <div class="p-3 bg-red-100 rounded-full">
               <ExclamationTriangleIcon class="h-6 w-6 text-red-600" />
@@ -264,8 +254,8 @@ function isOverdue(expense) {
         <div class="card-body">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-500">Ish haqi to'lovlari</p>
-              <p class="text-2xl font-bold text-blue-600">{{ formatCurrency(salaryTotal) }} so'm</p>
+              <p class="text-sm text-gray-500">{{ $t('finance.expenses.salaryPayments') }}</p>
+              <p class="text-2xl font-bold text-blue-600">{{ formatCurrency(salaryTotal) }} {{ $t('sum') }}</p>
             </div>
             <div class="p-3 bg-blue-100 rounded-full">
               <UserGroupIcon class="h-6 w-6 text-blue-600" />
@@ -277,7 +267,7 @@ function isOverdue(expense) {
         <div class="card-body">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-500">Jami hisob-fakturalar</p>
+              <p class="text-sm text-gray-500">{{ $t('finance.expenses.totalInvoices') }}</p>
               <p class="text-2xl font-bold text-gray-900">{{ pagination.totalElements }}</p>
             </div>
             <div class="p-3 bg-gray-100 rounded-full">
@@ -301,7 +291,7 @@ function isOverdue(expense) {
           ]"
         >
           <BanknotesIcon class="h-5 w-5 inline mr-2" />
-          Hisob-fakturalar ({{ pagination.totalElements }})
+          {{ $t('finance.expenses.invoicesTab') }} ({{ pagination.totalElements }})
         </button>
         <button
           @click="switchTab('salary')"
@@ -313,7 +303,7 @@ function isOverdue(expense) {
           ]"
         >
           <UserGroupIcon class="h-5 w-5 inline mr-2" />
-          Ish haqi va avanslar ({{ salaryPagination.totalElements }})
+          {{ $t('finance.expenses.salaryTab') }} ({{ salaryPagination.totalElements }})
         </button>
       </nav>
     </div>
@@ -328,25 +318,25 @@ function isOverdue(expense) {
             <input
               v-model="search"
               type="text"
-              placeholder="Qidiruv..."
+              :placeholder="$t('finance.expenses.searchPlaceholder')"
               class="input pl-10"
               @keyup.enter="handleFilter"
             />
           </div>
           <select v-model="vendorFilter" @change="handleFilter" class="input w-auto">
-            <option value="">Barcha yetkazib beruvchilar</option>
+            <option value="">{{ $t('finance.expenses.allSuppliers') }}</option>
             <option v-for="vendor in vendors" :key="vendor.id" :value="vendor.id">
               {{ vendor.name }}
             </option>
           </select>
           <select v-model="statusFilter" @change="handleFilter" class="input w-auto">
-            <option value="all">Barcha holatlar</option>
-            <option value="DRAFT">Qoralama</option>
-            <option value="PENDING_APPROVAL">Tasdiqlanmoqda</option>
-            <option value="APPROVED">Tasdiqlangan</option>
-            <option value="PARTIALLY_PAID">Qisman to'langan</option>
-            <option value="PAID">To'langan</option>
-            <option value="ON_HOLD">Kutish</option>
+            <option value="all">{{ $t('finance.expenses.allStatuses') }}</option>
+            <option value="DRAFT">{{ $t('enums.apInvoiceStatus.DRAFT') }}</option>
+            <option value="PENDING_APPROVAL">{{ $t('enums.apInvoiceStatus.PENDING_APPROVAL') }}</option>
+            <option value="APPROVED">{{ $t('enums.apInvoiceStatus.APPROVED') }}</option>
+            <option value="PARTIALLY_PAID">{{ $t('enums.apInvoiceStatus.PARTIALLY_PAID') }}</option>
+            <option value="PAID">{{ $t('enums.apInvoiceStatus.PAID') }}</option>
+            <option value="ON_HOLD">{{ $t('enums.apInvoiceStatus.ON_HOLD') }}</option>
           </select>
         </div>
       </div>
@@ -359,10 +349,10 @@ function isOverdue(expense) {
 
         <div v-else-if="expenses.length === 0" class="text-center py-12">
           <BanknotesIcon class="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <p class="text-gray-500 mb-4">Xarajatlar topilmadi</p>
+          <p class="text-gray-500 mb-4">{{ $t('finance.expenses.noExpenses') }}</p>
           <RouterLink to="/finance/expenses/new" class="btn-primary">
             <PlusIcon class="h-5 w-5 mr-2" />
-            Birinchi xarajatni qo'shish
+            {{ $t('finance.expenses.addFirst') }}
           </RouterLink>
         </div>
 
@@ -370,14 +360,14 @@ function isOverdue(expense) {
           <table class="table">
             <thead>
               <tr>
-                <th>Hisob-faktura №</th>
-                <th>Yetkazib beruvchi / Tavsif</th>
-                <th>Sana</th>
-                <th>Muddat</th>
-                <th class="text-right">Summa</th>
-                <th class="text-right">Qoldiq</th>
-                <th>Holat</th>
-                <th class="text-right">Amallar</th>
+                <th>{{ $t('finance.expenses.invoiceNumber') }}</th>
+                <th>{{ $t('finance.expenses.supplierOrDescription') }}</th>
+                <th>{{ $t('date') }}</th>
+                <th>{{ $t('finance.expenses.dueDate') }}</th>
+                <th class="text-right">{{ $t('amount') }}</th>
+                <th class="text-right">{{ $t('balance') }}</th>
+                <th>{{ $t('status') }}</th>
+                <th class="text-right">{{ $t('actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -392,12 +382,12 @@ function isOverdue(expense) {
                 <td class="text-sm text-gray-500">{{ formatDate(expense.invoiceDate) }}</td>
                 <td :class="{ 'text-red-600 font-medium': isOverdue(expense) }">
                   {{ formatDate(expense.dueDate) }}
-                  <span v-if="isOverdue(expense)" class="text-xs">(muddati o'tgan)</span>
+                  <span v-if="isOverdue(expense)" class="text-xs">({{ $t('finance.expenses.overdue') }})</span>
                 </td>
-                <td class="text-right font-medium">{{ formatCurrency(expense.totalAmount) }} so'm</td>
+                <td class="text-right font-medium">{{ formatCurrency(expense.totalAmount) }} {{ $t('sum') }}</td>
                 <td class="text-right">
                   <span :class="Number(expense.balanceDue) > 0 ? 'text-red-600 font-medium' : 'text-green-600'">
-                    {{ formatCurrency(expense.balanceDue) }} so'm
+                    {{ formatCurrency(expense.balanceDue) }} {{ $t('sum') }}
                   </span>
                 </td>
                 <td>
@@ -409,7 +399,7 @@ function isOverdue(expense) {
                   <RouterLink
                     :to="`/finance/expenses/${expense.id}`"
                     class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                    title="Ko'rish"
+                    :title="$t('details')"
                   >
                     <EyeIcon class="h-5 w-5" />
                   </RouterLink>
@@ -427,18 +417,18 @@ function isOverdue(expense) {
               :disabled="pagination.page === 0"
               class="btn-secondary"
             >
-              Oldingi
+              {{ $t('previous') }}
             </button>
             <span class="text-sm text-gray-500">
-              Sahifa {{ pagination.page + 1 }} / {{ pagination.totalPages }}
-              (Jami: {{ pagination.totalElements }})
+              {{ $t('page') }} {{ pagination.page + 1 }} / {{ pagination.totalPages }}
+              ({{ $t('total') }}: {{ pagination.totalElements }})
             </span>
             <button
               @click="pagination.page++; fetchExpenses()"
               :disabled="pagination.page >= pagination.totalPages - 1"
               class="btn-secondary"
             >
-              Keyingi
+              {{ $t('next') }}
             </button>
           </div>
         </div>
@@ -454,21 +444,21 @@ function isOverdue(expense) {
 
         <div v-else-if="salaryEntries.length === 0" class="text-center py-12">
           <UserGroupIcon class="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <p class="text-gray-500">Ish haqi to'lovlari topilmadi</p>
-          <p class="text-sm text-gray-400 mt-2">Ish haqi to'langan yoki avans berilganda bu yerda ko'rinadi</p>
+          <p class="text-gray-500">{{ $t('finance.expenses.noSalaryEntries') }}</p>
+          <p class="text-sm text-gray-400 mt-2">{{ $t('finance.expenses.noSalaryHint') }}</p>
         </div>
 
         <div v-else class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Yozuv №</th>
-                <th>Tavsif</th>
-                <th>Turi</th>
-                <th>Sana</th>
-                <th class="text-right">Summa</th>
-                <th>Holat</th>
-                <th class="text-right">Amallar</th>
+                <th>{{ $t('finance.expenses.entryNumber') }}</th>
+                <th>{{ $t('description') }}</th>
+                <th>{{ $t('finance.expenses.entryType') }}</th>
+                <th>{{ $t('date') }}</th>
+                <th class="text-right">{{ $t('amount') }}</th>
+                <th>{{ $t('status') }}</th>
+                <th class="text-right">{{ $t('actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -486,7 +476,7 @@ function isOverdue(expense) {
                   </span>
                 </td>
                 <td class="text-sm text-gray-500">{{ formatDate(entry.entryDate) }}</td>
-                <td class="text-right font-medium">{{ formatCurrency(entry.totalDebit) }} so'm</td>
+                <td class="text-right font-medium">{{ formatCurrency(entry.totalDebit) }} {{ $t('sum') }}</td>
                 <td>
                   <span :class="['badge', getStatusClass(entry.status)]">
                     {{ getStatusLabel(entry.status) }}
@@ -496,7 +486,7 @@ function isOverdue(expense) {
                   <button
                     @click="showEntryDetail(entry)"
                     class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                    title="Ko'rish"
+                    :title="$t('details')"
                   >
                     <EyeIcon class="h-5 w-5" />
                   </button>
@@ -514,18 +504,18 @@ function isOverdue(expense) {
               :disabled="salaryPagination.page === 0"
               class="btn-secondary"
             >
-              Oldingi
+              {{ $t('previous') }}
             </button>
             <span class="text-sm text-gray-500">
-              Sahifa {{ salaryPagination.page + 1 }} / {{ salaryPagination.totalPages }}
-              (Jami: {{ salaryPagination.totalElements }})
+              {{ $t('page') }} {{ salaryPagination.page + 1 }} / {{ salaryPagination.totalPages }}
+              ({{ $t('total') }}: {{ salaryPagination.totalElements }})
             </span>
             <button
               @click="salaryPagination.page++; fetchSalaryEntries()"
               :disabled="salaryPagination.page >= salaryPagination.totalPages - 1"
               class="btn-secondary"
             >
-              Keyingi
+              {{ $t('next') }}
             </button>
           </div>
         </div>
@@ -549,7 +539,7 @@ function isOverdue(expense) {
           <!-- Entry info -->
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <dt class="text-sm text-gray-500">Turi</dt>
+              <dt class="text-sm text-gray-500">{{ $t('finance.expenses.entryType') }}</dt>
               <dd class="font-medium">
                 <span :class="['badge', getEntryTypeClass(selectedEntry)]">
                   {{ getEntryTypeLabel(selectedEntry) }}
@@ -557,7 +547,7 @@ function isOverdue(expense) {
               </dd>
             </div>
             <div>
-              <dt class="text-sm text-gray-500">Holat</dt>
+              <dt class="text-sm text-gray-500">{{ $t('status') }}</dt>
               <dd>
                 <span :class="['badge', getStatusClass(selectedEntry.status)]">
                   {{ getStatusLabel(selectedEntry.status) }}
@@ -565,12 +555,12 @@ function isOverdue(expense) {
               </dd>
             </div>
             <div>
-              <dt class="text-sm text-gray-500">Jami debet</dt>
-              <dd class="font-medium">{{ formatCurrency(selectedEntry.totalDebit) }} so'm</dd>
+              <dt class="text-sm text-gray-500">{{ $t('finance.expenses.debit') }}</dt>
+              <dd class="font-medium">{{ formatCurrency(selectedEntry.totalDebit) }} {{ $t('sum') }}</dd>
             </div>
             <div>
-              <dt class="text-sm text-gray-500">Jami kredit</dt>
-              <dd class="font-medium">{{ formatCurrency(selectedEntry.totalCredit) }} so'm</dd>
+              <dt class="text-sm text-gray-500">{{ $t('finance.expenses.credit') }}</dt>
+              <dd class="font-medium">{{ formatCurrency(selectedEntry.totalCredit) }} {{ $t('sum') }}</dd>
             </div>
           </div>
 
@@ -579,14 +569,14 @@ function isOverdue(expense) {
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
           </div>
           <div v-else-if="selectedEntry.lines?.length" class="mt-4">
-            <h4 class="text-sm font-medium text-gray-700 mb-2">Buxgalteriya yozuvlari</h4>
+            <h4 class="text-sm font-medium text-gray-700 mb-2">{{ $t('finance.expenses.accountingEntries') }}</h4>
             <table class="table">
               <thead>
                 <tr>
-                  <th>Hisob</th>
-                  <th>Tavsif</th>
-                  <th class="text-right">Debet</th>
-                  <th class="text-right">Kredit</th>
+                  <th>{{ $t('finance.expenses.account') }}</th>
+                  <th>{{ $t('description') }}</th>
+                  <th class="text-right">{{ $t('finance.expenses.debit') }}</th>
+                  <th class="text-right">{{ $t('finance.expenses.credit') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200">
@@ -609,7 +599,7 @@ function isOverdue(expense) {
         </div>
 
         <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
-          <button @click="closeDetail" class="btn-secondary">Yopish</button>
+          <button @click="closeDetail" class="btn-secondary">{{ $t('close') }}</button>
         </div>
       </div>
     </div>

@@ -1,7 +1,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { shiftsApi } from '@/services/api'
 import { EyeIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const shifts = ref([])
 const loading = ref(true)
@@ -77,9 +80,9 @@ function getStatusClass(status) {
 
 function getStatusLabel(status) {
   const labels = {
-    'OPEN': 'Ochiq',
-    'CLOSED': 'Yopilgan',
-    'RECONCILED': 'Tekshirilgan'
+    'OPEN': t('pos.shifts.open'),
+    'CLOSED': t('pos.shifts.closed'),
+    'RECONCILED': t('pos.shifts.reconciled')
   }
   return labels[status] || status
 }
@@ -94,8 +97,8 @@ function getDifferenceClass(value) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Smenalar</h1>
-        <p class="mt-1 text-sm text-gray-500">Barcha kassa smenalari tarixi</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('pos.shifts.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('pos.shifts.subtitle') }}</p>
       </div>
     </div>
 
@@ -105,23 +108,23 @@ function getDifferenceClass(value) {
       </div>
 
       <div v-else-if="shifts.length === 0" class="text-center py-12">
-        <p class="text-gray-500">Smenalar topilmadi</p>
+        <p class="text-gray-500">{{ $t('pos.shifts.noShifts') }}</p>
       </div>
 
       <div v-else class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>Smena №</th>
-              <th>Terminal</th>
-              <th>Kassir</th>
-              <th>Ochilgan vaqt</th>
-              <th>Yopilgan vaqt</th>
-              <th class="text-right">Boshlang'ich</th>
-              <th class="text-right">Sotuv</th>
-              <th class="text-center">Tranzaksiyalar</th>
-              <th>Holat</th>
-              <th class="text-right">Amallar</th>
+              <th>{{ $t('pos.shifts.shiftNumber') }}</th>
+              <th>{{ $t('pos.shifts.terminal') }}</th>
+              <th>{{ $t('pos.shifts.openedBy') }}</th>
+              <th>{{ $t('pos.shifts.openedAt') }}</th>
+              <th>{{ $t('pos.shifts.closedAt') }}</th>
+              <th class="text-right">{{ $t('pos.shifts.openingBalance') }}</th>
+              <th class="text-right">{{ $t('pos.shifts.totalSales') }}</th>
+              <th class="text-center">{{ $t('pos.transactions.title') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -159,18 +162,18 @@ function getDifferenceClass(value) {
             :disabled="pagination.page === 0"
             class="btn-secondary"
           >
-            Oldingi
+            {{ $t('previous') }}
           </button>
           <span class="text-sm text-gray-500">
-            Sahifa {{ pagination.page + 1 }} / {{ pagination.totalPages }}
-            (Jami: {{ pagination.totalElements }})
+            {{ $t('page') }} {{ pagination.page + 1 }} / {{ pagination.totalPages }}
+            ({{ $t('totalCount') }}: {{ pagination.totalElements }})
           </span>
           <button
             @click="pagination.page++; fetchShifts()"
             :disabled="pagination.page >= pagination.totalPages - 1"
             class="btn-secondary"
           >
-            Keyingi
+            {{ $t('next') }}
           </button>
         </div>
       </div>
@@ -186,7 +189,7 @@ function getDifferenceClass(value) {
         <!-- Modal Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
-            <h2 class="text-xl font-bold text-gray-900">Smena tafsilotlari</h2>
+            <h2 class="text-xl font-bold text-gray-900">{{ $t('pos.shifts.shiftDetails') }}</h2>
             <p class="text-sm text-gray-500">{{ selectedShift.shiftNumber }}</p>
           </div>
           <div class="flex items-center gap-2">
@@ -208,53 +211,53 @@ function getDifferenceClass(value) {
           <!-- Basic Info -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
-              <label class="text-sm text-gray-500">Terminal</label>
+              <label class="text-sm text-gray-500">{{ $t('pos.shifts.terminal') }}</label>
               <p class="font-medium">{{ selectedShift.terminalName || '-' }}</p>
               <p v-if="selectedShift.terminalCode" class="text-xs text-gray-400">{{ selectedShift.terminalCode }}</p>
             </div>
             <div>
-              <label class="text-sm text-gray-500">Kassir</label>
+              <label class="text-sm text-gray-500">{{ $t('pos.shifts.openedBy') }}</label>
               <p class="font-medium">{{ selectedShift.cashierName || '-' }}</p>
             </div>
             <div>
-              <label class="text-sm text-gray-500">Ochilgan vaqt</label>
+              <label class="text-sm text-gray-500">{{ $t('pos.shifts.openedAt') }}</label>
               <p class="font-medium text-sm">{{ formatDateTime(selectedShift.openedAt) }}</p>
             </div>
             <div>
-              <label class="text-sm text-gray-500">Yopilgan vaqt</label>
+              <label class="text-sm text-gray-500">{{ $t('pos.shifts.closedAt') }}</label>
               <p class="font-medium text-sm">{{ formatDateTime(selectedShift.closedAt) }}</p>
             </div>
           </div>
 
           <!-- Cash Summary -->
           <div>
-            <h3 class="font-semibold text-gray-900 mb-3">Kassa hisoboti</h3>
+            <h3 class="font-semibold text-gray-900 mb-3">{{ $t('pos.shifts.cashReport') }}</h3>
             <div class="bg-gray-50 rounded-lg p-4">
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div>
-                  <label class="text-sm text-gray-500">Boshlang'ich summa</label>
+                  <label class="text-sm text-gray-500">{{ $t('pos.shifts.openingBalance') }}</label>
                   <p class="text-lg font-semibold">{{ formatCurrency(selectedShift.openingCash) }} so'm</p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Yopilish summasi</label>
+                  <label class="text-sm text-gray-500">{{ $t('pos.shifts.closingBalance') }}</label>
                   <p class="text-lg font-semibold">{{ formatCurrency(selectedShift.closingCash) }} so'm</p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Kutilgan summa</label>
+                  <label class="text-sm text-gray-500">{{ $t('pos.shifts.expectedCash') }}</label>
                   <p class="text-lg font-semibold">{{ formatCurrency(selectedShift.expectedCash) }} so'm</p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Farq</label>
+                  <label class="text-sm text-gray-500">{{ $t('pos.shifts.difference') }}</label>
                   <p :class="['text-lg font-semibold', getDifferenceClass(selectedShift.cashDifference)]">
                     {{ selectedShift.cashDifference > 0 ? '+' : '' }}{{ formatCurrency(selectedShift.cashDifference) }} so'm
                   </p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Kirim (Cash In)</label>
+                  <label class="text-sm text-gray-500">{{ $t('pos.shifts.cashIn') }}</label>
                   <p class="text-lg font-semibold text-green-600">+{{ formatCurrency(selectedShift.cashIn) }} so'm</p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Chiqim (Cash Out)</label>
+                  <label class="text-sm text-gray-500">{{ $t('pos.shifts.cashOut') }}</label>
                   <p class="text-lg font-semibold text-red-600">-{{ formatCurrency(selectedShift.cashOut) }} so'm</p>
                 </div>
               </div>
@@ -263,24 +266,24 @@ function getDifferenceClass(value) {
 
           <!-- Sales Summary -->
           <div>
-            <h3 class="font-semibold text-gray-900 mb-3">Sotuv ma'lumotlari</h3>
+            <h3 class="font-semibold text-gray-900 mb-3">{{ $t('pos.shifts.salesInfo') }}</h3>
             <div class="bg-gray-50 rounded-lg overflow-hidden">
               <table class="w-full">
                 <tbody class="divide-y divide-gray-200">
                   <tr>
-                    <td class="px-4 py-3 text-gray-600">Jami sotuv</td>
+                    <td class="px-4 py-3 text-gray-600">{{ $t('pos.shifts.totalSales') }}</td>
                     <td class="px-4 py-3 text-right font-semibold">{{ formatCurrency(selectedShift.totalSales) }} so'm</td>
                   </tr>
                   <tr>
-                    <td class="px-4 py-3 text-gray-600">Qaytarishlar</td>
+                    <td class="px-4 py-3 text-gray-600">{{ $t('pos.shifts.returns') }}</td>
                     <td class="px-4 py-3 text-right font-semibold text-red-600">-{{ formatCurrency(selectedShift.totalReturns) }} so'm</td>
                   </tr>
                   <tr>
-                    <td class="px-4 py-3 text-gray-600">Chegirmalar</td>
+                    <td class="px-4 py-3 text-gray-600">{{ $t('pos.shifts.discounts') }}</td>
                     <td class="px-4 py-3 text-right font-semibold text-orange-600">-{{ formatCurrency(selectedShift.totalDiscounts) }} so'm</td>
                   </tr>
                   <tr>
-                    <td class="px-4 py-3 text-gray-600">Soliqlar</td>
+                    <td class="px-4 py-3 text-gray-600">{{ $t('pos.shifts.taxes') }}</td>
                     <td class="px-4 py-3 text-right font-semibold">{{ formatCurrency(selectedShift.totalTaxes) }} so'm</td>
                   </tr>
                 </tbody>
@@ -290,18 +293,18 @@ function getDifferenceClass(value) {
 
           <!-- Payment Breakdown -->
           <div>
-            <h3 class="font-semibold text-gray-900 mb-3">To'lov turlari</h3>
+            <h3 class="font-semibold text-gray-900 mb-3">{{ $t('pos.shifts.paymentTypes') }}</h3>
             <div class="grid grid-cols-3 gap-4">
               <div class="bg-green-50 rounded-lg p-4 text-center">
-                <label class="text-sm text-green-700">Naqd</label>
+                <label class="text-sm text-green-700">{{ $t('pos.cash') }}</label>
                 <p class="text-lg font-bold text-green-800">{{ formatCurrency(selectedShift.cashPayments) }}</p>
               </div>
               <div class="bg-blue-50 rounded-lg p-4 text-center">
-                <label class="text-sm text-blue-700">Karta</label>
+                <label class="text-sm text-blue-700">{{ $t('pos.card') }}</label>
                 <p class="text-lg font-bold text-blue-800">{{ formatCurrency(selectedShift.cardPayments) }}</p>
               </div>
               <div class="bg-purple-50 rounded-lg p-4 text-center">
-                <label class="text-sm text-purple-700">Boshqa</label>
+                <label class="text-sm text-purple-700">{{ $t('pos.shifts.other') }}</label>
                 <p class="text-lg font-bold text-purple-800">{{ formatCurrency(selectedShift.otherPayments) }}</p>
               </div>
             </div>
@@ -309,18 +312,18 @@ function getDifferenceClass(value) {
 
           <!-- Transaction Counts -->
           <div>
-            <h3 class="font-semibold text-gray-900 mb-3">Tranzaksiyalar</h3>
+            <h3 class="font-semibold text-gray-900 mb-3">{{ $t('pos.transactions.title') }}</h3>
             <div class="grid grid-cols-3 gap-4">
               <div class="bg-gray-50 rounded-lg p-4 text-center">
-                <label class="text-sm text-gray-600">Jami</label>
+                <label class="text-sm text-gray-600">{{ $t('total') }}</label>
                 <p class="text-2xl font-bold text-gray-900">{{ selectedShift.transactionCount || 0 }}</p>
               </div>
               <div class="bg-red-50 rounded-lg p-4 text-center">
-                <label class="text-sm text-red-700">Bekor qilingan</label>
+                <label class="text-sm text-red-700">{{ $t('pos.transactions.voided') }}</label>
                 <p class="text-2xl font-bold text-red-800">{{ selectedShift.voidedCount || 0 }}</p>
               </div>
               <div class="bg-orange-50 rounded-lg p-4 text-center">
-                <label class="text-sm text-orange-700">Qaytarilgan</label>
+                <label class="text-sm text-orange-700">{{ $t('pos.shifts.returned') }}</label>
                 <p class="text-2xl font-bold text-orange-800">{{ selectedShift.returnCount || 0 }}</p>
               </div>
             </div>
@@ -328,14 +331,14 @@ function getDifferenceClass(value) {
 
           <!-- Notes -->
           <div v-if="selectedShift.notes || selectedShift.closingNotes">
-            <h3 class="font-semibold text-gray-900 mb-3">Izohlar</h3>
+            <h3 class="font-semibold text-gray-900 mb-3">{{ $t('notes') }}</h3>
             <div class="space-y-2">
               <div v-if="selectedShift.notes" class="bg-gray-50 rounded-lg p-3">
-                <label class="text-xs text-gray-500">Ochilish izohi</label>
+                <label class="text-xs text-gray-500">{{ $t('pos.shifts.openingNote') }}</label>
                 <p class="text-gray-700">{{ selectedShift.notes }}</p>
               </div>
               <div v-if="selectedShift.closingNotes" class="bg-gray-50 rounded-lg p-3">
-                <label class="text-xs text-gray-500">Yopilish izohi</label>
+                <label class="text-xs text-gray-500">{{ $t('pos.shifts.closingNote') }}</label>
                 <p class="text-gray-700">{{ selectedShift.closingNotes }}</p>
               </div>
             </div>

@@ -1,8 +1,11 @@
 <script setup>
 import { ref, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { authApi } from '@/services/api'
 import { ArrowLeftIcon, EyeIcon, EyeSlashIcon, KeyIcon } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
@@ -33,28 +36,28 @@ function validate() {
   let isValid = true
 
   if (!form.token.trim()) {
-    errors.token = 'Reset code is required'
+    errors.token = t('auth.resetCodeRequired')
     isValid = false
   }
 
   if (!form.phone.trim()) {
-    errors.phone = 'Phone number is required'
+    errors.phone = t('auth.phoneRequired')
     isValid = false
   }
 
   if (!form.newPassword) {
-    errors.newPassword = 'New password is required'
+    errors.newPassword = t('auth.newPasswordRequired')
     isValid = false
   } else if (form.newPassword.length < 8) {
-    errors.newPassword = 'Password must be at least 8 characters'
+    errors.newPassword = t('auth.passwordMinLength')
     isValid = false
   }
 
   if (!form.confirmPassword) {
-    errors.confirmPassword = 'Please confirm your password'
+    errors.confirmPassword = t('auth.confirmPasswordRequired')
     isValid = false
   } else if (form.newPassword !== form.confirmPassword) {
-    errors.confirmPassword = 'Passwords do not match'
+    errors.confirmPassword = t('auth.passwordsDoNotMatch')
     isValid = false
   }
 
@@ -86,9 +89,9 @@ async function handleSubmit() {
           errors[err.field] = err.message
         }
       })
-      errors.general = 'Please fix the errors below'
+      errors.general = t('auth.fixErrorsBelow')
     } else {
-      errors.general = response?.message || 'Failed to reset password. The code may be invalid or expired.'
+      errors.general = response?.message || t('auth.failedToReset')
     }
   } finally {
     loading.value = false
@@ -104,19 +107,19 @@ async function handleSubmit() {
         <div class="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
           <span class="text-white font-bold text-3xl">H</span>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900">Reset Password</h2>
-        <p class="mt-2 text-sm text-gray-600">Enter your reset code and new password</p>
+        <h2 class="text-2xl font-bold text-gray-900">{{ $t('auth.resetPassword') }}</h2>
+        <p class="mt-2 text-sm text-gray-600">{{ $t('auth.resetPasswordSubtitle') }}</p>
       </div>
 
       <!-- Success message -->
       <div v-if="success" class="text-center">
         <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
           <p class="text-sm text-green-700">
-            Your password has been reset successfully! Redirecting to login...
+            {{ $t('auth.passwordResetSuccess') }}
           </p>
         </div>
         <RouterLink to="/login" class="btn-primary inline-block">
-          Go to Login
+          {{ $t('auth.goToLogin') }}
         </RouterLink>
       </div>
 
@@ -129,7 +132,7 @@ async function handleSubmit() {
 
         <!-- Phone -->
         <div>
-          <label for="phone" class="label">Phone Number</label>
+          <label for="phone" class="label">{{ $t('auth.phoneNumber') }}</label>
           <input
             id="phone"
             v-model="form.phone"
@@ -142,7 +145,7 @@ async function handleSubmit() {
 
         <!-- Reset Code -->
         <div>
-          <label for="token" class="label">Reset Code</label>
+          <label for="token" class="label">{{ $t('auth.resetCode') }}</label>
           <div class="relative">
             <KeyIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
@@ -150,7 +153,7 @@ async function handleSubmit() {
               v-model="form.token"
               type="text"
               :class="[errors.token ? 'input-error' : 'input', 'pl-10']"
-              placeholder="Enter the code from SMS"
+              :placeholder="$t('auth.enterCodeFromSms')"
             />
           </div>
           <p v-if="errors.token" class="mt-1 text-sm text-red-600">{{ errors.token }}</p>
@@ -158,14 +161,14 @@ async function handleSubmit() {
 
         <!-- New Password -->
         <div>
-          <label for="newPassword" class="label">New Password</label>
+          <label for="newPassword" class="label">{{ $t('auth.newPassword') }}</label>
           <div class="relative">
             <input
               id="newPassword"
               v-model="form.newPassword"
               :type="showPassword ? 'text' : 'password'"
               :class="[errors.newPassword ? 'input-error' : 'input', 'pr-10']"
-              placeholder="Enter new password"
+              :placeholder="$t('auth.enterNewPassword')"
             />
             <button
               type="button"
@@ -181,14 +184,14 @@ async function handleSubmit() {
 
         <!-- Confirm Password -->
         <div>
-          <label for="confirmPassword" class="label">Confirm Password</label>
+          <label for="confirmPassword" class="label">{{ $t('auth.confirmPassword') }}</label>
           <div class="relative">
             <input
               id="confirmPassword"
               v-model="form.confirmPassword"
               :type="showConfirmPassword ? 'text' : 'password'"
               :class="[errors.confirmPassword ? 'input-error' : 'input', 'pr-10']"
-              placeholder="Confirm new password"
+              :placeholder="$t('auth.confirmNewPassword')"
             />
             <button
               type="button"
@@ -208,14 +211,14 @@ async function handleSubmit() {
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          {{ loading ? 'Resetting...' : 'Reset Password' }}
+          {{ loading ? $t('auth.resetting') : $t('auth.resetPassword') }}
         </button>
 
         <!-- Back to login -->
         <div class="text-center">
           <RouterLink to="/login" class="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500">
             <ArrowLeftIcon class="h-4 w-4 mr-1" />
-            Back to login
+            {{ $t('auth.backToLogin') }}
           </RouterLink>
         </div>
       </form>

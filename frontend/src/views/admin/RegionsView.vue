@@ -9,6 +9,9 @@ import {
   MagnifyingGlassIcon,
   MapPinIcon
 } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const router = useRouter()
 const regions = ref([])
@@ -39,13 +42,13 @@ async function fetchRegions(page = 0) {
 }
 
 async function deleteRegion(region) {
-  if (!confirm(`"${region.name}" hududni o'chirishni xohlaysizmi?`)) return
+  if (!confirm(t('admin.regions.confirmDelete', { name: region.name }))) return
 
   try {
     await deliveryRegionsApi.delete(region.id)
     fetchRegions(currentPage.value)
   } catch (error) {
-    alert(error.response?.data?.message || 'O\'chirishda xatolik yuz berdi')
+    alert(error.response?.data?.message || t('admin.regions.deleteError'))
   }
 }
 
@@ -61,12 +64,12 @@ onMounted(() => fetchRegions())
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Hududlar (Regionlar)</h1>
-        <p class="text-sm text-gray-500 mt-1">Yetkazib berish hududlarini boshqaring</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('admin.regions.title') }}</h1>
+        <p class="text-sm text-gray-500 mt-1">{{ $t('admin.regions.subtitle') }}</p>
       </div>
       <router-link to="/admin/regions/new" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Yangi hudud
+        {{ $t('admin.regions.newRegion') }}
       </router-link>
     </div>
 
@@ -79,7 +82,7 @@ onMounted(() => fetchRegions())
             v-model="searchQuery"
             @input="handleSearch"
             type="text"
-            placeholder="Hudud nomi yoki kodi bo'yicha qidirish..."
+            :placeholder="$t('admin.regions.searchPlaceholder')"
             class="input pl-10"
           />
         </div>
@@ -92,21 +95,21 @@ onMounted(() => fetchRegions())
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nomi</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kod</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mahallalar soni</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Holat</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amallar</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('name') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('code') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('admin.regions.villageCount') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('status') }}</th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="loading">
-              <td colspan="5" class="px-6 py-8 text-center text-gray-500">Yuklanmoqda...</td>
+              <td colspan="5" class="px-6 py-8 text-center text-gray-500">{{ $t('loading') }}</td>
             </tr>
             <tr v-else-if="regions.length === 0">
               <td colspan="5" class="px-6 py-8 text-center text-gray-500">
                 <MapPinIcon class="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                <p>Hududlar topilmadi</p>
+                <p>{{ $t('admin.regions.noRegions') }}</p>
               </td>
             </tr>
             <tr v-for="region in regions" :key="region.id" class="hover:bg-gray-50">
@@ -123,7 +126,7 @@ onMounted(() => fetchRegions())
                     region.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   ]"
                 >
-                  {{ region.active ? 'Faol' : 'Nofaol' }}
+                  {{ region.active ? $t('active') : $t('inactive') }}
                 </span>
               </td>
               <td class="px-6 py-4 text-right space-x-2">
@@ -148,7 +151,7 @@ onMounted(() => fetchRegions())
       <!-- Pagination -->
       <div v-if="totalPages > 1" class="px-6 py-3 border-t flex items-center justify-between">
         <p class="text-sm text-gray-500">
-          Jami: {{ totalElements }} ta hudud
+          {{ $t('admin.regions.totalRegions') }}: {{ totalElements }}
         </p>
         <div class="flex gap-2">
           <button
@@ -156,14 +159,14 @@ onMounted(() => fetchRegions())
             :disabled="currentPage === 0"
             class="btn-secondary text-sm py-1 px-3"
           >
-            Oldingi
+            {{ $t('previous') }}
           </button>
           <button
             @click="fetchRegions(currentPage + 1)"
             :disabled="currentPage >= totalPages - 1"
             class="btn-secondary text-sm py-1 px-3"
           >
-            Keyingi
+            {{ $t('next') }}
           </button>
         </div>
       </div>

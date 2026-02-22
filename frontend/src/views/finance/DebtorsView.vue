@@ -1,10 +1,12 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { arReportsApi, arInvoicesApi, arPaymentsApi } from '@/services/api'
 import { useReceiptStore } from '@/stores/receipt'
 import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon, PlusIcon, BanknotesIcon } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const router = useRouter()
 const receiptStore = useReceiptStore()
 const brandConfig = computed(() => receiptStore.config)
@@ -138,12 +140,12 @@ const paymentForm = reactive({
 const paymentSubmitting = ref(false)
 const paymentError = ref('')
 
-const paymentMethods = [
-  { value: 'CASH', label: 'Naqd pul' },
-  { value: 'BANK_TRANSFER', label: 'Bank o\'tkazmasi' },
-  { value: 'CREDIT_CARD', label: 'Kredit karta' },
-  { value: 'MOBILE_PAYMENT', label: 'Mobil to\'lov' }
-]
+const paymentMethods = computed(() => [
+  { value: 'CASH', label: t('enums.paymentMethod.CASH') },
+  { value: 'BANK_TRANSFER', label: t('enums.paymentMethod.BANK_TRANSFER') },
+  { value: 'CREDIT_CARD', label: t('enums.paymentMethod.CREDIT_CARD') },
+  { value: 'MOBILE_PAYMENT', label: t('enums.paymentMethod.MOBILE_PAYMENT') }
+])
 
 function openPayment(invoice) {
   paymentInvoice.value = invoice
@@ -158,11 +160,11 @@ function openPayment(invoice) {
 async function submitPayment() {
   if (!paymentInvoice.value || !selectedCustomer.value) return
   if (paymentForm.amount <= 0) {
-    paymentError.value = 'To\'lov summasi musbat bo\'lishi kerak'
+    paymentError.value = t('finance.expenseDetail.paymentAmountRequired')
     return
   }
   if (paymentForm.amount > paymentInvoice.value.balanceDue) {
-    paymentError.value = 'To\'lov summasi qarz qoldig\'idan oshmasligi kerak'
+    paymentError.value = t('finance.expenseDetail.paymentExceedsBalance')
     return
   }
 
@@ -198,22 +200,14 @@ async function submitPayment() {
     customerPayments.value = payData.content || payData || []
     await fetchData()
   } catch (e) {
-    paymentError.value = e.response?.data?.message || 'To\'lovni qayd etishda xatolik'
+    paymentError.value = e.response?.data?.message || t('finance.expenseDetail.paymentError')
   } finally {
     paymentSubmitting.value = false
   }
 }
 
 function getStatusLabel(status) {
-  const labels = {
-    'PENDING': 'Kutilmoqda',
-    'SENT': 'Yuborilgan',
-    'PARTIAL': 'Qisman',
-    'OVERDUE': 'Muddati o\'tgan',
-    'DRAFT': 'Qoralama',
-    'DISPUTED': 'Bahsli'
-  }
-  return labels[status] || status
+  return t(`enums.arInvoiceStatus.${status}`, status)
 }
 
 function getStatusClass(status) {
@@ -238,14 +232,7 @@ function formatDate(dateString) {
 }
 
 function getPaymentStatusLabel(status) {
-  const labels = {
-    'PENDING': 'Kutilmoqda',
-    'COMPLETED': 'Bajarildi',
-    'DEPOSITED': 'Depozitga qo\'yildi',
-    'CANCELLED': 'Bekor qilingan',
-    'REFUNDED': 'Qaytarilgan'
-  }
-  return labels[status] || status
+  return t(`enums.arPaymentStatus.${status}`, status)
 }
 
 function getPaymentStatusClass(status) {
@@ -258,18 +245,7 @@ function getPaymentStatusClass(status) {
 }
 
 function getMethodLabel(method) {
-  const labels = {
-    'CASH': 'Naqd pul',
-    'BANK_TRANSFER': 'Bank o\'tkazmasi',
-    'CREDIT_CARD': 'Kredit karta',
-    'DEBIT_CARD': 'Debet karta',
-    'MOBILE_PAYMENT': 'Mobil to\'lov',
-    'ONLINE_PAYMENT': 'Onlayn to\'lov',
-    'CHECK': 'Chek',
-    'STORE_CREDIT': 'Do\'kon krediti',
-    'OTHER': 'Boshqa'
-  }
-  return labels[method] || method
+  return t(`enums.paymentMethod.${method}`, method)
 }
 
 function printCustomerDebt() {
@@ -288,11 +264,11 @@ function printCustomerDebt() {
     invoiceRows += `
       <tr style="background: #f3f4f6;">
         <td colspan="6" style="padding: 8px 10px; border: 1px solid #d1d5db; font-weight: 600;">
-          <span style="color: #111827;">Faktura: ${inv.invoiceNumber}</span>
-          <span style="margin-left: 16px; color: #6b7280; font-size: 11px;">Sana: ${formatDate(inv.invoiceDate)}</span>
-          <span style="margin-left: 16px; color: #6b7280; font-size: 11px;">Muddat: ${formatDate(inv.dueDate)}</span>
-          ${inv.overdue ? '<span style="margin-left: 16px; color: #dc2626; font-size: 11px; font-weight: 600;">' + inv.daysOverdue + ' kun kechikkan</span>' : ''}
-          <span style="float: right; color: #dc2626; font-weight: 700;">Qoldiq: ${formatCurrency(inv.balanceDue)} so'm</span>
+          <span style="color: #111827;">${t('finance.payments.invoice')}: ${inv.invoiceNumber}</span>
+          <span style="margin-left: 16px; color: #6b7280; font-size: 11px;">${t('date')}: ${formatDate(inv.invoiceDate)}</span>
+          <span style="margin-left: 16px; color: #6b7280; font-size: 11px;">${t('finance.debtors.dueDate')}: ${formatDate(inv.dueDate)}</span>
+          ${inv.overdue ? '<span style="margin-left: 16px; color: #dc2626; font-size: 11px; font-weight: 600;">' + inv.daysOverdue + ' ' + t('finance.debtors.overdue') + '</span>' : ''}
+          <span style="float: right; color: #dc2626; font-weight: 700;">${t('balance')}: ${formatCurrency(inv.balanceDue)} ${t('sum')}</span>
         </td>
       </tr>`
 
@@ -316,7 +292,7 @@ function printCustomerDebt() {
       invoiceRows += `
         <tr>
           <td colspan="6" style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: center; color: #9ca3af; font-size: 11px;">
-            Mahsulot tafsilotlari mavjud emas
+            ${t('noData')}
           </td>
         </tr>`
     }
@@ -333,7 +309,7 @@ function printCustomerDebt() {
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Qarzdor: ${customer.customerName}</title>
+      <title>${t('finance.debtors.debtor')}: ${customer.customerName}</title>
       <style>
         @page { size: A4 portrait; margin: 12mm 15mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -352,8 +328,8 @@ function printCustomerDebt() {
           ${brandConfig.value.phone ? '<div style="color: #6b7280; font-size: 12px;">Tel: ' + brandConfig.value.phone + '</div>' : ''}
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Qarz tafsiloti</div>
-          <div style="color: #6b7280; margin-top: 4px;">Sana: ${today}</div>
+          <div style="font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">${t('details')}</div>
+          <div style="color: #6b7280; margin-top: 4px;">${t('date')}: ${today}</div>
         </div>
       </div>
 
@@ -361,13 +337,13 @@ function printCustomerDebt() {
       <div style="display: flex; justify-content: space-between; margin-bottom: 16px; padding: 12px 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
         <div>
           <div style="font-size: 16px; font-weight: bold;">${customer.customerName}</div>
-          ${customer.customerCode ? '<div style="color: #6b7280; font-size: 12px;">Kod: ' + customer.customerCode + '</div>' : ''}
-          ${customer.paymentTerms ? '<div style="color: #6b7280; font-size: 12px;">To\'lov muddati: ' + customer.paymentTerms + ' kun</div>' : ''}
+          ${customer.customerCode ? '<div style="color: #6b7280; font-size: 12px;">' + t('code') + ': ' + customer.customerCode + '</div>' : ''}
+          ${customer.paymentTerms ? '<div style="color: #6b7280; font-size: 12px;">' + t('finance.debtors.dueDate') + ': ' + customer.paymentTerms + '</div>' : ''}
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 12px; color: #6b7280;">Jami qarz:</div>
-          <div style="font-size: 20px; font-weight: bold; color: #dc2626;">${formatCurrency(customer.netBalance)} so'm</div>
-          ${customer.creditLimit ? '<div style="font-size: 11px; color: #6b7280;">Kredit limiti: ' + formatCurrency(customer.creditLimit) + ' so\'m</div>' : ''}
+          <div style="font-size: 12px; color: #6b7280;">${t('finance.debtors.totalDebt')}:</div>
+          <div style="font-size: 20px; font-weight: bold; color: #dc2626;">${formatCurrency(customer.netBalance)} ${t('sum')}</div>
+          ${customer.creditLimit ? '<div style="font-size: 11px; color: #6b7280;">' + t('finance.debtors.creditLimit') + ': ' + formatCurrency(customer.creditLimit) + ' ' + t('sum') + '</div>' : ''}
         </div>
       </div>
 
@@ -375,39 +351,39 @@ function printCustomerDebt() {
       <!-- Aging -->
       <div style="display: flex; gap: 8px; margin-bottom: 16px; font-size: 11px;">
         <div style="flex: 1; padding: 8px; background: #f0fdf4; border-radius: 6px; text-align: center;">
-          <div style="color: #6b7280;">Joriy</div>
+          <div style="color: #6b7280;">${t('finance.debtors.current')}</div>
           <div style="font-weight: 600; color: #15803d;">${formatCurrency(aging.currentAmount)}</div>
         </div>
         <div style="flex: 1; padding: 8px; background: #fefce8; border-radius: 6px; text-align: center;">
-          <div style="color: #6b7280;">1-30 kun</div>
+          <div style="color: #6b7280;">${t('finance.debtors.days1to30')}</div>
           <div style="font-weight: 600; color: #ca8a04;">${formatCurrency(aging.days1To30)}</div>
         </div>
         <div style="flex: 1; padding: 8px; background: #fff7ed; border-radius: 6px; text-align: center;">
-          <div style="color: #6b7280;">31-60 kun</div>
+          <div style="color: #6b7280;">${t('finance.debtors.days31to60')}</div>
           <div style="font-weight: 600; color: #ea580c;">${formatCurrency(aging.days31To60)}</div>
         </div>
         <div style="flex: 1; padding: 8px; background: #fef2f2; border-radius: 6px; text-align: center;">
-          <div style="color: #6b7280;">61-90 kun</div>
+          <div style="color: #6b7280;">${t('finance.debtors.days61to90')}</div>
           <div style="font-weight: 600; color: #dc2626;">${formatCurrency(aging.days61To90)}</div>
         </div>
         <div style="flex: 1; padding: 8px; background: #fef2f2; border-radius: 6px; text-align: center;">
-          <div style="color: #6b7280;">90+ kun</div>
+          <div style="color: #6b7280;">${t('finance.debtors.over90days')}</div>
           <div style="font-weight: 600; color: #991b1b;">${formatCurrency(aging.over90Days)}</div>
         </div>
       </div>
       ` : ''}
 
       <!-- Invoices with Items -->
-      <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">To'lanmagan fakturalar va mahsulotlar</div>
+      <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">${t('finance.debtors.unpaidInvoices')}</div>
       <table>
         <thead>
           <tr>
             <th style="text-align: center; width: 35px;">№</th>
-            <th>Mahsulot</th>
-            <th style="text-align: center; width: 80px;">Soni</th>
-            <th style="text-align: right; width: 100px;">Narxi</th>
-            <th style="text-align: right; width: 80px;">Chegirma</th>
-            <th style="text-align: right; width: 110px;">Jami</th>
+            <th>${t('product')}</th>
+            <th style="text-align: center; width: 80px;">${t('quantity')}</th>
+            <th style="text-align: right; width: 100px;">${t('price')}</th>
+            <th style="text-align: right; width: 80px;">${t('receipt.discount')}</th>
+            <th style="text-align: right; width: 110px;">${t('total')}</th>
           </tr>
         </thead>
         <tbody>
@@ -415,16 +391,16 @@ function printCustomerDebt() {
         </tbody>
         <tfoot>
           <tr style="background: #f3f4f6; font-weight: bold;">
-            <td colspan="5" style="padding: 8px 10px; border: 1px solid #d1d5db;">Umumiy jami</td>
-            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right;">${formatCurrency(totalAmount)} so'm</td>
+            <td colspan="5" style="padding: 8px 10px; border: 1px solid #d1d5db;">${t('total')}</td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right;">${formatCurrency(totalAmount)} ${t('sum')}</td>
           </tr>
           <tr style="font-weight: bold;">
-            <td colspan="5" style="padding: 6px 10px; border: 1px solid #d1d5db; color: #15803d;">To'langan</td>
-            <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right; color: #15803d;">${formatCurrency(totalPaid)} so'm</td>
+            <td colspan="5" style="padding: 6px 10px; border: 1px solid #d1d5db; color: #15803d;">${t('finance.debtors.paidAmount')}</td>
+            <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right; color: #15803d;">${formatCurrency(totalPaid)} ${t('sum')}</td>
           </tr>
           <tr style="font-weight: bold; background: #fef2f2;">
-            <td colspan="5" style="padding: 8px 10px; border: 1px solid #d1d5db; color: #dc2626; font-size: 13px;">Qarz qoldig'i</td>
-            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right; color: #dc2626; font-size: 13px;">${formatCurrency(totalBalance)} so'm</td>
+            <td colspan="5" style="padding: 8px 10px; border: 1px solid #d1d5db; color: #dc2626; font-size: 13px;">${t('finance.debtors.remainingBalance')}</td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right; color: #dc2626; font-size: 13px;">${formatCurrency(totalBalance)} ${t('sum')}</td>
           </tr>
         </tfoot>
       </table>
@@ -432,16 +408,16 @@ function printCustomerDebt() {
       <!-- Footer -->
       <div style="margin-top: 40px; display: flex; justify-content: space-between;">
         <div style="width: 40%;">
-          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">Tuzuvchi:</div>
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">${t('invoice.sellerHandedOver')}:</div>
           <div style="border-bottom: 1px solid #111827; min-height: 30px;"></div>
         </div>
         <div style="width: 40%;">
-          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">Mijoz imzosi:</div>
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">${t('invoice.buyerReceived')}:</div>
           <div style="border-bottom: 1px solid #111827; min-height: 30px;"></div>
         </div>
       </div>
       <div style="margin-top: 24px; text-align: center; font-size: 10px; color: #9ca3af;">
-        Chop etilgan: ${new Date().toLocaleString('uz-UZ')}
+        ${t('receipt.printedAt')}: ${new Date().toLocaleString('uz-UZ')}
       </div>
     </body>
     </html>
@@ -461,7 +437,7 @@ function printDebtors() {
 
   const rows = list.map((c, i) => {
     const aging = getAgingForCustomer(c.customerId)
-    const status = c.onCreditHold ? 'To\'xtatilgan' : c.overCreditLimit ? 'Limitidan oshgan' : 'Faol'
+    const status = c.onCreditHold ? t('finance.debtors.creditHold') : c.overCreditLimit ? t('finance.debtors.overLimit') : t('active')
     return `
       <tr>
         <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: center;">${i + 1}</td>
@@ -489,7 +465,7 @@ function printDebtors() {
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Qarzdorlar ro'yxati</title>
+      <title>${t('finance.debtors.title')}</title>
       <style>
         @page { size: A4 landscape; margin: 12mm 15mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -508,17 +484,17 @@ function printDebtors() {
           ${brandConfig.value.phone ? '<div style="color: #6b7280; font-size: 12px;">Tel: ' + brandConfig.value.phone + '</div>' : ''}
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 22px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Qarzdorlar ro'yxati</div>
-          <div style="color: #6b7280; margin-top: 4px;">Sana: ${today}</div>
+          <div style="font-size: 22px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">${t('finance.debtors.title')}</div>
+          <div style="color: #6b7280; margin-top: 4px;">${t('date')}: ${today}</div>
         </div>
       </div>
 
       <!-- Summary -->
       <div style="display: flex; gap: 24px; margin-bottom: 16px; font-size: 13px;">
-        <div><strong>Jami qarzdorlar:</strong> ${summary.value.count} ta</div>
-        <div><strong>Jami qarz:</strong> <span style="color: #dc2626;">${formatCurrency(summary.value.totalDebt)} so'm</span></div>
-        <div><strong>Limitidan oshgan:</strong> ${summary.value.overLimit}</div>
-        <div><strong>Kredit to'xtatilgan:</strong> ${summary.value.onHold}</div>
+        <div><strong>${t('finance.debtors.title')}:</strong> ${summary.value.count} ${t('items')}</div>
+        <div><strong>${t('finance.debtors.totalDebt')}:</strong> <span style="color: #dc2626;">${formatCurrency(summary.value.totalDebt)} ${t('sum')}</span></div>
+        <div><strong>${t('finance.debtors.overLimit')}:</strong> ${summary.value.overLimit}</div>
+        <div><strong>${t('finance.debtors.creditHold')}:</strong> ${summary.value.onHold}</div>
       </div>
 
       <!-- Table -->
@@ -526,15 +502,15 @@ function printDebtors() {
         <thead>
           <tr>
             <th style="text-align: center; width: 35px;">№</th>
-            <th>Mijoz</th>
-            <th style="text-align: right;">Qarz summasi</th>
-            <th style="text-align: right;">Kredit limiti</th>
-            <th style="text-align: right;">Joriy</th>
-            <th style="text-align: right;">1-30 kun</th>
-            <th style="text-align: right;">31-60 kun</th>
-            <th style="text-align: right;">60+ kun</th>
-            <th style="text-align: center;">Holat</th>
-            <th style="text-align: center;">Oxirgi faktura</th>
+            <th>${t('customer')}</th>
+            <th style="text-align: right;">${t('finance.debtors.totalDebt')}</th>
+            <th style="text-align: right;">${t('finance.debtors.creditLimit')}</th>
+            <th style="text-align: right;">${t('finance.debtors.current')}</th>
+            <th style="text-align: right;">${t('finance.debtors.days1to30')}</th>
+            <th style="text-align: right;">${t('finance.debtors.days31to60')}</th>
+            <th style="text-align: right;">60+</th>
+            <th style="text-align: center;">${t('status')}</th>
+            <th style="text-align: center;">${t('finance.debtors.lastInvoice')}</th>
           </tr>
         </thead>
         <tbody>
@@ -542,8 +518,8 @@ function printDebtors() {
         </tbody>
         <tfoot>
           <tr style="background: #f3f4f6; font-weight: bold;">
-            <td colspan="2" style="padding: 8px 10px; border: 1px solid #d1d5db;">JAMI</td>
-            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right; color: #dc2626;">${formatCurrency(summary.value.totalDebt)} so'm</td>
+            <td colspan="2" style="padding: 8px 10px; border: 1px solid #d1d5db;">${t('total')}</td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right; color: #dc2626;">${formatCurrency(summary.value.totalDebt)} ${t('sum')}</td>
             <td style="padding: 8px 10px; border: 1px solid #d1d5db;"></td>
             <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right;">${formatCurrency(agingTotals.totalCurrent)}</td>
             <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right;">${formatCurrency(agingTotals.total1To30Days)}</td>
@@ -557,16 +533,16 @@ function printDebtors() {
       <!-- Footer -->
       <div style="margin-top: 40px; display: flex; justify-content: space-between;">
         <div style="width: 40%;">
-          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">Tuzuvchi:</div>
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">${t('invoice.sellerHandedOver')}:</div>
           <div style="border-bottom: 1px solid #111827; min-height: 30px;"></div>
         </div>
         <div style="width: 40%;">
-          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">Tasdiqladi:</div>
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">${t('confirm')}:</div>
           <div style="border-bottom: 1px solid #111827; min-height: 30px;"></div>
         </div>
       </div>
       <div style="margin-top: 24px; text-align: center; font-size: 10px; color: #9ca3af;">
-        Chop etilgan: ${new Date().toLocaleString('uz-UZ')}
+        ${t('receipt.printedAt')}: ${new Date().toLocaleString('uz-UZ')}
       </div>
     </body>
     </html>
@@ -585,8 +561,8 @@ function printDebtors() {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Qarzdorlar</h1>
-        <p class="mt-1 text-sm text-gray-500">Nasiyaga olgan mijozlar ro'yxati</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('finance.debtors.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('finance.debtors.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-3">
         <button
@@ -594,7 +570,7 @@ function printDebtors() {
           class="btn-primary flex items-center gap-2"
         >
           <PlusIcon class="h-5 w-5" />
-          Qarz qo'shish
+          {{ $t('finance.debtors.addDebt') }}
         </button>
         <button
           @click="printDebtors"
@@ -602,7 +578,7 @@ function printDebtors() {
           class="btn-secondary flex items-center gap-2"
         >
           <PrinterIcon class="h-5 w-5" />
-          Chop etish
+          {{ $t('print') }}
         </button>
       </div>
     </div>
@@ -610,19 +586,19 @@ function printDebtors() {
     <!-- Summary Cards -->
     <div v-if="!loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="card card-body">
-        <p class="text-sm text-gray-500">Jami qarzdorlar</p>
+        <p class="text-sm text-gray-500">{{ $t('finance.debtors.title') }}</p>
         <p class="text-2xl font-bold text-gray-900">{{ summary.count }}</p>
       </div>
       <div class="card card-body">
-        <p class="text-sm text-gray-500">Jami qarz summasi</p>
-        <p class="text-2xl font-bold text-red-600">{{ formatCurrency(summary.totalDebt) }} so'm</p>
+        <p class="text-sm text-gray-500">{{ $t('finance.debtors.totalDebt') }}</p>
+        <p class="text-2xl font-bold text-red-600">{{ formatCurrency(summary.totalDebt) }} {{ $t('sum') }}</p>
       </div>
       <div class="card card-body">
-        <p class="text-sm text-gray-500">Kredit limitidan oshgan</p>
+        <p class="text-sm text-gray-500">{{ $t('finance.debtors.overLimit') }}</p>
         <p class="text-2xl font-bold text-orange-600">{{ summary.overLimit }}</p>
       </div>
       <div class="card card-body">
-        <p class="text-sm text-gray-500">Kredit to'xtatilgan</p>
+        <p class="text-sm text-gray-500">{{ $t('finance.debtors.creditHold') }}</p>
         <p class="text-2xl font-bold text-red-600">{{ summary.onHold }}</p>
       </div>
     </div>
@@ -635,14 +611,14 @@ function printDebtors() {
           <input
             v-model="search"
             type="text"
-            placeholder="Qidiruv (nomi, kodi)..."
+            :placeholder="$t('finance.debtors.searchPlaceholder')"
             class="input pl-10"
           />
         </div>
         <select v-model="typeFilter" class="input w-auto">
-          <option value="all">Barchasi</option>
-          <option value="credit_hold">Kredit to'xtatilgan</option>
-          <option value="over_limit">Limitidan oshgan</option>
+          <option value="all">{{ $t('all') }}</option>
+          <option value="credit_hold">{{ $t('finance.debtors.creditHold') }}</option>
+          <option value="over_limit">{{ $t('finance.debtors.overLimit') }}</option>
         </select>
       </div>
     </div>
@@ -654,21 +630,21 @@ function printDebtors() {
       </div>
 
       <div v-else-if="debtors.length === 0" class="text-center py-12">
-        <p class="text-gray-500">Qarzdorlar topilmadi</p>
+        <p class="text-gray-500">{{ $t('finance.debtors.noDebtors') }}</p>
       </div>
 
       <div v-else class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>Mijoz</th>
-              <th>Telefon / Kod</th>
-              <th class="text-right">Qarz summasi</th>
-              <th class="text-right">Kredit limiti</th>
-              <th class="text-right">Mavjud kredit</th>
-              <th>Holat</th>
-              <th>Oxirgi faktura</th>
-              <th class="text-right">Amallar</th>
+              <th>{{ $t('finance.payments.customer') }}</th>
+              <th>{{ $t('phone') }} / {{ $t('code') }}</th>
+              <th class="text-right">{{ $t('finance.debtors.totalDebt') }}</th>
+              <th class="text-right">{{ $t('finance.debtors.creditLimit') }}</th>
+              <th class="text-right">{{ $t('finance.debtors.availableCredit') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th>{{ $t('finance.debtors.lastInvoice') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -687,21 +663,21 @@ function printDebtors() {
                 {{ customer.customerCode || '-' }}
               </td>
               <td class="text-right">
-                <span class="font-semibold text-red-600">{{ formatCurrency(customer.netBalance) }} so'm</span>
+                <span class="font-semibold text-red-600">{{ formatCurrency(customer.netBalance) }} {{ $t('sum') }}</span>
               </td>
               <td class="text-right text-sm">
-                {{ customer.creditLimit ? formatCurrency(customer.creditLimit) + " so'm" : '-' }}
+                {{ customer.creditLimit ? formatCurrency(customer.creditLimit) + " " + $t('sum') : '-' }}
               </td>
               <td class="text-right text-sm">
                 <span :class="(customer.availableCreditLimit || 0) < 0 ? 'text-red-600' : 'text-green-600'">
-                  {{ customer.creditLimit ? formatCurrency(customer.availableCreditLimit) + " so'm" : '-' }}
+                  {{ customer.creditLimit ? formatCurrency(customer.availableCreditLimit) + " " + $t('sum') : '-' }}
                 </span>
               </td>
               <td>
                 <div class="flex flex-col gap-1">
-                  <span v-if="customer.overCreditLimit" class="badge badge-danger text-xs">Limitidan oshgan</span>
-                  <span v-if="customer.onCreditHold" class="badge badge-warning text-xs">To'xtatilgan</span>
-                  <span v-if="!customer.overCreditLimit && !customer.onCreditHold" class="badge badge-info text-xs">Faol</span>
+                  <span v-if="customer.overCreditLimit" class="badge badge-danger text-xs">{{ $t('finance.debtors.overLimit') }}</span>
+                  <span v-if="customer.onCreditHold" class="badge badge-warning text-xs">{{ $t('finance.debtors.creditHold') }}</span>
+                  <span v-if="!customer.overCreditLimit && !customer.onCreditHold" class="badge badge-info text-xs">{{ $t('active') }}</span>
                 </div>
               </td>
               <td class="text-sm text-gray-500">
@@ -711,7 +687,7 @@ function printDebtors() {
                 <button
                   @click="viewCustomer(customer)"
                   class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  title="Batafsil"
+                  :title="$t('details')"
                 >
                   <EyeIcon class="h-5 w-5" />
                 </button>
@@ -740,7 +716,7 @@ function printDebtors() {
               @click="printCustomerDebt"
               :disabled="loadingInvoices || unpaidInvoices.length === 0"
               class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Qarz tafsilotini chop etish"
+              :title="$t('print')"
             >
               <PrinterIcon class="h-5 w-5" />
             </button>
@@ -754,20 +730,20 @@ function printDebtors() {
           <!-- Balance Summary -->
           <div class="grid grid-cols-2 gap-4">
             <div class="bg-red-50 rounded-lg p-4">
-              <p class="text-sm text-red-600">Jami qarz</p>
-              <p class="text-xl font-bold text-red-700">{{ formatCurrency(selectedCustomer.netBalance) }} so'm</p>
+              <p class="text-sm text-red-600">{{ $t('finance.debtors.totalDebt') }}</p>
+              <p class="text-xl font-bold text-red-700">{{ formatCurrency(selectedCustomer.netBalance) }} {{ $t('sum') }}</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
-              <p class="text-sm text-gray-600">Kredit limiti</p>
-              <p class="text-xl font-bold text-gray-900">{{ selectedCustomer.creditLimit ? formatCurrency(selectedCustomer.creditLimit) + " so'm" : "Belgilanmagan" }}</p>
+              <p class="text-sm text-gray-600">{{ $t('finance.debtors.creditLimit') }}</p>
+              <p class="text-xl font-bold text-gray-900">{{ selectedCustomer.creditLimit ? formatCurrency(selectedCustomer.creditLimit) + " " + $t('sum') : $t('notSet') }}</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
-              <p class="text-sm text-gray-600">Ochiq fakturalar</p>
-              <p class="text-xl font-bold text-gray-900">{{ formatCurrency(selectedCustomer.outstandingInvoices) }} so'm</p>
+              <p class="text-sm text-gray-600">{{ $t('finance.debtors.openInvoices') }}</p>
+              <p class="text-xl font-bold text-gray-900">{{ formatCurrency(selectedCustomer.outstandingInvoices) }} {{ $t('sum') }}</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
-              <p class="text-sm text-gray-600">Mavjud kreditlar</p>
-              <p class="text-xl font-bold text-gray-900">{{ formatCurrency(selectedCustomer.availableCredits) }} so'm</p>
+              <p class="text-sm text-gray-600">{{ $t('finance.debtors.availableCredit') }}</p>
+              <p class="text-xl font-bold text-gray-900">{{ formatCurrency(selectedCustomer.availableCredits) }} {{ $t('sum') }}</p>
             </div>
           </div>
 
@@ -775,63 +751,63 @@ function printDebtors() {
           <div v-if="selectedCustomer.overCreditLimit || selectedCustomer.onCreditHold" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <div class="flex items-center gap-2 mb-1">
               <ExclamationTriangleIcon class="h-5 w-5 text-yellow-600" />
-              <span class="font-medium text-yellow-800">Ogohlantirish</span>
+              <span class="font-medium text-yellow-800">{{ $t('finance.debtors.warning') }}</span>
             </div>
-            <p v-if="selectedCustomer.overCreditLimit" class="text-sm text-yellow-700">Kredit limitidan oshgan</p>
-            <p v-if="selectedCustomer.onCreditHold" class="text-sm text-yellow-700">Kredit to'xtatilgan</p>
+            <p v-if="selectedCustomer.overCreditLimit" class="text-sm text-yellow-700">{{ $t('finance.debtors.overLimit') }}</p>
+            <p v-if="selectedCustomer.onCreditHold" class="text-sm text-yellow-700">{{ $t('finance.debtors.creditHold') }}</p>
           </div>
 
           <!-- Info -->
           <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span class="text-gray-500">Oxirgi faktura:</span>
+              <span class="text-gray-500">{{ $t('finance.debtors.lastInvoice') }}:</span>
               <span class="ml-2 font-medium">{{ formatDate(selectedCustomer.lastInvoiceDate) }}</span>
             </div>
             <div>
-              <span class="text-gray-500">Oxirgi to'lov:</span>
+              <span class="text-gray-500">{{ $t('finance.debtors.lastPayment') }}:</span>
               <span class="ml-2 font-medium">{{ formatDate(selectedCustomer.lastPaymentDate) }}</span>
             </div>
             <div>
-              <span class="text-gray-500">To'lov muddati:</span>
-              <span class="ml-2 font-medium">{{ selectedCustomer.paymentTerms ? selectedCustomer.paymentTerms + ' kun' : '-' }}</span>
+              <span class="text-gray-500">{{ $t('finance.debtors.dueDate') }}:</span>
+              <span class="ml-2 font-medium">{{ selectedCustomer.paymentTerms ? selectedCustomer.paymentTerms + ' ' + $t('finance.debtors.overdue') : '-' }}</span>
             </div>
           </div>
 
           <!-- Aging Breakdown -->
           <div v-if="selectedAging">
-            <h3 class="font-semibold text-gray-900 mb-3">Qarz muddati bo'yicha taqsimot</h3>
+            <h3 class="font-semibold text-gray-900 mb-3">{{ $t('finance.debtors.agingBreakdown') }}</h3>
             <div class="bg-gray-50 rounded-lg overflow-hidden">
               <table class="w-full text-sm">
                 <thead class="bg-gray-100">
                   <tr>
-                    <th class="px-4 py-2 text-left text-gray-600">Davr</th>
-                    <th class="px-4 py-2 text-right text-gray-600">Summa</th>
+                    <th class="px-4 py-2 text-left text-gray-600">{{ $t('finance.debtors.period') }}</th>
+                    <th class="px-4 py-2 text-right text-gray-600">{{ $t('amount') }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                   <tr>
-                    <td class="px-4 py-2">Joriy (muddatida)</td>
-                    <td class="px-4 py-2 text-right font-medium">{{ formatCurrency(selectedAging.currentAmount) }} so'm</td>
+                    <td class="px-4 py-2">{{ $t('finance.debtors.current') }}</td>
+                    <td class="px-4 py-2 text-right font-medium">{{ formatCurrency(selectedAging.currentAmount) }} {{ $t('sum') }}</td>
                   </tr>
                   <tr>
-                    <td class="px-4 py-2">1–30 kun kechikkan</td>
-                    <td class="px-4 py-2 text-right font-medium" :class="selectedAging.days1To30 > 0 ? 'text-yellow-600' : ''">{{ formatCurrency(selectedAging.days1To30) }} so'm</td>
+                    <td class="px-4 py-2">{{ $t('finance.debtors.days1to30') }}</td>
+                    <td class="px-4 py-2 text-right font-medium" :class="selectedAging.days1To30 > 0 ? 'text-yellow-600' : ''">{{ formatCurrency(selectedAging.days1To30) }} {{ $t('sum') }}</td>
                   </tr>
                   <tr>
-                    <td class="px-4 py-2">31–60 kun kechikkan</td>
-                    <td class="px-4 py-2 text-right font-medium" :class="selectedAging.days31To60 > 0 ? 'text-orange-600' : ''">{{ formatCurrency(selectedAging.days31To60) }} so'm</td>
+                    <td class="px-4 py-2">{{ $t('finance.debtors.days31to60') }}</td>
+                    <td class="px-4 py-2 text-right font-medium" :class="selectedAging.days31To60 > 0 ? 'text-orange-600' : ''">{{ formatCurrency(selectedAging.days31To60) }} {{ $t('sum') }}</td>
                   </tr>
                   <tr>
-                    <td class="px-4 py-2">61–90 kun kechikkan</td>
-                    <td class="px-4 py-2 text-right font-medium" :class="selectedAging.days61To90 > 0 ? 'text-red-600' : ''">{{ formatCurrency(selectedAging.days61To90) }} so'm</td>
+                    <td class="px-4 py-2">{{ $t('finance.debtors.days61to90') }}</td>
+                    <td class="px-4 py-2 text-right font-medium" :class="selectedAging.days61To90 > 0 ? 'text-red-600' : ''">{{ formatCurrency(selectedAging.days61To90) }} {{ $t('sum') }}</td>
                   </tr>
                   <tr>
-                    <td class="px-4 py-2">90+ kun kechikkan</td>
-                    <td class="px-4 py-2 text-right font-bold" :class="selectedAging.over90Days > 0 ? 'text-red-700' : ''">{{ formatCurrency(selectedAging.over90Days) }} so'm</td>
+                    <td class="px-4 py-2">{{ $t('finance.debtors.over90days') }}</td>
+                    <td class="px-4 py-2 text-right font-bold" :class="selectedAging.over90Days > 0 ? 'text-red-700' : ''">{{ formatCurrency(selectedAging.over90Days) }} {{ $t('sum') }}</td>
                   </tr>
                   <tr class="bg-gray-100">
-                    <td class="px-4 py-2 font-semibold">Jami</td>
-                    <td class="px-4 py-2 text-right font-bold">{{ formatCurrency(selectedAging.totalBalance) }} so'm</td>
+                    <td class="px-4 py-2 font-semibold">{{ $t('total') }}</td>
+                    <td class="px-4 py-2 text-right font-bold">{{ formatCurrency(selectedAging.totalBalance) }} {{ $t('sum') }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -840,26 +816,26 @@ function printDebtors() {
 
           <!-- Payment History -->
           <div>
-            <h3 class="font-semibold text-gray-900 mb-3">To'lov tarixi</h3>
+            <h3 class="font-semibold text-gray-900 mb-3">{{ $t('finance.debtors.paymentHistory') }}</h3>
 
             <div v-if="loadingPayments" class="flex items-center justify-center py-6">
               <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
 
             <div v-else-if="customerPayments.length === 0" class="text-center py-4 bg-gray-50 rounded-lg">
-              <p class="text-gray-500 text-sm">To'lovlar topilmadi</p>
+              <p class="text-gray-500 text-sm">{{ $t('finance.payments.noArPayments') }}</p>
             </div>
 
             <div v-else class="bg-gray-50 rounded-lg overflow-hidden">
               <table class="w-full text-sm">
                 <thead class="bg-gray-100">
                   <tr>
-                    <th class="px-4 py-2 text-left text-gray-600">To'lov</th>
-                    <th class="px-4 py-2 text-left text-gray-600">Sana</th>
-                    <th class="px-4 py-2 text-left text-gray-600">Usul</th>
-                    <th class="px-4 py-2 text-left text-gray-600">Faktura</th>
-                    <th class="px-4 py-2 text-right text-gray-600">Summa</th>
-                    <th class="px-4 py-2 text-center text-gray-600">Holat</th>
+                    <th class="px-4 py-2 text-left text-gray-600">{{ $t('finance.payments.paymentNumber') }}</th>
+                    <th class="px-4 py-2 text-left text-gray-600">{{ $t('date') }}</th>
+                    <th class="px-4 py-2 text-left text-gray-600">{{ $t('finance.payments.method') }}</th>
+                    <th class="px-4 py-2 text-left text-gray-600">{{ $t('finance.payments.invoice') }}</th>
+                    <th class="px-4 py-2 text-right text-gray-600">{{ $t('amount') }}</th>
+                    <th class="px-4 py-2 text-center text-gray-600">{{ $t('status') }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
@@ -882,7 +858,7 @@ function printDebtors() {
                       <span v-else class="text-gray-400">-</span>
                     </td>
                     <td class="px-4 py-2 text-right font-semibold text-green-600">
-                      {{ formatCurrency(payment.paymentAmount) }} so'm
+                      {{ formatCurrency(payment.paymentAmount) }} {{ $t('sum') }}
                     </td>
                     <td class="px-4 py-2 text-center">
                       <span :class="['badge text-xs', getPaymentStatusClass(payment.status)]">
@@ -897,14 +873,14 @@ function printDebtors() {
 
           <!-- Unpaid Invoices -->
           <div>
-            <h3 class="font-semibold text-gray-900 mb-3">To'lanmagan fakturalar</h3>
+            <h3 class="font-semibold text-gray-900 mb-3">{{ $t('finance.debtors.unpaidInvoices') }}</h3>
 
             <div v-if="loadingInvoices" class="flex items-center justify-center py-8">
               <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
 
             <div v-else-if="unpaidInvoices.length === 0" class="text-center py-6 bg-gray-50 rounded-lg">
-              <p class="text-gray-500 text-sm">To'lanmagan fakturalar topilmadi</p>
+              <p class="text-gray-500 text-sm">{{ $t('finance.debtors.noUnpaidInvoices') }}</p>
             </div>
 
             <div v-else class="space-y-3">
@@ -927,20 +903,20 @@ function printDebtors() {
                       {{ getStatusLabel(invoice.status) }}
                     </span>
                     <span v-if="invoice.overdue" class="text-xs text-red-600 font-medium">
-                      {{ invoice.daysOverdue }} kun kechikkan
+                      {{ invoice.daysOverdue }} {{ $t('finance.debtors.overdue') }}
                     </span>
                   </div>
                   <div class="flex items-center gap-3">
                     <div class="text-right">
-                      <p class="font-semibold text-red-600 text-sm">{{ formatCurrency(invoice.balanceDue) }} so'm</p>
-                      <p class="text-xs text-gray-500">Jami: {{ formatCurrency(invoice.totalAmount) }} so'm</p>
+                      <p class="font-semibold text-red-600 text-sm">{{ formatCurrency(invoice.balanceDue) }} {{ $t('sum') }}</p>
+                      <p class="text-xs text-gray-500">{{ $t('total') }}: {{ formatCurrency(invoice.totalAmount) }} {{ $t('sum') }}</p>
                     </div>
                     <button
                       @click.stop="openPayment(invoice)"
                       class="px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center gap-1"
                     >
                       <BanknotesIcon class="h-3.5 w-3.5" />
-                      To'lov
+                      {{ $t('finance.debtors.makePayment') }}
                     </button>
                   </div>
                 </div>
@@ -949,19 +925,19 @@ function printDebtors() {
                 <div v-if="expandedInvoice === invoice.id" class="border-t border-gray-200 bg-gray-50">
                   <!-- Payment info -->
                   <div class="px-4 py-2 flex gap-4 text-xs text-gray-500 border-b border-gray-100">
-                    <span>To'lov muddati: <strong>{{ formatDate(invoice.dueDate) }}</strong></span>
-                    <span v-if="invoice.paidAmount > 0">To'langan: <strong>{{ formatCurrency(invoice.paidAmount) }} so'm</strong></span>
-                    <span v-if="invoice.posTransactionNumber">Tranzaksiya: <strong>{{ invoice.posTransactionNumber }}</strong></span>
+                    <span>{{ $t('finance.debtors.dueDate') }}: <strong>{{ formatDate(invoice.dueDate) }}</strong></span>
+                    <span v-if="invoice.paidAmount > 0">{{ $t('finance.debtors.paidAmount') }}: <strong>{{ formatCurrency(invoice.paidAmount) }} {{ $t('sum') }}</strong></span>
+                    <span v-if="invoice.posTransactionNumber">{{ $t('finance.payments.reference') }}: <strong>{{ invoice.posTransactionNumber }}</strong></span>
                   </div>
 
                   <!-- Items table -->
                   <table v-if="invoice.lines?.length" class="w-full text-sm">
                     <thead>
                       <tr class="text-xs text-gray-500 border-b border-gray-200">
-                        <th class="px-4 py-2 text-left font-medium">Mahsulot</th>
-                        <th class="px-4 py-2 text-right font-medium">Soni</th>
-                        <th class="px-4 py-2 text-right font-medium">Narxi</th>
-                        <th class="px-4 py-2 text-right font-medium">Jami</th>
+                        <th class="px-4 py-2 text-left font-medium">{{ $t('finance.debtors.products') }}</th>
+                        <th class="px-4 py-2 text-right font-medium">{{ $t('quantity') }}</th>
+                        <th class="px-4 py-2 text-right font-medium">{{ $t('price') }}</th>
+                        <th class="px-4 py-2 text-right font-medium">{{ $t('total') }}</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -972,13 +948,13 @@ function printDebtors() {
                         </td>
                         <td class="px-4 py-2 text-right">{{ line.quantity }}{{ line.unitOfMeasure ? ' ' + line.unitOfMeasure : '' }}</td>
                         <td class="px-4 py-2 text-right">{{ formatCurrency(line.unitPrice) }}</td>
-                        <td class="px-4 py-2 text-right font-medium">{{ formatCurrency(line.lineTotal) }} so'm</td>
+                        <td class="px-4 py-2 text-right font-medium">{{ formatCurrency(line.lineTotal) }} {{ $t('sum') }}</td>
                       </tr>
                     </tbody>
                   </table>
 
                   <div v-else class="px-4 py-3 text-sm text-gray-500">
-                    Mahsulot tafsilotlari mavjud emas
+                    {{ $t('finance.debtors.noProductDetails') }}
                   </div>
                 </div>
               </div>
@@ -997,7 +973,7 @@ function printDebtors() {
       <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
-            <h3 class="text-lg font-bold text-gray-900">To'lov qabul qilish</h3>
+            <h3 class="text-lg font-bold text-gray-900">{{ $t('finance.debtors.makePayment') }}</h3>
             <p class="text-sm text-gray-500">{{ paymentInvoice.invoiceNumber }}</p>
           </div>
           <button @click="showPaymentModal = false" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
@@ -1013,22 +989,22 @@ function printDebtors() {
           <!-- Invoice info -->
           <div class="bg-gray-50 rounded-lg p-3 text-sm">
             <div class="flex justify-between">
-              <span class="text-gray-500">Faktura summasi:</span>
-              <span class="font-medium">{{ formatCurrency(paymentInvoice.totalAmount) }} so'm</span>
+              <span class="text-gray-500">{{ $t('finance.debtors.invoiceAmount') }}:</span>
+              <span class="font-medium">{{ formatCurrency(paymentInvoice.totalAmount) }} {{ $t('sum') }}</span>
             </div>
             <div v-if="paymentInvoice.paidAmount > 0" class="flex justify-between mt-1">
-              <span class="text-gray-500">To'langan:</span>
-              <span class="font-medium text-green-600">{{ formatCurrency(paymentInvoice.paidAmount) }} so'm</span>
+              <span class="text-gray-500">{{ $t('finance.debtors.paidAmount') }}:</span>
+              <span class="font-medium text-green-600">{{ formatCurrency(paymentInvoice.paidAmount) }} {{ $t('sum') }}</span>
             </div>
             <div class="flex justify-between mt-1 pt-1 border-t border-gray-200">
-              <span class="text-gray-600 font-medium">Qarz qoldig'i:</span>
-              <span class="font-bold text-red-600">{{ formatCurrency(paymentInvoice.balanceDue) }} so'm</span>
+              <span class="text-gray-600 font-medium">{{ $t('finance.debtors.remainingBalance') }}:</span>
+              <span class="font-bold text-red-600">{{ formatCurrency(paymentInvoice.balanceDue) }} {{ $t('sum') }}</span>
             </div>
           </div>
 
           <!-- Amount -->
           <div>
-            <label class="label">To'lov summasi <span class="text-red-500">*</span></label>
+            <label class="label">{{ $t('finance.expenseDetail.paymentAmount') }} <span class="text-red-500">*</span></label>
             <input
               v-model.number="paymentForm.amount"
               type="number"
@@ -1041,7 +1017,7 @@ function printDebtors() {
 
           <!-- Method -->
           <div>
-            <label class="label">To'lov usuli</label>
+            <label class="label">{{ $t('finance.payments.paymentMethod') }}</label>
             <select v-model="paymentForm.method" class="input">
               <option v-for="m in paymentMethods" :key="m.value" :value="m.value">{{ m.label }}</option>
             </select>
@@ -1049,25 +1025,25 @@ function printDebtors() {
 
           <!-- Date -->
           <div>
-            <label class="label">Sana</label>
+            <label class="label">{{ $t('date') }}</label>
             <input v-model="paymentForm.date" type="date" class="input" />
           </div>
 
           <!-- Notes -->
           <div>
-            <label class="label">Izoh</label>
-            <input v-model="paymentForm.notes" type="text" class="input" placeholder="Ixtiyoriy izoh" />
+            <label class="label">{{ $t('notes') }}</label>
+            <input v-model="paymentForm.notes" type="text" class="input" :placeholder="$t('finance.expenseDetail.paymentNote')" />
           </div>
 
           <div class="flex justify-end gap-3 pt-2">
-            <button @click="showPaymentModal = false" class="btn-secondary">Bekor qilish</button>
+            <button @click="showPaymentModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
             <button
               @click="submitPayment"
               :disabled="paymentSubmitting || paymentForm.amount <= 0"
               class="btn-primary flex items-center gap-2"
             >
               <BanknotesIcon class="h-4 w-4" />
-              {{ paymentSubmitting ? 'Saqlanmoqda...' : 'To\'lovni saqlash' }}
+              {{ paymentSubmitting ? $t('saving') : $t('save') }}
             </button>
           </div>
         </div>

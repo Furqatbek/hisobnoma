@@ -1,9 +1,11 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { expensesApi, suppliersApi, productsApi } from '@/services/api'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, BanknotesIcon } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
@@ -94,7 +96,6 @@ async function fetchExpense() {
     }
   } catch (error) {
     console.error('Xarajatni yuklashda xatolik:', error)
-    alert('Xarajatni yuklashda xatolik yuz berdi')
     router.push('/finance/expenses')
   } finally {
     loading.value = false
@@ -153,24 +154,24 @@ function validateForm() {
   errors.value = {}
 
   if (!form.value.vendorId && !form.value.description?.trim()) {
-    errors.value.description = 'Yetkazib beruvchi yoki tavsif kiritilishi kerak'
+    errors.value.description = t('finance.expenseForm.vendorOrDescriptionRequired')
   }
 
   if (!form.value.invoiceDate) {
-    errors.value.invoiceDate = 'Sana majburiy'
+    errors.value.invoiceDate = t('finance.expenseForm.dateRequired')
   }
 
   if (!form.value.dueDate) {
-    errors.value.dueDate = 'To\'lov muddati majburiy'
+    errors.value.dueDate = t('finance.expenseForm.dueDateRequired')
   }
 
   if (form.value.lines.length === 0) {
-    errors.value.lines = 'Kamida bitta qator bo\'lishi kerak'
+    errors.value.lines = t('finance.expenseForm.atLeastOneLine')
   }
 
   const hasEmptyLine = form.value.lines.some(line => !line.description?.trim())
   if (hasEmptyLine) {
-    errors.value.lines = 'Barcha qatorlarda tavsif bo\'lishi kerak'
+    errors.value.lines = t('finance.expenseForm.allLinesNeedDescription')
   }
 
   return Object.keys(errors.value).length === 0
@@ -221,7 +222,7 @@ async function saveExpense() {
     } else if (error.response?.data?.message) {
       alert(error.response.data.message)
     } else {
-      alert('Xarajatni saqlashda xatolik yuz berdi')
+      alert(t('failedToSave'))
     }
   } finally {
     saving.value = false
@@ -266,10 +267,10 @@ onMounted(() => {
       </button>
       <div>
         <h1 class="text-2xl font-bold text-gray-900">
-          {{ isEdit ? 'Xarajatni tahrirlash' : 'Yangi xarajat' }}
+          {{ isEdit ? $t('finance.expenseForm.editExpense') : $t('finance.expenseForm.newExpense') }}
         </h1>
         <p class="mt-1 text-sm text-gray-500">
-          {{ isEdit ? 'Xarajat ma\'lumotlarini yangilash' : 'Yangi xarajat/hisob-faktura qo\'shish' }}
+          {{ isEdit ? $t('finance.expenseForm.editSubtitle') : $t('finance.expenseForm.newSubtitle') }}
         </p>
       </div>
     </div>
@@ -286,7 +287,7 @@ onMounted(() => {
           <div class="card-header">
             <div class="flex items-center">
               <BanknotesIcon class="h-6 w-6 text-primary-600 mr-2" />
-              <h3 class="text-lg font-medium">Asosiy ma'lumotlar</h3>
+              <h3 class="text-lg font-medium">{{ $t('finance.expenseForm.basicInfo') }}</h3>
             </div>
           </div>
 
@@ -294,22 +295,22 @@ onMounted(() => {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- Vendor -->
               <div>
-                <label class="label">Yetkazib beruvchi</label>
+                <label class="label">{{ $t('finance.expenseForm.supplier') }}</label>
                 <select
                   v-model="form.vendorId"
                   class="input"
                 >
-                  <option value="">Tanlanmagan (mustaqil xarajat)</option>
+                  <option value="">{{ $t('finance.expenseForm.noSupplier') }}</option>
                   <option v-for="vendor in vendors" :key="vendor.id" :value="vendor.id">
                     {{ vendor.name }}
                   </option>
                 </select>
-                <p class="text-xs text-gray-400 mt-1">Ijara, kommunal va boshqa xarajatlar uchun bo'sh qoldiring</p>
+                <p class="text-xs text-gray-400 mt-1">{{ $t('finance.expenseForm.noSupplierHint') }}</p>
               </div>
 
               <!-- Vendor Invoice Number -->
               <div>
-                <label class="label">Yetkazib beruvchi hisob-faktura №</label>
+                <label class="label">{{ $t('finance.expenseForm.invoiceNumber') }}</label>
                 <input
                   v-model="form.vendorInvoiceNumber"
                   type="text"
@@ -323,7 +324,7 @@ onMounted(() => {
               <!-- Invoice Date -->
               <div>
                 <label class="label">
-                  Sana <span class="text-red-500">*</span>
+                  {{ $t('finance.expenseForm.invoiceDate') }} <span class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="form.invoiceDate"
@@ -337,7 +338,7 @@ onMounted(() => {
               <!-- Due Date -->
               <div>
                 <label class="label">
-                  To'lov muddati <span class="text-red-500">*</span>
+                  {{ $t('finance.expenseForm.dueDate') }} <span class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="form.dueDate"
@@ -352,7 +353,7 @@ onMounted(() => {
             <!-- Description -->
             <div>
               <label class="label">
-                Tavsif
+                {{ $t('description') }}
                 <span v-if="!form.vendorId" class="text-red-500">*</span>
               </label>
               <textarea
@@ -360,7 +361,7 @@ onMounted(() => {
                 rows="2"
                 class="input"
                 :class="{ 'border-red-500': errors.description }"
-                :placeholder="!form.vendorId ? 'Masalan: Ijara to\'lovi, Kommunal xarajat...' : 'Xarajat haqida...'"
+                :placeholder="!form.vendorId ? $t('finance.expenseForm.descriptionPlaceholder') : $t('finance.expenseForm.descriptionHint')"
               ></textarea>
               <p v-if="errors.description" class="text-sm text-red-500 mt-1">{{ errors.description }}</p>
             </div>
@@ -370,10 +371,10 @@ onMounted(() => {
         <!-- Line Items -->
         <div class="card">
           <div class="card-header flex items-center justify-between">
-            <h3 class="text-lg font-medium">Xarajat qatorlari</h3>
+            <h3 class="text-lg font-medium">{{ $t('finance.expenseForm.lineItems') }}</h3>
             <button @click="addLine" class="btn-secondary btn-sm">
               <PlusIcon class="h-4 w-4 mr-1" />
-              Qator qo'shish
+              {{ $t('finance.expenseForm.addLine') }}
             </button>
           </div>
 
@@ -387,7 +388,7 @@ onMounted(() => {
                 class="border rounded-lg p-4 bg-gray-50"
               >
                 <div class="flex justify-between items-start mb-3">
-                  <span class="text-sm font-medium text-gray-500">Qator {{ index + 1 }}</span>
+                  <span class="text-sm font-medium text-gray-500">{{ $t('finance.expenseForm.line') }} {{ index + 1 }}</span>
                   <button
                     v-if="form.lines.length > 1"
                     @click="removeLine(index)"
@@ -400,13 +401,13 @@ onMounted(() => {
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                   <!-- Product (optional) -->
                   <div>
-                    <label class="text-xs text-gray-500">Mahsulot</label>
+                    <label class="text-xs text-gray-500">{{ $t('finance.expenseForm.product') }}</label>
                     <select
                       v-model="line.productId"
                       @change="onProductSelect(line, line.productId)"
                       class="input input-sm"
                     >
-                      <option value="">Tanlang (ixtiyoriy)</option>
+                      <option value="">{{ $t('finance.expenseForm.productOptional') }}</option>
                       <option v-for="product in products" :key="product.id" :value="product.id">
                         {{ product.name }}
                       </option>
@@ -415,18 +416,18 @@ onMounted(() => {
 
                   <!-- Description -->
                   <div class="md:col-span-2 lg:col-span-1">
-                    <label class="text-xs text-gray-500">Tavsif <span class="text-red-500">*</span></label>
+                    <label class="text-xs text-gray-500">{{ $t('finance.expenseForm.lineDescription') }} <span class="text-red-500">*</span></label>
                     <input
                       v-model="line.description"
                       type="text"
                       class="input input-sm"
-                      placeholder="Xarajat tavsifi"
+                      :placeholder="$t('finance.expenseForm.lineDescriptionPlaceholder')"
                     />
                   </div>
 
                   <!-- Quantity -->
                   <div>
-                    <label class="text-xs text-gray-500">Miqdor</label>
+                    <label class="text-xs text-gray-500">{{ $t('quantity') }}</label>
                     <input
                       v-model.number="line.quantity"
                       type="number"
@@ -438,7 +439,7 @@ onMounted(() => {
 
                   <!-- Unit -->
                   <div>
-                    <label class="text-xs text-gray-500">Birlik</label>
+                    <label class="text-xs text-gray-500">{{ $t('finance.expenseForm.unit') }}</label>
                     <input
                       v-model="line.unitOfMeasure"
                       type="text"
@@ -449,7 +450,7 @@ onMounted(() => {
 
                   <!-- Unit Price -->
                   <div>
-                    <label class="text-xs text-gray-500">Narx</label>
+                    <label class="text-xs text-gray-500">{{ $t('price') }}</label>
                     <input
                       v-model.number="line.unitPrice"
                       type="number"
@@ -461,7 +462,7 @@ onMounted(() => {
 
                   <!-- Tax Rate -->
                   <div>
-                    <label class="text-xs text-gray-500">Soliq %</label>
+                    <label class="text-xs text-gray-500">{{ $t('finance.expenseForm.taxPercent') }}</label>
                     <input
                       v-model.number="line.taxRate"
                       type="number"
@@ -474,9 +475,9 @@ onMounted(() => {
 
                   <!-- Line Total -->
                   <div>
-                    <label class="text-xs text-gray-500">Jami</label>
+                    <label class="text-xs text-gray-500">{{ $t('total') }}</label>
                     <div class="input input-sm bg-gray-100 font-medium">
-                      {{ formatCurrency(getLineTotal(line)) }} so'm
+                      {{ formatCurrency(getLineTotal(line)) }} {{ $t('sum') }}
                     </div>
                   </div>
                 </div>
@@ -490,14 +491,14 @@ onMounted(() => {
       <div class="lg:col-span-1">
         <div class="card sticky top-24">
           <div class="card-header">
-            <h3 class="text-lg font-medium">Jami</h3>
+            <h3 class="text-lg font-medium">{{ $t('total') }}</h3>
           </div>
 
           <div class="card-body space-y-4">
             <!-- Additional Charges -->
             <div class="space-y-3">
               <div>
-                <label class="text-xs text-gray-500">Yetkazish narxi</label>
+                <label class="text-xs text-gray-500">{{ $t('finance.expenseForm.shippingCost') }}</label>
                 <input
                   v-model.number="form.shippingAmount"
                   type="number"
@@ -506,7 +507,7 @@ onMounted(() => {
                 />
               </div>
               <div>
-                <label class="text-xs text-gray-500">Qo'shimcha soliq</label>
+                <label class="text-xs text-gray-500">{{ $t('finance.expenseForm.additionalTax') }}</label>
                 <input
                   v-model.number="form.taxAmount"
                   type="number"
@@ -515,7 +516,7 @@ onMounted(() => {
                 />
               </div>
               <div>
-                <label class="text-xs text-gray-500">Chegirma</label>
+                <label class="text-xs text-gray-500">{{ $t('finance.expenseForm.discountAmount') }}</label>
                 <input
                   v-model.number="form.discountAmount"
                   type="number"
@@ -527,49 +528,49 @@ onMounted(() => {
 
             <div class="border-t pt-4 space-y-2">
               <div class="flex justify-between text-sm">
-                <span class="text-gray-500">Oraliq jami:</span>
-                <span>{{ formatCurrency(subtotal) }} so'm</span>
+                <span class="text-gray-500">{{ $t('finance.expenseForm.subtotal') }}:</span>
+                <span>{{ formatCurrency(subtotal) }} {{ $t('sum') }}</span>
               </div>
               <div class="flex justify-between text-sm">
-                <span class="text-gray-500">Qator soliqlari:</span>
-                <span>{{ formatCurrency(lineTaxTotal) }} so'm</span>
+                <span class="text-gray-500">{{ $t('finance.expenseForm.lineTaxes') }}:</span>
+                <span>{{ formatCurrency(lineTaxTotal) }} {{ $t('sum') }}</span>
               </div>
               <div v-if="form.shippingAmount > 0" class="flex justify-between text-sm">
-                <span class="text-gray-500">Yetkazish:</span>
-                <span>{{ formatCurrency(form.shippingAmount) }} so'm</span>
+                <span class="text-gray-500">{{ $t('finance.expenseForm.shipping') }}:</span>
+                <span>{{ formatCurrency(form.shippingAmount) }} {{ $t('sum') }}</span>
               </div>
               <div v-if="form.taxAmount > 0" class="flex justify-between text-sm">
-                <span class="text-gray-500">Qo'shimcha soliq:</span>
-                <span>{{ formatCurrency(form.taxAmount) }} so'm</span>
+                <span class="text-gray-500">{{ $t('finance.expenseForm.additionalTax') }}:</span>
+                <span>{{ formatCurrency(form.taxAmount) }} {{ $t('sum') }}</span>
               </div>
               <div v-if="form.discountAmount > 0" class="flex justify-between text-sm text-green-600">
-                <span>Chegirma:</span>
-                <span>-{{ formatCurrency(form.discountAmount) }} so'm</span>
+                <span>{{ $t('finance.expenseForm.discountAmount') }}:</span>
+                <span>-{{ formatCurrency(form.discountAmount) }} {{ $t('sum') }}</span>
               </div>
               <div class="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Jami:</span>
-                <span class="text-primary-600">{{ formatCurrency(totalAmount) }} so'm</span>
+                <span>{{ $t('total') }}:</span>
+                <span class="text-primary-600">{{ formatCurrency(totalAmount) }} {{ $t('sum') }}</span>
               </div>
             </div>
 
             <!-- Notes -->
             <div class="pt-4 border-t">
-              <label class="label">Izohlar</label>
+              <label class="label">{{ $t('notes') }}</label>
               <textarea
                 v-model="form.notes"
                 rows="3"
                 class="input"
-                placeholder="Ichki izohlar..."
+                :placeholder="$t('finance.expenseForm.internalNotes')"
               ></textarea>
             </div>
           </div>
 
           <div class="card-footer flex justify-end space-x-3">
             <button @click="router.back()" class="btn-secondary">
-              Bekor qilish
+              {{ $t('cancel') }}
             </button>
             <button @click="saveExpense" :disabled="saving" class="btn-primary">
-              {{ saving ? 'Saqlanmoqda...' : (isEdit ? 'Yangilash' : 'Saqlash') }}
+              {{ saving ? $t('saving') : (isEdit ? $t('update') : $t('save')) }}
             </button>
           </div>
         </div>

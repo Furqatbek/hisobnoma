@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { arPaymentsApi, apPaymentsApi } from '@/services/api'
 import { MagnifyingGlassIcon, XMarkIcon, EyeIcon, XCircleIcon, ArrowDownTrayIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const activeTab = ref('ar') // 'ar' or 'ap'
 const loading = ref(true)
 const error = ref('')
@@ -43,7 +45,7 @@ async function fetchARPayments(page = 0) {
     arCurrentPage.value = data.page?.number ?? data.number ?? 0
   } catch (e) {
     if (e.response?.status !== 403) {
-      error.value = e.response?.data?.message || 'Kiruvchi to\'lovlarni yuklashda xatolik'
+      error.value = e.response?.data?.message || t('failedToLoad')
     }
   } finally {
     loading.value = false
@@ -67,7 +69,7 @@ async function fetchAPPayments(page = 0) {
     apCurrentPage.value = data.page?.number ?? data.number ?? 0
   } catch (e) {
     if (e.response?.status !== 403) {
-      error.value = e.response?.data?.message || 'Chiquvchi to\'lovlarni yuklashda xatolik'
+      error.value = e.response?.data?.message || t('failedToLoad')
     }
   } finally {
     loading.value = false
@@ -130,7 +132,7 @@ async function viewARPayment(payment) {
     detailType.value = 'ar'
     showDetailModal.value = true
   } catch (e) {
-    error.value = 'To\'lov ma\'lumotlarini yuklashda xatolik'
+    error.value = t('failedToLoad')
   }
 }
 
@@ -141,33 +143,33 @@ async function viewAPPayment(payment) {
     detailType.value = 'ap'
     showDetailModal.value = true
   } catch (e) {
-    error.value = 'To\'lov ma\'lumotlarini yuklashda xatolik'
+    error.value = t('failedToLoad')
   }
 }
 
 async function cancelARPayment(payment) {
-  const reason = prompt('Bekor qilish sababi:')
+  const reason = prompt(t('finance.payments.cancelReason') + ':')
   if (!reason) return
   try {
     await arPaymentsApi.cancel(payment.id, reason)
-    successMsg.value = `${payment.paymentNumber} bekor qilindi`
+    successMsg.value = `${payment.paymentNumber}`
     showDetailModal.value = false
     await fetchARPayments(arCurrentPage.value)
   } catch (e) {
-    error.value = e.response?.data?.message || 'Bekor qilishda xatolik'
+    error.value = e.response?.data?.message || t('errorOccurred')
   }
 }
 
 async function voidAPPayment(payment) {
-  const reason = prompt('Bekor qilish sababi:')
+  const reason = prompt(t('finance.payments.cancelReason') + ':')
   if (!reason) return
   try {
     await apPaymentsApi.void(payment.id, reason)
-    successMsg.value = `${payment.paymentNumber} bekor qilindi`
+    successMsg.value = `${payment.paymentNumber}`
     showDetailModal.value = false
     await fetchAPPayments(apCurrentPage.value)
   } catch (e) {
-    error.value = e.response?.data?.message || 'Bekor qilishda xatolik'
+    error.value = e.response?.data?.message || t('errorOccurred')
   }
 }
 
@@ -191,16 +193,7 @@ function formatDateTime(dateStr) {
 
 // AR statuses
 function getARStatusLabel(status) {
-  const labels = {
-    'PENDING': 'Kutilmoqda',
-    'COMPLETED': 'Bajarildi',
-    'DEPOSITED': 'Depozitga qo\'yildi',
-    'CANCELLED': 'Bekor qilingan',
-    'REFUNDED': 'Qaytarilgan',
-    'BOUNCED': 'Qaytib kelgan',
-    'FAILED': 'Xatolik'
-  }
-  return labels[status] || status
+  return t(`enums.arPaymentStatus.${status}`, status)
 }
 
 function getARStatusClass(status) {

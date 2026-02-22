@@ -81,5 +81,70 @@
   "required": "мажбурий",
 
   "logout": "Чиқиш",
-  "user": "Фойдаланувчи"
+  "user": "Фойдаланувчи",
+
+  "year": "Йил",
+  "month": "Ой",
+  "months": {
+    "1": "Январ",
+    "2": "Феврал",
+    "3": "Март",
+    "4": "Апрел",
+    "5": "Май",
+    "6": "Июн",
+    "7": "Июл",
+    "8": "Август",
+    "9": "Сентабр",
+    "10": "Октабр",
+    "11": "Ноябр",
+    "12": "Декабр"
+  },
+  "customer": "Мижоз",
+  "supplier": "Етказувчи",
+  "product": "Маҳсулот",
+
+  "receipt": {
+    "receiptNumber": "Чек №",
+    "date": "Сана",
+    "terminal": "Касса",
+    "cashier": "Кассир",
+    "customer": "Мижоз",
+    "delivery": "Етказиш",
+    "product": "Маҳсулот",
+    "qty": "Сони",
+    "price": "Нарх",
+    "amount": "Сумма",
+    "subtotal": "Оралиқ сумма",
+    "discount": "Чегирма",
+    "tax": "Солиқ",
+    "grandTotal": "ЖАМИ",
+    "change": "Қайтим",
+    "printedAt": "Чоп этилган"
+  },
+
+  "invoice": {
+    "title": "Ҳисоб-фактура",
+    "date": "Сана",
+    "customer": "Мижоз",
+    "customerNotSpecified": "Мижоз кўрсатилмаган",
+    "deliveryAddress": "Етказиш манзили",
+    "terminal": "Терминал",
+    "branch": "Филиал",
+    "cashier": "Кассир",
+    "product": "Маҳсулот",
+    "qty": "Миқдор",
+    "price": "Нарх",
+    "amount": "Сумма",
+    "subtotal": "Оралиқ сумма",
+    "discount": "Чегирма",
+    "tax": "Солиқ",
+    "grandTotal": "ЖАМИ",
+    "paymentDetails": "Тўлов маълумотлари",
+    "change": "Қайтим",
+    "sellerHandedOver": "Топширди (Сотувчи)",
+    "buyerReceived": "Қабул қилди (Харидор)",
+    "fullName": "Ф.И.О.",
+    "signature": "Имзо",
+    "payment": "Тўлов"
+  }
 }

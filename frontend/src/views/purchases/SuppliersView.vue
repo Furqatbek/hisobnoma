@@ -1,7 +1,10 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { suppliersApi } from '@/services/api'
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const suppliers = ref([])
 const loading = ref(true)
@@ -65,7 +68,7 @@ async function saveSupplier() {
 }
 
 async function deleteSupplier(supplier) {
-  if (!confirm(`Delete "${supplier.name}"?`)) return
+  if (!confirm(t('purchases.suppliers.confirmDelete', { name: supplier.name }))) return
   try {
     await suppliersApi.delete(supplier.id)
     fetchSuppliers()
@@ -79,12 +82,12 @@ async function deleteSupplier(supplier) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Suppliers</h1>
-        <p class="mt-1 text-sm text-gray-500">Manage your suppliers</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('purchases.suppliers.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('purchases.suppliers.subtitle') }}</p>
       </div>
       <button @click="openModal()" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Add Supplier
+        {{ $t('purchases.suppliers.addSupplier') }}
       </button>
     </div>
 
@@ -94,18 +97,18 @@ async function deleteSupplier(supplier) {
       </div>
 
       <div v-else-if="suppliers.length === 0" class="text-center py-12">
-        <p class="text-gray-500">No suppliers yet</p>
+        <p class="text-gray-500">{{ $t('purchases.suppliers.noSuppliers') }}</p>
       </div>
 
       <div v-else class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>Supplier</th>
-              <th>Contact</th>
-              <th>Contact Person</th>
-              <th>Status</th>
-              <th class="text-right">Actions</th>
+              <th>{{ $t('purchases.suppliers.supplierName') }}</th>
+              <th>{{ $t('purchases.suppliers.contact') }}</th>
+              <th>{{ $t('purchases.suppliers.contactPerson') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -121,7 +124,7 @@ async function deleteSupplier(supplier) {
               <td>{{ supplier.contactPerson || '-' }}</td>
               <td>
                 <span :class="['badge', supplier.active !== false ? 'badge-success' : 'badge-danger']">
-                  {{ supplier.active !== false ? 'Active' : 'Inactive' }}
+                  {{ supplier.active !== false ? $t('active') : $t('inactive') }}
                 </span>
               </td>
               <td class="text-right">
@@ -146,47 +149,47 @@ async function deleteSupplier(supplier) {
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showModal = false"></div>
         <div class="relative bg-white rounded-lg max-w-lg w-full p-6">
           <h3 class="text-lg font-medium text-gray-900 mb-4">
-            {{ editingSupplier ? 'Edit Supplier' : 'New Supplier' }}
+            {{ editingSupplier ? $t('purchases.suppliers.editSupplier') : $t('purchases.suppliers.newSupplier') }}
           </h3>
 
           <div class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="label">Name *</label>
+                <label class="label">{{ $t('name') }} *</label>
                 <input v-model="form.name" type="text" class="input" />
               </div>
               <div>
-                <label class="label">Code</label>
+                <label class="label">{{ $t('code') }}</label>
                 <input v-model="form.code" type="text" class="input" />
               </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="label">Phone</label>
+                <label class="label">{{ $t('phone') }}</label>
                 <input v-model="form.phone" type="tel" class="input" />
               </div>
               <div>
-                <label class="label">Email</label>
+                <label class="label">{{ $t('email') }}</label>
                 <input v-model="form.email" type="email" class="input" />
               </div>
             </div>
             <div>
-              <label class="label">Contact Person</label>
+              <label class="label">{{ $t('purchases.suppliers.contactPerson') }}</label>
               <input v-model="form.contactPerson" type="text" class="input" />
             </div>
             <div>
-              <label class="label">Address</label>
+              <label class="label">{{ $t('address') }}</label>
               <textarea v-model="form.address" rows="2" class="input"></textarea>
             </div>
             <label class="flex items-center">
               <input v-model="form.active" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-              <span class="ml-2 text-sm">Active</span>
+              <span class="ml-2 text-sm">{{ $t('active') }}</span>
             </label>
           </div>
 
           <div class="mt-6 flex justify-end space-x-3">
-            <button @click="showModal = false" class="btn-secondary">Cancel</button>
-            <button @click="saveSupplier" class="btn-primary">Save</button>
+            <button @click="showModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
+            <button @click="saveSupplier" class="btn-primary">{{ $t('save') }}</button>
           </div>
         </div>
       </div>

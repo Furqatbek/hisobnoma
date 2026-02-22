@@ -1,9 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { purchaseOrdersApi } from '@/services/api'
 import { PlusIcon, EyeIcon, MagnifyingGlassIcon, PrinterIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import ReceiptTemplate from '@/components/ReceiptTemplate.vue'
+
+const { t } = useI18n()
 
 const orders = ref([])
 const loading = ref(true)
@@ -96,15 +99,7 @@ function getStatusClass(status) {
 }
 
 function getStatusLabel(status) {
-  const labels = {
-    'DRAFT': 'Qoralama',
-    'PENDING': 'Kutilmoqda',
-    'APPROVED': 'Tasdiqlangan',
-    'PARTIAL': 'Qisman qabul',
-    'RECEIVED': 'Qabul qilingan',
-    'CANCELLED': 'Bekor qilingan'
-  }
-  return labels[status] || status
+  return t(`enums.purchaseOrderStatus.${status}`)
 }
 
 function handleSearch() {
@@ -138,12 +133,12 @@ function transformOrderForReceipt(order) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Xarid buyurtmalari</h1>
-        <p class="mt-1 text-sm text-gray-500">Yetkazib beruvchilardan buyurtmalar</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('purchases.orders.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('purchases.orders.subtitle') }}</p>
       </div>
       <RouterLink to="/purchases/orders/new" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Yangi buyurtma
+        {{ $t('purchases.orders.newOrder') }}
       </RouterLink>
     </div>
 
@@ -155,13 +150,13 @@ function transformOrderForReceipt(order) {
           <input
             v-model="search"
             type="text"
-            placeholder="Qidiruv (buyurtma raqami, yetkazib beruvchi)..."
+            :placeholder="$t('purchases.orders.searchPlaceholder')"
             class="input pl-10"
             @keyup.enter="handleSearch"
           />
         </div>
         <button @click="handleSearch" class="btn-primary">
-          Qidirish
+          {{ $t('search') }}
         </button>
       </div>
     </div>
@@ -172,20 +167,20 @@ function transformOrderForReceipt(order) {
       </div>
 
       <div v-else-if="orders.length === 0" class="text-center py-12">
-        <p class="text-gray-500">Buyurtmalar topilmadi</p>
+        <p class="text-gray-500">{{ $t('purchases.orders.noOrders') }}</p>
       </div>
 
       <div v-else class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>Buyurtma №</th>
-              <th>Yetkazib beruvchi</th>
-              <th>Sana</th>
-              <th>Mahsulotlar</th>
-              <th class="text-right">Summa</th>
-              <th>Holat</th>
-              <th class="text-right">Amallar</th>
+              <th>{{ $t('purchases.orders.orderNumber') }}</th>
+              <th>{{ $t('purchases.orders.supplier') }}</th>
+              <th>{{ $t('date') }}</th>
+              <th>{{ $t('purchases.orders.productsCount') }}</th>
+              <th class="text-right">{{ $t('amount') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -202,14 +197,14 @@ function transformOrderForReceipt(order) {
                 <button
                   @click="viewOrder(order)"
                   class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  title="Ko'rish va chop etish"
+                  :title="$t('purchases.orders.viewAndPrint')"
                 >
                   <EyeIcon class="h-5 w-5" />
                 </button>
                 <RouterLink
                   :to="`/purchases/orders/${order.id}`"
                   class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  title="Tafsilotlar"
+                  :title="$t('details')"
                 >
                   <PrinterIcon class="h-5 w-5" />
                 </RouterLink>
@@ -227,18 +222,18 @@ function transformOrderForReceipt(order) {
             :disabled="pagination.page === 0"
             class="btn-secondary"
           >
-            Oldingi
+            {{ $t('previous') }}
           </button>
           <span class="text-sm text-gray-500">
-            Sahifa {{ pagination.page + 1 }} / {{ pagination.totalPages }}
-            (Jami: {{ pagination.totalElements }})
+            {{ $t('page') }} {{ pagination.page + 1 }} {{ $t('of') }} {{ pagination.totalPages }}
+            ({{ $t('totalCount') }}: {{ pagination.totalElements }})
           </span>
           <button
             @click="pagination.page++; fetchOrders()"
             :disabled="pagination.page >= pagination.totalPages - 1"
             class="btn-secondary"
           >
-            Keyingi
+            {{ $t('next') }}
           </button>
         </div>
       </div>
@@ -255,7 +250,7 @@ function transformOrderForReceipt(order) {
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
             <h2 class="text-xl font-bold text-gray-900">
-              Buyurtma tafsilotlari
+              {{ $t('purchases.orders.orderDetails') }}
             </h2>
             <p class="text-sm text-gray-500">
               {{ selectedOrder?.poNumber || `PO-${selectedOrder?.id}` }}
@@ -268,7 +263,7 @@ function transformOrderForReceipt(order) {
               :disabled="loadingDetail"
             >
               <PrinterIcon class="h-5 w-5" />
-              Chop etish
+              {{ $t('print') }}
             </button>
             <button
               @click="closeModal"
@@ -291,11 +286,11 @@ function transformOrderForReceipt(order) {
               <!-- Basic Info -->
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="text-sm text-gray-500">Sana</label>
+                  <label class="text-sm text-gray-500">{{ $t('date') }}</label>
                   <p class="font-medium">{{ formatDate(selectedOrder.orderDate || selectedOrder.createdAt) }}</p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Holat</label>
+                  <label class="text-sm text-gray-500">{{ $t('status') }}</label>
                   <p>
                     <span :class="['badge', getStatusClass(selectedOrder.status)]">
                       {{ getStatusLabel(selectedOrder.status) }}
@@ -303,29 +298,29 @@ function transformOrderForReceipt(order) {
                   </p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Yetkazib beruvchi</label>
+                  <label class="text-sm text-gray-500">{{ $t('purchases.orders.supplier') }}</label>
                   <p class="font-medium">{{ selectedOrder.vendorName || '-' }}</p>
                   <p v-if="selectedOrder.vendorCode" class="text-sm text-gray-500">
                     {{ selectedOrder.vendorCode }}
                   </p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">Ombor</label>
+                  <label class="text-sm text-gray-500">{{ $t('purchases.orders.warehouse') }}</label>
                   <p class="font-medium">{{ selectedOrder.locationName || '-' }}</p>
                 </div>
               </div>
 
               <!-- Items -->
               <div>
-                <h3 class="font-semibold text-gray-900 mb-3">Mahsulotlar</h3>
+                <h3 class="font-semibold text-gray-900 mb-3">{{ $t('purchases.orders.productsCount') }}</h3>
                 <div class="bg-gray-50 rounded-lg overflow-hidden">
                   <table class="w-full">
                     <thead class="bg-gray-100">
                       <tr>
-                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Mahsulot</th>
-                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">Soni</th>
-                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">Narxi</th>
-                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">Jami</th>
+                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">{{ $t('purchases.orderForm.product') }}</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">{{ $t('quantity') }}</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">{{ $t('price') }}</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">{{ $t('total') }}</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -347,15 +342,15 @@ function transformOrderForReceipt(order) {
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="space-y-2">
                   <div class="flex justify-between" v-if="selectedOrder.subtotal">
-                    <span class="text-gray-600">Oraliq summa:</span>
+                    <span class="text-gray-600">{{ $t('purchases.orders.subtotal') }}:</span>
                     <span>{{ formatCurrency(selectedOrder.subtotal) }} so'm</span>
                   </div>
                   <div class="flex justify-between" v-if="selectedOrder.taxAmount">
-                    <span class="text-gray-600">Soliq:</span>
+                    <span class="text-gray-600">{{ $t('purchases.orders.taxAmount') }}:</span>
                     <span>{{ formatCurrency(selectedOrder.taxAmount) }} so'm</span>
                   </div>
                   <div class="flex justify-between text-lg font-bold border-t pt-2">
-                    <span>Jami:</span>
+                    <span>{{ $t('total') }}:</span>
                     <span>{{ formatCurrency(selectedOrder.totalAmount) }} so'm</span>
                   </div>
                 </div>
@@ -363,7 +358,7 @@ function transformOrderForReceipt(order) {
 
               <!-- Notes -->
               <div v-if="selectedOrder.notes">
-                <h3 class="font-semibold text-gray-900 mb-2">Izohlar</h3>
+                <h3 class="font-semibold text-gray-900 mb-2">{{ $t('notes') }}</h3>
                 <p class="text-gray-600 bg-gray-50 rounded-lg p-3">{{ selectedOrder.notes }}</p>
               </div>
             </div>
@@ -371,7 +366,7 @@ function transformOrderForReceipt(order) {
 
           <!-- Receipt Preview -->
           <div class="w-80 border-l border-gray-200 bg-gray-50 p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
-            <h3 class="font-semibold text-gray-900 mb-4 text-center">Chek ko'rinishi</h3>
+            <h3 class="font-semibold text-gray-900 mb-4 text-center">{{ $t('purchases.orders.receiptView') }}</h3>
             <div class="bg-white shadow-lg rounded-lg overflow-hidden">
               <ReceiptTemplate
                 v-if="selectedOrder"

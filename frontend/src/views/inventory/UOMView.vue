@@ -1,7 +1,10 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { uomApi } from '@/services/api'
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const uoms = ref([])
 const loading = ref(true)
@@ -61,13 +64,13 @@ function openModal(uom = null) {
 async function saveUom() {
   Object.keys(errors).forEach(key => delete errors[key])
   if (!form.name?.trim()) {
-    errors.name = 'Name is required'
+    errors.name = t('inventory.uom.nameRequired')
   }
   if (!form.code?.trim()) {
-    errors.code = 'Code is required'
+    errors.code = t('inventory.uom.codeRequired')
   }
   if (!form.symbol?.trim()) {
-    errors.symbol = 'Symbol is required'
+    errors.symbol = t('required')
   }
   if (Object.keys(errors).length > 0) return
 
@@ -80,18 +83,18 @@ async function saveUom() {
     showModal.value = false
     fetchUoms()
   } catch (error) {
-    errors.general = error.response?.data?.message || 'Failed to save'
+    errors.general = error.response?.data?.message || t('failedToSave')
   }
 }
 
 async function deleteUom(uom) {
-  if (!confirm(`Delete "${uom.name}"?`)) return
+  if (!confirm(t('inventory.uom.confirmDelete', { name: uom.name }))) return
   try {
     await uomApi.delete(uom.id)
     fetchUoms()
   } catch (error) {
     console.error('Failed to delete UOM:', error)
-    alert(error.response?.data?.message || 'Failed to delete UOM')
+    alert(error.response?.data?.message || t('failedToDelete'))
   }
 }
 </script>
@@ -100,12 +103,12 @@ async function deleteUom(uom) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Units of Measure</h1>
-        <p class="mt-1 text-sm text-gray-500">Manage units of measure for your products</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('inventory.uom.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('inventory.uom.subtitle') }}</p>
       </div>
       <button @click="openModal()" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Add UOM
+        {{ $t('inventory.uom.addUom') }}
       </button>
     </div>
 
@@ -115,20 +118,20 @@ async function deleteUom(uom) {
       </div>
 
       <div v-else-if="uoms.length === 0" class="text-center py-12">
-        <p class="text-gray-500">No units of measure yet</p>
+        <p class="text-gray-500">{{ $t('inventory.uom.noUoms') }}</p>
       </div>
 
       <div v-else class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Code</th>
-              <th>Symbol</th>
-              <th>Description</th>
-              <th>Base Unit</th>
-              <th>Status</th>
-              <th class="text-right">Actions</th>
+              <th>{{ $t('name') }}</th>
+              <th>{{ $t('code') }}</th>
+              <th>{{ $t('inventory.uom.symbol') }}</th>
+              <th>{{ $t('description') }}</th>
+              <th>{{ $t('inventory.uom.baseUnit') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -142,7 +145,7 @@ async function deleteUom(uom) {
                   'px-2 py-1 text-xs font-medium rounded-full',
                   uom.isBaseUnit ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                 ]">
-                  {{ uom.isBaseUnit ? 'Yes' : 'No' }}
+                  {{ uom.isBaseUnit ? $t('inventory.uom.yes') : $t('inventory.uom.no') }}
                 </span>
               </td>
               <td>
@@ -150,7 +153,7 @@ async function deleteUom(uom) {
                   'px-2 py-1 text-xs font-medium rounded-full',
                   uom.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                 ]">
-                  {{ uom.active ? 'Active' : 'Inactive' }}
+                  {{ uom.active ? $t('active') : $t('inactive') }}
                 </span>
               </td>
               <td class="text-right">
@@ -175,7 +178,7 @@ async function deleteUom(uom) {
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showModal = false"></div>
         <div class="relative bg-white rounded-lg max-w-md w-full p-6">
           <h3 class="text-lg font-medium text-gray-900 mb-4">
-            {{ editingUom ? 'Edit Unit of Measure' : 'New Unit of Measure' }}
+            {{ editingUom ? $t('inventory.uom.editUom') : $t('inventory.uom.newUom') }}
           </h3>
 
           <div v-if="errors.general" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -184,33 +187,33 @@ async function deleteUom(uom) {
 
           <div class="space-y-4">
             <div>
-              <label class="label">Name *</label>
-              <input v-model="form.name" @input="onNameChange" type="text" :class="[errors.name ? 'input-error' : 'input']" placeholder="e.g., Kilogram" />
+              <label class="label">{{ $t('name') }} *</label>
+              <input v-model="form.name" @input="onNameChange" type="text" :class="[errors.name ? 'input-error' : 'input']" />
               <p v-if="errors.name" class="mt-1 text-sm text-red-600">{{ errors.name }}</p>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="label">Code *</label>
-                <input v-model="form.code" type="text" :class="[errors.code ? 'input-error' : 'input']" placeholder="e.g., KG" />
+                <label class="label">{{ $t('code') }} *</label>
+                <input v-model="form.code" type="text" :class="[errors.code ? 'input-error' : 'input']" />
                 <p v-if="errors.code" class="mt-1 text-sm text-red-600">{{ errors.code }}</p>
               </div>
 
               <div>
-                <label class="label">Symbol *</label>
-                <input v-model="form.symbol" type="text" :class="[errors.symbol ? 'input-error' : 'input']" placeholder="e.g., kg" />
+                <label class="label">{{ $t('inventory.uom.symbol') }} *</label>
+                <input v-model="form.symbol" type="text" :class="[errors.symbol ? 'input-error' : 'input']" />
                 <p v-if="errors.symbol" class="mt-1 text-sm text-red-600">{{ errors.symbol }}</p>
               </div>
             </div>
 
             <div>
-              <label class="label">Description</label>
-              <textarea v-model="form.description" rows="2" class="input" placeholder="Optional description"></textarea>
+              <label class="label">{{ $t('description') }}</label>
+              <textarea v-model="form.description" rows="2" class="input"></textarea>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="label">Conversion Factor</label>
+                <label class="label">{{ $t('inventory.productForm.conversionFactor') }}</label>
                 <input v-model.number="form.conversionFactor" type="number" step="0.000001" min="0" class="input" />
               </div>
             </div>
@@ -218,19 +221,19 @@ async function deleteUom(uom) {
             <div class="flex flex-wrap gap-4">
               <label class="flex items-center">
                 <input v-model="form.isBaseUnit" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-                <span class="ml-2 text-sm text-gray-700">Base Unit</span>
+                <span class="ml-2 text-sm text-gray-700">{{ $t('inventory.uom.baseUnit') }}</span>
               </label>
 
               <label class="flex items-center">
                 <input v-model="form.active" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-                <span class="ml-2 text-sm text-gray-700">Active</span>
+                <span class="ml-2 text-sm text-gray-700">{{ $t('active') }}</span>
               </label>
             </div>
           </div>
 
           <div class="mt-6 flex justify-end space-x-3">
-            <button @click="showModal = false" class="btn-secondary">Cancel</button>
-            <button @click="saveUom" class="btn-primary">Save</button>
+            <button @click="showModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
+            <button @click="saveUom" class="btn-primary">{{ $t('save') }}</button>
           </div>
         </div>
       </div>

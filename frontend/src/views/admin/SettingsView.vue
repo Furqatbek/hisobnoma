@@ -1,10 +1,13 @@
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { Cog6ToothIcon, BuildingStorefrontIcon, CurrencyDollarIcon, BellIcon, PrinterIcon, PaperAirplaneIcon } from '@heroicons/vue/24/outline'
 import { useReceiptStore } from '@/stores/receipt'
 import { telegramApi } from '@/services/api'
 import ReceiptTemplate from '@/components/ReceiptTemplate.vue'
 import InvoiceA4Template from '@/components/InvoiceA4Template.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const receiptStore = useReceiptStore()
 const activeTab = ref('general')
@@ -88,9 +91,9 @@ async function saveSettings() {
   try {
     // API call would go here
     await new Promise(resolve => setTimeout(resolve, 1000))
-    alert('Sozlamalar saqlandi!')
+    alert(t('admin.settings.saved'))
   } catch (error) {
-    alert('Sozlamalarni saqlashda xatolik')
+    alert(t('admin.settings.saveError'))
   } finally {
     saving.value = false
   }
@@ -98,7 +101,7 @@ async function saveSettings() {
 
 function saveReceiptSettings() {
   receiptStore.updateConfig(receiptSettings)
-  alert('Chek sozlamalari saqlandi!')
+  alert(t('admin.settings.receiptSettingsSaved'))
 }
 
 function printTestReceipt() {
@@ -122,7 +125,7 @@ async function loadTelegramStatus() {
     telegram.linkedAt = res.data.linkedAt
   } catch (e) {
     // Telegram not enabled on backend — hide the tab silently
-    telegram.error = e.response?.status === 404 ? '' : 'Telegram holatini yuklashda xatolik'
+    telegram.error = e.response?.status === 404 ? '' : t('admin.telegram.statusLoadError')
   } finally {
     telegram.loading = false
   }
@@ -136,14 +139,14 @@ async function generateTelegramCode() {
     telegram.linkCode = res.data.code
     telegram.botUsername = res.data.botUsername
   } catch (e) {
-    telegram.error = e.response?.data?.message || 'Kod yaratishda xatolik'
+    telegram.error = e.response?.data?.message || t('admin.telegram.codeGenerateError')
   } finally {
     telegram.generatingCode = false
   }
 }
 
 async function unlinkTelegram() {
-  if (!confirm('Telegram akkauntni uzmoqchimisiz?')) return
+  if (!confirm(t('admin.telegram.confirmUnlink'))) return
   telegram.unlinking = true
   try {
     await telegramApi.unlink()
@@ -151,7 +154,7 @@ async function unlinkTelegram() {
     telegram.linkedAt = ''
     telegram.linkCode = ''
   } catch (e) {
-    telegram.error = e.response?.data?.message || 'Uzishda xatolik'
+    telegram.error = e.response?.data?.message || t('admin.telegram.unlinkError')
   } finally {
     telegram.unlinking = false
   }
@@ -161,20 +164,20 @@ watch(activeTab, (tab) => {
   if (tab === 'telegram') loadTelegramStatus()
 })
 
-const tabs = [
-  { key: 'general', name: 'Umumiy', icon: BuildingStorefrontIcon },
-  { key: 'pos', name: 'Kassa (POS)', icon: CurrencyDollarIcon },
-  { key: 'receipt', name: 'Chek sozlamalari', icon: PrinterIcon },
-  { key: 'notifications', name: 'Bildirishnomalar', icon: BellIcon },
-  { key: 'telegram', name: 'Telegram', icon: PaperAirplaneIcon }
-]
+const tabs = computed(() => [
+  { key: 'general', name: t('admin.settings.tabGeneral'), icon: BuildingStorefrontIcon },
+  { key: 'pos', name: t('admin.settings.tabPos'), icon: CurrencyDollarIcon },
+  { key: 'receipt', name: t('admin.settings.tabReceipt'), icon: PrinterIcon },
+  { key: 'notifications', name: t('admin.settings.tabNotifications'), icon: BellIcon },
+  { key: 'telegram', name: t('admin.settings.tabTelegram'), icon: PaperAirplaneIcon }
+])
 </script>
 
 <template>
   <div class="space-y-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Sozlamalar</h1>
-      <p class="mt-1 text-sm text-gray-500">Tizim konfiguratsiyasi</p>
+      <h1 class="text-2xl font-bold text-gray-900">{{ $t('admin.settings.title') }}</h1>
+      <p class="mt-1 text-sm text-gray-500">{{ $t('admin.settings.subtitle') }}</p>
     </div>
 
     <div class="flex flex-col lg:flex-row gap-6">
@@ -203,29 +206,29 @@ const tabs = [
         <!-- General Settings -->
         <div v-show="activeTab === 'general'" class="card">
           <div class="card-header">
-            <h3 class="text-lg font-medium">Kompaniya ma'lumotlari</h3>
+            <h3 class="text-lg font-medium">{{ $t('admin.settings.companyInfo') }}</h3>
           </div>
           <div class="card-body space-y-4">
             <div>
-              <label class="label">Kompaniya nomi</label>
+              <label class="label">{{ $t('admin.settings.companyName') }}</label>
               <input v-model="settings.company.name" type="text" class="input" />
             </div>
             <div>
-              <label class="label">Manzil</label>
+              <label class="label">{{ $t('address') }}</label>
               <textarea v-model="settings.company.address" rows="2" class="input"></textarea>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="label">Telefon</label>
+                <label class="label">{{ $t('phone') }}</label>
                 <input v-model="settings.company.phone" type="tel" class="input" />
               </div>
               <div>
-                <label class="label">Email</label>
+                <label class="label">{{ $t('email') }}</label>
                 <input v-model="settings.company.email" type="email" class="input" />
               </div>
             </div>
             <div>
-              <label class="label">STIR (Soliq to'lovchi identifikatsiya raqami)</label>
+              <label class="label">{{ $t('admin.settings.taxId') }}</label>
               <input v-model="settings.company.taxId" type="text" class="input" />
             </div>
           </div>
@@ -234,25 +237,25 @@ const tabs = [
         <!-- POS Settings -->
         <div v-show="activeTab === 'pos'" class="card">
           <div class="card-header">
-            <h3 class="text-lg font-medium">Kassa (POS) sozlamalari</h3>
+            <h3 class="text-lg font-medium">{{ $t('admin.settings.posSettings') }}</h3>
           </div>
           <div class="card-body space-y-4">
             <div>
-              <label class="label">Standart soliq stavkasi (%)</label>
+              <label class="label">{{ $t('admin.settings.defaultTaxRate') }}</label>
               <input v-model.number="settings.pos.defaultTaxRate" type="number" min="0" max="100" step="0.1" class="input w-32" />
             </div>
             <div class="space-y-3">
               <label class="flex items-center">
                 <input v-model="settings.pos.allowNegativeStock" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-                <span class="ml-2 text-sm">Salbiy zaxirada sotishga ruxsat berish</span>
+                <span class="ml-2 text-sm">{{ $t('admin.settings.allowNegativeStock') }}</span>
               </label>
               <label class="flex items-center">
                 <input v-model="settings.pos.requireCustomer" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-                <span class="ml-2 text-sm">Har bir sotuvda mijozni talab qilish</span>
+                <span class="ml-2 text-sm">{{ $t('admin.settings.requireCustomer') }}</span>
               </label>
               <label class="flex items-center">
                 <input v-model="settings.pos.printReceipt" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-                <span class="ml-2 text-sm">Sotuvdan keyin chekni avtomatik chop etish</span>
+                <span class="ml-2 text-sm">{{ $t('admin.settings.autoPrintReceipt') }}</span>
               </label>
             </div>
           </div>
@@ -264,31 +267,31 @@ const tabs = [
             <!-- Receipt Form -->
             <div class="flex-1 card">
               <div class="card-header">
-                <h3 class="text-lg font-medium">Chek ma'lumotlari</h3>
-                <p class="text-sm text-gray-500 mt-1">{{ receiptSettings.paperWidth === 'A4' ? 'A4 formatdagi hisob-faktura shabloni' : 'Termal printer uchun chek shabloni' }}</p>
+                <h3 class="text-lg font-medium">{{ $t('admin.settings.receiptInfo') }}</h3>
+                <p class="text-sm text-gray-500 mt-1">{{ receiptSettings.paperWidth === 'A4' ? $t('admin.settings.a4Template') : $t('admin.settings.thermalTemplate') }}</p>
               </div>
               <div class="card-body space-y-4">
                 <div>
-                  <label class="label">Do'kon/Brend nomi <span class="text-red-500">*</span></label>
+                  <label class="label">{{ $t('admin.settings.brandName') }} <span class="text-red-500">*</span></label>
                   <input
                     v-model="receiptSettings.brandName"
                     type="text"
                     class="input"
-                    placeholder="Do'koningiz nomi"
+                    :placeholder="$t('admin.settings.brandNamePlaceholder')"
                   />
                 </div>
                 <div>
-                  <label class="label">Manzil</label>
+                  <label class="label">{{ $t('address') }}</label>
                   <input
                     v-model="receiptSettings.address"
                     type="text"
                     class="input"
-                    placeholder="Manzil: Toshkent sh., Chilonzor t."
+                    :placeholder="$t('admin.settings.addressPlaceholder')"
                   />
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="label">Telefon raqami</label>
+                    <label class="label">{{ $t('phone') }}</label>
                     <input
                       v-model="receiptSettings.phone"
                       type="tel"
@@ -297,7 +300,7 @@ const tabs = [
                     />
                   </div>
                   <div>
-                    <label class="label">Veb-sayt</label>
+                    <label class="label">{{ $t('admin.settings.website') }}</label>
                     <input
                       v-model="receiptSettings.website"
                       type="text"
@@ -307,7 +310,7 @@ const tabs = [
                   </div>
                 </div>
                 <div>
-                  <label class="label">STIR</label>
+                  <label class="label">{{ $t('admin.settings.taxIdShort') }}</label>
                   <input
                     v-model="receiptSettings.taxId"
                     type="text"
@@ -316,7 +319,7 @@ const tabs = [
                   />
                 </div>
                 <div>
-                  <label class="label">Chek pastki qismi matni</label>
+                  <label class="label">{{ $t('admin.settings.footerText') }}</label>
                   <input
                     v-model="receiptSettings.footerText"
                     type="text"
@@ -325,23 +328,23 @@ const tabs = [
                   />
                 </div>
                 <div>
-                  <label class="label">Qog'oz kengligi</label>
+                  <label class="label">{{ $t('admin.settings.paperWidth') }}</label>
                   <select v-model="receiptSettings.paperWidth" class="input w-40">
                     <option value="58">58mm</option>
                     <option value="80">80mm</option>
                     <option value="A4">A4</option>
                   </select>
                   <p class="text-xs text-gray-500 mt-1">
-                    {{ receiptSettings.paperWidth === 'A4' ? 'A4 formatdagi chek (210mm x 297mm)' : 'Termal printeringiz qog\'oz o\'lchami' }}
+                    {{ receiptSettings.paperWidth === 'A4' ? $t('admin.settings.a4Format') : $t('admin.settings.thermalPaperSize') }}
                   </p>
                 </div>
 
                 <div class="flex gap-3 pt-4 border-t">
                   <button @click="saveReceiptSettings" class="btn-primary">
-                    Saqlash
+                    {{ $t('save') }}
                   </button>
                   <button @click="printTestReceipt" class="btn-secondary">
-                    Test chek chop etish
+                    {{ $t('admin.settings.printTestReceipt') }}
                   </button>
                 </div>
               </div>
@@ -351,7 +354,7 @@ const tabs = [
             <div v-if="receiptSettings.paperWidth !== 'A4'" class="w-80">
               <div class="card">
                 <div class="card-header">
-                  <h3 class="text-lg font-medium text-center">Ko'rinishi ({{ receiptSettings.paperWidth }}mm)</h3>
+                  <h3 class="text-lg font-medium text-center">{{ $t('admin.settings.preview') }} ({{ receiptSettings.paperWidth }}mm)</h3>
                 </div>
                 <div class="card-body p-2">
                   <div class="bg-white border rounded-lg overflow-hidden">
@@ -369,7 +372,7 @@ const tabs = [
             <div v-else class="flex-1 max-w-lg">
               <div class="card">
                 <div class="card-header">
-                  <h3 class="text-lg font-medium text-center">Ko'rinishi (A4)</h3>
+                  <h3 class="text-lg font-medium text-center">{{ $t('admin.settings.preview') }} (A4)</h3>
                 </div>
                 <div class="card-body p-2">
                   <div class="bg-white border rounded-lg overflow-hidden">
@@ -387,27 +390,27 @@ const tabs = [
         <!-- Notification Settings -->
         <div v-show="activeTab === 'notifications'" class="card">
           <div class="card-header">
-            <h3 class="text-lg font-medium">Bildirishnoma sozlamalari</h3>
+            <h3 class="text-lg font-medium">{{ $t('admin.settings.notificationSettings') }}</h3>
           </div>
           <div class="card-body space-y-4">
             <div class="space-y-3">
               <label class="flex items-center">
                 <input v-model="settings.notifications.lowStockAlert" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-                <span class="ml-2 text-sm">Kam zaxira ogohlantirishlarini yoqish</span>
+                <span class="ml-2 text-sm">{{ $t('admin.settings.enableLowStockAlert') }}</span>
               </label>
               <div v-if="settings.notifications.lowStockAlert" class="ml-6">
-                <label class="label">Zaxira quyidagi miqdordan kam bo'lganda ogohlantirish</label>
+                <label class="label">{{ $t('admin.settings.lowStockThreshold') }}</label>
                 <input v-model.number="settings.notifications.lowStockThreshold" type="number" min="1" class="input w-24" />
               </div>
             </div>
             <div class="space-y-3 pt-4 border-t">
               <label class="flex items-center">
                 <input v-model="settings.notifications.emailNotifications" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-                <span class="ml-2 text-sm">Email bildirishnomalari</span>
+                <span class="ml-2 text-sm">{{ $t('admin.settings.emailNotifications') }}</span>
               </label>
               <label class="flex items-center">
                 <input v-model="settings.notifications.smsNotifications" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
-                <span class="ml-2 text-sm">SMS bildirishnomalari</span>
+                <span class="ml-2 text-sm">{{ $t('admin.settings.smsNotifications') }}</span>
               </label>
             </div>
           </div>
@@ -416,8 +419,8 @@ const tabs = [
         <!-- Telegram Settings -->
         <div v-show="activeTab === 'telegram'" class="card">
           <div class="card-header">
-            <h3 class="text-lg font-medium">Telegram bot</h3>
-            <p class="text-sm text-gray-500 mt-1">Telegram orqali bildirishnomalar olish</p>
+            <h3 class="text-lg font-medium">{{ $t('admin.telegram.botTitle') }}</h3>
+            <p class="text-sm text-gray-500 mt-1">{{ $t('admin.telegram.botSubtitle') }}</p>
           </div>
           <div class="card-body space-y-6">
             <div v-if="telegram.error" class="p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -434,50 +437,49 @@ const tabs = [
                 <div class="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <span class="inline-block w-3 h-3 rounded-full bg-green-500"></span>
                   <div>
-                    <p class="font-medium text-green-800">Telegram ulangan</p>
+                    <p class="font-medium text-green-800">{{ $t('admin.telegram.linked') }}</p>
                     <p v-if="telegram.linkedAt" class="text-sm text-green-600">
-                      Ulangan sana: {{ new Date(telegram.linkedAt).toLocaleDateString('uz-UZ') }}
+                      {{ $t('admin.telegram.linkedDate') }}: {{ new Date(telegram.linkedAt).toLocaleDateString('uz-UZ') }}
                     </p>
                   </div>
                 </div>
                 <p class="text-sm text-gray-600">
-                  Siz bildirishnomalarni Telegram orqali olasiz. Bildirishnoma turlarini
-                  "Bildirishnomalar" bo'limida sozlashingiz mumkin.
+                  {{ $t('admin.telegram.linkedDescription') }}
                 </p>
                 <button
                   @click="unlinkTelegram"
                   :disabled="telegram.unlinking"
                   class="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50"
                 >
-                  {{ telegram.unlinking ? 'Uzilmoqda...' : 'Telegramni uzish' }}
+                  {{ telegram.unlinking ? $t('admin.telegram.unlinking') : $t('admin.telegram.unlinkTelegram') }}
                 </button>
               </div>
 
               <!-- Not linked state -->
               <div v-else class="space-y-6">
                 <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p class="font-medium text-blue-800 mb-2">Telegram botga ulanish</p>
+                  <p class="font-medium text-blue-800 mb-2">{{ $t('admin.telegram.connectToBot') }}</p>
                   <ol class="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-                    <li>"Kod olish" tugmasini bosing</li>
-                    <li>Telegramda <b>@{{ telegram.botUsername || 'hisobnoma_bot' }}</b> botni oching</li>
-                    <li>Olingan 6 raqamli kodni botga yuboring</li>
+                    <li>{{ $t('admin.telegram.step1') }}</li>
+                    <li>{{ $t('admin.telegram.step2') }} <b>@{{ telegram.botUsername || 'hisobnoma_bot' }}</b></li>
+                    <li>{{ $t('admin.telegram.step3') }}</li>
                   </ol>
                 </div>
 
                 <!-- Link code display -->
                 <div v-if="telegram.linkCode" class="text-center space-y-3">
-                  <p class="text-sm text-gray-600">Ushbu kodni Telegram botga yuboring:</p>
+                  <p class="text-sm text-gray-600">{{ $t('admin.telegram.sendCodeToBot') }}</p>
                   <div class="inline-block px-8 py-4 bg-gray-900 rounded-xl">
                     <span class="text-3xl font-mono font-bold text-white tracking-widest">{{ telegram.linkCode }}</span>
                   </div>
-                  <p class="text-xs text-gray-400">Kod 10 daqiqa amal qiladi</p>
+                  <p class="text-xs text-gray-400">{{ $t('admin.telegram.codeExpiry') }}</p>
                   <div>
                     <a
                       :href="'https://t.me/' + (telegram.botUsername || 'hisobnoma_bot')"
                       target="_blank"
                       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg"
                     >
-                      Telegram botni ochish
+                      {{ $t('admin.telegram.openBot') }}
                     </a>
                   </div>
                 </div>
@@ -487,7 +489,7 @@ const tabs = [
                   :disabled="telegram.generatingCode"
                   class="btn-primary"
                 >
-                  {{ telegram.generatingCode ? 'Yaratilmoqda...' : (telegram.linkCode ? 'Yangi kod olish' : 'Kod olish') }}
+                  {{ telegram.generatingCode ? $t('admin.telegram.generating') : (telegram.linkCode ? $t('admin.telegram.getNewCode') : $t('admin.telegram.getCode')) }}
                 </button>
               </div>
             </template>
@@ -497,7 +499,7 @@ const tabs = [
         <!-- Save Button for other tabs -->
         <div v-if="activeTab !== 'receipt' && activeTab !== 'telegram'" class="mt-6 flex justify-end">
           <button @click="saveSettings" :disabled="saving" class="btn-primary">
-            {{ saving ? 'Saqlanmoqda...' : 'Saqlash' }}
+            {{ saving ? $t('saving') : $t('save') }}
           </button>
         </div>
       </div>

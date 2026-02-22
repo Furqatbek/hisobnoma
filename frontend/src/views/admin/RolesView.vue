@@ -10,6 +10,9 @@ import {
   MagnifyingGlassIcon,
   LockClosedIcon
 } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const roles = ref([])
 const loading = ref(true)
@@ -47,18 +50,18 @@ async function fetchRoles() {
 
 async function deleteRole(role) {
   if (role.systemRole) {
-    alert('Tizim rollari o\'chirib bo\'lmaydi')
+    alert(t('admin.roles.systemRoleCannotDelete'))
     return
   }
 
-  if (!confirm(`"${role.name}" rolini o'chirmoqchimisiz?`)) return
+  if (!confirm(t('admin.roles.confirmDelete', { name: role.name }))) return
 
   try {
     await rolesApi.delete(role.id)
     roles.value = roles.value.filter(r => r.id !== role.id)
   } catch (error) {
     console.error('Rolni o\'chirishda xatolik:', error)
-    alert('Rolni o\'chirishda xatolik yuz berdi')
+    alert(t('admin.roles.deleteError'))
   }
 }
 
@@ -79,12 +82,12 @@ function formatDate(date) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Rollar va ruxsatlar</h1>
-        <p class="mt-1 text-sm text-gray-500">Foydalanuvchi rollari va ularning ruxsatlarini boshqarish</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('admin.roles.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('admin.roles.subtitle') }}</p>
       </div>
       <RouterLink to="/admin/roles/new" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Yangi rol
+        {{ $t('admin.roles.newRole') }}
       </RouterLink>
     </div>
 
@@ -96,13 +99,13 @@ function formatDate(date) {
           <input
             v-model="search"
             type="text"
-            placeholder="Qidiruv (rol nomi, kodi)..."
+            :placeholder="$t('admin.roles.searchPlaceholder')"
             class="input pl-10"
             @keyup.enter="handleSearch"
           />
         </div>
         <button @click="handleSearch" class="btn-primary">
-          Qidirish
+          {{ $t('search') }}
         </button>
       </div>
     </div>
@@ -115,10 +118,10 @@ function formatDate(date) {
 
       <div v-else-if="roles.length === 0" class="text-center py-12">
         <ShieldCheckIcon class="h-12 w-12 mx-auto text-gray-400 mb-4" />
-        <p class="text-gray-500 mb-4">Rollar topilmadi</p>
+        <p class="text-gray-500 mb-4">{{ $t('admin.roles.noRoles') }}</p>
         <RouterLink to="/admin/roles/new" class="btn-primary">
           <PlusIcon class="h-5 w-5 mr-2" />
-          Birinchi rolni qo'shish
+          {{ $t('admin.roles.addFirst') }}
         </RouterLink>
       </div>
 
@@ -126,13 +129,13 @@ function formatDate(date) {
         <table class="table">
           <thead>
             <tr>
-              <th>Rol nomi</th>
-              <th>Kod</th>
-              <th>Tavsif</th>
-              <th>Ruxsatlar</th>
-              <th>Turi</th>
-              <th>Yaratilgan</th>
-              <th class="text-right">Amallar</th>
+              <th>{{ $t('admin.roles.roleName') }}</th>
+              <th>{{ $t('code') }}</th>
+              <th>{{ $t('description') }}</th>
+              <th>{{ $t('admin.roles.permissions') }}</th>
+              <th>{{ $t('admin.roles.type') }}</th>
+              <th>{{ $t('admin.roles.createdAt') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -146,21 +149,21 @@ function formatDate(date) {
               <td class="font-mono text-sm text-gray-500">{{ role.code }}</td>
               <td class="text-sm text-gray-500 max-w-xs truncate">{{ role.description || '-' }}</td>
               <td>
-                <span class="badge badge-info">{{ role.permissions?.length || 0 }} ta ruxsat</span>
+                <span class="badge badge-info">{{ role.permissions?.length || 0 }} {{ $t('admin.roles.permissionCount') }}</span>
               </td>
               <td>
                 <span v-if="role.systemRole" class="badge badge-warning flex items-center w-fit">
                   <LockClosedIcon class="h-3 w-3 mr-1" />
-                  Tizim
+                  {{ $t('admin.roles.system') }}
                 </span>
-                <span v-else class="badge badge-success">Maxsus</span>
+                <span v-else class="badge badge-success">{{ $t('admin.roles.custom') }}</span>
               </td>
               <td class="text-sm text-gray-500">{{ formatDate(role.createdAt) }}</td>
               <td class="text-right space-x-1">
                 <RouterLink
                   :to="`/admin/roles/${role.id}/edit`"
                   class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  title="Tahrirlash"
+                  :title="$t('edit')"
                 >
                   <PencilSquareIcon class="h-5 w-5" />
                 </RouterLink>
@@ -173,7 +176,7 @@ function formatDate(date) {
                       ? 'text-gray-300 cursor-not-allowed'
                       : 'text-gray-400 hover:text-red-600 hover:bg-gray-100'
                   ]"
-                  title="O'chirish"
+                  :title="$t('delete')"
                 >
                   <TrashIcon class="h-5 w-5" />
                 </button>
@@ -191,18 +194,18 @@ function formatDate(date) {
             :disabled="pagination.page === 0"
             class="btn-secondary"
           >
-            Oldingi
+            {{ $t('previous') }}
           </button>
           <span class="text-sm text-gray-500">
-            Sahifa {{ pagination.page + 1 }} / {{ pagination.totalPages }}
-            (Jami: {{ pagination.totalElements }})
+            {{ $t('page') }} {{ pagination.page + 1 }} / {{ pagination.totalPages }}
+            ({{ $t('totalCount') }}: {{ pagination.totalElements }})
           </span>
           <button
             @click="pagination.page++; fetchRoles()"
             :disabled="pagination.page >= pagination.totalPages - 1"
             class="btn-secondary"
           >
-            Keyingi
+            {{ $t('next') }}
           </button>
         </div>
       </div>

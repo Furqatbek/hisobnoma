@@ -11,6 +11,9 @@ import {
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const terminals = ref([])
 const locations = ref([])
@@ -83,19 +86,19 @@ async function toggleStatus(terminal) {
     }
   } catch (error) {
     console.error('Holatni o\'zgartirishda xatolik:', error)
-    alert('Holatni o\'zgartirishda xatolik yuz berdi')
+    alert(t('admin.terminals.statusChangeError'))
   }
 }
 
 async function deleteTerminal(terminal) {
-  if (!confirm(`"${terminal.name}" terminalini o'chirmoqchimisiz?`)) return
+  if (!confirm(t('admin.terminals.confirmDelete', { name: terminal.name }))) return
 
   try {
     await terminalsApi.delete(terminal.id)
     terminals.value = terminals.value.filter(t => t.id !== terminal.id)
   } catch (error) {
     console.error('Terminalni o\'chirishda xatolik:', error)
-    alert('Terminalni o\'chirishda xatolik yuz berdi')
+    alert(t('admin.terminals.deleteError'))
   }
 }
 
@@ -109,7 +112,7 @@ function getStatusClass(status) {
 }
 
 function getStatusLabel(status) {
-  return status === 'ACTIVE' ? 'Faol' : 'Nofaol'
+  return status === 'ACTIVE' ? t('active') : t('inactive')
 }
 
 function handleSearch() {
@@ -122,12 +125,12 @@ function handleSearch() {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">POS Terminallar</h1>
-        <p class="mt-1 text-sm text-gray-500">Kassa terminallarini boshqarish</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('admin.terminals.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('admin.terminals.subtitle') }}</p>
       </div>
       <RouterLink to="/admin/terminals/new" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Yangi terminal
+        {{ $t('admin.terminals.newTerminal') }}
       </RouterLink>
     </div>
 
@@ -139,18 +142,18 @@ function handleSearch() {
           <input
             v-model="search"
             type="text"
-            placeholder="Qidiruv (kod, nom)..."
+            :placeholder="$t('admin.terminals.searchPlaceholder')"
             class="input pl-10"
             @keyup.enter="handleSearch"
           />
         </div>
         <select v-model="statusFilter" @change="fetchTerminals" class="input w-auto">
-          <option value="all">Barcha holatlar</option>
-          <option value="ACTIVE">Faol</option>
-          <option value="INACTIVE">Nofaol</option>
+          <option value="all">{{ $t('admin.terminals.allStatuses') }}</option>
+          <option value="ACTIVE">{{ $t('active') }}</option>
+          <option value="INACTIVE">{{ $t('inactive') }}</option>
         </select>
         <button @click="handleSearch" class="btn-primary">
-          Qidirish
+          {{ $t('search') }}
         </button>
       </div>
     </div>
@@ -163,10 +166,10 @@ function handleSearch() {
 
       <div v-else-if="terminals.length === 0" class="text-center py-12">
         <ComputerDesktopIcon class="h-12 w-12 mx-auto text-gray-400 mb-4" />
-        <p class="text-gray-500 mb-4">Terminallar topilmadi</p>
+        <p class="text-gray-500 mb-4">{{ $t('admin.terminals.noTerminals') }}</p>
         <RouterLink to="/admin/terminals/new" class="btn-primary">
           <PlusIcon class="h-5 w-5 mr-2" />
-          Birinchi terminalni qo'shish
+          {{ $t('admin.terminals.addFirst') }}
         </RouterLink>
       </div>
 
@@ -174,12 +177,12 @@ function handleSearch() {
         <table class="table">
           <thead>
             <tr>
-              <th>Kod</th>
-              <th>Nomi</th>
-              <th>Joylashuv</th>
-              <th>Holat</th>
-              <th>Yaratilgan</th>
-              <th class="text-right">Amallar</th>
+              <th>{{ $t('admin.terminals.terminalCode') }}</th>
+              <th>{{ $t('name') }}</th>
+              <th>{{ $t('admin.terminals.location') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th>{{ $t('admin.roles.createdAt') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -196,7 +199,7 @@ function handleSearch() {
                 <button
                   @click="toggleStatus(terminal)"
                   :class="['badge cursor-pointer hover:opacity-80', getStatusClass(terminal.status)]"
-                  :title="terminal.status === 'ACTIVE' ? 'Nofaol qilish' : 'Faollashtirish'"
+                  :title="terminal.status === 'ACTIVE' ? $t('admin.terminals.deactivate') : $t('admin.terminals.activate')"
                 >
                   <component
                     :is="terminal.status === 'ACTIVE' ? CheckCircleIcon : XCircleIcon"
@@ -212,14 +215,14 @@ function handleSearch() {
                 <RouterLink
                   :to="`/admin/terminals/${terminal.id}/edit`"
                   class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  title="Tahrirlash"
+                  :title="$t('edit')"
                 >
                   <PencilSquareIcon class="h-5 w-5" />
                 </RouterLink>
                 <button
                   @click="deleteTerminal(terminal)"
                   class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  title="O'chirish"
+                  :title="$t('delete')"
                 >
                   <TrashIcon class="h-5 w-5" />
                 </button>
@@ -237,18 +240,18 @@ function handleSearch() {
             :disabled="pagination.page === 0"
             class="btn-secondary"
           >
-            Oldingi
+            {{ $t('previous') }}
           </button>
           <span class="text-sm text-gray-500">
-            Sahifa {{ pagination.page + 1 }} / {{ pagination.totalPages }}
-            (Jami: {{ pagination.totalElements }})
+            {{ $t('page') }} {{ pagination.page + 1 }} / {{ pagination.totalPages }}
+            ({{ $t('totalCount') }}: {{ pagination.totalElements }})
           </span>
           <button
             @click="pagination.page++; fetchTerminals()"
             :disabled="pagination.page >= pagination.totalPages - 1"
             class="btn-secondary"
           >
-            Keyingi
+            {{ $t('next') }}
           </button>
         </div>
       </div>

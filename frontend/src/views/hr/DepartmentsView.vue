@@ -2,6 +2,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { departmentsApi, employeesApi } from '@/services/api'
 import { PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const departments = ref([])
 const employees = ref([])
@@ -53,19 +55,19 @@ async function handleSave() {
     await loadData()
   } catch (error) {
     console.error('Failed to save:', error)
-    alert(error.response?.data?.message || 'Xatolik yuz berdi')
+    alert(error.response?.data?.message || t('noData'))
   } finally {
     saving.value = false
   }
 }
 
 async function handleDelete(id) {
-  if (!confirm("Bo'limni o'chirmoqchimisiz?")) return
+  if (!confirm(t('hr.departments.confirmDelete'))) return
   try {
     await departmentsApi.delete(id)
     await loadData()
   } catch (error) {
-    alert(error.response?.data?.message || "O'chirishda xatolik")
+    alert(error.response?.data?.message || t('noData'))
   }
 }
 
@@ -76,11 +78,11 @@ onMounted(loadData)
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Bo'limlar</h1>
-        <p class="mt-1 text-sm text-gray-500">Tashkilot bo'limlari</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('hr.departments.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('hr.departments.subtitle') }}</p>
       </div>
       <button @click="openCreate" class="btn-primary">
-        <PlusIcon class="h-5 w-5 mr-2" /> Yangi bo'lim
+        <PlusIcon class="h-5 w-5 mr-2" /> {{ $t('hr.departments.addDepartment') }}
       </button>
     </div>
 
@@ -90,18 +92,18 @@ onMounted(loadData)
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         </div>
         <div v-else-if="departments.length === 0" class="text-center py-12 text-gray-500">
-          Bo'limlar topilmadi
+          {{ $t('hr.departments.noDepartments') }}
         </div>
         <div v-else class="table-container">
           <table class="table">
             <thead>
               <tr>
-                <th>Kod</th>
-                <th>Nomi</th>
-                <th>Tavsif</th>
-                <th>Boshqaruvchi</th>
-                <th>Holat</th>
-                <th>Amallar</th>
+                <th>{{ $t('code') }}</th>
+                <th>{{ $t('name') }}</th>
+                <th>{{ $t('description') }}</th>
+                <th>{{ $t('hr.departments.head') }}</th>
+                <th>{{ $t('status') }}</th>
+                <th>{{ $t('actions') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -112,7 +114,7 @@ onMounted(loadData)
                 <td>{{ dept.managerName || '-' }}</td>
                 <td>
                   <span :class="['badge', dept.active ? 'badge-success' : 'badge-danger']">
-                    {{ dept.active ? 'Faol' : 'Nofaol' }}
+                    {{ dept.active ? $t('active') : $t('inactive') }}
                   </span>
                 </td>
                 <td>
@@ -136,40 +138,40 @@ onMounted(loadData)
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
         <div class="flex items-center justify-between px-6 py-4 border-b">
-          <h3 class="text-lg font-medium">{{ editingId ? "Bo'limni tahrirlash" : "Yangi bo'lim" }}</h3>
+          <h3 class="text-lg font-medium">{{ editingId ? $t('hr.departments.editDepartment') : $t('hr.departments.newDepartment') }}</h3>
           <button @click="showModal = false"><XMarkIcon class="h-5 w-5 text-gray-400" /></button>
         </div>
         <form @submit.prevent="handleSave" class="p-6 space-y-4">
           <div>
-            <label class="label">Kod *</label>
+            <label class="label">{{ $t('code') }} *</label>
             <input v-model="form.code" type="text" class="input" :disabled="!!editingId" />
           </div>
           <div>
-            <label class="label">Nomi *</label>
+            <label class="label">{{ $t('name') }} *</label>
             <input v-model="form.name" type="text" class="input" />
           </div>
           <div>
-            <label class="label">Tavsif</label>
+            <label class="label">{{ $t('description') }}</label>
             <textarea v-model="form.description" rows="2" class="input"></textarea>
           </div>
           <div>
-            <label class="label">Yuqori bo'lim</label>
+            <label class="label">{{ $t('hr.departments.title') }}</label>
             <select v-model="form.parentId" class="input">
-              <option :value="null">Yo'q</option>
+              <option :value="null">{{ $t('no') }}</option>
               <option v-for="d in departments.filter(d => d.id !== editingId)" :key="d.id" :value="d.id">{{ d.name }}</option>
             </select>
           </div>
           <div>
-            <label class="label">Boshqaruvchi</label>
+            <label class="label">{{ $t('hr.departments.head') }}</label>
             <select v-model="form.managerId" class="input">
-              <option :value="null">Tanlang</option>
+              <option :value="null">{{ $t('hr.employeeForm.selectDepartment') }}</option>
               <option v-for="e in employees" :key="e.id" :value="e.id">{{ e.fullName }}</option>
             </select>
           </div>
           <div class="flex justify-end gap-3 pt-4">
-            <button type="button" @click="showModal = false" class="btn-secondary">Bekor qilish</button>
+            <button type="button" @click="showModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
             <button type="submit" :disabled="saving" class="btn-primary">
-              {{ saving ? 'Saqlanmoqda...' : 'Saqlash' }}
+              {{ saving ? $t('saving') : $t('save') }}
             </button>
           </div>
         </form>
