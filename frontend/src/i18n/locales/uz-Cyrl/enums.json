@@ -1,0 +1,111 @@
+{
+  "status": {
+    "ACTIVE": "Фаол",
+    "INACTIVE": "Нофаол",
+    "ENABLED": "Ёқилган",
+    "DISABLED": "Ўчирилган"
+  },
+  "apInvoiceStatus": {
+    "DRAFT": "Қоралама",
+    "PENDING_APPROVAL": "Тасдиқланмоқда",
+    "APPROVED": "Тасдиқланган",
+    "PARTIAL": "Қисман тўланган",
+    "PAID": "Тўланган",
+    "CANCELLED": "Бекор қилинган",
+    "ON_HOLD": "Кутиш",
+    "REJECTED": "Рад этилган",
+    "ENTERED": "Киритилган",
+    "REVERSED": "Қайтарилган"
+  },
+  "apPaymentStatus": {
+    "DRAFT": "Қоралама",
+    "PENDING_APPROVAL": "Тасдиқлаш кутилмоқда",
+    "APPROVED": "Тасдиқланган",
+    "COMPLETED": "Бажарилди",
+    "VOIDED": "Бекор қилинган",
+    "FAILED": "Хатолик"
+  },
+  "arPaymentStatus": {
+    "PENDING": "Кутилмоқда",
+    "COMPLETED": "Бажарилди",
+    "DEPOSITED": "Депозитга қўйилди",
+    "CANCELLED": "Бекор қилинган",
+    "REFUNDED": "Қайтарилган",
+    "BOUNCED": "Қайтиб келган",
+    "FAILED": "Хатолик"
+  },
+  "arInvoiceStatus": {
+    "DRAFT": "Қоралама",
+    "PENDING": "Кутилмоқда",
+    "SENT": "Юборилган",
+    "PARTIAL": "Қисман тўланган",
+    "PAID": "Тўланган",
+    "OVERDUE": "Муддати ўтган",
+    "CANCELLED": "Бекор қилинган",
+    "DISPUTED": "Низолашилган",
+    "WRITTEN_OFF": "Ҳисобдан чиқарилган"
+  },
+  "transactionStatus": {
+    "PENDING": "Кутилмоқда",
+    "COMPLETED": "Бажарилди",
+    "VOIDED": "Бекор қилинган",
+    "HELD": "Кутиш",
+    "CANCELLED": "Бекор қилинган"
+  },
+  "shiftStatus": {
+    "OPEN": "Очиқ",
+    "CLOSED": "Ёпилган",
+    "RECONCILED": "Текширилган"
+  },
+  "purchaseOrderStatus": {
+    "DRAFT": "Қоралама",
+    "PENDING": "Кутилмоқда",
+    "APPROVED": "Тасдиқланган",
+    "PARTIAL": "Қисман қабул",
+    "RECEIVED": "Қабул қилинган",
+    "CANCELLED": "Бекор қилинган"
+  },
+  "paymentMethod": {
+    "CASH": "Нақд пул",
+    "CHECK": "Чек",
+    "BANK_TRANSFER": "Банк ўтказмаси",
+    "CREDIT_CARD": "Кредит карта",
+    "DEBIT_CARD": "Дебет карта",
+    "MOBILE_PAYMENT": "Мобил тўлов",
+    "ONLINE_PAYMENT": "Онлайн тўлов",
+    "ACH": "ACH",
+    "STORE_CREDIT": "Дўкон кредити",
+    "OTHER": "Бошқа"
+  },
+  "paymentType": {
+    "CASH": "Нақд",
+    "CARD": "Карта",
+    "CREDIT": "Насия",
+    "MOBILE": "Мобил",
+    "TRANSFER": "Ўтказма"
+  },
+  "salaryStatus": {
+    "PAID": "Тўланган",
+    "PENDING": "Кутилмоқда",
+    "CANCELLED": "Бекор қилинган"
+  },
+  "salaryEntryType": {
+    "ADVANCE": "Аванс",
+    "SALARY": "Иш ҳақи"
+  },
+  "employmentType": {
+    "FULL_TIME": "Тўлиқ ставка",
+    "PART_TIME": "Ярим ставка",
+    "CONTRACT": "Шартнома",
+    "INTERN": "Стажёр"
+  },
+  "gender": {
+    "MALE": "Эркак",
+    "FEMALE": "Аёл"
+  },
+  "stockStatus": {
+    "IN_STOCK": "Мавжуд",
+    "LOW_STOCK": "Кам қолган",
+    "OUT_OF_STOCK": "Тугаган"
+  }
+}

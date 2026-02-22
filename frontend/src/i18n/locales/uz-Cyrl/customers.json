@@ -1,0 +1,30 @@
+{
+  "title": "Мижозлар",
+  "subtitle": "Мижозлар базасини бошқариш",
+  "addCustomer": "Мижоз қўшиш",
+  "searchPlaceholder": "Мижоз номи, телефон ёки код бўйича қидириш...",
+  "noCustomers": "Мижозлар топилмади",
+  "addFirst": "Биринчи мижозни қўшиш",
+  "customer": "Мижоз",
+  "customerCode": "Мижоз коди",
+  "totalPurchases": "Жами харидлар",
+  "lastPurchase": "Охирги харид",
+  "confirmDelete": "\"{name}\" мижозини ўчирмоқчимисиз?",
+  "form": {
+    "newCustomer": "Янги мижоз",
+    "editCustomer": "Мижозни таҳрирлаш",
+    "newSubtitle": "Янги мижоз яратиш",
+    "editSubtitle": "Мижоз маълумотларини янгилаш",
+    "basicInfo": "Асосий маълумотлар",
+    "fullName": "Тўлиқ исм",
+    "companyName": "Компания номи",
+    "region": "Ҳудуд",
+    "selectRegion": "Ҳудуд танланг",
+    "village": "Маҳалла",
+    "selectVillage": "Маҳалла танланг",
+    "additionalInfo": "Қўшимча маълумотлар",
+    "telegramUsername": "Телеграм username",
+    "nameRequired": "Мижоз номи киритилиши шарт",
+    "phoneRequired": "Телефон рақами киритилиши шарт"
+  }
+}
