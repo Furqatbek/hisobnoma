@@ -40,6 +40,7 @@ public class GLIntegrationService {
     private static final String ACCOUNTS_RECEIVABLE = "1130"; // Asset: Accounts Receivable
     private static final String ACCOUNTS_PAYABLE = "2110";   // Liability: Accounts Payable
     private static final String PURCHASE_EXPENSE = "5200";   // Expense: Purchases
+    private static final String PURCHASE_DISCOUNTS_ACCOUNT = "4300"; // Revenue: Purchase Discounts
     private static final String SALES_DISCOUNTS_ACCOUNT = "4200"; // Contra-Revenue: Sales Discounts
     private static final String SALARY_EXPENSE_ACCOUNT = "6100"; // Expense: Salary and Wages
     private static final String SALARY_ADVANCE_ACCOUNT = "1400"; // Asset: Employee Salary Advances
@@ -577,7 +578,7 @@ public class GLIntegrationService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (totalDiscount.compareTo(BigDecimal.ZERO) > 0) {
-            Long discountAccountId = resolveAccountId("5200", tenantId); // Purchase Discounts
+            Long discountAccountId = resolveAccountId(PURCHASE_DISCOUNTS_ACCOUNT, tenantId); // Purchase Discounts
             lines.add(CreateJournalLineRequest.builder()
                     .accountId(discountAccountId)
                     .debitAmount(BigDecimal.ZERO)
