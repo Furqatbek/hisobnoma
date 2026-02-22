@@ -67,6 +67,8 @@ public class ProductDto {
     private BigDecimal margin;
     private BigDecimal markup;
 
+    private BigDecimal stockQuantity;
+
     private List<ProductVariantDto> variants;
     private List<ProductImageDto> images;
     private List<ProductAttributeDto> attributes;

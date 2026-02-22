@@ -47,6 +47,9 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
     @Query("SELECT SUM(s.quantityOnHand) FROM Stock s WHERE s.product.id = :productId AND s.tenantId = :tenantId")
     BigDecimal getTotalQuantityByProduct(@Param("productId") Long productId, @Param("tenantId") Long tenantId);
 
+    @Query("SELECT s.product.id, SUM(s.quantityOnHand) FROM Stock s WHERE s.tenantId = :tenantId GROUP BY s.product.id")
+    List<Object[]> getTotalQuantitiesByTenant(@Param("tenantId") Long tenantId);
+
     @Query("SELECT SUM(s.quantityOnHand - s.quantityReserved) FROM Stock s WHERE s.product.id = :productId AND s.tenantId = :tenantId")
     BigDecimal getAvailableQuantityByProduct(@Param("productId") Long productId, @Param("tenantId") Long tenantId);
 

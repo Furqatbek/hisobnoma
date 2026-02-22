@@ -21,8 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,6 +39,7 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final BrandRepository brandRepository;
     private final UnitOfMeasureRepository uomRepository;
+    private final StockRepository stockRepository;
     private final ProductMapper productMapper;
     private final ProductVariantMapper variantMapper;
     private final ProductAttributeMapper attributeMapper;
@@ -48,14 +51,14 @@ public class ProductService {
     public PageResponse<ProductDto> getProducts(Pageable pageable) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Page<Product> page = productRepository.findAllByTenantId(tenantId, pageable);
-        return PageResponse.of(page.map(productMapper::toDtoSimple));
+        return enrichWithStockQuantities(PageResponse.of(page.map(productMapper::toDtoSimple)), tenantId);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<ProductDto> getActiveProducts(Pageable pageable) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Page<Product> page = productRepository.findAllActiveByTenantId(tenantId, pageable);
-        return PageResponse.of(page.map(productMapper::toDtoSimple));
+        return enrichWithStockQuantities(PageResponse.of(page.map(productMapper::toDtoSimple)), tenantId);
     }
 
     @Transactional(readOnly = true)
@@ -82,6 +85,11 @@ public class ProductService {
                 .toList());
         dto.setAttributes(attributeMapper.toDtoList(attributeRepository.findByProductIdOrderBySortOrder(id)));
 
+        // Enrich with stock quantity
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        BigDecimal totalQty = stockRepository.getTotalQuantityByProduct(id, tenantId);
+        dto.setStockQuantity(totalQty != null ? totalQty : BigDecimal.ZERO);
+
         return dto;
     }
 
@@ -105,21 +113,37 @@ public class ProductService {
     public PageResponse<ProductDto> searchProducts(String search, Pageable pageable) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Page<Product> page = productRepository.searchByTenantId(tenantId, search, pageable);
-        return PageResponse.of(page.map(productMapper::toDtoSimple));
+        return enrichWithStockQuantities(PageResponse.of(page.map(productMapper::toDtoSimple)), tenantId);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<ProductDto> getProductsByCategory(Long categoryId, Pageable pageable) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Page<Product> page = productRepository.findByCategoryIdAndTenantId(categoryId, tenantId, pageable);
-        return PageResponse.of(page.map(productMapper::toDtoSimple));
+        return enrichWithStockQuantities(PageResponse.of(page.map(productMapper::toDtoSimple)), tenantId);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<ProductDto> getProductsByBrand(Long brandId, Pageable pageable) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Page<Product> page = productRepository.findByBrandIdAndTenantId(brandId, tenantId, pageable);
-        return PageResponse.of(page.map(productMapper::toDtoSimple));
+        return enrichWithStockQuantities(PageResponse.of(page.map(productMapper::toDtoSimple)), tenantId);
+    }
+
+    private PageResponse<ProductDto> enrichWithStockQuantities(PageResponse<ProductDto> response, Long tenantId) {
+        if (response.getContent() == null || response.getContent().isEmpty()) {
+            return response;
+        }
+        Map<Long, BigDecimal> stockMap = stockRepository.getTotalQuantitiesByTenant(tenantId)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO
+                ));
+        response.getContent().forEach(dto ->
+                dto.setStockQuantity(stockMap.getOrDefault(dto.getId(), BigDecimal.ZERO))
+        );
+        return response;
     }
 
     @Transactional
