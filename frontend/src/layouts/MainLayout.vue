@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watchEffect } from 'vue'
 import { RouterView, RouterLink, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import {
   HomeIcon,
@@ -32,6 +33,7 @@ import {
   MapIcon
 } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const route = useRoute()
 

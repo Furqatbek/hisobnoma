@@ -1,8 +1,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { customersApi } from '@/services/api'
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const customers = ref([])
 const loading = ref(true)
@@ -30,7 +33,7 @@ async function fetchCustomers() {
 onMounted(fetchCustomers)
 
 async function deleteCustomer(customer) {
-  if (!confirm(`Delete "${customer.name}"?`)) return
+  if (!confirm(t('customers.confirmDelete'))) return
   try {
     await customersApi.delete(customer.id)
     fetchCustomers()
@@ -48,12 +51,12 @@ function formatCurrency(value) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Customers</h1>
-        <p class="mt-1 text-sm text-gray-500">Manage your customer database</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('customers.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('customers.subtitle') }}</p>
       </div>
       <RouterLink to="/customers/new" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Add Customer
+        {{ $t('customers.addCustomer') }}
       </RouterLink>
     </div>
 
@@ -65,7 +68,7 @@ function formatCurrency(value) {
             v-model="search"
             @input="fetchCustomers"
             type="text"
-            placeholder="Search customers..."
+            :placeholder="$t('customers.searchPlaceholder')"
             class="input pl-10"
           />
         </div>
@@ -78,19 +81,19 @@ function formatCurrency(value) {
       </div>
 
       <div v-else-if="customers.length === 0" class="text-center py-12">
-        <p class="text-gray-500">No customers found</p>
+        <p class="text-gray-500">{{ $t('customers.noCustomers') }}</p>
       </div>
 
       <div v-else class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>Customer</th>
-              <th>Contact</th>
-              <th>Type</th>
-              <th class="text-right">Balance</th>
-              <th>Status</th>
-              <th class="text-right">Actions</th>
+              <th>{{ $t('customers.customer') }}</th>
+              <th>{{ $t('pos.transactions.customer') }}</th>
+              <th>{{ $t('customers.form.basicInfo') }}</th>
+              <th class="text-right">{{ $t('balance') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -128,7 +131,7 @@ function formatCurrency(value) {
               </td>
               <td>
                 <span :class="['badge', customer.active !== false ? 'badge-success' : 'badge-danger']">
-                  {{ customer.active !== false ? 'Active' : 'Inactive' }}
+                  {{ customer.active !== false ? $t('active') : $t('inactive') }}
                 </span>
               </td>
               <td class="text-right">

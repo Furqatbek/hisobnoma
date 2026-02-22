@@ -1,8 +1,11 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { customersApi } from '@/services/api'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -59,7 +62,7 @@ onMounted(async () => {
 
 function validate() {
   Object.keys(errors).forEach(key => delete errors[key])
-  if (!form.name?.trim()) errors.name = 'Ism kiritish shart'
+  if (!form.name?.trim()) errors.name = t('customers.form.nameRequired')
   return Object.keys(errors).length === 0
 }
 
@@ -76,7 +79,7 @@ async function handleSubmit() {
     }
     router.push('/customers')
   } catch (error) {
-    errors.general = error.response?.data?.message || 'Saqlashda xatolik yuz berdi'
+    errors.general = error.response?.data?.message || t('customers.form.saveFailed')
   } finally {
     saving.value = false
   }
@@ -91,7 +94,7 @@ async function toggleCreditHold() {
     form.creditHold = res.data.creditHold
     customerData.value = res.data
   } catch (error) {
-    errors.general = error.response?.data?.message || 'Kredit holdni o\'zgartirishda xatolik'
+    errors.general = error.response?.data?.message || t('customers.form.creditHoldError')
   } finally {
     togglingHold.value = false
   }
@@ -105,7 +108,7 @@ async function toggleCreditHold() {
         <ArrowLeftIcon class="h-5 w-5 text-gray-500" />
       </button>
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Mijozni tahrirlash' : 'Yangi mijoz' }}</h1>
+        <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? $t('customers.form.editCustomer') : $t('customers.form.newCustomer') }}</h1>
       </div>
     </div>
 
@@ -121,8 +124,8 @@ async function toggleCreditHold() {
       <!-- Credit hold warning banner -->
       <div v-if="isEdit && form.creditHold" class="p-4 bg-red-50 border border-red-300 rounded-lg flex items-center justify-between">
         <div>
-          <p class="font-semibold text-red-700">Kredit to'xtatilgan</p>
-          <p class="text-sm text-red-600">Bu mijozga yangi faktura yaratib bo'lmaydi</p>
+          <p class="font-semibold text-red-700">{{ $t('customers.form.creditHoldActive') }}</p>
+          <p class="text-sm text-red-600">{{ $t('customers.form.creditHoldWarning') }}</p>
         </div>
         <button
           type="button"
@@ -130,42 +133,42 @@ async function toggleCreditHold() {
           :disabled="togglingHold"
           class="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg disabled:opacity-50"
         >
-          {{ togglingHold ? 'O\'zgartirilmoqda...' : 'Kreditni yoqish' }}
+          {{ togglingHold ? $t('customers.form.toggling') : $t('customers.form.enableCredit') }}
         </button>
       </div>
 
       <!-- Balance info (edit mode only) -->
       <div v-if="isEdit && customerData" class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">Kredit holati</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">{{ $t('customers.form.creditStatus') }}</h3></div>
         <div class="card-body">
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-gray-50 rounded-lg p-4">
-              <p class="text-xs text-gray-500">Joriy qarz</p>
+              <p class="text-xs text-gray-500">{{ $t('customers.form.currentDebt') }}</p>
               <p class="text-lg font-bold" :class="(customerData.currentBalance || 0) > 0 ? 'text-red-600' : 'text-gray-900'">
                 {{ formatCurrency(customerData.currentBalance) }} so'm
               </p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
-              <p class="text-xs text-gray-500">Kredit limiti</p>
+              <p class="text-xs text-gray-500">{{ $t('customers.form.creditLimit') }}</p>
               <p class="text-lg font-bold text-gray-900">
-                {{ customerData.creditLimit ? formatCurrency(customerData.creditLimit) + " so'm" : 'Cheksiz' }}
+                {{ customerData.creditLimit ? formatCurrency(customerData.creditLimit) + " " + $t('customers.form.currency') : $t('customers.form.unlimited') }}
               </p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
-              <p class="text-xs text-gray-500">Mavjud kredit</p>
+              <p class="text-xs text-gray-500">{{ $t('customers.form.availableCredit') }}</p>
               <p class="text-lg font-bold" :class="customerData.overCreditLimit ? 'text-red-600' : 'text-green-600'">
-                {{ customerData.creditLimit ? formatCurrency(customerData.availableCredit) + " so'm" : 'Cheksiz' }}
+                {{ customerData.creditLimit ? formatCurrency(customerData.availableCredit) + " " + $t('customers.form.currency') : $t('customers.form.unlimited') }}
               </p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
-              <p class="text-xs text-gray-500">Kredit holati</p>
+              <p class="text-xs text-gray-500">{{ $t('customers.form.creditStatus') }}</p>
               <div class="flex items-center gap-2 mt-1">
                 <span
                   class="inline-block w-2.5 h-2.5 rounded-full"
                   :class="form.creditHold ? 'bg-red-500' : 'bg-green-500'"
                 ></span>
                 <span class="text-sm font-medium" :class="form.creditHold ? 'text-red-600' : 'text-green-600'">
-                  {{ form.creditHold ? 'To\'xtatilgan' : 'Faol' }}
+                  {{ form.creditHold ? $t('customers.form.suspended') : $t('active') }}
                 </span>
               </div>
             </div>

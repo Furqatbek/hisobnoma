@@ -57,8 +57,8 @@ function formatNumber(value) {
     <!-- Page header + CBU informer -->
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p class="mt-1 text-sm text-gray-500">Welcome back! Here's an overview of your business.</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('dashboard.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('dashboard.welcome') }}</p>
       </div>
       <a href="https://cbu.uz/" target="_blank" title="O'zbekiston Respublikasi Markaziy banki">
         <img src="https://cbu.uz/uz/informer/?txtclr=212121&brdclr=FFC700&bgclr=FFE27D&r_choose=USD_EUR_RUB" alt="CBU valyuta kurslari" />
@@ -81,7 +81,7 @@ function formatNumber(value) {
                 <CurrencyDollarIcon class="h-6 w-6 text-green-600" />
               </div>
               <div class="ml-4">
-                <p class="text-sm font-medium text-gray-500">Sales Today</p>
+                <p class="text-sm font-medium text-gray-500">{{ $t('dashboard.salesToday') }}</p>
                 <p class="text-2xl font-semibold text-gray-900">
                   {{ formatCurrency(stats.totalSalesToday) }}
                 </p>
@@ -89,7 +89,7 @@ function formatNumber(value) {
             </div>
             <div class="mt-4 flex items-center text-sm">
               <ArrowTrendingUpIcon class="h-4 w-4 text-green-500 mr-1" />
-              <span class="text-green-600 font-medium">{{ stats.salesCountToday }} transactions</span>
+              <span class="text-green-600 font-medium">{{ stats.salesCountToday }} {{ $t('dashboard.transactions') }}</span>
             </div>
           </div>
         </div>
@@ -102,14 +102,14 @@ function formatNumber(value) {
                 <ShoppingCartIcon class="h-6 w-6 text-blue-600" />
               </div>
               <div class="ml-4">
-                <p class="text-sm font-medium text-gray-500">This Week</p>
+                <p class="text-sm font-medium text-gray-500">{{ $t('dashboard.thisWeek') }}</p>
                 <p class="text-2xl font-semibold text-gray-900">
                   {{ formatCurrency(stats.totalSalesThisWeek) }}
                 </p>
               </div>
             </div>
             <div class="mt-4 flex items-center text-sm text-gray-500">
-              <span>Monthly: {{ formatCurrency(stats.totalSalesThisMonth) }}</span>
+              <span>{{ $t('dashboard.monthly') }}: {{ formatCurrency(stats.totalSalesThisMonth) }}</span>
             </div>
           </div>
         </div>
@@ -122,19 +122,19 @@ function formatNumber(value) {
                 <CubeIcon class="h-6 w-6 text-purple-600" />
               </div>
               <div class="ml-4">
-                <p class="text-sm font-medium text-gray-500">Products</p>
+                <p class="text-sm font-medium text-gray-500">{{ $t('dashboard.products') }}</p>
                 <p class="text-2xl font-semibold text-gray-900">
                   {{ formatNumber(stats.totalProducts) }}
                 </p>
               </div>
             </div>
             <div class="mt-4 flex items-center text-sm">
-              <span class="text-green-600">{{ stats.activeProducts }} active</span>
+              <span class="text-green-600">{{ stats.activeProducts }} {{ $t('dashboard.activeCount') }}</span>
               <span class="mx-2 text-gray-300">|</span>
               <span v-if="stats.lowStockProducts > 0" class="text-yellow-600">
-                {{ stats.lowStockProducts }} low stock
+                {{ stats.lowStockProducts }} {{ $t('dashboard.lowStock') }}
               </span>
-              <span v-else class="text-gray-500">Stock OK</span>
+              <span v-else class="text-gray-500">{{ $t('dashboard.stockOk') }}</span>
             </div>
           </div>
         </div>
@@ -147,16 +147,16 @@ function formatNumber(value) {
                 <UsersIcon class="h-6 w-6 text-orange-600" />
               </div>
               <div class="ml-4">
-                <p class="text-sm font-medium text-gray-500">Users</p>
+                <p class="text-sm font-medium text-gray-500">{{ $t('dashboard.users') }}</p>
                 <p class="text-2xl font-semibold text-gray-900">
                   {{ formatNumber(stats.totalUsers) }}
                 </p>
               </div>
             </div>
             <div class="mt-4 flex items-center text-sm">
-              <span class="text-green-600">{{ stats.activeUsers }} active</span>
+              <span class="text-green-600">{{ stats.activeUsers }} {{ $t('dashboard.activeUsers') }}</span>
               <span class="mx-2 text-gray-300">|</span>
-              <span class="text-blue-600">+{{ stats.newUsersToday }} today</span>
+              <span class="text-blue-600">+{{ stats.newUsersToday }} {{ $t('dashboard.newToday') }}</span>
             </div>
           </div>
         </div>
@@ -168,14 +168,14 @@ function formatNumber(value) {
           <div class="flex items-start">
             <ExclamationTriangleIcon class="h-6 w-6 text-yellow-600 flex-shrink-0" />
             <div class="ml-3">
-              <h3 class="text-sm font-medium text-yellow-800">Inventory Alerts</h3>
+              <h3 class="text-sm font-medium text-yellow-800">{{ $t('dashboard.inventoryAlerts') }}</h3>
               <div class="mt-2 text-sm text-yellow-700">
                 <ul class="list-disc pl-5 space-y-1">
                   <li v-if="stats.lowStockProducts > 0">
-                    {{ stats.lowStockProducts }} products are running low on stock
+                    {{ $t('dashboard.lowStockWarning', { count: stats.lowStockProducts }) }}
                   </li>
                   <li v-if="stats.outOfStockProducts > 0">
-                    {{ stats.outOfStockProducts }} products are out of stock
+                    {{ $t('dashboard.outOfStockWarning', { count: stats.outOfStockProducts }) }}
                   </li>
                 </ul>
               </div>
@@ -184,7 +184,7 @@ function formatNumber(value) {
                   to="/inventory/stock"
                   class="text-sm font-medium text-yellow-800 hover:text-yellow-900"
                 >
-                  View inventory &rarr;
+                  {{ $t('dashboard.viewInventory') }} &rarr;
                 </RouterLink>
               </div>
             </div>
@@ -195,13 +195,13 @@ function formatNumber(value) {
       <!-- Financial Summary -->
       <div class="card">
         <div class="card-header">
-          <h3 class="text-lg font-medium text-gray-900">Financial Summary</h3>
+          <h3 class="text-lg font-medium text-gray-900">{{ $t('dashboard.financialSummary') }}</h3>
         </div>
         <div class="card-body">
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="flex justify-between items-center p-4 bg-green-50 rounded-lg">
               <div>
-                <p class="text-sm text-gray-500">Receivables</p>
+                <p class="text-sm text-gray-500">{{ $t('dashboard.receivables') }}</p>
                 <p class="text-xl font-semibold text-green-700">
                   {{ formatCurrency(stats.totalReceivables) }}
                 </p>
@@ -210,7 +210,7 @@ function formatNumber(value) {
             </div>
             <div class="flex justify-between items-center p-4 bg-red-50 rounded-lg">
               <div>
-                <p class="text-sm text-gray-500">Payables</p>
+                <p class="text-sm text-gray-500">{{ $t('dashboard.payables') }}</p>
                 <p class="text-xl font-semibold text-red-700">
                   {{ formatCurrency(stats.totalPayables) }}
                 </p>
@@ -219,7 +219,7 @@ function formatNumber(value) {
             </div>
             <div class="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
               <div>
-                <p class="text-sm text-gray-500">Inventory Value</p>
+                <p class="text-sm text-gray-500">{{ $t('dashboard.inventoryValue') }}</p>
                 <p class="text-xl font-semibold text-blue-700">
                   {{ formatCurrency(stats.totalInventoryValue) }}
                 </p>
@@ -233,7 +233,7 @@ function formatNumber(value) {
       <!-- Quick actions -->
       <div class="card">
         <div class="card-header">
-          <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
+          <h3 class="text-lg font-medium text-gray-900">{{ $t('dashboard.quickActions') }}</h3>
         </div>
         <div class="card-body">
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -242,28 +242,28 @@ function formatNumber(value) {
               class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <ShoppingCartIcon class="h-8 w-8 text-primary-600 mb-2" />
-              <span class="text-sm font-medium text-gray-900">New Sale</span>
+              <span class="text-sm font-medium text-gray-900">{{ $t('dashboard.newSale') }}</span>
             </RouterLink>
             <RouterLink
               to="/inventory/products/new"
               class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <CubeIcon class="h-8 w-8 text-purple-600 mb-2" />
-              <span class="text-sm font-medium text-gray-900">Add Product</span>
+              <span class="text-sm font-medium text-gray-900">{{ $t('dashboard.addProduct') }}</span>
             </RouterLink>
             <RouterLink
               to="/customers/new"
               class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <UsersIcon class="h-8 w-8 text-orange-600 mb-2" />
-              <span class="text-sm font-medium text-gray-900">Add Customer</span>
+              <span class="text-sm font-medium text-gray-900">{{ $t('dashboard.addCustomer') }}</span>
             </RouterLink>
             <RouterLink
               to="/purchases/orders/new"
               class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <CurrencyDollarIcon class="h-8 w-8 text-green-600 mb-2" />
-              <span class="text-sm font-medium text-gray-900">Purchase Order</span>
+              <span class="text-sm font-medium text-gray-900">{{ $t('dashboard.purchaseOrder') }}</span>
             </RouterLink>
           </div>
         </div>

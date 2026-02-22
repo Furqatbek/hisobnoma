@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { productsApi } from '@/services/api'
 import {
   PlusIcon,
@@ -9,6 +10,8 @@ import {
   TrashIcon,
   FunnelIcon
 } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const products = ref([])
 const loading = ref(true)
@@ -84,12 +87,12 @@ function formatCurrency(value) {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Products</h1>
-        <p class="mt-1 text-sm text-gray-500">Manage your product catalog</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('inventory.products.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('inventory.products.subtitle') }}</p>
       </div>
       <RouterLink to="/inventory/products/new" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Add Product
+        {{ $t('inventory.products.addProduct') }}
       </RouterLink>
     </div>
 
@@ -102,13 +105,13 @@ function formatCurrency(value) {
             <input
               v-model="search"
               type="text"
-              placeholder="Search products by name, SKU, or barcode..."
+              :placeholder="$t('inventory.products.searchPlaceholder')"
               class="input pl-10"
             />
           </div>
           <button class="btn-secondary">
             <FunnelIcon class="h-5 w-5 mr-2" />
-            Filters
+            {{ $t('search') }}
           </button>
         </div>
       </div>
@@ -121,10 +124,10 @@ function formatCurrency(value) {
       </div>
 
       <div v-else-if="products.length === 0" class="text-center py-12">
-        <p class="text-gray-500">No products found</p>
+        <p class="text-gray-500">{{ $t('inventory.products.noProducts') }}</p>
         <RouterLink to="/inventory/products/new" class="btn-primary mt-4 inline-flex">
           <PlusIcon class="h-5 w-5 mr-2" />
-          Add your first product
+          {{ $t('inventory.products.addFirst') }}
         </RouterLink>
       </div>
 
@@ -132,13 +135,13 @@ function formatCurrency(value) {
         <table class="table">
           <thead>
             <tr>
-              <th>Product</th>
-              <th>SKU</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Stock</th>
-              <th>Status</th>
-              <th class="text-right">Actions</th>
+              <th>{{ $t('inventory.products.product') }}</th>
+              <th>{{ $t('inventory.products.sku') }}</th>
+              <th>{{ $t('inventory.products.category') }}</th>
+              <th>{{ $t('price') }}</th>
+              <th>{{ $t('inventory.products.stockQty') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -152,11 +155,11 @@ function formatCurrency(value) {
                       :alt="product.name"
                       class="h-10 w-10 rounded-lg object-cover"
                     />
-                    <span v-else class="text-gray-400 text-xs">No img</span>
+                    <span v-else class="text-gray-400 text-xs">{{ $t('inventory.products.noImage') }}</span>
                   </div>
                   <div class="ml-4">
                     <div class="font-medium text-gray-900">{{ product.name }}</div>
-                    <div class="text-sm text-gray-500">{{ product.barcode || 'No barcode' }}</div>
+                    <div class="text-sm text-gray-500">{{ product.barcode || $t('inventory.products.noBarcode') }}</div>
                   </div>
                 </div>
               </td>
@@ -164,7 +167,7 @@ function formatCurrency(value) {
               <td>{{ product.category?.name || '-' }}</td>
               <td>
                 <div class="font-medium">{{ formatCurrency(product.sellingPrice) }}</div>
-                <div class="text-xs text-gray-500">Cost: {{ formatCurrency(product.costPrice) }}</div>
+                <div class="text-xs text-gray-500">{{ $t('inventory.products.cost') }}: {{ formatCurrency(product.costPrice) }}</div>
               </td>
               <td>
                 <span
@@ -184,7 +187,7 @@ function formatCurrency(value) {
                     product.active ? 'badge-success' : 'badge-danger'
                   ]"
                 >
-                  {{ product.active ? 'Active' : 'Inactive' }}
+                  {{ product.active ? $t('active') : $t('inactive') }}
                 </span>
               </td>
               <td class="text-right">
@@ -212,9 +215,11 @@ function formatCurrency(value) {
       <div v-if="pagination.totalPages > 1" class="px-6 py-4 border-t border-gray-200">
         <div class="flex items-center justify-between">
           <p class="text-sm text-gray-500">
-            Showing {{ pagination.page * pagination.size + 1 }} to
-            {{ Math.min((pagination.page + 1) * pagination.size, pagination.totalElements) }}
-            of {{ pagination.totalElements }} products
+            {{ $t('inventory.products.showingProducts', {
+              from: pagination.page * pagination.size + 1,
+              to: Math.min((pagination.page + 1) * pagination.size, pagination.totalElements),
+              total: pagination.totalElements
+            }) }}
           </p>
           <div class="flex space-x-2">
             <button
@@ -222,14 +227,14 @@ function formatCurrency(value) {
               :disabled="pagination.page === 0"
               class="btn-secondary px-3 py-1"
             >
-              Previous
+              {{ $t('previous') }}
             </button>
             <button
               @click="changePage(pagination.page + 1)"
               :disabled="pagination.page >= pagination.totalPages - 1"
               class="btn-secondary px-3 py-1"
             >
-              Next
+              {{ $t('next') }}
             </button>
           </div>
         </div>
@@ -244,16 +249,16 @@ function formatCurrency(value) {
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showDeleteModal = false"></div>
         <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Delete Product</h3>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">{{ $t('inventory.products.deleteProduct') }}</h3>
           <p class="text-gray-500 mb-6">
-            Are you sure you want to delete "{{ productToDelete?.name }}"? This action cannot be undone.
+            {{ $t('inventory.products.deleteConfirm', { name: productToDelete?.name }) }}
           </p>
           <div class="flex justify-end space-x-3">
             <button @click="showDeleteModal = false" class="btn-secondary">
-              Cancel
+              {{ $t('cancel') }}
             </button>
             <button @click="deleteProduct" class="btn-danger">
-              Delete
+              {{ $t('delete') }}
             </button>
           </div>
         </div>

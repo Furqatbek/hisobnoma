@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/api'
 import {
@@ -13,6 +14,7 @@ import {
   CheckCircleIcon
 } from '@heroicons/vue/24/outline'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const loading = ref(true)
 const profile = ref(null)
@@ -58,28 +60,28 @@ function validatePassword() {
   let isValid = true
 
   if (!passwordForm.currentPassword) {
-    passwordErrors.currentPassword = 'Current password is required'
+    passwordErrors.currentPassword = t('profile.currentPasswordRequired')
     isValid = false
   }
 
   if (!passwordForm.newPassword) {
-    passwordErrors.newPassword = 'New password is required'
+    passwordErrors.newPassword = t('profile.newPasswordRequired')
     isValid = false
   } else if (passwordForm.newPassword.length < 8) {
-    passwordErrors.newPassword = 'Password must be at least 8 characters'
+    passwordErrors.newPassword = t('profile.passwordMinLength')
     isValid = false
   }
 
   if (!passwordForm.confirmPassword) {
-    passwordErrors.confirmPassword = 'Please confirm your password'
+    passwordErrors.confirmPassword = t('profile.confirmPasswordRequired')
     isValid = false
   } else if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-    passwordErrors.confirmPassword = 'Passwords do not match'
+    passwordErrors.confirmPassword = t('profile.passwordsDoNotMatch')
     isValid = false
   }
 
   if (passwordForm.currentPassword === passwordForm.newPassword) {
-    passwordErrors.newPassword = 'New password must be different from current password'
+    passwordErrors.newPassword = t('profile.newPasswordMustDiffer')
     isValid = false
   }
 
@@ -118,14 +120,14 @@ async function handleChangePassword() {
         }
       })
     }
-    passwordErrors.general = response?.message || 'Failed to change password'
+    passwordErrors.general = response?.message || t('profile.failedToChangePassword')
   } finally {
     changingPassword.value = false
   }
 }
 
 function formatDate(date) {
-  if (!date) return 'Never'
+  if (!date) return t('never')
   return new Date(date).toLocaleString()
 }
 </script>
@@ -133,8 +135,8 @@ function formatDate(date) {
 <template>
   <div class="space-y-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">My Profile</h1>
-      <p class="mt-1 text-sm text-gray-500">View and manage your account information</p>
+      <h1 class="text-2xl font-bold text-gray-900">{{ $t('profile.title') }}</h1>
+      <p class="mt-1 text-sm text-gray-500">{{ $t('profile.subtitle') }}</p>
     </div>
 
     <div v-if="loading" class="flex items-center justify-center h-64">
@@ -149,7 +151,7 @@ function formatDate(date) {
           <div class="card-header">
             <h3 class="text-lg font-medium flex items-center">
               <UserCircleIcon class="h-5 w-5 mr-2 text-gray-400" />
-              Account Information
+              {{ $t('profile.accountInfo') }}
             </h3>
           </div>
           <div class="card-body">
@@ -169,23 +171,23 @@ function formatDate(date) {
 
             <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="p-4 bg-gray-50 rounded-lg">
-                <dt class="text-sm font-medium text-gray-500">Username</dt>
+                <dt class="text-sm font-medium text-gray-500">{{ $t('name') }}</dt>
                 <dd class="mt-1 text-sm text-gray-900">{{ profile?.username }}</dd>
               </div>
               <div class="p-4 bg-gray-50 rounded-lg">
                 <dt class="text-sm font-medium text-gray-500 flex items-center">
                   <PhoneIcon class="h-4 w-4 mr-1" />
-                  Phone
+                  {{ $t('phone') }}
                 </dt>
-                <dd class="mt-1 text-sm text-gray-900">{{ profile?.phone || 'Not set' }}</dd>
+                <dd class="mt-1 text-sm text-gray-900">{{ profile?.phone || $t('notSet') }}</dd>
               </div>
               <div class="p-4 bg-gray-50 rounded-lg">
-                <dt class="text-sm font-medium text-gray-500">First Name</dt>
-                <dd class="mt-1 text-sm text-gray-900">{{ profile?.firstName || 'Not set' }}</dd>
+                <dt class="text-sm font-medium text-gray-500">{{ $t('profile.firstName') }}</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ profile?.firstName || $t('notSet') }}</dd>
               </div>
               <div class="p-4 bg-gray-50 rounded-lg">
-                <dt class="text-sm font-medium text-gray-500">Last Name</dt>
-                <dd class="mt-1 text-sm text-gray-900">{{ profile?.lastName || 'Not set' }}</dd>
+                <dt class="text-sm font-medium text-gray-500">{{ $t('profile.lastName') }}</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ profile?.lastName || $t('notSet') }}</dd>
               </div>
             </dl>
           </div>
@@ -196,20 +198,20 @@ function formatDate(date) {
           <div class="card-header flex items-center justify-between">
             <h3 class="text-lg font-medium flex items-center">
               <KeyIcon class="h-5 w-5 mr-2 text-gray-400" />
-              Password & Security
+              {{ $t('profile.passwordAndSecurity') }}
             </h3>
             <button
               v-if="!showChangePassword"
               @click="showChangePassword = true"
               class="btn-secondary text-sm"
             >
-              Change Password
+              {{ $t('profile.changePassword') }}
             </button>
           </div>
           <div class="card-body">
             <div v-if="!showChangePassword" class="text-sm text-gray-500">
-              <p>Your password was last changed: <span class="font-medium">Unknown</span></p>
-              <p class="mt-2">We recommend changing your password periodically for security.</p>
+              <p>{{ $t('profile.passwordLastChanged') }}: <span class="font-medium">{{ $t('profile.unknown') }}</span></p>
+              <p class="mt-2">{{ $t('profile.passwordRecommendation') }}</p>
             </div>
 
             <!-- Change Password Form -->
@@ -217,7 +219,7 @@ function formatDate(date) {
               <!-- Success Message -->
               <div v-if="passwordSuccess" class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
                 <CheckCircleIcon class="h-5 w-5 text-green-600 mr-2" />
-                <p class="text-sm text-green-700">Password changed successfully!</p>
+                <p class="text-sm text-green-700">{{ $t('profile.passwordChanged') }}</p>
               </div>
 
               <!-- Error Message -->
@@ -228,13 +230,13 @@ function formatDate(date) {
               <form @submit.prevent="handleChangePassword" class="space-y-4">
                 <!-- Current Password -->
                 <div>
-                  <label class="label">Current Password</label>
+                  <label class="label">{{ $t('profile.currentPassword') }}</label>
                   <div class="relative">
                     <input
                       v-model="passwordForm.currentPassword"
                       :type="showCurrentPassword ? 'text' : 'password'"
                       :class="[passwordErrors.currentPassword ? 'input-error' : 'input', 'pr-10']"
-                      placeholder="Enter current password"
+                      :placeholder="$t('profile.enterCurrentPassword')"
                     />
                     <button
                       type="button"
@@ -252,13 +254,13 @@ function formatDate(date) {
 
                 <!-- New Password -->
                 <div>
-                  <label class="label">New Password</label>
+                  <label class="label">{{ $t('profile.newPassword') }}</label>
                   <div class="relative">
                     <input
                       v-model="passwordForm.newPassword"
                       :type="showNewPassword ? 'text' : 'password'"
                       :class="[passwordErrors.newPassword ? 'input-error' : 'input', 'pr-10']"
-                      placeholder="Enter new password (min 8 characters)"
+                      :placeholder="$t('profile.enterNewPasswordMin')"
                     />
                     <button
                       type="button"
@@ -276,13 +278,13 @@ function formatDate(date) {
 
                 <!-- Confirm Password -->
                 <div>
-                  <label class="label">Confirm New Password</label>
+                  <label class="label">{{ $t('profile.confirmNewPassword') }}</label>
                   <div class="relative">
                     <input
                       v-model="passwordForm.confirmPassword"
                       :type="showConfirmPassword ? 'text' : 'password'"
                       :class="[passwordErrors.confirmPassword ? 'input-error' : 'input', 'pr-10']"
-                      placeholder="Confirm new password"
+                      :placeholder="$t('profile.confirmNewPasswordPlaceholder')"
                     />
                     <button
                       type="button"
@@ -304,14 +306,14 @@ function formatDate(date) {
                     @click="showChangePassword = false"
                     class="btn-secondary"
                   >
-                    Cancel
+                    {{ $t('cancel') }}
                   </button>
                   <button
                     type="submit"
                     :disabled="changingPassword"
                     class="btn-primary"
                   >
-                    {{ changingPassword ? 'Changing...' : 'Change Password' }}
+                    {{ changingPassword ? $t('profile.changing') : $t('profile.changePassword') }}
                   </button>
                 </div>
               </form>
@@ -327,7 +329,7 @@ function formatDate(date) {
           <div class="card-header">
             <h3 class="text-lg font-medium flex items-center">
               <ShieldCheckIcon class="h-5 w-5 mr-2 text-gray-400" />
-              Roles
+              {{ $t('profile.roles') }}
             </h3>
           </div>
           <div class="card-body">
@@ -340,7 +342,7 @@ function formatDate(date) {
                 {{ role }}
               </span>
               <span v-if="!profile?.roles?.length" class="text-sm text-gray-500">
-                No roles assigned
+                {{ $t('profile.noRolesAssigned') }}
               </span>
             </div>
           </div>
@@ -351,38 +353,38 @@ function formatDate(date) {
           <div class="card-header">
             <h3 class="text-lg font-medium flex items-center">
               <CalendarIcon class="h-5 w-5 mr-2 text-gray-400" />
-              Account Status
+              {{ $t('profile.accountStatus') }}
             </h3>
           </div>
           <div class="card-body space-y-3">
             <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-500">Status</span>
+              <span class="text-sm text-gray-500">{{ $t('status') }}</span>
               <span
                 :class="[
                   'px-2 py-1 text-xs font-medium rounded-full',
                   profile?.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                 ]"
               >
-                {{ profile?.enabled ? 'Active' : 'Disabled' }}
+                {{ profile?.enabled ? $t('active') : $t('inactive') }}
               </span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-500">Phone Verified</span>
+              <span class="text-sm text-gray-500">{{ $t('profile.phoneVerified') }}</span>
               <span
                 :class="[
                   'px-2 py-1 text-xs font-medium rounded-full',
                   profile?.phoneVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                 ]"
               >
-                {{ profile?.phoneVerified ? 'Verified' : 'Not Verified' }}
+                {{ profile?.phoneVerified ? $t('profile.verified') : $t('profile.notVerified') }}
               </span>
             </div>
             <div class="pt-2 border-t">
-              <div class="text-sm text-gray-500">Last Login</div>
+              <div class="text-sm text-gray-500">{{ $t('profile.lastLogin') }}</div>
               <div class="text-sm font-medium">{{ formatDate(profile?.lastLoginAt) }}</div>
             </div>
             <div>
-              <div class="text-sm text-gray-500">Account Created</div>
+              <div class="text-sm text-gray-500">{{ $t('profile.accountCreated') }}</div>
               <div class="text-sm font-medium">{{ formatDate(profile?.createdAt) }}</div>
             </div>
           </div>
