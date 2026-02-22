@@ -145,7 +145,7 @@ async function deleteUom(uom) {
                   'px-2 py-1 text-xs font-medium rounded-full',
                   uom.isBaseUnit ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                 ]">
-                  {{ uom.isBaseUnit ? $t('inventory.uom.yes') : $t('inventory.uom.no') }}
+                  {{ uom.isBaseUnit ? $t('yes') : $t('no') }}
                 </span>
               </td>
               <td>
