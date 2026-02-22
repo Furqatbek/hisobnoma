@@ -40,6 +40,10 @@ const showCloseShiftModal = ref(false)
 const openingCash = ref(0)
 const closingCash = ref(0)
 const shiftLoading = ref(false)
+const unresolvedTransactions = ref([])
+const unresolvedLoading = ref(false)
+const voidingTransactionId = ref(null)
+const shiftVoidReason = ref('')
 
 const cart = reactive({
   items: [],
@@ -677,10 +681,49 @@ async function closeShift() {
     currentShift.value = null
     showCloseShiftModal.value = false
     closingCash.value = 0
+    unresolvedTransactions.value = []
   } catch (error) {
-    alert(t('pos.shifts.closeError') + ': ' + (error.response?.data?.message || error.message))
+    const msg = error.response?.data?.message || error.message
+    if (msg && msg.includes('unresolved')) {
+      await fetchUnresolvedTransactions()
+    } else {
+      alert(t('pos.shifts.closeError') + ': ' + msg)
+    }
   } finally {
     shiftLoading.value = false
+  }
+}
+
+async function fetchUnresolvedTransactions() {
+  if (!currentShift.value) return
+  unresolvedLoading.value = true
+  try {
+    const response = await posApi.getTransactions({
+      shiftId: currentShift.value.id,
+      status: 'PENDING,HELD',
+      size: 100
+    })
+    const data = response.data.data || response.data
+    unresolvedTransactions.value = data.content || []
+  } catch (e) {
+    console.error('Failed to fetch unresolved transactions:', e)
+  } finally {
+    unresolvedLoading.value = false
+  }
+}
+
+async function voidShiftTransaction(tx) {
+  const reason = shiftVoidReason.value.trim()
+  if (!reason) return
+  voidingTransactionId.value = tx.id
+  try {
+    await posApi.voidTransaction(tx.id, reason)
+    unresolvedTransactions.value = unresolvedTransactions.value.filter(t => t.id !== tx.id)
+    shiftVoidReason.value = ''
+  } catch (error) {
+    alert(t('pos.transactions.voidError') + ': ' + (error.response?.data?.message || error.message))
+  } finally {
+    voidingTransactionId.value = null
   }
 }
 
@@ -1298,7 +1341,7 @@ onMounted(() => {
     <div v-if="showCloseShiftModal" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showCloseShiftModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+        <div class="relative bg-white rounded-lg w-full p-6" :class="unresolvedTransactions.length ? 'max-w-2xl' : 'max-w-md'">
           <h3 class="text-lg font-medium text-gray-900 mb-4">{{ $t('pos.shifts.closeShift') }}</h3>
 
           <div class="space-y-4">
@@ -1320,6 +1363,78 @@ onMounted(() => {
                 <span class="font-medium">{{ formatCurrency(currentShift?.totalSales || 0) }}</span>
               </div>
             </div>
+
+            <!-- Unresolved Transactions Warning -->
+            <div v-if="unresolvedTransactions.length > 0" class="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+              <div class="flex items-start gap-2">
+                <svg class="h-5 w-5 text-red-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                </svg>
+                <div>
+                  <p class="text-sm font-medium text-red-800">{{ $t('pos.shifts.unresolvedWarning', { count: unresolvedTransactions.length }) }}</p>
+                  <p class="text-xs text-red-600 mt-1">{{ $t('pos.shifts.unresolvedHint') }}</p>
+                </div>
+              </div>
+
+              <div class="space-y-2 max-h-60 overflow-y-auto">
+                <div
+                  v-for="tx in unresolvedTransactions"
+                  :key="tx.id"
+                  class="bg-white rounded-lg border border-red-100 p-3"
+                >
+                  <div class="flex items-center justify-between gap-4">
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-gray-900 truncate">
+                        {{ tx.transactionNumber || `#${tx.id}` }}
+                        <span class="inline-block ml-2 px-1.5 py-0.5 rounded text-xs font-medium"
+                          :class="tx.status === 'HELD' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'">
+                          {{ tx.status === 'HELD' ? $t('pos.transactions.held') : $t('pos.transactions.pending') }}
+                        </span>
+                      </p>
+                      <p class="text-xs text-gray-500 mt-0.5">
+                        {{ tx.customerName || $t('pos.walkInCustomer') }} &middot; {{ formatCurrency(tx.totalAmount) }} {{ $t('sum') }}
+                      </p>
+                    </div>
+                    <button
+                      v-if="voidingTransactionId !== tx.id"
+                      @click="voidingTransactionId = tx.id; shiftVoidReason = ''"
+                      class="shrink-0 text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 font-medium"
+                    >
+                      {{ $t('pos.transactions.voidTransaction') }}
+                    </button>
+                    <div v-if="voidingTransactionId === tx.id" class="animate-spin h-4 w-4 border-2 border-red-500 border-t-transparent rounded-full shrink-0" v-show="shiftVoidReason === '__loading__'"></div>
+                  </div>
+                  <!-- Inline void reason input -->
+                  <div v-if="voidingTransactionId === tx.id && shiftVoidReason !== '__loading__'" class="mt-2 flex gap-2">
+                    <input
+                      v-model="shiftVoidReason"
+                      type="text"
+                      class="input text-sm flex-1"
+                      :placeholder="$t('pos.transactions.voidReasonPlaceholder')"
+                      @keyup.enter="shiftVoidReason.trim() && voidShiftTransaction(tx)"
+                    />
+                    <button
+                      @click="voidShiftTransaction(tx)"
+                      :disabled="!shiftVoidReason.trim()"
+                      class="px-3 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300"
+                    >
+                      {{ $t('confirm') }}
+                    </button>
+                    <button
+                      @click="voidingTransactionId = null"
+                      class="px-2 py-1 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-100"
+                    >
+                      {{ $t('cancel') }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="unresolvedLoading" class="flex items-center justify-center py-4">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+            </div>
+
             <div>
               <label class="label">{{ $t('pos.shifts.closingBalance') }}</label>
               <input
@@ -1334,7 +1449,7 @@ onMounted(() => {
           </div>
 
           <div class="flex space-x-3 mt-6">
-            <button @click="showCloseShiftModal = false" class="btn-secondary flex-1">
+            <button @click="showCloseShiftModal = false; unresolvedTransactions.splice(0)" class="btn-secondary flex-1">
               {{ $t('cancel') }}
             </button>
             <button @click="closeShift" :disabled="shiftLoading" class="btn-primary flex-1 !bg-red-600 hover:!bg-red-700">

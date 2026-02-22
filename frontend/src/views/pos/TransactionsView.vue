@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { posApi } from '@/services/api'
-import { EyeIcon, MagnifyingGlassIcon, PrinterIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { EyeIcon, MagnifyingGlassIcon, PrinterIcon, XMarkIcon, NoSymbolIcon } from '@heroicons/vue/24/outline'
 import ReceiptTemplate from '@/components/ReceiptTemplate.vue'
 
 const { t } = useI18n()
@@ -17,6 +17,11 @@ const showDetailModal = ref(false)
 const selectedTransaction = ref(null)
 const loadingDetail = ref(false)
 const receiptRef = ref(null)
+
+// Void state
+const showVoidModal = ref(false)
+const voidReason = ref('')
+const voidLoading = ref(false)
 
 const pagination = ref({
   page: 0,
@@ -89,6 +94,27 @@ function closeModal() {
 function printReceipt() {
   if (receiptRef.value) {
     receiptRef.value.printReceipt()
+  }
+}
+
+function openVoidModal() {
+  voidReason.value = ''
+  showVoidModal.value = true
+}
+
+async function voidTransaction() {
+  if (!voidReason.value.trim()) return
+  voidLoading.value = true
+  try {
+    await posApi.voidTransaction(selectedTransaction.value.id, voidReason.value.trim())
+    showVoidModal.value = false
+    showDetailModal.value = false
+    selectedTransaction.value = null
+    fetchTransactions()
+  } catch (error) {
+    alert(t('pos.transactions.voidError') + ': ' + (error.response?.data?.message || error.message))
+  } finally {
+    voidLoading.value = false
   }
 }
 
@@ -306,6 +332,15 @@ function handleSearch() {
           </div>
           <div class="flex items-center gap-2">
             <button
+              v-if="selectedTransaction && ['PENDING', 'HELD'].includes(selectedTransaction.status)"
+              @click="openVoidModal"
+              class="btn-secondary flex items-center gap-2 !text-red-600 !border-red-300 hover:!bg-red-50"
+              :disabled="loadingDetail"
+            >
+              <NoSymbolIcon class="h-5 w-5" />
+              {{ $t('pos.transactions.voidTransaction') }}
+            </button>
+            <button
               @click="printReceipt"
               class="btn-primary flex items-center gap-2"
               :disabled="loadingDetail"
@@ -465,6 +500,40 @@ function handleSearch() {
               />
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+    <!-- Void Confirmation Modal -->
+    <div
+      v-if="showVoidModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4"
+      @click.self="showVoidModal = false"
+    >
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-2">{{ $t('pos.transactions.voidTransaction') }}</h3>
+        <p class="text-sm text-gray-500 mb-4">{{ $t('pos.transactions.confirmVoid') }}</p>
+
+        <div class="mb-4">
+          <label class="label">{{ $t('pos.transactions.voidReason') }} *</label>
+          <textarea
+            v-model="voidReason"
+            rows="3"
+            class="input"
+            :placeholder="$t('pos.transactions.voidReasonPlaceholder')"
+          ></textarea>
+        </div>
+
+        <div class="flex space-x-3">
+          <button @click="showVoidModal = false" class="btn-secondary flex-1">
+            {{ $t('cancel') }}
+          </button>
+          <button
+            @click="voidTransaction"
+            :disabled="!voidReason.trim() || voidLoading"
+            class="btn-primary flex-1 !bg-red-600 hover:!bg-red-700 disabled:!bg-red-300"
+          >
+            {{ voidLoading ? $t('pos.processing') : $t('pos.transactions.voidTransaction') }}
+          </button>
         </div>
       </div>
     </div>
