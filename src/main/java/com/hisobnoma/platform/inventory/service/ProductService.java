@@ -90,6 +90,14 @@ public class ProductService {
         BigDecimal totalQty = stockRepository.getTotalQuantityByProduct(id, tenantId);
         dto.setStockQuantity(totalQty != null ? totalQty : BigDecimal.ZERO);
 
+        // Fallback: derive primaryImageUrl from images if not set on product
+        if (dto.getPrimaryImageUrl() == null && dto.getImages() != null) {
+            dto.getImages().stream()
+                    .filter(ProductImageDto::isPrimary)
+                    .findFirst()
+                    .ifPresent(img -> dto.setPrimaryImageUrl(img.getImageUrl()));
+        }
+
         return dto;
     }
 
@@ -134,15 +142,33 @@ public class ProductService {
         if (response.getContent() == null || response.getContent().isEmpty()) {
             return response;
         }
+        List<Long> productIds = response.getContent().stream()
+                .map(ProductDto::getId)
+                .collect(Collectors.toList());
+
+        // Enrich stock quantities
         Map<Long, BigDecimal> stockMap = stockRepository.getTotalQuantitiesByTenant(tenantId)
                 .stream()
                 .collect(Collectors.toMap(
                         row -> (Long) row[0],
                         row -> row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO
                 ));
-        response.getContent().forEach(dto ->
-                dto.setStockQuantity(stockMap.getOrDefault(dto.getId(), BigDecimal.ZERO))
-        );
+
+        // Enrich primary image URLs from product_images table
+        Map<Long, String> imageMap = imageRepository.findPrimaryImageUrlsByProductIds(productIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (String) row[1],
+                        (first, second) -> first
+                ));
+
+        response.getContent().forEach(dto -> {
+            dto.setStockQuantity(stockMap.getOrDefault(dto.getId(), BigDecimal.ZERO));
+            if (dto.getPrimaryImageUrl() == null) {
+                dto.setPrimaryImageUrl(imageMap.get(dto.getId()));
+            }
+        });
         return response;
     }
 
