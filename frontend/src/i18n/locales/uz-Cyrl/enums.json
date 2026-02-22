@@ -89,7 +89,14 @@
   "salaryStatus": {
     "PAID": "Тўланган",
     "PENDING": "Кутилмоқда",
-    "CANCELLED": "Бекор қилинган"
+    "CANCELLED": "Бекор қилинган",
+    "GIVEN": "Берилган",
+    "DEDUCTED": "Ушланган"
+  },
+  "employeeStatus": {
+    "ACTIVE": "Фаол",
+    "ON_LEAVE": "Таътилда",
+    "TERMINATED": "Ишдан бўшатилган"
   },
   "salaryEntryType": {
     "ADVANCE": "Аванс",
