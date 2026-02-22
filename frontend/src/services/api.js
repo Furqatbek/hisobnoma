@@ -96,6 +96,7 @@ export const usersApi = {
 // Products API - Backend: /api/v1/inventory/products
 export const productsApi = {
   getAll: (params) => api.get('/inventory/products', { params }),
+  getActive: (params) => api.get('/inventory/products/active', { params }),
   getById: (id) => api.get(`/inventory/products/${id}`),
   create: (data) => api.post('/inventory/products', data),
   update: (id, data) => api.put(`/inventory/products/${id}`, data),

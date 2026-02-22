@@ -24,6 +24,7 @@ const { t } = useI18n()
 
 // State
 const products = ref([])
+const quickProducts = ref([])
 const customers = ref([])
 const searchQuery = ref('')
 const loading = ref(false)
@@ -151,6 +152,15 @@ const isDebtSale = computed(() => {
 })
 
 // Methods
+async function fetchQuickProducts() {
+  try {
+    const response = await productsApi.getActive({ size: 50 })
+    quickProducts.value = response.data.content || response.data || []
+  } catch (error) {
+    console.error('Failed to load products:', error)
+  }
+}
+
 async function searchProducts() {
   if (!searchQuery.value.trim()) {
     products.value = []
@@ -682,6 +692,7 @@ watch(selectedTerminalId, () => {
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
   fetchTerminals().then(() => fetchCurrentShift())
+  fetchQuickProducts()
 })
 </script>
 
@@ -707,38 +718,96 @@ onMounted(() => {
       </div>
 
       <!-- Search Results -->
-      <div v-if="products.length > 0" class="card flex-1 overflow-hidden">
+      <div v-if="searchQuery && products.length > 0" class="card flex-1 overflow-hidden">
         <div class="card-body overflow-y-auto h-full">
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             <button
               v-for="product in products"
               :key="product.id"
               @click="addToCart(product)"
-              class="p-4 border rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-left"
+              class="p-3 border rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-left"
             >
-              <div class="font-medium text-gray-900 truncate">{{ product.name }}</div>
-              <div class="text-sm text-gray-500 mt-1">{{ product.sku }}</div>
-              <div class="text-lg font-bold text-primary-600 mt-2">
-                {{ formatCurrency(product.sellingPrice) }}
+              <div class="flex items-center gap-2 mb-1">
+                <img
+                  v-if="product.primaryImageUrl"
+                  :src="product.primaryImageUrl"
+                  :alt="product.name"
+                  class="h-10 w-10 rounded object-cover flex-shrink-0"
+                />
+                <div class="min-w-0 flex-1">
+                  <div class="font-medium text-gray-900 truncate">{{ product.name }}</div>
+                  <div class="text-xs text-gray-500">{{ product.sku }}</div>
+                </div>
               </div>
-              <div
-                :class="[
-                  'text-xs mt-1',
-                  (product.stockQuantity || 0) > 0 ? 'text-green-600' : 'text-red-600'
-                ]"
-              >
-                {{ $t('pos.stock') }}: {{ product.stockQuantity || 0 }}
+              <div class="flex items-center justify-between mt-2">
+                <div class="text-lg font-bold text-primary-600">
+                  {{ formatCurrency(product.sellingPrice) }}
+                </div>
+                <div
+                  :class="[
+                    'text-xs',
+                    (product.stockQuantity || 0) > 0 ? 'text-green-600' : 'text-red-600'
+                  ]"
+                >
+                  {{ product.stockQuantity || 0 }}
+                </div>
               </div>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Empty State -->
-      <div v-else class="card flex-1 flex items-center justify-center">
+      <!-- Search - No Results -->
+      <div v-else-if="searchQuery && products.length === 0 && !loading" class="card flex-1 flex items-center justify-center">
         <div class="text-center text-gray-500">
           <MagnifyingGlassIcon class="h-12 w-12 mx-auto mb-4 text-gray-300" />
           <p>{{ $t('pos.noProductsFound') }}</p>
+        </div>
+      </div>
+
+      <!-- Quick Product List -->
+      <div v-else class="card flex-1 overflow-hidden">
+        <div class="card-body overflow-y-auto h-full">
+          <div v-if="quickProducts.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <button
+              v-for="product in quickProducts"
+              :key="product.id"
+              @click="addToCart(product)"
+              class="p-3 border rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-left"
+            >
+              <div class="flex items-center gap-2 mb-1">
+                <img
+                  v-if="product.primaryImageUrl"
+                  :src="product.primaryImageUrl"
+                  :alt="product.name"
+                  class="h-10 w-10 rounded object-cover flex-shrink-0"
+                />
+                <div class="min-w-0 flex-1">
+                  <div class="font-medium text-gray-900 truncate">{{ product.name }}</div>
+                  <div class="text-xs text-gray-500">{{ product.sku }}</div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between mt-2">
+                <div class="text-lg font-bold text-primary-600">
+                  {{ formatCurrency(product.sellingPrice) }}
+                </div>
+                <div
+                  :class="[
+                    'text-xs',
+                    (product.stockQuantity || 0) > 0 ? 'text-green-600' : 'text-red-600'
+                  ]"
+                >
+                  {{ product.stockQuantity || 0 }}
+                </div>
+              </div>
+            </button>
+          </div>
+          <div v-else class="flex items-center justify-center h-full text-gray-500">
+            <div class="text-center">
+              <MagnifyingGlassIcon class="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>{{ $t('pos.noProductsFound') }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
