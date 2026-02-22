@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { arReportsApi, arInvoicesApi, arPaymentsApi } from '@/services/api'
 import { useReceiptStore } from '@/stores/receipt'
-import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon, PlusIcon, BanknotesIcon } from '@heroicons/vue/24/outline'
+import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon, PlusIcon, BanknotesIcon, PencilIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -724,6 +724,7 @@ function printDebtors() {
               <XMarkIcon class="h-6 w-6" />
             </button>
           </div>
+
         </div>
 
         <div class="p-6 space-y-6">
@@ -911,6 +912,13 @@ function printDebtors() {
                       <p class="font-semibold text-red-600 text-sm">{{ formatCurrency(invoice.balanceDue) }} {{ $t('sum') }}</p>
                       <p class="text-xs text-gray-500">{{ $t('total') }}: {{ formatCurrency(invoice.totalAmount) }} {{ $t('sum') }}</p>
                     </div>
+                    <button
+                      @click.stop="router.push(`/finance/debtors/${invoice.id}/edit`)"
+                      class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-1"
+                    >
+                      <PencilIcon class="h-3.5 w-3.5" />
+                      {{ $t('edit') }}
+                    </button>
                     <button
                       @click.stop="openPayment(invoice)"
                       class="px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center gap-1"

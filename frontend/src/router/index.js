@@ -213,6 +213,11 @@ const routes = [
             component: () => import('@/views/finance/DebtorFormView.vue')
           },
           {
+            path: 'debtors/:id/edit',
+            name: 'debtor-edit',
+            component: () => import('@/views/finance/DebtorFormView.vue')
+          },
+          {
             path: 'expenses',
             name: 'expenses',
             component: () => import('@/views/finance/ExpensesView.vue')

@@ -1,14 +1,19 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { arInvoicesApi, customersApi, productsApi } from '@/services/api'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 
+const route = useRoute()
 const router = useRouter()
 const saving = ref(false)
+const loading = ref(false)
 const errors = reactive({})
+
+const isEdit = computed(() => !!route.params.id)
+const invoiceId = computed(() => route.params.id)
 
 // Customer
 const allCustomers = ref([])
@@ -64,7 +69,6 @@ onMounted(async () => {
   // Preload all customers
   loadingCustomers.value = true
   try {
-    // Try active customers first (returns a simple list)
     const res = await customersApi.getAll({ size: 200 })
     const data = res.data.data || res.data
     allCustomers.value = data?.content || (Array.isArray(data) ? data : [])
@@ -72,6 +76,47 @@ onMounted(async () => {
     console.error('Failed to load customers:', err)
   } finally {
     loadingCustomers.value = false
+  }
+
+  // If editing, load the existing invoice
+  if (isEdit.value) {
+    loading.value = true
+    try {
+      const res = await arInvoicesApi.getById(invoiceId.value)
+      const invoice = res.data.data || res.data
+      form.customerId = invoice.customerId
+      form.invoiceDate = invoice.invoiceDate?.split('T')[0] || invoice.invoiceDate
+      form.dueDate = invoice.dueDate?.split('T')[0] || invoice.dueDate
+      form.description = invoice.description || ''
+      form.notes = invoice.notes || ''
+      form.lines = (invoice.lines || []).map(line => ({
+        productId: line.productId || null,
+        productSku: line.productSku || '',
+        productName: line.productName || '',
+        description: line.description || line.productName || '',
+        quantity: line.quantity || 1,
+        unitPrice: line.unitPrice || 0,
+        unitOfMeasure: line.unitOfMeasure || 'dona'
+      }))
+
+      // Set the selected customer from the loaded customers
+      const customer = allCustomers.value.find(c => c.id === invoice.customerId)
+      if (customer) {
+        selectedCustomer.value = customer
+      } else if (invoice.customerName) {
+        // Create a minimal customer object if not found in list
+        selectedCustomer.value = {
+          id: invoice.customerId,
+          name: invoice.customerName,
+          code: invoice.customerCode || ''
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load invoice:', error)
+      errors.general = t('finance.debtors.loadError')
+    } finally {
+      loading.value = false
+    }
   }
 })
 
@@ -244,12 +289,16 @@ async function handleSubmit() {
       }))
     }
 
-    const res = await arInvoicesApi.create(payload)
-    // Auto-post so the invoice moves from DRAFT to PENDING
-    // and appears in the debtors list (balance report excludes DRAFTs)
-    const invoiceId = res.data?.data?.id || res.data?.id
-    if (invoiceId) {
-      await arInvoicesApi.post(invoiceId)
+    if (isEdit.value) {
+      await arInvoicesApi.update(invoiceId.value, payload)
+    } else {
+      const res = await arInvoicesApi.create(payload)
+      // Auto-post so the invoice moves from DRAFT to PENDING
+      // and appears in the debtors list (balance report excludes DRAFTs)
+      const newId = res.data?.data?.id || res.data?.id
+      if (newId) {
+        await arInvoicesApi.post(newId)
+      }
     }
     router.push('/finance/debtors')
   } catch (error) {
@@ -276,12 +325,16 @@ async function handleSubmit() {
         <ArrowLeftIcon class="h-5 w-5 text-gray-500" />
       </button>
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">{{ $t('finance.debtors.addDebt') }}</h1>
-        <p class="text-sm text-gray-500">{{ $t('finance.debtors.addDebtSubtitle') }}</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? $t('finance.debtors.editDebt') : $t('finance.debtors.addDebt') }}</h1>
+        <p class="text-sm text-gray-500">{{ isEdit ? $t('finance.debtors.editDebtSubtitle') : $t('finance.debtors.addDebtSubtitle') }}</p>
       </div>
     </div>
 
-    <form @submit.prevent="handleSubmit" class="space-y-6">
+    <div v-if="loading" class="flex items-center justify-center h-64">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+    </div>
+
+    <form v-else @submit.prevent="handleSubmit" class="space-y-6">
       <!-- General error -->
       <div v-if="errors.general" class="p-4 bg-red-50 border border-red-200 rounded-lg">
         <p class="text-sm text-red-600">{{ errors.general }}</p>
@@ -526,7 +579,7 @@ async function handleSubmit() {
             :disabled="saving || form.lines.length === 0"
             class="btn-primary"
           >
-            {{ saving ? $t('saving') : $t('save') }}
+            {{ saving ? $t('saving') : (isEdit ? $t('save') : $t('save')) }}
           </button>
         </div>
       </div>

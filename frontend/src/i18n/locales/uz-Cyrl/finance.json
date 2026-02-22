@@ -52,7 +52,10 @@
     "noProductDetails": "Маҳсулот тафсилотлари мавжуд эмас",
     "invoiceAmount": "Фактура суммаси",
     "openInvoices": "Очиқ фактуралар",
-    "productNotFound": "Маҳсулот топилмади"
+    "productNotFound": "Маҳсулот топилмади",
+    "editDebt": "Қарзни таҳрирлаш",
+    "editDebtSubtitle": "Насия фактурасини таҳрирлаш",
+    "loadError": "Фактурани юклашда хатолик"
   },
   "expenses": {
     "title": "Харажатлар",
