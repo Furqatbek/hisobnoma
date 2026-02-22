@@ -57,30 +57,9 @@ const permissionGroups = computed(() => {
 })
 
 function getCategoryName(category) {
-  const names = {
-    'INVENTORY': 'Inventar',
-    'INVENTORY_PRODUCT': 'Mahsulotlar',
-    'INVENTORY_CATEGORY': 'Kategoriyalar',
-    'INVENTORY_BRAND': 'Brendlar',
-    'INVENTORY_UOM': 'O\'lchov birliklari',
-    'INVENTORY_LOCATION': 'Joylashuvlar',
-    'INVENTORY_STOCK': 'Zaxira',
-    'INVENTORY_VENDOR': 'Yetkazib beruvchilar',
-    'INVENTORY_PURCHASE': 'Xaridlar',
-    'POS': 'Kassa (POS)',
-    'POS_TERMINAL': 'POS Terminallar',
-    'POS_TRANSACTION': 'Tranzaksiyalar',
-    'FINANCE': 'Moliya',
-    'FINANCE_CUSTOMER': 'Mijozlar',
-    'REPORT': 'Hisobotlar',
-    'ADMIN': 'Administrator',
-    'ADMIN_ROLE': 'Rollar',
-    'ADMIN_PERMISSION': 'Ruxsatlar',
-    'USER': 'Foydalanuvchilar',
-    'SETTINGS': 'Sozlamalar',
-    'AUDIT': 'Audit'
-  }
-  return names[category] || category
+  const key = `admin.roleForm.categories.${category}`
+  const translated = t(key)
+  return translated !== key ? translated : category
 }
 
 function getPermissionLabel(permission) {
@@ -88,22 +67,9 @@ function getPermissionLabel(permission) {
   const parts = permission.split('_')
   const action = parts[parts.length - 1]
 
-  const actionLabels = {
-    'READ': 'Ko\'rish',
-    'CREATE': 'Yaratish',
-    'UPDATE': 'Tahrirlash',
-    'DELETE': 'O\'chirish',
-    'MANAGE': 'Boshqarish',
-    'VIEW': 'Ko\'rish',
-    'EXPORT': 'Eksport',
-    'VOID': 'Bekor qilish',
-    'APPROVE': 'Tasdiqlash',
-    'RECEIVE': 'Qabul qilish',
-    'TRANSFER': 'Ko\'chirish',
-    'ADJUST': 'Tuzatish'
-  }
-
-  return actionLabels[action] || action
+  const key = `admin.roleForm.actions.${action}`
+  const translated = t(key)
+  return translated !== key ? translated : action
 }
 
 async function fetchRole() {
@@ -293,7 +259,7 @@ onMounted(() => {
                 type="text"
                 class="input"
                 :class="{ 'border-red-500': errors.name }"
-                placeholder="Kassir"
+                :placeholder="$t('admin.roleForm.namePlaceholder')"
                 :disabled="isSystemRole"
               />
               <p v-if="errors.name" class="text-sm text-red-500 mt-1">{{ errors.name }}</p>
@@ -309,7 +275,7 @@ onMounted(() => {
                 type="text"
                 class="input uppercase"
                 :class="{ 'border-red-500': errors.code }"
-                placeholder="CASHIER"
+                :placeholder="$t('admin.roleForm.codePlaceholder')"
                 :disabled="isEdit"
               />
               <p v-if="errors.code" class="text-sm text-red-500 mt-1">{{ errors.code }}</p>

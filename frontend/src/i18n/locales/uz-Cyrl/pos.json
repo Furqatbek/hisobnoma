@@ -30,6 +30,11 @@
   "removeItem": "Ўчириш",
   "qty": "Миқдор",
 
+  "baseUnit": "Асосий бирлик",
+  "baseUnitDescription": "1 = 1 (асосий)",
+  "standard": "стандарт",
+  "baseUnitSuffix": "асосий",
+
   "shifts": {
     "title": "Сменалар",
     "subtitle": "Касса сменалари тарихи",

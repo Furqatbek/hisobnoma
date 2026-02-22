@@ -1348,7 +1348,7 @@ onMounted(() => {
               <div class="flex justify-between items-center">
                 <div>
                   <p class="font-medium text-gray-900">{{ $t('pos.baseUnit') }}</p>
-                  <p class="text-xs text-gray-500">1 = 1 (bazaviy)</p>
+                  <p class="text-xs text-gray-500">{{ $t('pos.baseUnitDescription') }}</p>
                 </div>
                 <span class="font-bold text-primary-600">{{ formatCurrency(pendingProduct.sellingPrice) }}</span>
               </div>
@@ -1366,9 +1366,9 @@ onMounted(() => {
                 <div>
                   <p class="font-medium text-gray-900">
                     {{ puom.uomName }}
-                    <span v-if="puom.defaultSale" class="text-xs text-primary-600">(standart)</span>
+                    <span v-if="puom.defaultSale" class="text-xs text-primary-600">({{ $t('pos.standard') }})</span>
                   </p>
-                  <p class="text-xs text-gray-500">1 {{ puom.uomCode }} = {{ puom.conversionFactor }} bazaviy</p>
+                  <p class="text-xs text-gray-500">1 {{ puom.uomCode }} = {{ puom.conversionFactor }} {{ $t('pos.baseUnitSuffix') }}</p>
                 </div>
                 <span class="font-bold text-primary-600">{{ formatCurrency(puom.effectiveSellingPrice) }}</span>
               </div>
