@@ -444,7 +444,7 @@ onMounted(() => {
                       v-model="line.unitOfMeasure"
                       type="text"
                       class="input input-sm"
-                      placeholder="dona"
+                      :placeholder="$t('inventory.uom.piece')"
                     />
                   </div>
 

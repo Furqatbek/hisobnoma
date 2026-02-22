@@ -393,8 +393,8 @@ function handleSearch() {
                           <p v-if="item.productCode" class="text-sm text-gray-500">{{ item.productCode }}</p>
                         </td>
                         <td class="px-4 py-3 text-right">{{ item.quantity }} <span v-if="item.uomCode" class="text-xs text-gray-500">{{ item.uomCode }}</span></td>
-                        <td class="px-4 py-3 text-right">{{ formatCurrency(item.unitPrice) }} so'm</td>
-                        <td class="px-4 py-3 text-right font-medium">{{ formatCurrency(item.lineTotal) }} so'm</td>
+                        <td class="px-4 py-3 text-right">{{ formatCurrency(item.unitPrice) }} {{ $t('sum') }}</td>
+                        <td class="px-4 py-3 text-right font-medium">{{ formatCurrency(item.lineTotal) }} {{ $t('sum') }}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -406,19 +406,19 @@ function handleSearch() {
                 <div class="space-y-2">
                   <div class="flex justify-between">
                     <span class="text-gray-600">{{ $t('pos.subtotal') }}:</span>
-                    <span>{{ formatCurrency(selectedTransaction.subtotal) }} so'm</span>
+                    <span>{{ formatCurrency(selectedTransaction.subtotal) }} {{ $t('sum') }}</span>
                   </div>
                   <div class="flex justify-between" v-if="selectedTransaction.discountAmount > 0">
                     <span class="text-gray-600">{{ $t('pos.discount') }}:</span>
-                    <span class="text-green-600">-{{ formatCurrency(selectedTransaction.discountAmount) }} so'm</span>
+                    <span class="text-green-600">-{{ formatCurrency(selectedTransaction.discountAmount) }} {{ $t('sum') }}</span>
                   </div>
                   <div class="flex justify-between" v-if="selectedTransaction.taxAmount > 0">
                     <span class="text-gray-600">{{ $t('pos.tax') }}:</span>
-                    <span>{{ formatCurrency(selectedTransaction.taxAmount) }} so'm</span>
+                    <span>{{ formatCurrency(selectedTransaction.taxAmount) }} {{ $t('sum') }}</span>
                   </div>
                   <div class="flex justify-between text-lg font-bold border-t pt-2">
                     <span>{{ $t('total') }}:</span>
-                    <span>{{ formatCurrency(selectedTransaction.totalAmount) }} so'm</span>
+                    <span>{{ formatCurrency(selectedTransaction.totalAmount) }} {{ $t('sum') }}</span>
                   </div>
                 </div>
               </div>
@@ -436,11 +436,11 @@ function handleSearch() {
                       <span class="badge badge-info">{{ getPaymentLabel(payment.paymentType) }}</span>
                       <span v-if="payment.cardLastFour" class="text-sm text-gray-500">****{{ payment.cardLastFour }}</span>
                     </span>
-                    <span class="font-medium">{{ formatCurrency(payment.amount) }} so'm</span>
+                    <span class="font-medium">{{ formatCurrency(payment.amount) }} {{ $t('sum') }}</span>
                   </div>
                   <div v-if="selectedTransaction.changeAmount > 0" class="flex justify-between items-center px-4 py-2 text-sm text-gray-600">
                     <span>{{ $t('pos.change') }}:</span>
-                    <span>{{ formatCurrency(selectedTransaction.changeAmount) }} so'm</span>
+                    <span>{{ formatCurrency(selectedTransaction.changeAmount) }} {{ $t('sum') }}</span>
                   </div>
                 </div>
               </div>

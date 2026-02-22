@@ -324,7 +324,7 @@ const tabs = computed(() => [
                     v-model="receiptSettings.footerText"
                     type="text"
                     class="input"
-                    placeholder="Xaridingiz uchun rahmat!"
+                    :placeholder="$t('admin.settings.receiptFooterPlaceholder')"
                   />
                 </div>
                 <div>

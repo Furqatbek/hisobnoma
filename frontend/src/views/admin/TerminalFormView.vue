@@ -188,7 +188,7 @@ onMounted(() => {
               type="text"
               class="input"
               :class="{ 'border-red-500': errors.name }"
-              placeholder="Asosiy kassa"
+              :placeholder="$t('admin.terminalForm.terminalNamePlaceholder')"
             />
             <p v-if="errors.name" class="text-sm text-red-500 mt-1">{{ errors.name }}</p>
           </div>

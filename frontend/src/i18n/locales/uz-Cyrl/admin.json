@@ -68,6 +68,7 @@
     "editTerminal": "Терминални таҳрирлаш",
     "terminalName": "Терминал номи",
     "terminalCode": "Терминал коди",
+    "terminalNamePlaceholder": "Асосий касса",
     "selectWarehouse": "Омборни танланг",
     "nameRequired": "Терминал номи киритилиши шарт"
   },
@@ -141,6 +142,7 @@
     "phoneNumber": "Телефон рақами",
     "footerText": "Чек пастки қисми матни",
     "footerPlaceholder": "Харидингиз учун раҳмат!",
+    "receiptFooterPlaceholder": "Харидингиз учун раҳмат!",
     "paperWidth": "Қоғоз кенглиги",
     "paperWidthA4Hint": "А4 форматдаги чек (210мм x 297мм)",
     "paperWidthThermalHint": "Термал принтерингиз қоғоз ўлчами",
@@ -223,6 +225,23 @@
     "entity": "Объект",
     "performedBy": "Бажарган",
     "timestamp": "Вақт",
-    "noLogs": "Аудит журнали бўш"
+    "noLogs": "Аудит журнали бўш",
+    "system": "Тизим",
+    "allActions": "Барча амаллар",
+    "create": "Яратиш",
+    "update": "Янгилаш",
+    "deleteAction": "Ўчириш",
+    "login": "Кириш",
+    "logout": "Чиқиш",
+    "allModules": "Барча модуллар",
+    "auth": "Аутентификация",
+    "inventory": "Инвентар",
+    "pos": "Касса",
+    "customer": "Мижоз",
+    "purchase": "Харидлар",
+    "filter": "Фильтр",
+    "user": "Фойдаланувчи",
+    "module": "Модул",
+    "ipAddress": "IP манзил"
   }
 }

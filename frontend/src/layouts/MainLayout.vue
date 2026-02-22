@@ -286,10 +286,10 @@ watchEffect(() => {
             </div>
             <div class="ml-3 flex-1 min-w-0">
               <p class="text-sm font-medium text-gray-900 truncate">
-                {{ authStore.user?.username || 'User' }}
+                {{ authStore.user?.username || $t('user') }}
               </p>
               <p class="text-xs text-gray-500 truncate">
-                {{ authStore.user?.roles?.[0] || 'User' }}
+                {{ authStore.user?.roles?.[0] || $t('user') }}
               </p>
             </div>
           </RouterLink>

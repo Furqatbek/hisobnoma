@@ -140,7 +140,7 @@ async function handleSubmit() {
             <input v-model="form.phone" type="text" class="input" />
           </div>
           <div>
-            <label class="label">Email</label>
+            <label class="label">{{ $t('email') }}</label>
             <input v-model="form.email" type="email" class="input" />
           </div>
           <div>

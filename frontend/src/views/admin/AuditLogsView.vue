@@ -134,7 +134,7 @@ function getActionClass(action) {
                       {{ log.username?.charAt(0).toUpperCase() || '?' }}
                     </span>
                   </div>
-                  <span class="ml-2 font-medium">{{ log.username || 'System' }}</span>
+                  <span class="ml-2 font-medium">{{ log.username || $t('admin.auditLogs.system') }}</span>
                 </div>
               </td>
               <td>

@@ -10,12 +10,14 @@
     "PENDING_APPROVAL": "Тасдиқланмоқда",
     "APPROVED": "Тасдиқланган",
     "PARTIAL": "Қисман тўланган",
+    "PARTIALLY_PAID": "Қисман тўланган",
     "PAID": "Тўланган",
     "CANCELLED": "Бекор қилинган",
     "ON_HOLD": "Кутиш",
     "REJECTED": "Рад этилган",
     "ENTERED": "Киритилган",
-    "REVERSED": "Қайтарилган"
+    "REVERSED": "Қайтарилган",
+    "POSTED": "Қайд этилган"
   },
   "apPaymentStatus": {
     "DRAFT": "Қоралама",

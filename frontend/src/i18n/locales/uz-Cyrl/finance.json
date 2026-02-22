@@ -51,7 +51,8 @@
     "noUnpaidInvoices": "Тўланмаган фактуралар топилмади",
     "noProductDetails": "Маҳсулот тафсилотлари мавжуд эмас",
     "invoiceAmount": "Фактура суммаси",
-    "openInvoices": "Очиқ фактуралар"
+    "openInvoices": "Очиқ фактуралар",
+    "productNotFound": "Маҳсулот топилмади"
   },
   "expenses": {
     "title": "Харажатлар",
@@ -177,6 +178,18 @@
     "cancelReason": "Бекор қилиш сабаби",
     "invoiceAllocations": "Фактураларга тақсимлаш",
     "cancelPayment": "Тўловни бекор қилиш",
-    "viewDetails": "Батафсил"
+    "viewDetails": "Батафсил",
+    "vendor": "Етказувчи",
+    "arPaymentDetail": "Кирувчи тўлов тафсилотлари",
+    "apPaymentDetail": "Чиқувчи тўлов тафсилотлари",
+    "createdAt": "Яратилган",
+    "glPosted": "GL журналга ёзилган",
+    "voidReason": "Бекор қилиш сабаби",
+    "allocations": "Фактураларга тақсимлаш",
+    "arLoadError": "Кирувчи тўловларни юклашда хатолик",
+    "apLoadError": "Чиқувчи тўловларни юклашда хатолик",
+    "loadDetailError": "Тўлов маълумотларини юклашда хатолик",
+    "paymentCancelled": "{number} бекор қилинди",
+    "cancelError": "Бекор қилишда хатолик"
   }
 }

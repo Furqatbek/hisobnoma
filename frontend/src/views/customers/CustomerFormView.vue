@@ -145,7 +145,7 @@ async function toggleCreditHold() {
             <div class="bg-gray-50 rounded-lg p-4">
               <p class="text-xs text-gray-500">{{ $t('customers.form.currentDebt') }}</p>
               <p class="text-lg font-bold" :class="(customerData.currentBalance || 0) > 0 ? 'text-red-600' : 'text-gray-900'">
-                {{ formatCurrency(customerData.currentBalance) }} so'm
+                {{ formatCurrency(customerData.currentBalance) }} {{ $t('sum') }}
               </p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">

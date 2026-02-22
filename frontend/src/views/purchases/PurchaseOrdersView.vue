@@ -189,7 +189,7 @@ function transformOrderForReceipt(order) {
               <td>{{ order.vendorName || '-' }}</td>
               <td>{{ formatDate(order.orderDate || order.createdAt) }}</td>
               <td>{{ order.lines?.length || '-' }}</td>
-              <td class="text-right font-medium">{{ formatCurrency(order.totalAmount) }} so'm</td>
+              <td class="text-right font-medium">{{ formatCurrency(order.totalAmount) }} {{ $t('sum') }}</td>
               <td>
                 <span :class="['badge', getStatusClass(order.status)]">{{ getStatusLabel(order.status) }}</span>
               </td>
@@ -330,8 +330,8 @@ function transformOrderForReceipt(order) {
                           <p v-if="line.productSku" class="text-sm text-gray-500">{{ line.productSku }}</p>
                         </td>
                         <td class="px-4 py-3 text-right">{{ line.quantity }}</td>
-                        <td class="px-4 py-3 text-right">{{ formatCurrency(line.unitPrice) }} so'm</td>
-                        <td class="px-4 py-3 text-right font-medium">{{ formatCurrency(line.lineTotal) }} so'm</td>
+                        <td class="px-4 py-3 text-right">{{ formatCurrency(line.unitPrice) }} {{ $t('sum') }}</td>
+                        <td class="px-4 py-3 text-right font-medium">{{ formatCurrency(line.lineTotal) }} {{ $t('sum') }}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -343,15 +343,15 @@ function transformOrderForReceipt(order) {
                 <div class="space-y-2">
                   <div class="flex justify-between" v-if="selectedOrder.subtotal">
                     <span class="text-gray-600">{{ $t('purchases.orders.subtotal') }}:</span>
-                    <span>{{ formatCurrency(selectedOrder.subtotal) }} so'm</span>
+                    <span>{{ formatCurrency(selectedOrder.subtotal) }} {{ $t('sum') }}</span>
                   </div>
                   <div class="flex justify-between" v-if="selectedOrder.taxAmount">
                     <span class="text-gray-600">{{ $t('purchases.orders.taxAmount') }}:</span>
-                    <span>{{ formatCurrency(selectedOrder.taxAmount) }} so'm</span>
+                    <span>{{ formatCurrency(selectedOrder.taxAmount) }} {{ $t('sum') }}</span>
                   </div>
                   <div class="flex justify-between text-lg font-bold border-t pt-2">
                     <span>{{ $t('total') }}:</span>
-                    <span>{{ formatCurrency(selectedOrder.totalAmount) }} so'm</span>
+                    <span>{{ formatCurrency(selectedOrder.totalAmount) }} {{ $t('sum') }}</span>
                   </div>
                 </div>
               </div>

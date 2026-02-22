@@ -144,7 +144,7 @@ function getDifferenceClass(value) {
                 <button
                   @click="viewShift(shift)"
                   class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  title="Batafsil ko'rish"
+                  :title="$t('details')"
                 >
                   <EyeIcon class="h-5 w-5" />
                 </button>
@@ -236,29 +236,29 @@ function getDifferenceClass(value) {
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div>
                   <label class="text-sm text-gray-500">{{ $t('pos.shifts.openingBalance') }}</label>
-                  <p class="text-lg font-semibold">{{ formatCurrency(selectedShift.openingCash) }} so'm</p>
+                  <p class="text-lg font-semibold">{{ formatCurrency(selectedShift.openingCash) }} {{ $t('sum') }}</p>
                 </div>
                 <div>
                   <label class="text-sm text-gray-500">{{ $t('pos.shifts.closingBalance') }}</label>
-                  <p class="text-lg font-semibold">{{ formatCurrency(selectedShift.closingCash) }} so'm</p>
+                  <p class="text-lg font-semibold">{{ formatCurrency(selectedShift.closingCash) }} {{ $t('sum') }}</p>
                 </div>
                 <div>
                   <label class="text-sm text-gray-500">{{ $t('pos.shifts.expectedCash') }}</label>
-                  <p class="text-lg font-semibold">{{ formatCurrency(selectedShift.expectedCash) }} so'm</p>
+                  <p class="text-lg font-semibold">{{ formatCurrency(selectedShift.expectedCash) }} {{ $t('sum') }}</p>
                 </div>
                 <div>
                   <label class="text-sm text-gray-500">{{ $t('pos.shifts.difference') }}</label>
                   <p :class="['text-lg font-semibold', getDifferenceClass(selectedShift.cashDifference)]">
-                    {{ selectedShift.cashDifference > 0 ? '+' : '' }}{{ formatCurrency(selectedShift.cashDifference) }} so'm
+                    {{ selectedShift.cashDifference > 0 ? '+' : '' }}{{ formatCurrency(selectedShift.cashDifference) }} {{ $t('sum') }}
                   </p>
                 </div>
                 <div>
                   <label class="text-sm text-gray-500">{{ $t('pos.shifts.cashIn') }}</label>
-                  <p class="text-lg font-semibold text-green-600">+{{ formatCurrency(selectedShift.cashIn) }} so'm</p>
+                  <p class="text-lg font-semibold text-green-600">+{{ formatCurrency(selectedShift.cashIn) }} {{ $t('sum') }}</p>
                 </div>
                 <div>
                   <label class="text-sm text-gray-500">{{ $t('pos.shifts.cashOut') }}</label>
-                  <p class="text-lg font-semibold text-red-600">-{{ formatCurrency(selectedShift.cashOut) }} so'm</p>
+                  <p class="text-lg font-semibold text-red-600">-{{ formatCurrency(selectedShift.cashOut) }} {{ $t('sum') }}</p>
                 </div>
               </div>
             </div>
@@ -272,19 +272,19 @@ function getDifferenceClass(value) {
                 <tbody class="divide-y divide-gray-200">
                   <tr>
                     <td class="px-4 py-3 text-gray-600">{{ $t('pos.shifts.totalSales') }}</td>
-                    <td class="px-4 py-3 text-right font-semibold">{{ formatCurrency(selectedShift.totalSales) }} so'm</td>
+                    <td class="px-4 py-3 text-right font-semibold">{{ formatCurrency(selectedShift.totalSales) }} {{ $t('sum') }}</td>
                   </tr>
                   <tr>
                     <td class="px-4 py-3 text-gray-600">{{ $t('pos.shifts.returns') }}</td>
-                    <td class="px-4 py-3 text-right font-semibold text-red-600">-{{ formatCurrency(selectedShift.totalReturns) }} so'm</td>
+                    <td class="px-4 py-3 text-right font-semibold text-red-600">-{{ formatCurrency(selectedShift.totalReturns) }} {{ $t('sum') }}</td>
                   </tr>
                   <tr>
                     <td class="px-4 py-3 text-gray-600">{{ $t('pos.shifts.discounts') }}</td>
-                    <td class="px-4 py-3 text-right font-semibold text-orange-600">-{{ formatCurrency(selectedShift.totalDiscounts) }} so'm</td>
+                    <td class="px-4 py-3 text-right font-semibold text-orange-600">-{{ formatCurrency(selectedShift.totalDiscounts) }} {{ $t('sum') }}</td>
                   </tr>
                   <tr>
                     <td class="px-4 py-3 text-gray-600">{{ $t('pos.shifts.taxes') }}</td>
-                    <td class="px-4 py-3 text-right font-semibold">{{ formatCurrency(selectedShift.totalTaxes) }} so'm</td>
+                    <td class="px-4 py-3 text-right font-semibold">{{ formatCurrency(selectedShift.totalTaxes) }} {{ $t('sum') }}</td>
                   </tr>
                 </tbody>
               </table>

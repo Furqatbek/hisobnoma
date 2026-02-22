@@ -207,15 +207,7 @@ function getARStatusClass(status) {
 
 // AP statuses
 function getAPStatusLabel(status) {
-  const labels = {
-    'DRAFT': 'Qoralama',
-    'PENDING_APPROVAL': 'Tasdiqlash kutilmoqda',
-    'APPROVED': 'Tasdiqlangan',
-    'COMPLETED': 'Bajarildi',
-    'VOIDED': 'Bekor qilingan',
-    'FAILED': 'Xatolik'
-  }
-  return labels[status] || status
+  return t(`enums.apPaymentStatus.${status}`, status)
 }
 
 function getAPStatusClass(status) {
@@ -229,20 +221,7 @@ function getAPStatusClass(status) {
 }
 
 function getMethodLabel(method) {
-  const labels = {
-    'CASH': 'Naqd pul',
-    'BANK_TRANSFER': 'Bank o\'tkazmasi',
-    'CREDIT_CARD': 'Kredit karta',
-    'DEBIT_CARD': 'Debet karta',
-    'MOBILE_PAYMENT': 'Mobil to\'lov',
-    'ONLINE_PAYMENT': 'Onlayn to\'lov',
-    'ONLINE': 'Onlayn to\'lov',
-    'CHECK': 'Chek',
-    'ACH': 'ACH',
-    'STORE_CREDIT': 'Do\'kon krediti',
-    'OTHER': 'Boshqa'
-  }
-  return labels[method] || method
+  return t(`enums.paymentMethod.${method}`, method)
 }
 
 function getInvoiceNumbers(payment) {
@@ -256,19 +235,19 @@ function getInvoiceNumbers(payment) {
 const statusOptions = computed(() => {
   if (activeTab.value === 'ar') {
     return [
-      { value: 'all', label: 'Barcha holatlar' },
-      { value: 'PENDING', label: 'Kutilmoqda' },
-      { value: 'COMPLETED', label: 'Bajarildi' },
-      { value: 'CANCELLED', label: 'Bekor qilingan' }
+      { value: 'all', label: t('finance.payments.allStatuses') },
+      { value: 'PENDING', label: t('enums.arPaymentStatus.PENDING') },
+      { value: 'COMPLETED', label: t('enums.arPaymentStatus.COMPLETED') },
+      { value: 'CANCELLED', label: t('enums.arPaymentStatus.CANCELLED') }
     ]
   } else {
     return [
-      { value: 'all', label: 'Barcha holatlar' },
-      { value: 'DRAFT', label: 'Qoralama' },
-      { value: 'PENDING_APPROVAL', label: 'Tasdiqlash kutilmoqda' },
-      { value: 'APPROVED', label: 'Tasdiqlangan' },
-      { value: 'COMPLETED', label: 'Bajarildi' },
-      { value: 'VOIDED', label: 'Bekor qilingan' }
+      { value: 'all', label: t('finance.payments.allStatuses') },
+      { value: 'DRAFT', label: t('enums.apPaymentStatus.DRAFT') },
+      { value: 'PENDING_APPROVAL', label: t('enums.apPaymentStatus.PENDING_APPROVAL') },
+      { value: 'APPROVED', label: t('enums.apPaymentStatus.APPROVED') },
+      { value: 'COMPLETED', label: t('enums.apPaymentStatus.COMPLETED') },
+      { value: 'VOIDED', label: t('enums.apPaymentStatus.VOIDED') }
     ]
   }
 })
@@ -277,8 +256,8 @@ const statusOptions = computed(() => {
 <template>
   <div class="space-y-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">To'lovlar</h1>
-      <p class="mt-1 text-sm text-gray-500">Kiruvchi va chiquvchi to'lovlar ro'yxati</p>
+      <h1 class="text-2xl font-bold text-gray-900">{{ $t('finance.payments.title') }}</h1>
+      <p class="mt-1 text-sm text-gray-500">{{ $t('finance.payments.subtitle') }}</p>
     </div>
 
     <!-- Error / Success -->
@@ -304,7 +283,7 @@ const statusOptions = computed(() => {
           ]"
         >
           <ArrowDownTrayIcon class="h-5 w-5" />
-          Kiruvchi to'lovlar (AR)
+          {{ $t('finance.payments.arPayments') }}
           <span v-if="arPayments.length" class="ml-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
             {{ arPayments.length }}
           </span>
@@ -319,7 +298,7 @@ const statusOptions = computed(() => {
           ]"
         >
           <ArrowUpTrayIcon class="h-5 w-5" />
-          Chiquvchi to'lovlar (AP)
+          {{ $t('finance.payments.apPayments') }}
           <span v-if="apPayments.length" class="ml-1 bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-full">
             {{ apPayments.length }}
           </span>
@@ -335,7 +314,7 @@ const statusOptions = computed(() => {
           <input
             v-model="search"
             type="text"
-            :placeholder="activeTab === 'ar' ? 'Qidiruv (raqam, mijoz)...' : 'Qidiruv (raqam, yetkazuvchi)...'"
+            :placeholder="activeTab === 'ar' ? $t('finance.payments.arSearchPlaceholder') : $t('finance.payments.apSearchPlaceholder')"
             class="input pl-10"
           />
         </div>
@@ -352,21 +331,21 @@ const statusOptions = computed(() => {
       </div>
 
       <div v-else-if="filteredARPayments.length === 0" class="text-center py-12">
-        <p class="text-gray-500">Kiruvchi to'lovlar topilmadi</p>
+        <p class="text-gray-500">{{ $t('finance.payments.noArPayments') }}</p>
       </div>
 
       <div v-else class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>To'lov raqami</th>
-              <th>Mijoz</th>
-              <th>Faktura</th>
-              <th>Sana</th>
-              <th>Usul</th>
-              <th class="text-right">Summa</th>
-              <th>Holat</th>
-              <th class="text-right">Amallar</th>
+              <th>{{ $t('finance.payments.paymentNumber') }}</th>
+              <th>{{ $t('finance.payments.customer') }}</th>
+              <th>{{ $t('finance.payments.invoice') }}</th>
+              <th>{{ $t('date') }}</th>
+              <th>{{ $t('finance.payments.method') }}</th>
+              <th class="text-right">{{ $t('amount') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -387,7 +366,7 @@ const statusOptions = computed(() => {
                 {{ getMethodLabel(payment.paymentMethod) }}
               </td>
               <td class="text-right">
-                <span class="font-semibold text-green-600">{{ formatCurrency(payment.paymentAmount) }} so'm</span>
+                <span class="font-semibold text-green-600">{{ formatCurrency(payment.paymentAmount) }} {{ $t('sum') }}</span>
               </td>
               <td>
                 <span :class="['badge text-xs', getARStatusClass(payment.status)]">
@@ -398,7 +377,7 @@ const statusOptions = computed(() => {
                 <button
                   @click="viewARPayment(payment)"
                   class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  title="Batafsil"
+                  :title="$t('finance.payments.viewDetails')"
                 >
                   <EyeIcon class="h-5 w-5" />
                 </button>
@@ -410,18 +389,18 @@ const statusOptions = computed(() => {
 
       <!-- Pagination -->
       <div v-if="arTotalPages > 1" class="flex items-center justify-between px-6 py-3 border-t border-gray-200">
-        <p class="text-sm text-gray-500">Sahifa {{ arCurrentPage + 1 }} / {{ arTotalPages }}</p>
+        <p class="text-sm text-gray-500">{{ $t('page') }} {{ arCurrentPage + 1 }} / {{ arTotalPages }}</p>
         <div class="flex gap-2">
           <button
             @click="fetchARPayments(arCurrentPage - 1)"
             :disabled="arCurrentPage === 0"
             class="btn-secondary text-sm"
-          >Oldingi</button>
+          >{{ $t('previous') }}</button>
           <button
             @click="fetchARPayments(arCurrentPage + 1)"
             :disabled="arCurrentPage >= arTotalPages - 1"
             class="btn-secondary text-sm"
-          >Keyingi</button>
+          >{{ $t('next') }}</button>
         </div>
       </div>
     </div>
@@ -433,21 +412,21 @@ const statusOptions = computed(() => {
       </div>
 
       <div v-else-if="filteredAPPayments.length === 0" class="text-center py-12">
-        <p class="text-gray-500">Chiquvchi to'lovlar topilmadi</p>
+        <p class="text-gray-500">{{ $t('finance.payments.noApPayments') }}</p>
       </div>
 
       <div v-else class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>To'lov raqami</th>
-              <th>Yetkazuvchi</th>
-              <th>Faktura</th>
-              <th>Sana</th>
-              <th>Usul</th>
-              <th class="text-right">Summa</th>
-              <th>Holat</th>
-              <th class="text-right">Amallar</th>
+              <th>{{ $t('finance.payments.paymentNumber') }}</th>
+              <th>{{ $t('finance.payments.supplier') }}</th>
+              <th>{{ $t('finance.payments.invoice') }}</th>
+              <th>{{ $t('date') }}</th>
+              <th>{{ $t('finance.payments.method') }}</th>
+              <th class="text-right">{{ $t('amount') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -468,7 +447,7 @@ const statusOptions = computed(() => {
                 {{ getMethodLabel(payment.paymentMethod) }}
               </td>
               <td class="text-right">
-                <span class="font-semibold text-red-600">{{ formatCurrency(payment.paymentAmount) }} so'm</span>
+                <span class="font-semibold text-red-600">{{ formatCurrency(payment.paymentAmount) }} {{ $t('sum') }}</span>
               </td>
               <td>
                 <span :class="['badge text-xs', getAPStatusClass(payment.status)]">
@@ -479,7 +458,7 @@ const statusOptions = computed(() => {
                 <button
                   @click="viewAPPayment(payment)"
                   class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  title="Batafsil"
+                  :title="$t('finance.payments.viewDetails')"
                 >
                   <EyeIcon class="h-5 w-5" />
                 </button>
@@ -491,18 +470,18 @@ const statusOptions = computed(() => {
 
       <!-- Pagination -->
       <div v-if="apTotalPages > 1" class="flex items-center justify-between px-6 py-3 border-t border-gray-200">
-        <p class="text-sm text-gray-500">Sahifa {{ apCurrentPage + 1 }} / {{ apTotalPages }}</p>
+        <p class="text-sm text-gray-500">{{ $t('page') }} {{ apCurrentPage + 1 }} / {{ apTotalPages }}</p>
         <div class="flex gap-2">
           <button
             @click="fetchAPPayments(apCurrentPage - 1)"
             :disabled="apCurrentPage === 0"
             class="btn-secondary text-sm"
-          >Oldingi</button>
+          >{{ $t('previous') }}</button>
           <button
             @click="fetchAPPayments(apCurrentPage + 1)"
             :disabled="apCurrentPage >= apTotalPages - 1"
             class="btn-secondary text-sm"
-          >Keyingi</button>
+          >{{ $t('next') }}</button>
         </div>
       </div>
     </div>
@@ -518,7 +497,7 @@ const statusOptions = computed(() => {
           <div>
             <h2 class="text-xl font-bold text-gray-900">{{ selectedPayment.paymentNumber }}</h2>
             <p class="text-sm text-gray-500">
-              {{ detailType === 'ar' ? 'Kiruvchi to\'lov tafsilotlari' : 'Chiquvchi to\'lov tafsilotlari' }}
+              {{ detailType === 'ar' ? $t('finance.payments.arDetails') : $t('finance.payments.apDetails') }}
             </p>
           </div>
           <button @click="showDetailModal = false" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
@@ -529,32 +508,32 @@ const statusOptions = computed(() => {
         <div class="p-6 space-y-5">
           <!-- Amount -->
           <div :class="[detailType === 'ar' ? 'bg-green-50' : 'bg-red-50', 'rounded-lg p-4 text-center']">
-            <p :class="[detailType === 'ar' ? 'text-green-600' : 'text-red-600', 'text-sm']">To'lov summasi</p>
+            <p :class="[detailType === 'ar' ? 'text-green-600' : 'text-red-600', 'text-sm']">{{ $t('finance.payments.paymentAmount') }}</p>
             <p :class="[detailType === 'ar' ? 'text-green-700' : 'text-red-700', 'text-2xl font-bold']">
-              {{ formatCurrency(selectedPayment.paymentAmount) }} so'm
+              {{ formatCurrency(selectedPayment.paymentAmount) }} {{ $t('sum') }}
             </p>
           </div>
 
           <!-- Info grid -->
           <div class="grid grid-cols-2 gap-4 text-sm">
             <div v-if="detailType === 'ar'">
-              <span class="text-gray-500">Mijoz:</span>
+              <span class="text-gray-500">{{ $t('finance.payments.customer') }}:</span>
               <p class="font-medium">{{ selectedPayment.customerName || '-' }}</p>
             </div>
             <div v-else>
-              <span class="text-gray-500">Yetkazuvchi:</span>
+              <span class="text-gray-500">{{ $t('finance.payments.supplier') }}:</span>
               <p class="font-medium">{{ selectedPayment.vendorName || '-' }}</p>
             </div>
             <div>
-              <span class="text-gray-500">Sana:</span>
+              <span class="text-gray-500">{{ $t('finance.payments.paymentDate') }}:</span>
               <p class="font-medium">{{ formatDate(selectedPayment.paymentDate) }}</p>
             </div>
             <div>
-              <span class="text-gray-500">To'lov usuli:</span>
+              <span class="text-gray-500">{{ $t('finance.payments.paymentMethod') }}:</span>
               <p class="font-medium">{{ getMethodLabel(selectedPayment.paymentMethod) }}</p>
             </div>
             <div>
-              <span class="text-gray-500">Holat:</span>
+              <span class="text-gray-500">{{ $t('status') }}:</span>
               <p>
                 <span v-if="detailType === 'ar'" :class="['badge text-xs', getARStatusClass(selectedPayment.status)]">
                   {{ getARStatusLabel(selectedPayment.status) }}
@@ -565,60 +544,60 @@ const statusOptions = computed(() => {
               </p>
             </div>
             <div v-if="selectedPayment.referenceNumber">
-              <span class="text-gray-500">Referens:</span>
+              <span class="text-gray-500">{{ $t('finance.payments.reference') }}:</span>
               <p class="font-medium">{{ selectedPayment.referenceNumber }}</p>
             </div>
             <div v-if="selectedPayment.checkNumber">
-              <span class="text-gray-500">Chek raqami:</span>
+              <span class="text-gray-500">{{ $t('finance.payments.checkNumber') }}:</span>
               <p class="font-medium">{{ selectedPayment.checkNumber }}</p>
             </div>
             <div v-if="selectedPayment.bankAccountName">
-              <span class="text-gray-500">Bank hisobi:</span>
+              <span class="text-gray-500">{{ $t('finance.payments.bankAccount') }}:</span>
               <p class="font-medium">{{ selectedPayment.bankAccountName }}</p>
             </div>
             <div v-if="selectedPayment.memo">
-              <span class="text-gray-500">Memo:</span>
+              <span class="text-gray-500">{{ $t('finance.payments.memo') }}:</span>
               <p class="font-medium">{{ selectedPayment.memo }}</p>
             </div>
             <div v-if="selectedPayment.notes">
-              <span class="text-gray-500">Izoh:</span>
+              <span class="text-gray-500">{{ $t('notes') }}:</span>
               <p class="font-medium">{{ selectedPayment.notes }}</p>
             </div>
             <div>
-              <span class="text-gray-500">Yaratilgan:</span>
+              <span class="text-gray-500">{{ $t('createdAt') }}:</span>
               <p class="font-medium">{{ formatDateTime(selectedPayment.createdAt) }}</p>
             </div>
             <div v-if="selectedPayment.glPosted">
-              <span class="text-gray-500">GL jurnalga yozilgan:</span>
-              <p class="font-medium text-green-600">Ha</p>
+              <span class="text-gray-500">{{ $t('finance.payments.glJournalized') }}:</span>
+              <p class="font-medium text-green-600">{{ $t('yes') }}</p>
             </div>
           </div>
 
           <!-- Void reason -->
           <div v-if="selectedPayment.voidReason" class="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p class="text-sm font-medium text-red-800">Bekor qilish sababi:</p>
+            <p class="text-sm font-medium text-red-800">{{ $t('finance.payments.cancelReason') }}:</p>
             <p class="text-sm text-red-700">{{ selectedPayment.voidReason }}</p>
           </div>
 
           <!-- Allocations -->
           <div v-if="selectedPayment.allocations?.length">
-            <h3 class="font-semibold text-gray-900 mb-2">Fakturalarga taqsimlash</h3>
+            <h3 class="font-semibold text-gray-900 mb-2">{{ $t('finance.payments.invoiceAllocations') }}</h3>
             <div class="bg-gray-50 rounded-lg overflow-hidden">
               <table class="w-full text-sm">
                 <thead class="bg-gray-100">
                   <tr>
-                    <th class="px-4 py-2 text-left text-gray-600">Faktura</th>
-                    <th class="px-4 py-2 text-right text-gray-600">Summa</th>
+                    <th class="px-4 py-2 text-left text-gray-600">{{ $t('finance.payments.invoice') }}</th>
+                    <th class="px-4 py-2 text-right text-gray-600">{{ $t('amount') }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                   <tr v-for="alloc in selectedPayment.allocations" :key="alloc.id">
                     <td class="px-4 py-2">
-                      <p class="font-medium">{{ alloc.invoiceNumber || `Faktura #${alloc.arInvoiceId || alloc.apInvoiceId}` }}</p>
+                      <p class="font-medium">{{ alloc.invoiceNumber || `${$t('finance.payments.invoice')} #${alloc.arInvoiceId || alloc.apInvoiceId}` }}</p>
                       <p v-if="alloc.notes" class="text-xs text-gray-400">{{ alloc.notes }}</p>
                     </td>
                     <td class="px-4 py-2 text-right font-medium" :class="detailType === 'ar' ? 'text-green-600' : 'text-red-600'">
-                      {{ formatCurrency(alloc.allocatedAmount) }} so'm
+                      {{ formatCurrency(alloc.allocatedAmount) }} {{ $t('sum') }}
                     </td>
                   </tr>
                 </tbody>
@@ -635,7 +614,7 @@ const statusOptions = computed(() => {
               class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
             >
               <XCircleIcon class="h-4 w-4" />
-              To'lovni bekor qilish
+              {{ $t('finance.payments.cancelPayment') }}
             </button>
             <!-- AP: Void approved/completed payment -->
             <button
@@ -644,7 +623,7 @@ const statusOptions = computed(() => {
               class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
             >
               <XCircleIcon class="h-4 w-4" />
-              To'lovni bekor qilish
+              {{ $t('finance.payments.cancelPayment') }}
             </button>
           </div>
         </div>

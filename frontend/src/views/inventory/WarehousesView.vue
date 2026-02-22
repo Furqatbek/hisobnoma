@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { warehousesApi } from '@/services/api'
 import { PlusIcon, PencilIcon, TrashIcon, BuildingStorefrontIcon } from '@heroicons/vue/24/outline'
@@ -21,13 +21,13 @@ const form = reactive({
   active: true
 })
 
-const locationTypes = [
-  { value: 'WAREHOUSE', label: 'Warehouse' },
-  { value: 'STORE', label: 'Store' },
-  { value: 'VIRTUAL', label: 'Virtual' },
-  { value: 'ZONE', label: 'Zone' },
-  { value: 'BIN', label: 'Bin' }
-]
+const locationTypes = computed(() => [
+  { value: 'WAREHOUSE', label: t('inventory.warehouses.locationTypeWarehouse') },
+  { value: 'STORE', label: t('inventory.warehouses.locationTypeStore') },
+  { value: 'VIRTUAL', label: t('inventory.warehouses.locationTypeVirtual') },
+  { value: 'ZONE', label: t('inventory.warehouses.locationTypeZone') },
+  { value: 'BIN', label: t('inventory.warehouses.locationTypeBin') }
+])
 
 const errors = reactive({})
 
