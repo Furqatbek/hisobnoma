@@ -3,6 +3,9 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usersApi, rolesApi } from '@/services/api'
 import { ArrowLeftIcon, LockClosedIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -70,10 +73,10 @@ onMounted(async () => {
 function validate() {
   Object.keys(errors).forEach(key => delete errors[key])
 
-  if (!form.username?.trim()) errors.username = 'Username is required'
-  if (!isEdit.value && !form.password) errors.password = 'Password is required'
+  if (!form.username?.trim()) errors.username = t('admin.userForm.usernameRequired')
+  if (!isEdit.value && !form.password) errors.password = t('admin.userForm.passwordRequired')
   if (!isEdit.value && form.password && form.password.length < 6) {
-    errors.password = 'Password must be at least 6 characters'
+    errors.password = t('admin.userForm.passwordMinLength')
   }
 
   return Object.keys(errors).length === 0
@@ -108,9 +111,9 @@ async function handleSubmit() {
           errors[err.field] = err.message
         }
       })
-      errors.general = 'Please fix the errors below'
+      errors.general = t('admin.userForm.fixErrors')
     } else {
-      errors.general = response?.message || 'Failed to save user'
+      errors.general = response?.message || t('failedToSave')
     }
   } finally {
     saving.value = false
@@ -138,7 +141,7 @@ function handlePinClear() {
 
 async function savePin() {
   if (pinInput.value.length !== 4) {
-    pinError.value = 'PIN 4 ta raqamdan iborat bo\'lishi kerak'
+    pinError.value = t('admin.userForm.pinMustBe4Digits')
     return
   }
 
@@ -149,9 +152,9 @@ async function savePin() {
     await usersApi.setPin(route.params.id, pinInput.value)
     userHasPin.value = true
     pinInput.value = ''
-    pinMessage.value = 'PIN muvaffaqiyatli o\'rnatildi'
+    pinMessage.value = t('admin.userForm.pinSetSuccess')
   } catch (err) {
-    pinError.value = err.response?.data?.message || 'PIN o\'rnatishda xatolik'
+    pinError.value = err.response?.data?.message || t('admin.userForm.pinSetError')
   } finally {
     pinSaving.value = false
   }
@@ -165,9 +168,9 @@ async function clearUserPin() {
     await usersApi.clearPin(route.params.id)
     userHasPin.value = false
     pinInput.value = ''
-    pinMessage.value = 'PIN o\'chirildi'
+    pinMessage.value = t('admin.userForm.pinCleared')
   } catch (err) {
-    pinError.value = err.response?.data?.message || 'PIN o\'chirishda xatolik'
+    pinError.value = err.response?.data?.message || t('admin.userForm.pinClearError')
   } finally {
     pinSaving.value = false
   }
@@ -190,7 +193,7 @@ function toggleRole(roleCode) {
         <ArrowLeftIcon class="h-5 w-5 text-gray-500" />
       </button>
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Edit User' : 'New User' }}</h1>
+        <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? $t('admin.userForm.editUser') : $t('admin.userForm.newUser') }}</h1>
       </div>
     </div>
 
@@ -204,10 +207,10 @@ function toggleRole(roleCode) {
       </div>
 
       <div class="card">
-        <div class="card-header"><h3 class="text-lg font-medium">User Information</h3></div>
+        <div class="card-header"><h3 class="text-lg font-medium">{{ $t('admin.userForm.userInformation') }}</h3></div>
         <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label class="label">Username *</label>
+            <label class="label">{{ $t('admin.userForm.username') }} *</label>
             <input v-model="form.username" type="text" :class="[errors.username ? 'input-error' : 'input']" />
             <p v-if="errors.username" class="mt-1 text-sm text-red-600">{{ errors.username }}</p>
           </div>

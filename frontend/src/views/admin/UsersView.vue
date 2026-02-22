@@ -3,6 +3,9 @@ import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { usersApi } from '@/services/api'
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const users = ref([])
 const loading = ref(true)
@@ -24,7 +27,7 @@ async function fetchUsers() {
 onMounted(fetchUsers)
 
 async function deleteUser(user) {
-  if (!confirm(`Delete user "${user.username}"?`)) return
+  if (!confirm(t('admin.users.confirmDelete', { name: user.username }))) return
   try {
     await usersApi.delete(user.id)
     fetchUsers()
@@ -38,12 +41,12 @@ async function deleteUser(user) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Users</h1>
-        <p class="mt-1 text-sm text-gray-500">Manage system users</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('admin.users.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('admin.users.subtitle') }}</p>
       </div>
       <RouterLink to="/admin/users/new" class="btn-primary">
         <PlusIcon class="h-5 w-5 mr-2" />
-        Add User
+        {{ $t('admin.users.addUser') }}
       </RouterLink>
     </div>
 
@@ -55,7 +58,7 @@ async function deleteUser(user) {
             v-model="search"
             @input="fetchUsers"
             type="text"
-            placeholder="Search users..."
+            :placeholder="$t('admin.users.searchPlaceholder')"
             class="input pl-10"
           />
         </div>
@@ -68,19 +71,19 @@ async function deleteUser(user) {
       </div>
 
       <div v-else-if="users.length === 0" class="text-center py-12">
-        <p class="text-gray-500">No users found</p>
+        <p class="text-gray-500">{{ $t('admin.users.noUsers') }}</p>
       </div>
 
       <div v-else class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>User</th>
-              <th>Phone</th>
-              <th>Roles</th>
-              <th>Last Login</th>
-              <th>Status</th>
-              <th class="text-right">Actions</th>
+              <th>{{ $t('admin.users.user') }}</th>
+              <th>{{ $t('phone') }}</th>
+              <th>{{ $t('admin.users.roles') }}</th>
+              <th>{{ $t('admin.users.lastLogin') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -105,11 +108,11 @@ async function deleteUser(user) {
                 </div>
               </td>
               <td class="text-sm text-gray-500">
-                {{ user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never' }}
+                {{ user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : $t('admin.users.never') }}
               </td>
               <td>
                 <span :class="['badge', user.enabled ? 'badge-success' : 'badge-danger']">
-                  {{ user.enabled ? 'Active' : 'Disabled' }}
+                  {{ user.enabled ? $t('active') : $t('inactive') }}
                 </span>
               </td>
               <td class="text-right">

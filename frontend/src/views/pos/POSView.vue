@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { productsApi, customersApi, posApi, terminalsApi, shiftsApi, deliveryRegionsApi, deliveryVillagesApi } from '@/services/api'
 import { ScaleIcon } from '@heroicons/vue/24/outline'
 import {
@@ -18,6 +19,8 @@ import {
   MapPinIcon,
   PencilSquareIcon
 } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 // State
 const products = ref([])
@@ -91,12 +94,12 @@ const newCustomer = reactive({
 })
 
 // Payment methods available
-const paymentMethods = [
-  { value: 'CASH', label: 'Cash', icon: BanknotesIcon, color: 'text-green-600' },
-  { value: 'CARD', label: 'Card', icon: CreditCardIcon, color: 'text-blue-600' },
-  { value: 'CREDIT', label: 'Debt', icon: DocumentTextIcon, color: 'text-orange-600' },
-  { value: 'MOBILE_PAYMENT', label: 'Mobile', icon: CreditCardIcon, color: 'text-purple-600' }
-]
+const paymentMethods = computed(() => [
+  { value: 'CASH', label: t('pos.cash'), icon: BanknotesIcon, color: 'text-green-600' },
+  { value: 'CARD', label: t('pos.card'), icon: CreditCardIcon, color: 'text-blue-600' },
+  { value: 'CREDIT', label: t('pos.credit'), icon: DocumentTextIcon, color: 'text-orange-600' },
+  { value: 'MOBILE_PAYMENT', label: t('pos.mobile'), icon: CreditCardIcon, color: 'text-purple-600' }
+])
 
 // Computed
 const subtotal = computed(() => {
@@ -398,7 +401,7 @@ function addPaymentSplit() {
 
   // For debt sales, customer is required
   if (currentPayment.method === 'CREDIT' && !cart.customerId) {
-    alert('Customer is required for debt sales')
+    alert(t('pos.customerRequiredForDebt'))
     return
   }
 
@@ -437,7 +440,7 @@ async function processPayment() {
                   (remainingAmount.value > 0 && currentPayment.method === 'CREDIT')
 
   if (hasDebt && !cart.customerId) {
-    alert('Customer is required for debt sales. Please select a customer first.')
+    alert(t('pos.customerRequiredForDebt'))
     return
   }
 
@@ -524,7 +527,7 @@ async function processPayment() {
 // Quick debt sale - sell entire amount as debt
 async function sellAsDebt() {
   if (!cart.customerId) {
-    alert('Customer is required for debt sales. Please select a customer first.')
+    alert(t('pos.customerRequiredForDebt'))
     showCustomerModal.value = true
     return
   }
