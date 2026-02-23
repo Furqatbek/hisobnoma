@@ -45,7 +45,7 @@ public class TelegramAdminController {
      * Get bot info and statistics.
      */
     @GetMapping("/info")
-    @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
+    @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<Map<String, Object>> getBotInfo() {
         Long tenantId = securityContextHelper.getRequiredTenantId();
         loadSettingsFromDb();
@@ -81,7 +81,7 @@ public class TelegramAdminController {
      * Get current Telegram settings (token is masked).
      */
     @GetMapping("/settings")
-    @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
+    @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<Map<String, Object>> getSettings() {
         loadSettingsFromDb();
 
@@ -102,7 +102,7 @@ public class TelegramAdminController {
      * Save Telegram settings (enable/disable, token, username).
      */
     @PostMapping("/settings")
-    @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
+    @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<Map<String, Object>> saveSettings(@Valid @RequestBody SaveSettingsRequest request) {
         tenantSettingService.updateSettings(Map.of(
                 SETTING_ENABLED, String.valueOf(request.isEnabled()),
@@ -142,7 +142,7 @@ public class TelegramAdminController {
      * Get all users with Telegram connected for this tenant.
      */
     @GetMapping("/users")
-    @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
+    @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<List<Map<String, Object>>> getConnectedUsers() {
         Long tenantId = securityContextHelper.getRequiredTenantId();
         List<User> users = userRepository.findUsersWithTelegramByTenantId(tenantId);
@@ -165,7 +165,7 @@ public class TelegramAdminController {
      * Send a message to a specific connected user via Telegram.
      */
     @PostMapping("/send")
-    @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
+    @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<Map<String, String>> sendMessage(@Valid @RequestBody SendMessageRequest request) {
         if (!telegramApiClient.isConfigured()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Telegram bot yoqilmagan"));
@@ -184,7 +184,7 @@ public class TelegramAdminController {
      * Send a broadcast message to all connected users in this tenant.
      */
     @PostMapping("/broadcast")
-    @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
+    @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<Map<String, Object>> broadcastMessage(@Valid @RequestBody BroadcastRequest request) {
         if (!telegramApiClient.isConfigured()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Telegram bot yoqilmagan"));
@@ -211,7 +211,7 @@ public class TelegramAdminController {
      * Unlink a specific user's Telegram (admin action).
      */
     @DeleteMapping("/users/{userId}/unlink")
-    @PreAuthorize("hasAuthority('SETTINGS_MANAGE')")
+    @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<Map<String, String>> adminUnlinkUser(@PathVariable Long userId) {
         User user = userRepository.findById(userId).orElseThrow();
         if (user.getTelegramChatId() != null) {

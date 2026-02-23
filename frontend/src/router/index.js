@@ -306,7 +306,7 @@ const routes = [
             path: 'settings',
             name: 'settings',
             component: () => import('@/views/admin/SettingsView.vue'),
-            meta: { permission: 'SETTINGS_MANAGE' }
+            meta: { permission: 'ADMIN_SETTINGS_MANAGE' }
           },
           {
             path: 'audit-logs',
@@ -354,7 +354,7 @@ const routes = [
             path: 'telegram',
             name: 'telegram-admin',
             component: () => import('@/views/admin/TelegramAdminView.vue'),
-            meta: { permission: 'SETTINGS_MANAGE' }
+            meta: { permission: 'ADMIN_SETTINGS_MANAGE' }
           },
           {
             path: 'regions',
