@@ -347,8 +347,11 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Product", id));
 
-        productRepository.delete(product);
-        log.info("Deleted product: {} ({})", product.getName(), product.getSku());
+        // Soft-delete: deactivate instead of hard-deleting to preserve
+        // referential integrity with stock, transactions, invoices, etc.
+        product.setActive(false);
+        productRepository.save(product);
+        log.info("Soft-deleted product: {} ({})", product.getName(), product.getSku());
     }
 
     @Transactional(readOnly = true)
