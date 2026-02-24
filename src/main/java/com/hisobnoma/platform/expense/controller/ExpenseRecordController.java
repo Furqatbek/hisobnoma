@@ -32,9 +32,15 @@ public class ExpenseRecordController {
             createDate = LocalDate.now();
         }
 
+        if (request.getTotalAmount() == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "total_amount is required"
+            ));
+        }
+
         ExpenseRecord record = ExpenseRecord.builder()
                 .createDate(createDate)
-                .category(request.getCategory())
+                .category(request.getCategory() != null ? request.getCategory() : "Boshqa")
                 .totalAmount(request.getTotalAmount())
                 .currency(request.getCurrency() != null ? request.getCurrency() : "UZS")
                 .generatedNotes(request.getGeneratedNotes())
