@@ -508,7 +508,13 @@ export const smsApi = {
   getBalance: () => api.get('/sms/balance'),
   getStatus: (params) => api.get('/sms/status', { params }),
   getSettings: () => api.get('/sms/settings'),
-  saveSettings: (data) => api.post('/sms/settings', data)
+  saveSettings: (data) => api.post('/sms/settings', data),
+  // Templates
+  getTemplates: (params) => api.get('/sms/templates', { params }),
+  getTemplate: (id) => api.get(`/sms/templates/${id}`),
+  createTemplate: (data) => api.post('/sms/templates', data),
+  updateTemplate: (id, data) => api.put(`/sms/templates/${id}`, data),
+  deleteTemplate: (id) => api.delete(`/sms/templates/${id}`)
 }
 
 // Delivery Regions API - Backend: /api/v1/delivery/regions

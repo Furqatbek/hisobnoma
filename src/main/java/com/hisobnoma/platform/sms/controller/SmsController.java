@@ -3,13 +3,17 @@ package com.hisobnoma.platform.sms.controller;
 import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.sms.dto.SmsSendRequest;
 import com.hisobnoma.platform.sms.dto.SmsSettingsRequest;
+import com.hisobnoma.platform.sms.dto.SmsTemplateDto;
+import com.hisobnoma.platform.sms.dto.SmsTemplateRequest;
 import com.hisobnoma.platform.sms.service.SmsService;
+import com.hisobnoma.platform.sms.service.SmsTemplateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -18,22 +22,62 @@ import java.util.Map;
 public class SmsController {
 
     private final SmsService smsService;
+    private final SmsTemplateService templateService;
 
-    /**
-     * Send an SMS message.
-     */
+    // ── Send SMS (template-based) ──────────────────────────────────────
+
     @PostMapping("/send")
     @PreAuthorize("hasAnyAuthority('SMS_SEND', 'ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> sendSms(
             @Valid @RequestBody SmsSendRequest request) {
-        Map<String, Object> result = smsService.sendSms(
-                request.getPhone(), request.getMessage(), request.getFrom());
+        String message = templateService.resolveTemplate(request.getTemplateId(), request.getVariables());
+        Map<String, Object> result = smsService.sendSms(request.getPhone(), message, request.getFrom());
         return ResponseEntity.ok(ApiResponse.success(result, "SMS yuborildi"));
     }
 
-    /**
-     * Get SMS delivery history.
-     */
+    // ── Templates CRUD ─────────────────────────────────────────────────
+
+    @GetMapping("/templates")
+    @PreAuthorize("hasAnyAuthority('SMS_SEND', 'SMS_TEMPLATES_MANAGE', 'ADMIN_SETTINGS_MANAGE')")
+    public ResponseEntity<ApiResponse<List<SmsTemplateDto>>> getTemplates(
+            @RequestParam(defaultValue = "false") boolean activeOnly) {
+        List<SmsTemplateDto> templates = activeOnly
+                ? templateService.getActiveTemplates()
+                : templateService.getAllTemplates();
+        return ResponseEntity.ok(ApiResponse.success(templates));
+    }
+
+    @GetMapping("/templates/{id}")
+    @PreAuthorize("hasAnyAuthority('SMS_TEMPLATES_MANAGE', 'ADMIN_SETTINGS_MANAGE')")
+    public ResponseEntity<ApiResponse<SmsTemplateDto>> getTemplate(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(templateService.getTemplate(id)));
+    }
+
+    @PostMapping("/templates")
+    @PreAuthorize("hasAnyAuthority('SMS_TEMPLATES_MANAGE', 'ADMIN_SETTINGS_MANAGE')")
+    public ResponseEntity<ApiResponse<SmsTemplateDto>> createTemplate(
+            @Valid @RequestBody SmsTemplateRequest request) {
+        SmsTemplateDto created = templateService.createTemplate(request);
+        return ResponseEntity.ok(ApiResponse.success(created, "Shablon yaratildi"));
+    }
+
+    @PutMapping("/templates/{id}")
+    @PreAuthorize("hasAnyAuthority('SMS_TEMPLATES_MANAGE', 'ADMIN_SETTINGS_MANAGE')")
+    public ResponseEntity<ApiResponse<SmsTemplateDto>> updateTemplate(
+            @PathVariable Long id, @Valid @RequestBody SmsTemplateRequest request) {
+        SmsTemplateDto updated = templateService.updateTemplate(id, request);
+        return ResponseEntity.ok(ApiResponse.success(updated, "Shablon yangilandi"));
+    }
+
+    @DeleteMapping("/templates/{id}")
+    @PreAuthorize("hasAnyAuthority('SMS_TEMPLATES_MANAGE', 'ADMIN_SETTINGS_MANAGE')")
+    public ResponseEntity<ApiResponse<Void>> deleteTemplate(@PathVariable Long id) {
+        templateService.deleteTemplate(id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Shablon o'chirildi"));
+    }
+
+    // ── History / Balance / Status ─────────────────────────────────────
+
     @GetMapping("/history")
     @PreAuthorize("hasAnyAuthority('SMS_VIEW', 'ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getHistory(
@@ -44,9 +88,6 @@ public class SmsController {
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
-    /**
-     * Get SMS account balance.
-     */
     @GetMapping("/balance")
     @PreAuthorize("hasAnyAuthority('SMS_VIEW', 'ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getBalance() {
@@ -54,9 +95,6 @@ public class SmsController {
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
-    /**
-     * Get status of a specific SMS.
-     */
     @GetMapping("/status")
     @PreAuthorize("hasAnyAuthority('SMS_VIEW', 'ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getStatus(
@@ -66,9 +104,8 @@ public class SmsController {
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
-    /**
-     * Get current SMS settings.
-     */
+    // ── Settings ───────────────────────────────────────────────────────
+
     @GetMapping("/settings")
     @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getSettings() {
@@ -76,16 +113,12 @@ public class SmsController {
         return ResponseEntity.ok(ApiResponse.success(settings));
     }
 
-    /**
-     * Update SMS settings.
-     */
     @PostMapping("/settings")
     @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> saveSettings(
             @RequestBody SmsSettingsRequest request) {
         smsService.updateSettings(request.isEnabled(), request.getApiToken(), request.getSenderId());
 
-        // Verify configuration by fetching balance
         Map<String, Object> balance = smsService.getBalance();
         boolean valid = balance.containsKey("success") && Boolean.TRUE.equals(balance.get("success"));
 

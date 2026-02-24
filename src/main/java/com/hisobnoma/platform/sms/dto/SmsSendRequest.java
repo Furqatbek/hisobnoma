@@ -1,8 +1,11 @@
 package com.hisobnoma.platform.sms.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
+
+import java.util.Map;
 
 @Data
 public class SmsSendRequest {
@@ -11,8 +14,10 @@ public class SmsSendRequest {
     @Pattern(regexp = "^998\\d{9}$", message = "Телефон рақами 998XXXXXXXXX форматида бўлиши керак")
     private String phone;
 
-    @NotBlank(message = "Хабар матни киритилиши шарт")
-    private String message;
+    @NotNull(message = "Шаблон танланиши шарт")
+    private Long templateId;
+
+    private Map<String, String> variables;
 
     private String from;
 }

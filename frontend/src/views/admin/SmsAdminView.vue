@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { smsApi } from '@/services/api'
 import {
   ChatBubbleLeftRightIcon,
@@ -9,7 +9,11 @@ import {
   PaperAirplaneIcon,
   CurrencyDollarIcon,
   ClockIcon,
-  SignalIcon
+  SignalIcon,
+  DocumentTextIcon,
+  PlusIcon,
+  PencilSquareIcon,
+  TrashIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -27,6 +31,13 @@ const hasExistingToken = ref(false)
 // Balance
 const balance = ref(null)
 
+// Templates
+const templates = ref([])
+const showTemplateModal = ref(false)
+const editingTemplate = ref(null)
+const templateForm = reactive({ code: '', name: '', template: '', active: true })
+const savingTemplate = ref(false)
+
 // History
 const history = ref([])
 const historyLoading = ref(false)
@@ -36,11 +47,31 @@ const historyLimit = 20
 
 // Send SMS
 const showSendModal = ref(false)
-const sendForm = reactive({ phone: '', message: '', from: '' })
+const sendForm = reactive({ phone: '', templateId: null, variables: {} })
 const sending = ref(false)
 const sendResult = ref(null)
 
 const isConfigured = computed(() => settingsForm.enabled && (settingsForm.apiToken || hasExistingToken.value))
+const activeTemplates = computed(() => templates.value.filter(t => t.active))
+const selectedTemplate = computed(() => templates.value.find(t => t.id === sendForm.templateId))
+
+const previewMessage = computed(() => {
+  if (!selectedTemplate.value) return ''
+  let text = selectedTemplate.value.template
+  for (const [key, val] of Object.entries(sendForm.variables)) {
+    text = text.replace(new RegExp(`\\{${key}\\}`, 'g'), val || `{${key}}`)
+  }
+  return text
+})
+
+const canSend = computed(() => {
+  if (!sendForm.phone.trim() || !sendForm.templateId) return false
+  if (!selectedTemplate.value) return false
+  for (const v of selectedTemplate.value.variables) {
+    if (!sendForm.variables[v] || !sendForm.variables[v].trim()) return false
+  }
+  return true
+})
 
 onMounted(async () => {
   await loadData()
@@ -58,7 +89,7 @@ async function loadData() {
     settingsForm.senderId = data.senderId || '4546'
 
     if (data.configured) {
-      await Promise.all([loadBalance(), loadHistory()])
+      await Promise.all([loadBalance(), loadHistory(), loadTemplates()])
     }
   } catch (e) {
     error.value = e.response?.data?.message || t('admin.sms.loadError')
@@ -71,6 +102,15 @@ async function loadBalance() {
   try {
     const res = await smsApi.getBalance()
     balance.value = res.data?.data || res.data
+  } catch (e) {
+    // Silently fail
+  }
+}
+
+async function loadTemplates() {
+  try {
+    const res = await smsApi.getTemplates()
+    templates.value = res.data?.data || res.data || []
   } catch (e) {
     // Silently fail
   }
@@ -119,24 +159,86 @@ async function saveSettings() {
   }
 }
 
+// ── Templates ──────────────────────────────────────────
+
+function openCreateTemplate() {
+  editingTemplate.value = null
+  templateForm.code = ''
+  templateForm.name = ''
+  templateForm.template = ''
+  templateForm.active = true
+  showTemplateModal.value = true
+}
+
+function openEditTemplate(tmpl) {
+  editingTemplate.value = tmpl
+  templateForm.code = tmpl.code
+  templateForm.name = tmpl.name
+  templateForm.template = tmpl.template
+  templateForm.active = tmpl.active
+  showTemplateModal.value = true
+}
+
+async function saveTemplate() {
+  savingTemplate.value = true
+  error.value = ''
+  try {
+    if (editingTemplate.value) {
+      await smsApi.updateTemplate(editingTemplate.value.id, templateForm)
+      successMsg.value = t('admin.sms.templateUpdated')
+    } else {
+      await smsApi.createTemplate(templateForm)
+      successMsg.value = t('admin.sms.templateCreated')
+    }
+    showTemplateModal.value = false
+    await loadTemplates()
+  } catch (e) {
+    error.value = e.response?.data?.message || t('admin.sms.templateSaveError')
+  } finally {
+    savingTemplate.value = false
+  }
+}
+
+async function deleteTemplate(tmpl) {
+  if (!confirm(t('admin.sms.templateDeleteConfirm', { name: tmpl.name }))) return
+  try {
+    await smsApi.deleteTemplate(tmpl.id)
+    successMsg.value = t('admin.sms.templateDeleted')
+    await loadTemplates()
+  } catch (e) {
+    error.value = e.response?.data?.message || t('admin.sms.templateDeleteError')
+  }
+}
+
+// ── Send SMS ───────────────────────────────────────────
+
 function openSendModal() {
   sendForm.phone = ''
-  sendForm.message = ''
-  sendForm.from = ''
+  sendForm.templateId = null
+  sendForm.variables = {}
   sendResult.value = null
   showSendModal.value = true
 }
 
+watch(() => sendForm.templateId, () => {
+  sendForm.variables = {}
+  if (selectedTemplate.value) {
+    for (const v of selectedTemplate.value.variables) {
+      sendForm.variables[v] = ''
+    }
+  }
+})
+
 async function handleSend() {
-  if (!sendForm.phone.trim() || !sendForm.message.trim()) return
+  if (!canSend.value) return
   sending.value = true
   error.value = ''
   sendResult.value = null
   try {
     const res = await smsApi.send({
       phone: sendForm.phone,
-      message: sendForm.message,
-      from: sendForm.from || undefined
+      templateId: sendForm.templateId,
+      variables: sendForm.variables
     })
     sendResult.value = res.data?.data || res.data
     successMsg.value = t('admin.sms.smsSent')
@@ -193,7 +295,7 @@ function formatDate(dateStr) {
         <p class="mt-1 text-sm text-gray-500">{{ $t('admin.sms.subtitle') }}</p>
       </div>
       <button
-        v-if="!loading && isConfigured"
+        v-if="!loading && isConfigured && activeTemplates.length > 0"
         @click="openSendModal"
         class="btn-primary inline-flex items-center gap-2"
       >
@@ -328,6 +430,59 @@ function formatDate(dateStr) {
         </div>
       </template>
 
+      <!-- SMS Templates -->
+      <template v-if="isConfigured">
+        <div class="card">
+          <div class="card-header flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <DocumentTextIcon class="h-5 w-5 text-gray-500" />
+              <h3 class="text-lg font-medium">{{ $t('admin.sms.templates') }}</h3>
+            </div>
+            <button @click="openCreateTemplate" class="btn-primary inline-flex items-center gap-2 text-sm">
+              <PlusIcon class="h-4 w-4" />
+              {{ $t('admin.sms.addTemplate') }}
+            </button>
+          </div>
+
+          <div v-if="templates.length === 0" class="card-body">
+            <div class="text-center py-8 text-gray-500">
+              <DocumentTextIcon class="h-12 w-12 mx-auto text-gray-300 mb-3" />
+              <p>{{ $t('admin.sms.noTemplates') }}</p>
+              <p class="text-xs mt-1">{{ $t('admin.sms.noTemplatesHint') }}</p>
+            </div>
+          </div>
+
+          <div v-else class="divide-y divide-gray-200">
+            <div v-for="tmpl in templates" :key="tmpl.id" class="p-4 flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-gray-900">{{ tmpl.name }}</span>
+                  <span class="px-2 py-0.5 text-xs font-mono bg-gray-100 text-gray-600 rounded">{{ tmpl.code }}</span>
+                  <span v-if="!tmpl.active" class="px-2 py-0.5 text-xs bg-red-100 text-red-600 rounded">
+                    {{ $t('admin.sms.inactive') }}
+                  </span>
+                </div>
+                <p class="mt-1 text-sm text-gray-500 truncate">{{ tmpl.template }}</p>
+                <div v-if="tmpl.variables && tmpl.variables.length > 0" class="mt-1 flex gap-1 flex-wrap">
+                  <span v-for="v in tmpl.variables" :key="v"
+                    class="px-1.5 py-0.5 text-xs bg-blue-50 text-blue-700 rounded font-mono">
+                    {{"{"}}{{ v }}{{"}"}}
+                  </span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1">
+                <button @click="openEditTemplate(tmpl)" class="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
+                  <PencilSquareIcon class="h-4 w-4" />
+                </button>
+                <button @click="deleteTemplate(tmpl)" class="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50">
+                  <TrashIcon class="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
       <!-- SMS History -->
       <template v-if="isConfigured">
         <div class="card">
@@ -412,7 +567,7 @@ function formatDate(dateStr) {
       </template>
     </template>
 
-    <!-- Send SMS Modal -->
+    <!-- Send SMS Modal (template-based) -->
     <Teleport to="body">
       <div v-if="showSendModal" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="fixed inset-0 bg-black/50" @click="showSendModal = false"></div>
@@ -436,16 +591,32 @@ function formatDate(dateStr) {
           </div>
 
           <div>
-            <label class="label">{{ $t('admin.sms.messageText') }}</label>
-            <textarea
-              v-model="sendForm.message"
-              rows="4"
-              class="input"
-              :placeholder="$t('admin.sms.messagePlaceholder')"
-            ></textarea>
-            <p class="mt-1 text-xs text-gray-400">
-              {{ sendForm.message.length }} {{ $t('admin.sms.characters') }}
-            </p>
+            <label class="label">{{ $t('admin.sms.selectTemplate') }}</label>
+            <select v-model="sendForm.templateId" class="input">
+              <option :value="null" disabled>{{ $t('admin.sms.selectTemplatePlaceholder') }}</option>
+              <option v-for="tmpl in activeTemplates" :key="tmpl.id" :value="tmpl.id">
+                {{ tmpl.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Variable inputs -->
+          <template v-if="selectedTemplate && selectedTemplate.variables.length > 0">
+            <div v-for="v in selectedTemplate.variables" :key="v">
+              <label class="label font-mono text-xs">{{"{"}}{{ v }}{{"}"}}</label>
+              <input
+                v-model="sendForm.variables[v]"
+                type="text"
+                class="input"
+                :placeholder="v"
+              />
+            </div>
+          </template>
+
+          <!-- Preview -->
+          <div v-if="selectedTemplate" class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <p class="text-xs font-medium text-gray-500 mb-1">{{ $t('admin.sms.preview') }}</p>
+            <p class="text-sm text-gray-800">{{ previewMessage }}</p>
           </div>
 
           <div v-if="sendResult" class="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -458,11 +629,90 @@ function formatDate(dateStr) {
             <button @click="showSendModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
             <button
               @click="handleSend"
-              :disabled="sending || !sendForm.phone.trim() || !sendForm.message.trim()"
+              :disabled="sending || !canSend"
               class="btn-primary inline-flex items-center gap-2"
             >
               <PaperAirplaneIcon class="h-4 w-4" />
               {{ sending ? $t('admin.sms.sending') : $t('admin.sms.send') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Template Create/Edit Modal -->
+    <Teleport to="body">
+      <div v-if="showTemplateModal" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="fixed inset-0 bg-black/50" @click="showTemplateModal = false"></div>
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900">
+              {{ editingTemplate ? $t('admin.sms.editTemplate') : $t('admin.sms.addTemplate') }}
+            </h3>
+            <button @click="showTemplateModal = false" class="text-gray-400 hover:text-gray-600">
+              <XMarkIcon class="h-5 w-5" />
+            </button>
+          </div>
+
+          <div>
+            <label class="label">{{ $t('admin.sms.templateCode') }}</label>
+            <input
+              v-model="templateForm.code"
+              type="text"
+              class="input font-mono text-sm uppercase"
+              placeholder="DEBT_REMINDER"
+            />
+            <p class="mt-1 text-xs text-gray-400">{{ $t('admin.sms.templateCodeHint') }}</p>
+          </div>
+
+          <div>
+            <label class="label">{{ $t('admin.sms.templateName') }}</label>
+            <input
+              v-model="templateForm.name"
+              type="text"
+              class="input"
+              :placeholder="$t('admin.sms.templateNamePlaceholder')"
+            />
+          </div>
+
+          <div>
+            <label class="label">{{ $t('admin.sms.templateText') }}</label>
+            <textarea
+              v-model="templateForm.template"
+              rows="4"
+              class="input"
+              :placeholder="$t('admin.sms.templateTextPlaceholder')"
+            ></textarea>
+            <p class="mt-1 text-xs text-gray-400">{{ $t('admin.sms.templateTextHint') }}</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              @click="templateForm.active = !templateForm.active"
+              :class="[
+                'relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200',
+                templateForm.active ? 'bg-primary-600' : 'bg-gray-200'
+              ]"
+            >
+              <span
+                :class="[
+                  'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200',
+                  templateForm.active ? 'translate-x-4' : 'translate-x-0'
+                ]"
+              />
+            </button>
+            <span class="text-sm text-gray-700">{{ $t('admin.sms.templateActive') }}</span>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <button @click="showTemplateModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
+            <button
+              @click="saveTemplate"
+              :disabled="savingTemplate || !templateForm.code.trim() || !templateForm.name.trim() || !templateForm.template.trim()"
+              class="btn-primary inline-flex items-center gap-2"
+            >
+              <CheckCircleIcon class="h-4 w-4" />
+              {{ savingTemplate ? $t('saving') : $t('save') }}
             </button>
           </div>
         </div>
