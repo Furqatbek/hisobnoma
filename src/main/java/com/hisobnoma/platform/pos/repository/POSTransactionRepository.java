@@ -120,11 +120,11 @@ public interface POSTransactionRepository extends JpaRepository<POSTransaction, 
     List<POSTransaction> findCompletedCreditWithoutArInvoice(@Param("tenantId") Long tenantId);
 
     // Failed GL posting / AR invoice queries for scheduled retry (cross-tenant)
-    @Query("SELECT t FROM POSTransaction t WHERE t.status = 'COMPLETED' AND t.glPosted = false ORDER BY t.completedAt ASC")
+    @Query("SELECT DISTINCT t FROM POSTransaction t LEFT JOIN FETCH t.lines WHERE t.status = 'COMPLETED' AND t.glPosted = false ORDER BY t.completedAt ASC")
     List<POSTransaction> findAllCompletedWithoutGlPosting();
 
-    @Query("SELECT DISTINCT t FROM POSTransaction t JOIN t.payments p WHERE t.status = 'COMPLETED' " +
-           "AND p.paymentType = 'CREDIT' AND p.status = 'APPROVED' AND t.arInvoiceId IS NULL ORDER BY t.completedAt ASC")
+    @Query("SELECT DISTINCT t FROM POSTransaction t LEFT JOIN FETCH t.payments LEFT JOIN FETCH t.lines WHERE t.status = 'COMPLETED' " +
+           "AND t.arInvoiceId IS NULL AND EXISTS (SELECT 1 FROM POSPayment p WHERE p.transaction = t AND p.paymentType = 'CREDIT' AND p.status = 'APPROVED') ORDER BY t.completedAt ASC")
     List<POSTransaction> findAllCompletedCreditWithoutArInvoice();
 
     @Query("SELECT COUNT(t) FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.shift.id = :shiftId AND t.status IN ('PENDING', 'HELD')")
