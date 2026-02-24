@@ -25,9 +25,13 @@ const { t } = useI18n()
 // State
 const products = ref([])
 const quickProducts = ref([])
-const customers = ref([])
 const searchQuery = ref('')
 const loading = ref(false)
+
+// Customer list state (tap-based)
+const allCustomers = ref([])
+const customersLoading = ref(false)
+const customerFilter = ref('')
 
 // Terminal state
 const terminals = ref([])
@@ -64,7 +68,6 @@ const selectedVillageId = ref(null)
 
 const showPaymentModal = ref(false)
 const showCustomerModal = ref(false)
-const customerSearch = ref('')
 
 // Split payment support - array of payments
 const payments = ref([])
@@ -182,19 +185,30 @@ async function searchProducts() {
   }
 }
 
-async function searchCustomers() {
-  if (!customerSearch.value.trim()) {
-    customers.value = []
-    return
-  }
-
+async function loadAllCustomers() {
+  if (allCustomers.value.length > 0) return // already loaded
+  customersLoading.value = true
   try {
-    const response = await customersApi.search(customerSearch.value)
-    customers.value = response.data.content || response.data.data || response.data || []
+    const response = await customersApi.getAll({ size: 1000, sort: 'name,asc' })
+    const data = response.data?.data?.content || response.data?.content || response.data?.data || response.data || []
+    allCustomers.value = Array.isArray(data) ? data : []
   } catch (error) {
-    console.error('Customer search failed:', error)
+    console.error('Failed to load customers:', error)
+  } finally {
+    customersLoading.value = false
   }
 }
+
+const filteredCustomers = computed(() => {
+  const q = customerFilter.value.toLowerCase().trim()
+  if (!q) return allCustomers.value
+  return allCustomers.value.filter(c => {
+    const name = (c.name || '').toLowerCase()
+    const code = (c.code || '').toLowerCase()
+    const phone = (c.phone || c.mobilePhone || '').toLowerCase()
+    return name.includes(q) || code.includes(q) || phone.includes(q)
+  })
+})
 
 // UOM selection state
 const showUomModal = ref(false)
@@ -268,9 +282,11 @@ function selectBaseUom() {
 }
 
 function updateQuantity(item, delta) {
-  item.quantity += delta
-  if (item.quantity <= 0) {
+  const newQty = Math.round((item.quantity + delta) * 10) / 10
+  if (newQty <= 0) {
     removeFromCart(item)
+  } else {
+    item.quantity = newQty
   }
 }
 
@@ -285,8 +301,13 @@ function selectCustomer(customer) {
   cart.customerId = customer.id
   cart.customerName = customer.name
   showCustomerModal.value = false
-  customerSearch.value = ''
-  customers.value = []
+  customerFilter.value = ''
+}
+
+function openCustomerModal() {
+  customerFilter.value = ''
+  showCustomerModal.value = true
+  loadAllCustomers()
 }
 
 function clearCustomer() {
@@ -741,11 +762,11 @@ onMounted(() => {
 
 <template>
   <div class="h-[calc(100vh-10rem)] flex gap-6">
-    <!-- Left Panel - Product Search & Quick Add -->
+    <!-- Left Panel - Product List -->
     <div class="flex-1 flex flex-col">
       <!-- Search -->
-      <div class="card mb-4">
-        <div class="card-body">
+      <div class="card mb-3">
+        <div class="card-body py-3">
           <div class="relative">
             <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
@@ -760,43 +781,35 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Search Results -->
+      <!-- Search Results (list rows) -->
       <div v-if="searchQuery && products.length > 0" class="card flex-1 overflow-hidden">
-        <div class="card-body overflow-y-auto h-full">
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            <button
-              v-for="product in products"
-              :key="product.id"
-              @click="addToCart(product)"
-              class="p-3 border rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-left"
+        <div class="overflow-y-auto h-full divide-y divide-gray-100">
+          <button
+            v-for="product in products"
+            :key="product.id"
+            @click="addToCart(product)"
+            class="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary-50 active:bg-primary-100 transition-colors text-left"
+          >
+            <img
+              v-if="product.primaryImageUrl"
+              :src="product.primaryImageUrl"
+              :alt="product.name"
+              class="h-10 w-10 rounded object-cover flex-shrink-0"
+            />
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-gray-900 truncate">{{ product.name }}</div>
+              <div class="text-xs text-gray-400">{{ product.sku }}</div>
+            </div>
+            <div
+              :class="[
+                'text-xs font-medium px-2 py-0.5 rounded-full',
+                (product.stockQuantity || 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+              ]"
             >
-              <div class="flex items-center gap-2 mb-1">
-                <img
-                  v-if="product.primaryImageUrl"
-                  :src="product.primaryImageUrl"
-                  :alt="product.name"
-                  class="h-10 w-10 rounded object-cover flex-shrink-0"
-                />
-                <div class="min-w-0 flex-1">
-                  <div class="font-medium text-gray-900 truncate">{{ product.name }}</div>
-                  <div class="text-xs text-gray-500">{{ product.sku }}</div>
-                </div>
-              </div>
-              <div class="flex items-center justify-between mt-2">
-                <div class="text-lg font-bold text-primary-600">
-                  {{ formatCurrency(product.sellingPrice) }}
-                </div>
-                <div
-                  :class="[
-                    'text-xs',
-                    (product.stockQuantity || 0) > 0 ? 'text-green-600' : 'text-red-600'
-                  ]"
-                >
-                  {{ product.stockQuantity || 0 }}
-                </div>
-              </div>
-            </button>
-          </div>
+              {{ product.stockQuantity || 0 }}
+            </div>
+            <PlusIcon class="h-5 w-5 text-primary-500 flex-shrink-0" />
+          </button>
         </div>
       </div>
 
@@ -808,48 +821,40 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Quick Product List -->
+      <!-- Quick Product List (list rows) -->
       <div v-else class="card flex-1 overflow-hidden">
-        <div class="card-body overflow-y-auto h-full">
-          <div v-if="quickProducts.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            <button
-              v-for="product in quickProducts"
-              :key="product.id"
-              @click="addToCart(product)"
-              class="p-3 border rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-left"
-            >
-              <div class="flex items-center gap-2 mb-1">
-                <img
-                  v-if="product.primaryImageUrl"
-                  :src="product.primaryImageUrl"
-                  :alt="product.name"
-                  class="h-10 w-10 rounded object-cover flex-shrink-0"
-                />
-                <div class="min-w-0 flex-1">
-                  <div class="font-medium text-gray-900 truncate">{{ product.name }}</div>
-                  <div class="text-xs text-gray-500">{{ product.sku }}</div>
-                </div>
-              </div>
-              <div class="flex items-center justify-between mt-2">
-                <div class="text-lg font-bold text-primary-600">
-                  {{ formatCurrency(product.sellingPrice) }}
-                </div>
-                <div
-                  :class="[
-                    'text-xs',
-                    (product.stockQuantity || 0) > 0 ? 'text-green-600' : 'text-red-600'
-                  ]"
-                >
-                  {{ product.stockQuantity || 0 }}
-                </div>
-              </div>
-            </button>
-          </div>
-          <div v-else class="flex items-center justify-center h-full text-gray-500">
-            <div class="text-center">
-              <MagnifyingGlassIcon class="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>{{ $t('pos.noProductsFound') }}</p>
+        <div v-if="quickProducts.length > 0" class="overflow-y-auto h-full divide-y divide-gray-100">
+          <button
+            v-for="product in quickProducts"
+            :key="product.id"
+            @click="addToCart(product)"
+            class="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary-50 active:bg-primary-100 transition-colors text-left"
+          >
+            <img
+              v-if="product.primaryImageUrl"
+              :src="product.primaryImageUrl"
+              :alt="product.name"
+              class="h-10 w-10 rounded object-cover flex-shrink-0"
+            />
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-gray-900 truncate">{{ product.name }}</div>
+              <div class="text-xs text-gray-400">{{ product.sku }}</div>
             </div>
+            <div
+              :class="[
+                'text-xs font-medium px-2 py-0.5 rounded-full',
+                (product.stockQuantity || 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+              ]"
+            >
+              {{ product.stockQuantity || 0 }}
+            </div>
+            <PlusIcon class="h-5 w-5 text-primary-500 flex-shrink-0" />
+          </button>
+        </div>
+        <div v-else class="flex items-center justify-center h-full text-gray-500">
+          <div class="text-center">
+            <MagnifyingGlassIcon class="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <p>{{ $t('pos.noProductsFound') }}</p>
           </div>
         </div>
       </div>
@@ -917,16 +922,16 @@ onMounted(() => {
           </div>
           <div v-else class="flex items-center gap-2">
             <button
-              @click="showCustomerModal = true"
-              class="flex items-center text-primary-600 hover:text-primary-700 text-sm"
+              @click="openCustomerModal"
+              class="flex items-center text-primary-600 hover:text-primary-700 text-sm py-1 px-2 rounded-lg hover:bg-primary-50 active:bg-primary-100"
             >
-              <MagnifyingGlassIcon class="h-4 w-4 mr-1" />
+              <UserIcon class="h-4 w-4 mr-1" />
               {{ $t('pos.selectCustomer') }}
             </button>
             <span class="text-gray-300">|</span>
             <button
               @click="showNewCustomerModal = true"
-              class="flex items-center text-green-600 hover:text-green-700 text-sm"
+              class="flex items-center text-green-600 hover:text-green-700 text-sm py-1 px-2 rounded-lg hover:bg-green-50 active:bg-green-100"
             >
               <PlusIcon class="h-4 w-4 mr-1" />
               {{ $t('pos.quickAdd') }}
@@ -971,50 +976,64 @@ onMounted(() => {
           </div>
 
           <ul v-else class="divide-y">
-            <li v-for="(item, index) in cart.items" :key="item._uomKey" class="p-4">
-              <div class="flex justify-between">
+            <li v-for="(item, index) in cart.items" :key="item._uomKey" class="px-3 py-2.5">
+              <div class="flex justify-between items-start">
                 <div class="flex-1 min-w-0">
-                  <p class="font-medium text-gray-900 truncate">{{ item.name }}</p>
+                  <p class="font-medium text-gray-900 truncate text-sm">{{ item.name }}</p>
                   <div class="flex items-center gap-1.5">
-                    <span class="text-sm text-gray-500">{{ item.sku }}</span>
-                    <span v-if="item.uomName" class="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                    <span class="text-xs text-gray-400">{{ formatCurrency(item.price) }} x {{ item.quantity }}</span>
+                    <span v-if="item.uomName" class="inline-flex items-center gap-0.5 text-xs px-1 py-0.5 rounded bg-blue-50 text-blue-700">
                       <ScaleIcon class="h-3 w-3" />
                       {{ item.uomName }}
                     </span>
                   </div>
                 </div>
-                <button
-                  @click="removeFromCart(item)"
-                  class="ml-2 text-gray-400 hover:text-red-500"
-                >
-                  <TrashIcon class="h-4 w-4" />
-                </button>
+                <div class="text-right flex-shrink-0 ml-2">
+                  <span class="font-bold text-sm text-gray-900">{{ formatCurrency(item.price * item.quantity) }}</span>
+                </div>
               </div>
 
-              <div class="flex items-center justify-between mt-2">
-                <div class="flex items-center space-x-2">
+              <div class="flex items-center justify-between mt-1.5">
+                <div class="flex items-center gap-1">
                   <button
                     @click="updateQuantity(item, -1)"
-                    class="p-1 rounded-lg border hover:bg-gray-100"
+                    class="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200"
                   >
                     <MinusIcon class="h-4 w-4" />
                   </button>
-                  <span class="w-8 text-center font-medium">{{ item.quantity }}</span>
+                  <button
+                    @click="updateQuantity(item, -0.5)"
+                    class="h-8 px-1.5 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200 text-xs font-medium text-gray-600"
+                  >
+                    -½
+                  </button>
+                  <span class="w-10 text-center font-bold text-sm">{{ item.quantity }}</span>
+                  <button
+                    @click="updateQuantity(item, 0.5)"
+                    class="h-8 px-1.5 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200 text-xs font-medium text-gray-600"
+                  >
+                    +½
+                  </button>
                   <button
                     @click="updateQuantity(item, 1)"
-                    class="p-1 rounded-lg border hover:bg-gray-100"
+                    class="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200"
                   >
                     <PlusIcon class="h-4 w-4" />
                   </button>
                 </div>
-                <div class="text-right">
-                  <span class="font-medium">{{ formatCurrency(item.price * item.quantity) }}</span>
+                <div class="flex items-center gap-1">
                   <button
                     @click="openItemDiscount(index)"
-                    class="ml-2 text-xs px-1.5 py-0.5 rounded border hover:bg-gray-100"
+                    class="h-8 text-xs px-2 rounded-lg border hover:bg-gray-100 active:bg-gray-200"
                     :class="item.discount ? 'text-green-600 border-green-300 bg-green-50' : 'text-gray-400 border-gray-200'"
                   >
                     {{ item.discount ? ('-' + formatCurrency(item.discount)) : '%' }}
+                  </button>
+                  <button
+                    @click="removeFromCart(item)"
+                    class="h-8 w-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100"
+                  >
+                    <TrashIcon class="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -1079,11 +1098,11 @@ onMounted(() => {
         </div>
 
         <!-- Payment Buttons -->
-        <div class="p-4 border-t space-y-2">
+        <div class="p-3 border-t space-y-2">
           <button
             @click="openPayment"
             :disabled="cart.items.length === 0 || !currentShift"
-            class="btn-primary w-full py-3 text-lg"
+            class="btn-primary w-full py-4 text-lg rounded-xl active:scale-[0.98] transition-transform"
           >
             <CreditCardIcon class="h-6 w-6 mr-2" />
             {{ $t('pos.checkout') }} {{ formatCurrency(total) }}
@@ -1091,7 +1110,7 @@ onMounted(() => {
           <button
             @click="sellAsDebt"
             :disabled="cart.items.length === 0 || !currentShift"
-            class="w-full py-2 text-sm border-2 border-orange-500 text-orange-600 rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center"
+            class="w-full py-3 text-sm border-2 border-orange-500 text-orange-600 rounded-xl hover:bg-orange-50 active:bg-orange-100 transition-colors flex items-center justify-center"
           >
             <DocumentTextIcon class="h-5 w-5 mr-2" />
             {{ $t('pos.sellAsDebt') }}
@@ -1147,18 +1166,18 @@ onMounted(() => {
           <div v-if="remainingAmount > 0" class="space-y-4">
             <p class="text-sm font-medium text-gray-700">{{ $t('pos.addPayment') }}:</p>
 
-            <div class="grid grid-cols-4 gap-2">
+            <div class="grid grid-cols-2 gap-3">
               <button
                 v-for="method in paymentMethods"
                 :key="method.value"
                 @click="selectPaymentMethod(method.value)"
                 :class="[
-                  'p-3 border-2 rounded-lg flex flex-col items-center transition-colors',
+                  'p-4 border-2 rounded-xl flex items-center gap-3 transition-colors active:scale-95',
                   currentPayment.method === method.value ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
                 ]"
               >
-                <component :is="method.icon" :class="['h-6 w-6 mb-1', method.color]" />
-                <span class="text-xs font-medium">{{ method.label }}</span>
+                <component :is="method.icon" :class="['h-7 w-7', method.color]" />
+                <span class="text-sm font-medium">{{ method.label }}</span>
               </button>
             </div>
 
@@ -1225,39 +1244,65 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Customer Modal -->
+    <!-- Customer Modal (tap-based list) -->
     <div v-if="showCustomerModal" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showCustomerModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">{{ $t('pos.selectCustomer') }}</h3>
-
-          <div class="relative mb-4">
-            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              v-model="customerSearch"
-              @input="searchCustomers"
-              type="text"
-              :placeholder="$t('customers.searchPlaceholder')"
-              class="input pl-10"
-            />
-          </div>
-
-          <div class="max-h-64 overflow-y-auto">
-            <button
-              v-for="customer in customers"
-              :key="customer.id"
-              @click="selectCustomer(customer)"
-              class="w-full p-3 text-left hover:bg-gray-50 rounded-lg border mb-2"
-            >
-              <p class="font-medium">{{ customer.name }}</p>
-              <p class="text-sm text-gray-500">{{ customer.phone || customer.email }}</p>
+        <div class="relative bg-white rounded-xl max-w-md w-full p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold text-gray-900">{{ $t('pos.selectCustomer') }}</h3>
+            <button @click="showCustomerModal = false" class="text-gray-400 hover:text-gray-600">
+              <XMarkIcon class="h-5 w-5" />
             </button>
           </div>
 
-          <button @click="showCustomerModal = false" class="btn-secondary w-full mt-4">
-            {{ $t('cancel') }}
-          </button>
+          <!-- Filter -->
+          <div class="relative mb-3">
+            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              v-model="customerFilter"
+              type="text"
+              :placeholder="$t('pos.filterCustomerPlaceholder')"
+              class="input pl-9 text-sm"
+            />
+          </div>
+
+          <!-- Customer List -->
+          <div v-if="customersLoading" class="flex items-center justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          </div>
+          <div v-else-if="filteredCustomers.length === 0" class="text-center py-6 text-sm text-gray-400">
+            {{ $t('pos.noCustomersFound') }}
+          </div>
+          <div v-else class="max-h-72 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+            <button
+              v-for="customer in filteredCustomers"
+              :key="customer.id"
+              @click="selectCustomer(customer)"
+              class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-primary-50 active:bg-primary-100 transition-colors"
+            >
+              <div class="h-9 w-9 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                <span class="text-sm font-bold text-primary-700">{{ (customer.name || '?')[0] }}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-sm text-gray-900 truncate">{{ customer.name }}</p>
+                <p class="text-xs text-gray-400">{{ customer.code }} {{ customer.phone ? '· ' + customer.phone : '' }}</p>
+              </div>
+              <div v-if="customer.currentBalance > 0" class="text-xs font-medium text-red-600 flex-shrink-0">
+                {{ formatCurrency(customer.currentBalance) }}
+              </div>
+            </button>
+          </div>
+
+          <div class="flex gap-2 mt-4">
+            <button @click="showCustomerModal = false" class="btn-secondary flex-1">
+              {{ $t('cancel') }}
+            </button>
+            <button @click="showCustomerModal = false; showNewCustomerModal = true" class="btn-primary flex-1">
+              <PlusIcon class="h-4 w-4 mr-1" />
+              {{ $t('pos.quickAdd') }}
+            </button>
+          </div>
         </div>
       </div>
     </div>

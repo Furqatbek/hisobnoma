@@ -52,6 +52,8 @@
   "paymentFailed": "Тўлов амалга ошмади",
   "failedToCreateCustomer": "Мижоз яратишда хатолик",
   "noTerminalAvailable": "Фаол терминал топилмади",
+  "filterCustomerPlaceholder": "Исм, код ёки телефон...",
+  "noCustomersFound": "Мижозлар топилмади",
 
   "deliveryAddress": "Етказиш манзили",
   "noVillagesFound": "Маҳаллалар топилмади",
