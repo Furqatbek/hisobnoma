@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.sms.controller;
 
 import com.hisobnoma.platform.common.dto.ApiResponse;
+import com.hisobnoma.platform.sms.dto.SmsBulkSendRequest;
 import com.hisobnoma.platform.sms.dto.SmsSendRequest;
 import com.hisobnoma.platform.sms.dto.SmsSettingsRequest;
 import com.hisobnoma.platform.sms.dto.SmsTemplateDto;
@@ -33,6 +34,15 @@ public class SmsController {
         String message = templateService.resolveTemplate(request.getTemplateId(), request.getVariables());
         Map<String, Object> result = smsService.sendSms(request.getPhone(), message, request.getFrom());
         return ResponseEntity.ok(ApiResponse.success(result, "SMS yuborildi"));
+    }
+
+    @PostMapping("/send-bulk")
+    @PreAuthorize("hasAnyAuthority('SMS_SEND', 'ADMIN_SETTINGS_MANAGE')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> sendBulkSms(
+            @Valid @RequestBody SmsBulkSendRequest request) {
+        Map<String, Object> result = smsService.sendBulk(
+                request.getTemplateId(), request.getRecipients(), request.getFrom());
+        return ResponseEntity.ok(ApiResponse.success(result, "Ommaviy SMS yuborildi"));
     }
 
     // ── Templates CRUD ─────────────────────────────────────────────────

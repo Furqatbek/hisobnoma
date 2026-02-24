@@ -13,7 +13,8 @@ import {
   DocumentTextIcon,
   PlusIcon,
   PencilSquareIcon,
-  TrashIcon
+  TrashIcon,
+  UsersIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -50,6 +51,12 @@ const showSendModal = ref(false)
 const sendForm = reactive({ phone: '', templateId: null, variables: {} })
 const sending = ref(false)
 const sendResult = ref(null)
+
+// Bulk Send
+const showBulkModal = ref(false)
+const bulkForm = reactive({ templateId: null, recipients: [{ phone: '', variables: {} }] })
+const bulkSending = ref(false)
+const bulkResult = ref(null)
 
 const isConfigured = computed(() => settingsForm.enabled && (settingsForm.apiToken || hasExistingToken.value))
 const activeTemplates = computed(() => templates.value.filter(t => t.active))
@@ -253,6 +260,77 @@ async function handleSend() {
   }
 }
 
+// ── Bulk Send ──────────────────────────────────────────
+
+const bulkSelectedTemplate = computed(() => templates.value.find(t => t.id === bulkForm.templateId))
+
+const canBulkSend = computed(() => {
+  if (!bulkForm.templateId || !bulkSelectedTemplate.value) return false
+  for (const r of bulkForm.recipients) {
+    if (!r.phone || !r.phone.trim()) return false
+    for (const v of bulkSelectedTemplate.value.variables) {
+      if (!r.variables[v] || !r.variables[v].trim()) return false
+    }
+  }
+  return true
+})
+
+function openBulkModal() {
+  bulkForm.templateId = null
+  bulkForm.recipients = [{ phone: '', variables: {} }]
+  bulkResult.value = null
+  showBulkModal.value = true
+}
+
+watch(() => bulkForm.templateId, () => {
+  for (const r of bulkForm.recipients) {
+    r.variables = {}
+    if (bulkSelectedTemplate.value) {
+      for (const v of bulkSelectedTemplate.value.variables) {
+        r.variables[v] = ''
+      }
+    }
+  }
+})
+
+function addRecipient() {
+  const vars = {}
+  if (bulkSelectedTemplate.value) {
+    for (const v of bulkSelectedTemplate.value.variables) {
+      vars[v] = ''
+    }
+  }
+  bulkForm.recipients.push({ phone: '', variables: vars })
+}
+
+function removeRecipient(idx) {
+  if (bulkForm.recipients.length > 1) {
+    bulkForm.recipients.splice(idx, 1)
+  }
+}
+
+async function handleBulkSend() {
+  if (!canBulkSend.value) return
+  bulkSending.value = true
+  error.value = ''
+  bulkResult.value = null
+  try {
+    const res = await smsApi.sendBulk({
+      templateId: bulkForm.templateId,
+      recipients: bulkForm.recipients
+    })
+    bulkResult.value = res.data?.data || res.data
+    if (bulkResult.value?.sent > 0) {
+      successMsg.value = t('admin.sms.bulkSent', { sent: bulkResult.value.sent, total: bulkResult.value.total })
+    }
+    await Promise.all([loadBalance(), loadHistory()])
+  } catch (e) {
+    error.value = e.response?.data?.message || t('admin.sms.bulkSendError')
+  } finally {
+    bulkSending.value = false
+  }
+}
+
 function filterHistory(status) {
   historyFilter.value = status
   historyOffset.value = 0
@@ -296,14 +374,22 @@ function formatDate(dateStr) {
         <h1 class="text-2xl font-bold text-gray-900">{{ $t('admin.sms.title') }}</h1>
         <p class="mt-1 text-sm text-gray-500">{{ $t('admin.sms.subtitle') }}</p>
       </div>
-      <button
-        v-if="!loading && isConfigured && activeTemplates.length > 0"
-        @click="openSendModal"
-        class="btn-primary inline-flex items-center gap-2"
-      >
-        <PaperAirplaneIcon class="h-4 w-4" />
-        {{ $t('admin.sms.sendSms') }}
-      </button>
+      <div v-if="!loading && isConfigured && activeTemplates.length > 0" class="flex gap-2">
+        <button
+          @click="openSendModal"
+          class="btn-primary inline-flex items-center gap-2"
+        >
+          <PaperAirplaneIcon class="h-4 w-4" />
+          {{ $t('admin.sms.sendSms') }}
+        </button>
+        <button
+          @click="openBulkModal"
+          class="btn-secondary inline-flex items-center gap-2"
+        >
+          <UsersIcon class="h-4 w-4" />
+          {{ $t('admin.sms.bulkSend') }}
+        </button>
+      </div>
     </div>
 
     <!-- Error / Success -->
@@ -715,6 +801,100 @@ function formatDate(dateStr) {
             >
               <CheckCircleIcon class="h-4 w-4" />
               {{ savingTemplate ? $t('saving') : $t('save') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Bulk Send Modal -->
+    <Teleport to="body">
+      <div v-if="showBulkModal" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="fixed inset-0 bg-black/50" @click="showBulkModal = false"></div>
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900">{{ $t('admin.sms.bulkSend') }}</h3>
+            <button @click="showBulkModal = false" class="text-gray-400 hover:text-gray-600">
+              <XMarkIcon class="h-5 w-5" />
+            </button>
+          </div>
+
+          <div>
+            <label class="label">{{ $t('admin.sms.selectTemplate') }}</label>
+            <select v-model="bulkForm.templateId" class="input">
+              <option :value="null" disabled>{{ $t('admin.sms.selectTemplatePlaceholder') }}</option>
+              <option v-for="tmpl in activeTemplates" :key="tmpl.id" :value="tmpl.id">
+                {{ tmpl.name }}
+              </option>
+            </select>
+            <p v-if="bulkSelectedTemplate" class="mt-1 text-xs text-gray-400">{{ bulkSelectedTemplate.template }}</p>
+          </div>
+
+          <!-- Recipients -->
+          <template v-if="bulkSelectedTemplate">
+            <div class="flex items-center justify-between">
+              <label class="label mb-0">{{ $t('admin.sms.recipients') }} ({{ bulkForm.recipients.length }})</label>
+              <button @click="addRecipient" class="text-sm text-primary-600 hover:text-primary-700 inline-flex items-center gap-1">
+                <PlusIcon class="h-3.5 w-3.5" />
+                {{ $t('admin.sms.addRecipient') }}
+              </button>
+            </div>
+
+            <div class="space-y-3">
+              <div v-for="(recipient, idx) in bulkForm.recipients" :key="idx"
+                class="p-3 bg-gray-50 rounded-lg space-y-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-medium text-gray-400 w-6">{{ idx + 1 }}</span>
+                  <input
+                    v-model="recipient.phone"
+                    type="text"
+                    class="input font-mono text-sm flex-1"
+                    placeholder="998901234567"
+                  />
+                  <button
+                    v-if="bulkForm.recipients.length > 1"
+                    @click="removeRecipient(idx)"
+                    class="p-1 text-gray-400 hover:text-red-500"
+                  >
+                    <XMarkIcon class="h-4 w-4" />
+                  </button>
+                </div>
+                <div v-if="bulkSelectedTemplate.variables.length > 0"
+                  class="grid gap-2 pl-8"
+                  :class="bulkSelectedTemplate.variables.length > 1 ? 'grid-cols-2' : 'grid-cols-1'">
+                  <div v-for="v in bulkSelectedTemplate.variables" :key="v">
+                    <label class="text-xs text-gray-500 font-mono">{{"{"}}{{ v }}{{"}"}}</label>
+                    <input
+                      v-model="recipient.variables[v]"
+                      type="text"
+                      class="input text-sm"
+                      :placeholder="v"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Bulk Result -->
+          <div v-if="bulkResult" class="p-3 rounded-lg" :class="bulkResult.failed > 0 ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200'">
+            <p class="text-sm font-medium" :class="bulkResult.failed > 0 ? 'text-yellow-800' : 'text-green-700'">
+              {{ $t('admin.sms.bulkResult', { sent: bulkResult.sent, failed: bulkResult.failed, total: bulkResult.total }) }}
+            </p>
+            <ul v-if="bulkResult.errors && bulkResult.errors.length > 0" class="mt-2 text-xs text-red-600 space-y-1">
+              <li v-for="(err, i) in bulkResult.errors" :key="i">{{ err }}</li>
+            </ul>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <button @click="showBulkModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
+            <button
+              @click="handleBulkSend"
+              :disabled="bulkSending || !canBulkSend"
+              class="btn-primary inline-flex items-center gap-2"
+            >
+              <UsersIcon class="h-4 w-4" />
+              {{ bulkSending ? $t('admin.sms.sending') : $t('admin.sms.bulkSendBtn', { count: bulkForm.recipients.length }) }}
             </button>
           </div>
         </div>

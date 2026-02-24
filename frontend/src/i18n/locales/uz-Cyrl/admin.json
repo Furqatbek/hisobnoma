@@ -426,7 +426,14 @@
     "templateDeleteConfirm": "{name} шаблонини ўчиришни тасдиқлайсизми?",
     "selectTemplate": "Шаблон танланг",
     "selectTemplatePlaceholder": "-- Шаблонни танланг --",
-    "preview": "Олдиндан кўриш"
+    "preview": "Олдиндан кўриш",
+    "bulkSend": "Оммавий юбориш",
+    "bulkSendBtn": "{count} та SMS юбориш",
+    "bulkSent": "{sent}/{total} та SMS муваффақиятли юборилди",
+    "bulkSendError": "Оммавий SMS юборишда хатолик",
+    "bulkResult": "Юборилди: {sent}, хатолик: {failed}, жами: {total}",
+    "recipients": "Қабул қилувчилар",
+    "addRecipient": "Қўшиш"
   },
   "auditLogs": {
     "title": "Аудит журнали",

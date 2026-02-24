@@ -3,6 +3,7 @@ package com.hisobnoma.platform.sms.service;
 import com.hisobnoma.platform.admin.entity.SystemSetting;
 import com.hisobnoma.platform.admin.repository.SystemSettingRepository;
 import com.hisobnoma.platform.sms.config.SmsProperties;
+import com.hisobnoma.platform.sms.dto.SmsBulkSendRequest;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -20,6 +24,7 @@ public class SmsService {
     private final DevSmsClient smsClient;
     private final SmsProperties smsProperties;
     private final SystemSettingRepository systemSettingRepository;
+    private final SmsTemplateService templateService;
 
     @PostConstruct
     public void loadSettingsFromDb() {
@@ -61,6 +66,38 @@ public class SmsService {
     @Async
     public void sendSmsAsync(String phone, String message) {
         smsClient.sendSms(phone, message);
+    }
+
+    public Map<String, Object> sendBulk(Long templateId, List<SmsBulkSendRequest.Recipient> recipients, String from) {
+        int sent = 0;
+        int failed = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (SmsBulkSendRequest.Recipient recipient : recipients) {
+            try {
+                String message = templateService.resolveTemplate(templateId, recipient.getVariables());
+                Map<String, Object> result = smsClient.sendSms(recipient.getPhone(), message, from);
+                if (Boolean.TRUE.equals(result.get("success"))) {
+                    sent++;
+                } else {
+                    failed++;
+                    errors.add(recipient.getPhone() + ": " + result.getOrDefault("error", "noma'lum xato"));
+                }
+            } catch (Exception e) {
+                failed++;
+                errors.add(recipient.getPhone() + ": " + e.getMessage());
+            }
+        }
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("total", recipients.size());
+        summary.put("sent", sent);
+        summary.put("failed", failed);
+        if (!errors.isEmpty()) {
+            summary.put("errors", errors);
+        }
+        log.info("Bulk SMS: total={}, sent={}, failed={}", recipients.size(), sent, failed);
+        return summary;
     }
 
     public Map<String, Object> getHistory(int limit, int offset, String status) {

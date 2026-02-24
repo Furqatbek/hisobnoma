@@ -504,6 +504,7 @@ export const telegramApi = {
 // SMS API - Backend: /api/v1/sms
 export const smsApi = {
   send: (data) => api.post('/sms/send', data),
+  sendBulk: (data) => api.post('/sms/send-bulk', data),
   getHistory: (params) => api.get('/sms/history', { params }),
   getBalance: () => api.get('/sms/balance'),
   getStatus: (params) => api.get('/sms/status', { params }),
