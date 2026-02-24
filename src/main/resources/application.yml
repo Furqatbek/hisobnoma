@@ -28,6 +28,7 @@ spring:
     locations: classpath:db/migration
     validate-on-migrate: true
     repair-on-migrate: true
+    out-of-order: true
 
   # Jackson Configuration
   jackson:
