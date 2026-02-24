@@ -3,6 +3,7 @@ package com.hisobnoma.platform.expense.controller;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.expense.entity.ExpenseRecord;
 import com.hisobnoma.platform.expense.repository.ExpenseRecordRepository;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -62,11 +63,15 @@ public class ExpenseRecordController {
 
     @Data
     public static class ExpenseRequest {
+        @JsonProperty("create_date")
         private String createDate;
         private String category;
+        @JsonProperty("total_amount")
         private BigDecimal totalAmount;
         private String currency;
+        @JsonProperty("generated_notes")
         private String generatedNotes;
+        @JsonProperty("full_text")
         private String fullText;
     }
 }
