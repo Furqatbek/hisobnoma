@@ -89,11 +89,10 @@ public class SmsController {
         Map<String, Object> balance = smsService.getBalance();
         boolean valid = balance.containsKey("success") && Boolean.TRUE.equals(balance.get("success"));
 
-        Map<String, Object> result = Map.of(
-                "saved", true,
-                "valid", valid,
-                "settings", smsService.getSettings()
-        );
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("saved", true);
+        result.put("valid", valid);
+        result.put("settings", smsService.getSettings());
         return ResponseEntity.ok(ApiResponse.success(result, "SMS sozlamalari saqlandi"));
     }
 }

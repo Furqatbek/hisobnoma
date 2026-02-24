@@ -74,15 +74,15 @@ public class SmsService {
      */
     public Map<String, Object> getSettings() {
         String maskedToken = "";
-        if (smsProperties.getApiToken() != null && smsProperties.getApiToken().length() > 8) {
-            maskedToken = smsProperties.getApiToken().substring(0, 4) + "****"
-                    + smsProperties.getApiToken().substring(smsProperties.getApiToken().length() - 4);
+        String token = smsProperties.getApiToken();
+        if (token != null && token.length() > 8) {
+            maskedToken = token.substring(0, 4) + "****" + token.substring(token.length() - 4);
         }
-        return Map.of(
-                "enabled", smsProperties.isEnabled(),
-                "apiToken", maskedToken,
-                "senderId", smsProperties.getSenderId() != null ? smsProperties.getSenderId() : "4546",
-                "configured", smsClient.isConfigured()
-        );
+        Map<String, Object> settings = new java.util.HashMap<>();
+        settings.put("enabled", smsProperties.isEnabled());
+        settings.put("apiToken", maskedToken);
+        settings.put("senderId", smsProperties.getSenderId() != null ? smsProperties.getSenderId() : "4546");
+        settings.put("configured", smsClient.isConfigured());
+        return settings;
     }
 }
