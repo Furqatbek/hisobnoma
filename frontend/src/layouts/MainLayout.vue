@@ -29,6 +29,7 @@ import {
   BanknotesIcon,
   BriefcaseIcon,
   PaperAirplaneIcon,
+  ChatBubbleLeftRightIcon,
   MapPinIcon,
   MapIcon
 } from '@heroicons/vue/24/outline'
@@ -128,6 +129,7 @@ const navigation = computed(() => [
       { name: t('nav.regions'), href: '/admin/regions', icon: MapIcon },
       { name: t('nav.villages'), href: '/admin/villages', icon: MapPinIcon },
       { name: t('nav.telegramBot'), href: '/admin/telegram', icon: PaperAirplaneIcon },
+      { name: t('nav.sms'), href: '/admin/sms', icon: ChatBubbleLeftRightIcon },
       { name: t('nav.settings'), href: '/admin/settings', icon: Cog6ToothIcon },
       { name: t('nav.auditLog'), href: '/admin/audit-logs', icon: DocumentTextIcon }
     ]

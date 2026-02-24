@@ -357,6 +357,12 @@ const routes = [
             meta: { permission: 'ADMIN_SETTINGS_MANAGE' }
           },
           {
+            path: 'sms',
+            name: 'sms-admin',
+            component: () => import('@/views/admin/SmsAdminView.vue'),
+            meta: { permission: 'ADMIN_SETTINGS_MANAGE' }
+          },
+          {
             path: 'regions',
             name: 'regions',
             component: () => import('@/views/admin/RegionsView.vue')

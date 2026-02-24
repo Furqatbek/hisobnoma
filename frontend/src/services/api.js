@@ -501,6 +501,16 @@ export const telegramApi = {
   adminUnlinkUser: (userId) => api.delete(`/telegram/admin/users/${userId}/unlink`)
 }
 
+// SMS API - Backend: /api/v1/sms
+export const smsApi = {
+  send: (data) => api.post('/sms/send', data),
+  getHistory: (params) => api.get('/sms/history', { params }),
+  getBalance: () => api.get('/sms/balance'),
+  getStatus: (params) => api.get('/sms/status', { params }),
+  getSettings: () => api.get('/sms/settings'),
+  saveSettings: (data) => api.post('/sms/settings', data)
+}
+
 // Delivery Regions API - Backend: /api/v1/delivery/regions
 export const deliveryRegionsApi = {
   getAll: (params) => api.get('/delivery/regions', { params }),

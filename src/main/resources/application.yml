@@ -120,6 +120,13 @@ app:
     max-file-size: 10MB
     allowed-extensions: jpg,jpeg,png,gif,pdf,xlsx,csv
 
+  # SMS (DevSMS.uz)
+  sms:
+    enabled: ${SMS_ENABLED:false}
+    api-token: ${SMS_API_TOKEN:}
+    base-url: ${SMS_BASE_URL:https://devsms.uz/api}
+    sender-id: ${SMS_SENDER_ID:4546}
+
   # Telegram Bot
   telegram:
     enabled: ${TELEGRAM_BOT_ENABLED:false}
