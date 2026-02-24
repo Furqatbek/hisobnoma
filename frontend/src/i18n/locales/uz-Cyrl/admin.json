@@ -433,11 +433,14 @@
     "bulkSendError": "Оммавий SMS юборишда хатолик",
     "bulkResult": "Юборилди: {sent}, хатолик: {failed}, жами: {total}",
     "recipients": "Қабул қилувчилар",
-    "addRecipient": "Қўшиш",
-    "searchCustomer": "Мижоз қидириш",
-    "searchCustomerPlaceholder": "Мижоз исми, коди ёки телефони...",
-    "searching": "Қидирилмоқда",
-    "noRecipientsSelected": "Мижозларни қидириб танланг"
+    "allCustomers": "Барча мижозлар",
+    "debtors": "Қарздорлар",
+    "selected": "Танланган",
+    "filterPlaceholder": "Исм, код ёки телефон бўйича қидириш...",
+    "selectAllBtn": "Барчасини танлаш",
+    "deselectAllBtn": "Бекор қилиш",
+    "noCustomersFound": "Мижозлар топилмади",
+    "recipientVariables": "Қабул қилувчилар ўзгарувчилари"
   },
   "auditLogs": {
     "title": "Аудит журнали",

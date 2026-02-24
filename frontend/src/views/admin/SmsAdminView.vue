@@ -1,6 +1,6 @@
 <script setup>
-import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue'
-import { smsApi, customersApi } from '@/services/api'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { smsApi, customersApi, arReportsApi } from '@/services/api'
 import {
   ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
@@ -58,12 +58,12 @@ const bulkForm = reactive({ templateId: null, recipients: [] })
 const bulkSending = ref(false)
 const bulkResult = ref(null)
 
-// Customer search
-const customerSearch = ref('')
-const customerResults = ref([])
-const customerSearching = ref(false)
-const showCustomerDropdown = ref(false)
-let searchDebounce = null
+// Customer list for bulk modal
+const bulkTab = ref('customers') // 'customers' | 'debtors'
+const customerList = ref([])
+const debtorList = ref([])
+const customerListLoading = ref(false)
+const customerFilter = ref('')
 
 const isConfigured = computed(() => settingsForm.enabled && (settingsForm.apiToken || hasExistingToken.value))
 const activeTemplates = computed(() => templates.value.filter(t => t.active))
@@ -283,14 +283,50 @@ const canBulkSend = computed(() => {
   return true
 })
 
-function openBulkModal() {
+async function openBulkModal() {
   bulkForm.templateId = null
   bulkForm.recipients = []
   bulkResult.value = null
-  customerSearch.value = ''
-  customerResults.value = []
+  bulkTab.value = 'customers'
+  customerFilter.value = ''
   showBulkModal.value = true
+  await loadCustomerList()
 }
+
+async function loadCustomerList() {
+  customerListLoading.value = true
+  try {
+    const [custRes, debtRes] = await Promise.all([
+      customersApi.getAll({ size: 1000, sort: 'name,asc' }),
+      arReportsApi.getCustomerBalanceReport()
+    ])
+    const custData = custRes.data?.data?.content || custRes.data?.data || custRes.data?.content || []
+    customerList.value = Array.isArray(custData) ? custData : []
+
+    const debtData = debtRes.data?.data || debtRes.data
+    const balances = debtData?.customerBalances || []
+    debtorList.value = balances.filter(c => c.netBalance > 0).sort((a, b) => b.netBalance - a.netBalance)
+  } catch (e) {
+    customerList.value = []
+    debtorList.value = []
+  } finally {
+    customerListLoading.value = false
+  }
+}
+
+const filteredCustomers = computed(() => {
+  const q = customerFilter.value.toLowerCase().trim()
+  const list = bulkTab.value === 'debtors' ? debtorList.value : customerList.value
+  if (!q) return list
+  return list.filter(c => {
+    const name = (c.customerName || c.name || '').toLowerCase()
+    const code = (c.customerCode || c.code || '').toLowerCase()
+    const phone = (c.phone || c.mobilePhone || '').toLowerCase()
+    return name.includes(q) || code.includes(q) || phone.includes(q)
+  })
+})
+
+const selectedCustomerIds = computed(() => new Set(bulkForm.recipients.map(r => r.customerId)))
 
 watch(() => bulkForm.templateId, () => {
   for (const r of bulkForm.recipients) {
@@ -304,56 +340,47 @@ watch(() => bulkForm.templateId, () => {
   }
 })
 
-function handleCustomerSearch() {
-  clearTimeout(searchDebounce)
-  showCustomerDropdown.value = true
-  if (!customerSearch.value || customerSearch.value.trim().length < 2) {
-    customerResults.value = []
+function toggleCustomer(customer) {
+  const id = customer.customerId || customer.id
+  const existingIdx = bulkForm.recipients.findIndex(r => r.customerId === id)
+  if (existingIdx >= 0) {
+    bulkForm.recipients.splice(existingIdx, 1)
     return
   }
-  searchDebounce = setTimeout(async () => {
-    customerSearching.value = true
-    try {
-      const res = await customersApi.search(customerSearch.value.trim())
-      const data = res.data?.data?.content || res.data?.data || res.data?.content || []
-      customerResults.value = (Array.isArray(data) ? data : []).filter(c => {
-        const phone = c.phone || c.mobilePhone
-        if (!phone) return false
-        return !bulkForm.recipients.some(r => r.customerId === c.id)
-      })
-    } catch (e) {
-      customerResults.value = []
-    } finally {
-      customerSearching.value = false
-    }
-  }, 300)
-}
-
-function selectCustomer(customer) {
   const phone = customer.phone || customer.mobilePhone || ''
+  const name = customer.customerName || customer.name || ''
+  const code = customer.customerCode || customer.code || ''
+  const balance = customer.netBalance ?? customer.currentBalance
   const vars = {}
   if (bulkSelectedTemplate.value) {
     for (const v of bulkSelectedTemplate.value.variables) {
-      if (v === 'name') vars[v] = customer.name || ''
+      if (v === 'name') vars[v] = name
       else if (v === 'phone') vars[v] = phone
-      else if (v === 'code') vars[v] = customer.code || ''
-      else if (v === 'balance' || v === 'amount') vars[v] = customer.currentBalance ? String(customer.currentBalance) : ''
+      else if (v === 'code') vars[v] = code
+      else if (v === 'balance' || v === 'amount') vars[v] = balance ? String(balance) : ''
       else vars[v] = ''
     }
   }
   bulkForm.recipients.push({
-    customerId: customer.id,
-    customerName: customer.name,
+    customerId: id,
+    customerName: name,
     phone: phone.replace(/[^0-9]/g, ''),
     variables: vars
   })
-  customerSearch.value = ''
-  customerResults.value = []
-  showCustomerDropdown.value = false
 }
 
-function removeRecipient(idx) {
-  bulkForm.recipients.splice(idx, 1)
+function selectAll() {
+  for (const c of filteredCustomers.value) {
+    const id = c.customerId || c.id
+    if (!selectedCustomerIds.value.has(id)) {
+      toggleCustomer(c)
+    }
+  }
+}
+
+function deselectAll() {
+  const ids = new Set(filteredCustomers.value.map(c => c.customerId || c.id))
+  bulkForm.recipients = bulkForm.recipients.filter(r => !ids.has(r.customerId))
 }
 
 async function handleBulkSend() {
@@ -877,59 +904,88 @@ function formatDate(dateStr) {
             <p v-if="bulkSelectedTemplate" class="mt-1 text-xs text-gray-400">{{ bulkSelectedTemplate.template }}</p>
           </div>
 
-          <!-- Customer Search -->
+          <!-- Customer list with tabs -->
           <template v-if="bulkSelectedTemplate">
-            <div>
-              <label class="label">{{ $t('admin.sms.searchCustomer') }}</label>
-              <div class="relative">
-                <input
-                  v-model="customerSearch"
-                  @input="handleCustomerSearch"
-                  @focus="showCustomerDropdown = true"
-                  type="text"
-                  class="input"
-                  :placeholder="$t('admin.sms.searchCustomerPlaceholder')"
-                />
-                <!-- Dropdown -->
-                <div v-if="showCustomerDropdown && (customerResults.length > 0 || customerSearching)"
-                  class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  <div v-if="customerSearching" class="px-4 py-3 text-sm text-gray-500 text-center">
-                    {{ $t('admin.sms.searching') }}...
-                  </div>
-                  <button
-                    v-for="c in customerResults"
-                    :key="c.id"
-                    @click="selectCustomer(c)"
-                    class="w-full px-4 py-2 text-left hover:bg-primary-50 flex items-center justify-between gap-3 text-sm"
-                  >
-                    <div class="min-w-0">
-                      <span class="font-medium text-gray-900">{{ c.name }}</span>
-                      <span class="text-gray-400 ml-1.5 text-xs">{{ c.code }}</span>
-                    </div>
-                    <span class="text-gray-500 font-mono text-xs whitespace-nowrap">{{ c.phone || c.mobilePhone || '-' }}</span>
-                  </button>
-                </div>
+            <!-- Tabs -->
+            <div class="flex items-center gap-4 border-b border-gray-200">
+              <button
+                @click="bulkTab = 'customers'"
+                :class="['pb-2 px-1 text-sm font-medium border-b-2 -mb-px transition-colors',
+                  bulkTab === 'customers' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700']"
+              >{{ $t('admin.sms.allCustomers') }}</button>
+              <button
+                @click="bulkTab = 'debtors'"
+                :class="['pb-2 px-1 text-sm font-medium border-b-2 -mb-px transition-colors',
+                  bulkTab === 'debtors' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700']"
+              >
+                {{ $t('admin.sms.debtors') }}
+                <span v-if="debtorList.length" class="ml-1 px-1.5 py-0.5 text-xs bg-red-100 text-red-700 rounded-full">{{ debtorList.length }}</span>
+              </button>
+              <div class="ml-auto text-xs text-gray-500">
+                {{ $t('admin.sms.selected') }}: <span class="font-bold text-primary-600">{{ bulkForm.recipients.length }}</span>
               </div>
             </div>
 
-            <!-- Selected recipients -->
-            <div v-if="bulkForm.recipients.length > 0">
-              <label class="label">{{ $t('admin.sms.recipients') }} ({{ bulkForm.recipients.length }})</label>
-              <div class="space-y-3">
-                <div v-for="(recipient, idx) in bulkForm.recipients" :key="recipient.customerId || idx"
-                  class="p-3 bg-gray-50 rounded-lg space-y-2">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2 min-w-0">
-                      <span class="text-xs font-medium text-gray-400 w-5">{{ idx + 1 }}</span>
-                      <span class="font-medium text-sm text-gray-900 truncate">{{ recipient.customerName }}</span>
-                      <span class="text-xs font-mono text-gray-500">{{ recipient.phone }}</span>
-                    </div>
-                    <button @click="removeRecipient(idx)" class="p-1 text-gray-400 hover:text-red-500 flex-shrink-0">
-                      <XMarkIcon class="h-4 w-4" />
-                    </button>
+            <!-- Search filter + select all -->
+            <div class="flex items-center gap-2">
+              <input
+                v-model="customerFilter"
+                type="text"
+                class="input flex-1 text-sm"
+                :placeholder="$t('admin.sms.filterPlaceholder')"
+              />
+              <button @click="selectAll" class="text-xs text-primary-600 hover:text-primary-800 whitespace-nowrap">
+                {{ $t('admin.sms.selectAllBtn') }}
+              </button>
+              <button @click="deselectAll" class="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap">
+                {{ $t('admin.sms.deselectAllBtn') }}
+              </button>
+            </div>
+
+            <!-- Customer list -->
+            <div v-if="customerListLoading" class="flex items-center justify-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+            <div v-else-if="filteredCustomers.length === 0" class="text-center py-6 text-sm text-gray-400">
+              {{ $t('admin.sms.noCustomersFound') }}
+            </div>
+            <div v-else class="border border-gray-200 rounded-lg max-h-60 overflow-y-auto divide-y divide-gray-100">
+              <label
+                v-for="c in filteredCustomers"
+                :key="c.customerId || c.id"
+                class="flex items-center gap-3 px-3 py-2.5 hover:bg-primary-50 cursor-pointer transition-colors"
+                :class="selectedCustomerIds.has(c.customerId || c.id) ? 'bg-primary-50' : ''"
+              >
+                <input
+                  type="checkbox"
+                  :checked="selectedCustomerIds.has(c.customerId || c.id)"
+                  @change="toggleCustomer(c)"
+                  class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <div class="flex-1 min-w-0 flex items-center gap-2">
+                  <span class="font-medium text-sm text-gray-900 truncate">{{ c.customerName || c.name }}</span>
+                  <span class="text-xs text-gray-400 font-mono">{{ c.customerCode || c.code }}</span>
+                </div>
+                <span class="text-xs text-gray-500 font-mono whitespace-nowrap">{{ c.phone || c.mobilePhone || '-' }}</span>
+                <span v-if="(c.netBalance ?? c.currentBalance) > 0"
+                  class="text-xs font-medium text-red-600 whitespace-nowrap">
+                  {{ Number(c.netBalance ?? c.currentBalance).toLocaleString() }}
+                </span>
+              </label>
+            </div>
+
+            <!-- Selected recipients variables -->
+            <div v-if="bulkForm.recipients.length > 0 && bulkSelectedTemplate.variables.length > 0">
+              <label class="label">{{ $t('admin.sms.recipientVariables') }} ({{ bulkForm.recipients.length }})</label>
+              <div class="space-y-2 max-h-48 overflow-y-auto">
+                <div v-for="(recipient, idx) in bulkForm.recipients" :key="recipient.customerId"
+                  class="p-2.5 bg-gray-50 rounded-lg">
+                  <div class="flex items-center gap-2 mb-1.5">
+                    <span class="text-xs font-medium text-gray-400">{{ idx + 1 }}.</span>
+                    <span class="font-medium text-sm text-gray-900">{{ recipient.customerName }}</span>
+                    <span class="text-xs font-mono text-gray-500">{{ recipient.phone }}</span>
                   </div>
-                  <div v-if="bulkSelectedTemplate.variables.length > 0"
-                    class="grid gap-2 pl-7"
+                  <div class="grid gap-2 pl-5"
                     :class="bulkSelectedTemplate.variables.length > 1 ? 'grid-cols-2' : 'grid-cols-1'">
                     <div v-for="v in bulkSelectedTemplate.variables" :key="v">
                       <label class="text-xs text-gray-500 font-mono">{{"{"}}{{ v }}{{"}"}}</label>
@@ -943,9 +999,6 @@ function formatDate(dateStr) {
                   </div>
                 </div>
               </div>
-            </div>
-            <div v-else class="text-center py-4 text-sm text-gray-400">
-              {{ $t('admin.sms.noRecipientsSelected') }}
             </div>
           </template>
 
