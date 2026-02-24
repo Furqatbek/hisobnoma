@@ -49,6 +49,13 @@ const recordsPagination = ref({
   totalElements: 0
 })
 const recordsTotal = ref(0)
+const showRecordForm = ref(false)
+const recordSaving = ref(false)
+const newRecord = ref({
+  category: '',
+  total_amount: '',
+  generated_notes: ''
+})
 
 // Salary GL entries state
 const salaryEntries = ref([])
@@ -141,6 +148,26 @@ async function fetchRecordsTotal() {
     recordsTotal.value = Number(data.total ?? data) || 0
   } catch (error) {
     console.error('Xarajat jami yuklashda xatolik:', error)
+  }
+}
+
+async function createRecord() {
+  if (!newRecord.value.total_amount || !newRecord.value.category) return
+  recordSaving.value = true
+  try {
+    await expenseRecordsApi.create({
+      category: newRecord.value.category,
+      total_amount: Number(newRecord.value.total_amount),
+      generated_notes: newRecord.value.generated_notes || null
+    })
+    newRecord.value = { category: '', total_amount: '', generated_notes: '' }
+    showRecordForm.value = false
+    fetchExpenseRecords()
+    fetchRecordsTotal()
+  } catch (error) {
+    console.error('Xarajat yaratishda xatolik:', error)
+  } finally {
+    recordSaving.value = false
   }
 }
 
@@ -376,6 +403,63 @@ function isOverdue(expense) {
 
     <!-- Expense Records Tab -->
     <template v-if="activeTab === 'records'">
+      <!-- Quick Add Form -->
+      <div class="card">
+        <div class="card-body">
+          <div v-if="!showRecordForm" class="flex justify-end">
+            <button @click="showRecordForm = true" class="btn-primary">
+              <PlusIcon class="h-5 w-5 mr-2" />
+              {{ $t('finance.expenses.addRecord') }}
+            </button>
+          </div>
+          <div v-else class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ $t('finance.expenses.recordCategory') }}</label>
+                <input
+                  v-model="newRecord.category"
+                  type="text"
+                  class="input"
+                  :placeholder="$t('finance.expenses.categoryPlaceholder')"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ $t('amount') }}</label>
+                <input
+                  v-model="newRecord.total_amount"
+                  type="number"
+                  class="input"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ $t('finance.expenses.recordNotes') }}</label>
+                <input
+                  v-model="newRecord.generated_notes"
+                  type="text"
+                  class="input"
+                  :placeholder="$t('finance.expenses.notesPlaceholder')"
+                />
+              </div>
+              <div class="flex items-end gap-2">
+                <button
+                  @click="createRecord"
+                  :disabled="recordSaving || !newRecord.category || !newRecord.total_amount"
+                  class="btn-primary"
+                >
+                  <CheckCircleIcon class="h-5 w-5 mr-1" />
+                  {{ $t('save') }}
+                </button>
+                <button @click="showRecordForm = false" class="btn-secondary">
+                  {{ $t('cancel') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <div v-if="recordsLoading" class="flex items-center justify-center h-64">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>

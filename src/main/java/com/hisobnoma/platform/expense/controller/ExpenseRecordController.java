@@ -7,6 +7,7 @@ import com.hisobnoma.platform.expense.repository.ExpenseRecordRepository;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -20,34 +21,31 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 /**
- * Public (non-secured) REST controller for accepting expense data from external services.
- * Expects X-Tenant-ID header or JWT for multi-tenancy.
+ * REST controller for expense records.
+ * Supports both authenticated (JWT) and external (X-Tenant-ID header) access.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/web/expenses")
 @RequiredArgsConstructor
 public class ExpenseRecordController {
+
+    private static final Long DEFAULT_TENANT_ID = 1L;
 
     private final ExpenseRecordRepository repository;
 
     @GetMapping
     public ResponseEntity<PageResponse<ExpenseRecord>> getExpenses(
             @PageableDefault(size = 20, sort = "createDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        Long tenantId = TenantContext.getCurrentTenant();
-        if (tenantId == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        Page<ExpenseRecord> page = repository.findAllByTenantId(tenantId, pageable);
+        Long tenantId = resolveTenantId();
+        Page<ExpenseRecord> page = repository.findByTenantIdOrTenantIdIsNull(tenantId, pageable);
         return ResponseEntity.ok(PageResponse.from(page));
     }
 
     @GetMapping("/summary/total")
     public ResponseEntity<Map<String, Object>> getTotal() {
-        Long tenantId = TenantContext.getCurrentTenant();
-        if (tenantId == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        BigDecimal total = repository.sumTotalByTenantId(tenantId);
+        Long tenantId = resolveTenantId();
+        BigDecimal total = repository.sumTotalByTenantIdOrNull(tenantId);
         return ResponseEntity.ok(Map.of("total", total));
     }
 
@@ -64,6 +62,8 @@ public class ExpenseRecordController {
             ));
         }
 
+        Long tenantId = resolveTenantId();
+
         ExpenseRecord record = ExpenseRecord.builder()
                 .createDate(createDate)
                 .category(request.getCategory() != null ? request.getCategory() : "Boshqa")
@@ -71,10 +71,11 @@ public class ExpenseRecordController {
                 .currency(request.getCurrency() != null ? request.getCurrency() : "UZS")
                 .generatedNotes(request.getGeneratedNotes())
                 .fullText(request.getFullText())
-                .tenantId(TenantContext.getCurrentTenant())
+                .tenantId(tenantId)
                 .build();
 
         ExpenseRecord saved = repository.save(record);
+        log.info("Created expense record id={} tenant={} amount={}", saved.getId(), tenantId, saved.getTotalAmount());
 
         return ResponseEntity.ok(Map.of(
                 "id", saved.getId(),
@@ -84,16 +85,25 @@ public class ExpenseRecordController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteExpense(@PathVariable Long id) {
-        Long tenantId = TenantContext.getCurrentTenant();
-        if (tenantId == null) {
-            return ResponseEntity.badRequest().build();
-        }
+        Long tenantId = resolveTenantId();
         repository.findById(id).ifPresent(record -> {
-            if (tenantId.equals(record.getTenantId())) {
+            if (tenantId.equals(record.getTenantId()) || record.getTenantId() == null) {
                 repository.delete(record);
             }
         });
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Resolves tenant ID from context, defaulting to 1 if not available.
+     */
+    private Long resolveTenantId() {
+        Long tenantId = TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            log.debug("No tenant in context, defaulting to tenant {}", DEFAULT_TENANT_ID);
+            return DEFAULT_TENANT_ID;
+        }
+        return tenantId;
     }
 
     private LocalDate parseDate(String dateStr) {

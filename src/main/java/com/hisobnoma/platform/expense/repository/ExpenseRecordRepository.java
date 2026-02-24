@@ -15,8 +15,14 @@ public interface ExpenseRecordRepository extends JpaRepository<ExpenseRecord, Lo
 
     Page<ExpenseRecord> findAllByTenantId(Long tenantId, Pageable pageable);
 
+    @Query("SELECT e FROM ExpenseRecord e WHERE e.tenantId = :tenantId OR e.tenantId IS NULL")
+    Page<ExpenseRecord> findByTenantIdOrTenantIdIsNull(@Param("tenantId") Long tenantId, Pageable pageable);
+
     Page<ExpenseRecord> findByTenantIdAndCategory(Long tenantId, String category, Pageable pageable);
 
     @Query("SELECT COALESCE(SUM(e.totalAmount), 0) FROM ExpenseRecord e WHERE e.tenantId = :tenantId")
     BigDecimal sumTotalByTenantId(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT COALESCE(SUM(e.totalAmount), 0) FROM ExpenseRecord e WHERE e.tenantId = :tenantId OR e.tenantId IS NULL")
+    BigDecimal sumTotalByTenantIdOrNull(@Param("tenantId") Long tenantId);
 }

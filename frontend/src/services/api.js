@@ -397,6 +397,7 @@ export const journalEntriesApi = {
 export const expenseRecordsApi = {
   getAll: (params) => api.get('/web/expenses', { params }),
   getTotal: () => api.get('/web/expenses/summary/total'),
+  create: (data) => api.post('/web/expenses', data),
   delete: (id) => api.delete(`/web/expenses/${id}`)
 }
 
