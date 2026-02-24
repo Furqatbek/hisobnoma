@@ -433,7 +433,11 @@
     "bulkSendError": "Оммавий SMS юборишда хатолик",
     "bulkResult": "Юборилди: {sent}, хатолик: {failed}, жами: {total}",
     "recipients": "Қабул қилувчилар",
-    "addRecipient": "Қўшиш"
+    "addRecipient": "Қўшиш",
+    "searchCustomer": "Мижоз қидириш",
+    "searchCustomerPlaceholder": "Мижоз исми, коди ёки телефони...",
+    "searching": "Қидирилмоқда",
+    "noRecipientsSelected": "Мижозларни қидириб танланг"
   },
   "auditLogs": {
     "title": "Аудит журнали",

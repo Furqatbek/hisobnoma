@@ -1,6 +1,6 @@
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { smsApi } from '@/services/api'
+import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue'
+import { smsApi, customersApi } from '@/services/api'
 import {
   ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
@@ -54,9 +54,16 @@ const sendResult = ref(null)
 
 // Bulk Send
 const showBulkModal = ref(false)
-const bulkForm = reactive({ templateId: null, recipients: [{ phone: '', variables: {} }] })
+const bulkForm = reactive({ templateId: null, recipients: [] })
 const bulkSending = ref(false)
 const bulkResult = ref(null)
+
+// Customer search
+const customerSearch = ref('')
+const customerResults = ref([])
+const customerSearching = ref(false)
+const showCustomerDropdown = ref(false)
+let searchDebounce = null
 
 const isConfigured = computed(() => settingsForm.enabled && (settingsForm.apiToken || hasExistingToken.value))
 const activeTemplates = computed(() => templates.value.filter(t => t.active))
@@ -266,6 +273,7 @@ const bulkSelectedTemplate = computed(() => templates.value.find(t => t.id === b
 
 const canBulkSend = computed(() => {
   if (!bulkForm.templateId || !bulkSelectedTemplate.value) return false
+  if (bulkForm.recipients.length === 0) return false
   for (const r of bulkForm.recipients) {
     if (!r.phone || !r.phone.trim()) return false
     for (const v of bulkSelectedTemplate.value.variables) {
@@ -277,36 +285,75 @@ const canBulkSend = computed(() => {
 
 function openBulkModal() {
   bulkForm.templateId = null
-  bulkForm.recipients = [{ phone: '', variables: {} }]
+  bulkForm.recipients = []
   bulkResult.value = null
+  customerSearch.value = ''
+  customerResults.value = []
   showBulkModal.value = true
 }
 
 watch(() => bulkForm.templateId, () => {
   for (const r of bulkForm.recipients) {
+    const old = { ...r.variables }
     r.variables = {}
     if (bulkSelectedTemplate.value) {
       for (const v of bulkSelectedTemplate.value.variables) {
-        r.variables[v] = ''
+        r.variables[v] = old[v] || ''
       }
     }
   }
 })
 
-function addRecipient() {
+function handleCustomerSearch() {
+  clearTimeout(searchDebounce)
+  showCustomerDropdown.value = true
+  if (!customerSearch.value || customerSearch.value.trim().length < 2) {
+    customerResults.value = []
+    return
+  }
+  searchDebounce = setTimeout(async () => {
+    customerSearching.value = true
+    try {
+      const res = await customersApi.search(customerSearch.value.trim())
+      const data = res.data?.data?.content || res.data?.data || res.data?.content || []
+      customerResults.value = (Array.isArray(data) ? data : []).filter(c => {
+        const phone = c.phone || c.mobilePhone
+        if (!phone) return false
+        return !bulkForm.recipients.some(r => r.customerId === c.id)
+      })
+    } catch (e) {
+      customerResults.value = []
+    } finally {
+      customerSearching.value = false
+    }
+  }, 300)
+}
+
+function selectCustomer(customer) {
+  const phone = customer.phone || customer.mobilePhone || ''
   const vars = {}
   if (bulkSelectedTemplate.value) {
     for (const v of bulkSelectedTemplate.value.variables) {
-      vars[v] = ''
+      if (v === 'name') vars[v] = customer.name || ''
+      else if (v === 'phone') vars[v] = phone
+      else if (v === 'code') vars[v] = customer.code || ''
+      else if (v === 'balance' || v === 'amount') vars[v] = customer.currentBalance ? String(customer.currentBalance) : ''
+      else vars[v] = ''
     }
   }
-  bulkForm.recipients.push({ phone: '', variables: vars })
+  bulkForm.recipients.push({
+    customerId: customer.id,
+    customerName: customer.name,
+    phone: phone.replace(/[^0-9]/g, ''),
+    variables: vars
+  })
+  customerSearch.value = ''
+  customerResults.value = []
+  showCustomerDropdown.value = false
 }
 
 function removeRecipient(idx) {
-  if (bulkForm.recipients.length > 1) {
-    bulkForm.recipients.splice(idx, 1)
-  }
+  bulkForm.recipients.splice(idx, 1)
 }
 
 async function handleBulkSend() {
@@ -317,7 +364,7 @@ async function handleBulkSend() {
   try {
     const res = await smsApi.sendBulk({
       templateId: bulkForm.templateId,
-      recipients: bulkForm.recipients
+      recipients: bulkForm.recipients.map(r => ({ phone: r.phone, variables: r.variables }))
     })
     bulkResult.value = res.data?.data || res.data
     if (bulkResult.value?.sent > 0) {
@@ -830,49 +877,75 @@ function formatDate(dateStr) {
             <p v-if="bulkSelectedTemplate" class="mt-1 text-xs text-gray-400">{{ bulkSelectedTemplate.template }}</p>
           </div>
 
-          <!-- Recipients -->
+          <!-- Customer Search -->
           <template v-if="bulkSelectedTemplate">
-            <div class="flex items-center justify-between">
-              <label class="label mb-0">{{ $t('admin.sms.recipients') }} ({{ bulkForm.recipients.length }})</label>
-              <button @click="addRecipient" class="text-sm text-primary-600 hover:text-primary-700 inline-flex items-center gap-1">
-                <PlusIcon class="h-3.5 w-3.5" />
-                {{ $t('admin.sms.addRecipient') }}
-              </button>
-            </div>
-
-            <div class="space-y-3">
-              <div v-for="(recipient, idx) in bulkForm.recipients" :key="idx"
-                class="p-3 bg-gray-50 rounded-lg space-y-2">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-medium text-gray-400 w-6">{{ idx + 1 }}</span>
-                  <input
-                    v-model="recipient.phone"
-                    type="text"
-                    class="input font-mono text-sm flex-1"
-                    placeholder="998901234567"
-                  />
+            <div>
+              <label class="label">{{ $t('admin.sms.searchCustomer') }}</label>
+              <div class="relative">
+                <input
+                  v-model="customerSearch"
+                  @input="handleCustomerSearch"
+                  @focus="showCustomerDropdown = true"
+                  type="text"
+                  class="input"
+                  :placeholder="$t('admin.sms.searchCustomerPlaceholder')"
+                />
+                <!-- Dropdown -->
+                <div v-if="showCustomerDropdown && (customerResults.length > 0 || customerSearching)"
+                  class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div v-if="customerSearching" class="px-4 py-3 text-sm text-gray-500 text-center">
+                    {{ $t('admin.sms.searching') }}...
+                  </div>
                   <button
-                    v-if="bulkForm.recipients.length > 1"
-                    @click="removeRecipient(idx)"
-                    class="p-1 text-gray-400 hover:text-red-500"
+                    v-for="c in customerResults"
+                    :key="c.id"
+                    @click="selectCustomer(c)"
+                    class="w-full px-4 py-2 text-left hover:bg-primary-50 flex items-center justify-between gap-3 text-sm"
                   >
-                    <XMarkIcon class="h-4 w-4" />
+                    <div class="min-w-0">
+                      <span class="font-medium text-gray-900">{{ c.name }}</span>
+                      <span class="text-gray-400 ml-1.5 text-xs">{{ c.code }}</span>
+                    </div>
+                    <span class="text-gray-500 font-mono text-xs whitespace-nowrap">{{ c.phone || c.mobilePhone || '-' }}</span>
                   </button>
                 </div>
-                <div v-if="bulkSelectedTemplate.variables.length > 0"
-                  class="grid gap-2 pl-8"
-                  :class="bulkSelectedTemplate.variables.length > 1 ? 'grid-cols-2' : 'grid-cols-1'">
-                  <div v-for="v in bulkSelectedTemplate.variables" :key="v">
-                    <label class="text-xs text-gray-500 font-mono">{{"{"}}{{ v }}{{"}"}}</label>
-                    <input
-                      v-model="recipient.variables[v]"
-                      type="text"
-                      class="input text-sm"
-                      :placeholder="v"
-                    />
+              </div>
+            </div>
+
+            <!-- Selected recipients -->
+            <div v-if="bulkForm.recipients.length > 0">
+              <label class="label">{{ $t('admin.sms.recipients') }} ({{ bulkForm.recipients.length }})</label>
+              <div class="space-y-3">
+                <div v-for="(recipient, idx) in bulkForm.recipients" :key="recipient.customerId || idx"
+                  class="p-3 bg-gray-50 rounded-lg space-y-2">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="text-xs font-medium text-gray-400 w-5">{{ idx + 1 }}</span>
+                      <span class="font-medium text-sm text-gray-900 truncate">{{ recipient.customerName }}</span>
+                      <span class="text-xs font-mono text-gray-500">{{ recipient.phone }}</span>
+                    </div>
+                    <button @click="removeRecipient(idx)" class="p-1 text-gray-400 hover:text-red-500 flex-shrink-0">
+                      <XMarkIcon class="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div v-if="bulkSelectedTemplate.variables.length > 0"
+                    class="grid gap-2 pl-7"
+                    :class="bulkSelectedTemplate.variables.length > 1 ? 'grid-cols-2' : 'grid-cols-1'">
+                    <div v-for="v in bulkSelectedTemplate.variables" :key="v">
+                      <label class="text-xs text-gray-500 font-mono">{{"{"}}{{ v }}{{"}"}}</label>
+                      <input
+                        v-model="recipient.variables[v]"
+                        type="text"
+                        class="input text-sm"
+                        :placeholder="v"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+            <div v-else class="text-center py-4 text-sm text-gray-400">
+              {{ $t('admin.sms.noRecipientsSelected') }}
             </div>
           </template>
 
