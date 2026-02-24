@@ -1,8 +1,8 @@
 -- SMS module permissions
-INSERT INTO permissions (code, name, description, module, created_at, updated_at)
+INSERT INTO permissions (name, code, description, module, action)
 VALUES
-    ('SMS_SEND', 'SMS yuborish', 'SMS xabar yuborish', 'SMS', NOW(), NOW()),
-    ('SMS_VIEW', 'SMS ko''rish', 'SMS tarix va balansni ko''rish', 'SMS', NOW(), NOW())
+    ('SMS yuborish', 'SMS_SEND', 'SMS xabar yuborish', 'SMS', 'CREATE'),
+    ('SMS ko''rish', 'SMS_VIEW', 'SMS tarix va balansni ko''rish', 'SMS', 'READ')
 ON CONFLICT (code) DO NOTHING;
 
 -- Grant SMS permissions to ADMIN and SUPER_ADMIN roles
