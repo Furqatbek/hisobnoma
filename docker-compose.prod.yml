@@ -200,46 +200,6 @@ services:
           cpus: '0.5'
           memory: 256M
 
-  # ==================== Alertmanager ====================
-  alertmanager:
-    image: prom/alertmanager:latest
-    container_name: hisobnoma-alertmanager
-    restart: unless-stopped
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-    volumes:
-      - ./docker/alertmanager:/etc/alertmanager:ro
-      - alertmanager_data:/alertmanager
-    networks:
-      - hisobnoma-network
-
-  # ==================== Loki (Log Aggregation) ====================
-  loki:
-    image: grafana/loki:latest
-    container_name: hisobnoma-loki
-    restart: unless-stopped
-    command: -config.file=/etc/loki/loki-config.yml
-    volumes:
-      - ./docker/loki:/etc/loki:ro
-      - loki_data:/loki
-    networks:
-      - hisobnoma-network
-
-  # ==================== Promtail (Log Collector) ====================
-  promtail:
-    image: grafana/promtail:latest
-    container_name: hisobnoma-promtail
-    restart: unless-stopped
-    volumes:
-      - ./docker/promtail:/etc/promtail:ro
-      - app_logs:/var/log/app:ro
-      - nginx_logs:/var/log/nginx:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    command: -config.file=/etc/promtail/promtail-config.yml
-    networks:
-      - hisobnoma-network
-
 # ==================== Volumes ====================
 volumes:
   postgres_data:
@@ -258,12 +218,8 @@ volumes:
     name: hisobnoma_prometheus_data
   grafana_data:
     name: hisobnoma_grafana_data
-  alertmanager_data:
-    name: hisobnoma_alertmanager_data
   uploads_data:
     name: hisobnoma_uploads_data
-  loki_data:
-    name: hisobnoma_loki_data
 
 # ==================== Networks ====================
 networks:
