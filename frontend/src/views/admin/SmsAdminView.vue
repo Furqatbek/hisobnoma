@@ -14,7 +14,8 @@ import {
   PlusIcon,
   PencilSquareIcon,
   TrashIcon,
-  UsersIcon
+  UsersIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -271,19 +272,35 @@ async function handleSend() {
 
 const bulkSelectedTemplate = computed(() => templates.value.find(t => t.id === bulkForm.templateId))
 
-const canBulkSend = computed(() => {
-  if (!bulkForm.templateId || !bulkSelectedTemplate.value) return false
-  if (bulkForm.recipients.length === 0) return false
-  for (const r of bulkForm.recipients) {
-    if (!r.phone || !r.phone.trim()) return false
-    for (const v of bulkSelectedTemplate.value.variables) {
-      const val = r.variables[v]
-      // Allow "0" as a valid value (e.g. for balance/amount)
-      if (val == null || String(val).trim() === '') return false
+const bulkSendErrors = computed(() => {
+  const errors = []
+  if (!bulkForm.templateId || !bulkSelectedTemplate.value) {
+    errors.push(t('admin.sms.bulkErrNoTemplate'))
+    return errors
+  }
+  if (bulkForm.recipients.length === 0) {
+    errors.push(t('admin.sms.bulkErrNoRecipients'))
+    return errors
+  }
+  const noPhone = bulkForm.recipients.filter(r => !r.phone || !r.phone.trim())
+  if (noPhone.length > 0) {
+    errors.push(t('admin.sms.bulkErrNoPhone', { names: noPhone.map(r => r.customerName).join(', ') }))
+  }
+  if (bulkSelectedTemplate.value.variables.length > 0) {
+    const missingVars = bulkForm.recipients.filter(r => {
+      return bulkSelectedTemplate.value.variables.some(v => {
+        const val = r.variables[v]
+        return val == null || String(val).trim() === ''
+      })
+    })
+    if (missingVars.length > 0) {
+      errors.push(t('admin.sms.bulkErrMissingVars', { names: missingVars.map(r => r.customerName).join(', ') }))
     }
   }
-  return true
+  return errors
 })
+
+const canBulkSend = computed(() => bulkSendErrors.value.length === 0)
 
 async function openBulkModal() {
   bulkForm.templateId = null
@@ -1023,6 +1040,15 @@ function formatDate(dateStr) {
             </p>
             <ul v-if="bulkResult.errors && bulkResult.errors.length > 0" class="mt-2 text-xs text-red-600 space-y-1">
               <li v-for="(err, i) in bulkResult.errors" :key="i">{{ err }}</li>
+            </ul>
+          </div>
+
+          <div v-if="!canBulkSend && bulkSendErrors.length > 0" class="p-3 rounded-lg bg-amber-50 border border-amber-200">
+            <ul class="text-sm text-amber-700 space-y-1">
+              <li v-for="(err, i) in bulkSendErrors" :key="i" class="flex items-start gap-1.5">
+                <ExclamationTriangleIcon class="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{{ err }}</span>
+              </li>
             </ul>
           </div>
 
