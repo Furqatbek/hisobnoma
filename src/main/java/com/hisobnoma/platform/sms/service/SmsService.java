@@ -2,6 +2,7 @@ package com.hisobnoma.platform.sms.service;
 
 import com.hisobnoma.platform.admin.entity.SystemSetting;
 import com.hisobnoma.platform.admin.repository.SystemSettingRepository;
+import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.sms.config.SmsProperties;
 import com.hisobnoma.platform.sms.dto.SmsBulkSendRequest;
 import jakarta.annotation.PostConstruct;
@@ -20,6 +21,8 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class SmsService {
+
+    private static final double SMS_COST_UZS = 200.0;
 
     private final DevSmsClient smsClient;
     private final SmsProperties smsProperties;
@@ -56,19 +59,24 @@ public class SmsService {
     }
 
     public Map<String, Object> sendSms(String phone, String message) {
+        checkBalance(1);
         return smsClient.sendSms(phone, message);
     }
 
     public Map<String, Object> sendSms(String phone, String message, String from) {
+        checkBalance(1);
         return smsClient.sendSms(phone, message, from);
     }
 
     @Async
     public void sendSmsAsync(String phone, String message) {
+        checkBalance(1);
         smsClient.sendSms(phone, message);
     }
 
     public Map<String, Object> sendBulk(Long templateId, List<SmsBulkSendRequest.Recipient> recipients, String from) {
+        checkBalance(recipients.size());
+
         int sent = 0;
         int failed = 0;
         List<String> errors = new ArrayList<>();
@@ -98,6 +106,25 @@ public class SmsService {
         }
         log.info("Bulk SMS: total={}, sent={}, failed={}", recipients.size(), sent, failed);
         return summary;
+    }
+
+    private void checkBalance(int smsCount) {
+        double requiredAmount = smsCount * SMS_COST_UZS;
+        double balance = smsClient.getBalanceAmount();
+
+        if (balance < 0) {
+            log.warn("Could not retrieve SMS balance, allowing send to proceed");
+            return;
+        }
+
+        if (balance < requiredAmount) {
+            log.warn("Insufficient SMS balance: have={} UZS, need={} UZS ({} SMS x {} UZS)",
+                    balance, requiredAmount, smsCount, (long) SMS_COST_UZS);
+            throw new BusinessException(
+                    String.format("SMS yuborish uchun balans yetarli emas. Joriy balans: %.0f UZS, kerakli summa: %.0f UZS (%d ta SMS x %.0f UZS)",
+                            balance, requiredAmount, smsCount, SMS_COST_UZS),
+                    "INSUFFICIENT_SMS_BALANCE");
+        }
     }
 
     public Map<String, Object> getHistory(int limit, int offset, String status) {

@@ -98,7 +98,7 @@ public class DevSmsClient {
     }
 
     /**
-     * Get current account balance.
+     * Get current account balance (raw API response).
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getBalance() {
@@ -113,6 +113,33 @@ public class DevSmsClient {
             log.error("Failed to get SMS balance: {}", e.getMessage());
             return Map.of("success", false, "error", e.getMessage());
         }
+    }
+
+    /**
+     * Get current account balance as a numeric value in UZS.
+     *
+     * @return balance in UZS, or -1 if balance could not be retrieved
+     */
+    @SuppressWarnings("unchecked")
+    public double getBalanceAmount() {
+        Map<String, Object> response = getBalance();
+        try {
+            Object data = response.get("data");
+            if (data instanceof Map) {
+                Object balance = ((Map<String, Object>) data).get("balance");
+                if (balance instanceof Number) {
+                    return ((Number) balance).doubleValue();
+                }
+            }
+            // Fallback: balance might be at the top level
+            Object balance = response.get("balance");
+            if (balance instanceof Number) {
+                return ((Number) balance).doubleValue();
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse SMS balance: {}", e.getMessage());
+        }
+        return -1;
     }
 
     /**
