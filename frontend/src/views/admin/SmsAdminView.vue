@@ -101,7 +101,8 @@ async function loadData() {
 async function loadBalance() {
   try {
     const res = await smsApi.getBalance()
-    balance.value = res.data?.data || res.data
+    const wrapper = res.data?.data || res.data
+    balance.value = wrapper?.data || wrapper
   } catch (e) {
     // Silently fail
   }
@@ -124,8 +125,9 @@ async function loadHistory() {
       offset: historyOffset.value,
       status: historyFilter.value || undefined
     })
-    const data = res.data?.data || res.data
-    history.value = data?.data || data?.history || []
+    const wrapper = res.data?.data || res.data
+    const inner = wrapper?.data || wrapper
+    history.value = inner?.history || inner?.data || []
   } catch (e) {
     // Silently fail
   } finally {
@@ -535,15 +537,15 @@ function formatDate(dateStr) {
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
                 <tr v-for="(item, idx) in history" :key="idx">
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{{ item.phone }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{{ item.phone_number || item.phone }}</td>
                   <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{{ item.message }}</td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <span :class="['px-2 py-1 text-xs font-medium rounded-full', getStatusColor(item.status)]">
                       {{ item.status }}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.total_cost ?? '-' }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(item.created_at) }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.total_cost ?? item.price ?? '-' }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(item.sent_at || item.created_at) }}</td>
                 </tr>
               </tbody>
             </table>
