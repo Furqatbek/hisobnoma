@@ -629,7 +629,11 @@ let barcodeTimeout = null
 
 async function handleKeydown(event) {
   // Ignore if focused on input
-  if (event.target.tagName === 'INPUT') return
+  if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return
+
+  // Ignore modifier keys and special keys — only accept single printable characters
+  if (event.ctrlKey || event.altKey || event.metaKey) return
+  if (event.key.length !== 1) return
 
   // Barcode scanners typically send characters quickly
   clearTimeout(barcodeTimeout)
