@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { expensesApi, suppliersApi, journalEntriesApi } from '@/services/api'
+import { expensesApi, expenseRecordsApi, suppliersApi, journalEntriesApi } from '@/services/api'
 import {
   PlusIcon,
   EyeIcon,
@@ -12,11 +12,13 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   XCircleIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  TrashIcon,
+  DocumentTextIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
-const activeTab = ref('invoices') // 'invoices' or 'salary'
+const activeTab = ref('records') // 'records', 'invoices' or 'salary'
 
 // AP Invoices state
 const expenses = ref([])
@@ -36,6 +38,17 @@ const pagination = ref({
 // Summary stats
 const totalPayable = ref(0)
 const overdueBalance = ref(0)
+
+// Expense Records state
+const expenseRecords = ref([])
+const recordsLoading = ref(false)
+const recordsPagination = ref({
+  page: 0,
+  size: 20,
+  totalPages: 0,
+  totalElements: 0
+})
+const recordsTotal = ref(0)
 
 // Salary GL entries state
 const salaryEntries = ref([])
@@ -103,6 +116,45 @@ async function fetchSummary() {
   }
 }
 
+async function fetchExpenseRecords() {
+  recordsLoading.value = true
+  try {
+    const response = await expenseRecordsApi.getAll({
+      page: recordsPagination.value.page,
+      size: recordsPagination.value.size
+    })
+    const data = response.data.data || response.data
+    expenseRecords.value = data.content || data || []
+    recordsPagination.value.totalPages = data.page?.totalPages || data.totalPages || 1
+    recordsPagination.value.totalElements = data.page?.totalElements || data.totalElements || expenseRecords.value.length
+  } catch (error) {
+    console.error('Xarajat yozuvlarini yuklashda xatolik:', error)
+  } finally {
+    recordsLoading.value = false
+  }
+}
+
+async function fetchRecordsTotal() {
+  try {
+    const response = await expenseRecordsApi.getTotal()
+    const data = response.data.data || response.data
+    recordsTotal.value = Number(data.total ?? data) || 0
+  } catch (error) {
+    console.error('Xarajat jami yuklashda xatolik:', error)
+  }
+}
+
+async function deleteRecord(record) {
+  if (!confirm(t('finance.expenses.confirmDelete'))) return
+  try {
+    await expenseRecordsApi.delete(record.id)
+    fetchExpenseRecords()
+    fetchRecordsTotal()
+  } catch (error) {
+    console.error('Xarajatni o\'chirishda xatolik:', error)
+  }
+}
+
 async function fetchSalaryEntries() {
   salaryLoading.value = true
   try {
@@ -146,6 +198,8 @@ onMounted(() => {
   fetchExpenses()
   fetchVendors()
   fetchSummary()
+  fetchExpenseRecords()
+  fetchRecordsTotal()
   fetchSalaryEntries()
 })
 
@@ -228,11 +282,24 @@ function isOverdue(expense) {
         <div class="card-body">
           <div class="flex items-center justify-between">
             <div>
+              <p class="text-sm text-gray-500">{{ $t('finance.expenses.recordsTotal') }}</p>
+              <p class="text-2xl font-bold text-primary-600">{{ formatCurrency(recordsTotal) }} {{ $t('sum') }}</p>
+            </div>
+            <div class="p-3 bg-primary-100 rounded-full">
+              <DocumentTextIcon class="h-6 w-6 text-primary-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="flex items-center justify-between">
+            <div>
               <p class="text-sm text-gray-500">{{ $t('finance.expenses.totalPayable') }}</p>
               <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(totalPayable) }} {{ $t('sum') }}</p>
             </div>
-            <div class="p-3 bg-primary-100 rounded-full">
-              <BanknotesIcon class="h-6 w-6 text-primary-600" />
+            <div class="p-3 bg-gray-100 rounded-full">
+              <BanknotesIcon class="h-6 w-6 text-gray-600" />
             </div>
           </div>
         </div>
@@ -263,24 +330,23 @@ function isOverdue(expense) {
           </div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-body">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-gray-500">{{ $t('finance.expenses.totalInvoices') }}</p>
-              <p class="text-2xl font-bold text-gray-900">{{ pagination.totalElements }}</p>
-            </div>
-            <div class="p-3 bg-gray-100 rounded-full">
-              <ClockIcon class="h-6 w-6 text-gray-600" />
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Tabs -->
     <div class="border-b border-gray-200">
       <nav class="flex space-x-8">
+        <button
+          @click="switchTab('records')"
+          :class="[
+            'py-4 px-1 border-b-2 font-medium text-sm',
+            activeTab === 'records'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ]"
+        >
+          <DocumentTextIcon class="h-5 w-5 inline mr-2" />
+          {{ $t('finance.expenses.recordsTab') }} ({{ recordsPagination.totalElements }})
+        </button>
         <button
           @click="switchTab('invoices')"
           :class="[
@@ -307,6 +373,80 @@ function isOverdue(expense) {
         </button>
       </nav>
     </div>
+
+    <!-- Expense Records Tab -->
+    <template v-if="activeTab === 'records'">
+      <div class="card">
+        <div v-if="recordsLoading" class="flex items-center justify-center h-64">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+
+        <div v-else-if="expenseRecords.length === 0" class="text-center py-12">
+          <DocumentTextIcon class="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <p class="text-gray-500">{{ $t('finance.expenses.noRecords') }}</p>
+          <p class="text-sm text-gray-400 mt-2">{{ $t('finance.expenses.noRecordsHint') }}</p>
+        </div>
+
+        <div v-else class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>{{ $t('date') }}</th>
+                <th>{{ $t('finance.expenses.recordCategory') }}</th>
+                <th class="text-right">{{ $t('amount') }}</th>
+                <th>{{ $t('finance.expenses.recordNotes') }}</th>
+                <th class="text-right">{{ $t('actions') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr v-for="record in expenseRecords" :key="record.id">
+                <td class="font-mono text-sm text-gray-500">{{ record.id }}</td>
+                <td class="text-sm">{{ formatDate(record.createDate) }}</td>
+                <td>
+                  <span class="badge badge-info">{{ record.category }}</span>
+                </td>
+                <td class="text-right font-medium">{{ formatCurrency(record.totalAmount) }} {{ record.currency || 'UZS' }}</td>
+                <td class="text-sm text-gray-500 max-w-xs truncate">{{ record.generatedNotes || '-' }}</td>
+                <td class="text-right">
+                  <button
+                    @click="deleteRecord(record)"
+                    class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 inline-flex"
+                    :title="$t('finance.expenses.deleteRecord')"
+                  >
+                    <TrashIcon class="h-5 w-5" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div v-if="recordsPagination.totalPages > 1" class="px-6 py-4 border-t border-gray-200">
+          <div class="flex items-center justify-between">
+            <button
+              @click="recordsPagination.page--; fetchExpenseRecords()"
+              :disabled="recordsPagination.page === 0"
+              class="btn-secondary"
+            >
+              {{ $t('previous') }}
+            </button>
+            <span class="text-sm text-gray-500">
+              {{ $t('page') }} {{ recordsPagination.page + 1 }} / {{ recordsPagination.totalPages }}
+              ({{ $t('total') }}: {{ recordsPagination.totalElements }})
+            </span>
+            <button
+              @click="recordsPagination.page++; fetchExpenseRecords()"
+              :disabled="recordsPagination.page >= recordsPagination.totalPages - 1"
+              class="btn-secondary"
+            >
+              {{ $t('next') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- AP Invoices Tab -->
     <template v-if="activeTab === 'invoices'">

@@ -85,7 +85,15 @@
     "accountingEntries": "Бухгалтерия ёзувлари",
     "account": "Ҳисоб",
     "debit": "Дебет",
-    "credit": "Кредит"
+    "credit": "Кредит",
+    "recordsTab": "Кундалик харажатлар",
+    "recordsTotal": "Кундалик харажатлар жами",
+    "noRecords": "Кундалик харажатлар топилмади",
+    "noRecordsHint": "Ташқи хизматлар орқали қўшилган харажатлар бу ерда кўринади",
+    "recordCategory": "Категория",
+    "recordNotes": "Изоҳ",
+    "deleteRecord": "Ўчириш",
+    "confirmDelete": "Бу харажатни ўчиришни тасдиқлайсизми?"
   },
   "expenseForm": {
     "newExpense": "Янги харажат",

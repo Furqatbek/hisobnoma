@@ -1,11 +1,16 @@
 package com.hisobnoma.platform.expense.controller;
 
+import com.hisobnoma.platform.common.dto.PageResponse;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.expense.entity.ExpenseRecord;
 import com.hisobnoma.platform.expense.repository.ExpenseRecordRepository;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,7 +21,7 @@ import java.util.Map;
 
 /**
  * Public (non-secured) REST controller for accepting expense data from external services.
- * Expects X-Tenant-ID header for multi-tenancy.
+ * Expects X-Tenant-ID header or JWT for multi-tenancy.
  */
 @RestController
 @RequestMapping("/api/v1/web/expenses")
@@ -24,6 +29,27 @@ import java.util.Map;
 public class ExpenseRecordController {
 
     private final ExpenseRecordRepository repository;
+
+    @GetMapping
+    public ResponseEntity<PageResponse<ExpenseRecord>> getExpenses(
+            @PageableDefault(size = 20, sort = "createDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        Long tenantId = TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        Page<ExpenseRecord> page = repository.findAllByTenantId(tenantId, pageable);
+        return ResponseEntity.ok(PageResponse.from(page));
+    }
+
+    @GetMapping("/summary/total")
+    public ResponseEntity<Map<String, Object>> getTotal() {
+        Long tenantId = TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        BigDecimal total = repository.sumTotalByTenantId(tenantId);
+        return ResponseEntity.ok(Map.of("total", total));
+    }
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> createExpense(@RequestBody ExpenseRequest request) {
@@ -54,6 +80,20 @@ public class ExpenseRecordController {
                 "id", saved.getId(),
                 "status", "created"
         ));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteExpense(@PathVariable Long id) {
+        Long tenantId = TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        repository.findById(id).ifPresent(record -> {
+            if (tenantId.equals(record.getTenantId())) {
+                repository.delete(record);
+            }
+        });
+        return ResponseEntity.noContent().build();
     }
 
     private LocalDate parseDate(String dateStr) {

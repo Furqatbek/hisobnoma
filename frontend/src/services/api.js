@@ -393,6 +393,13 @@ export const journalEntriesApi = {
   search: (q, params) => api.get('/finance/journal-entries/search', { params: { q, ...params } })
 }
 
+// Expense Records API - Backend: /api/v1/web/expenses
+export const expenseRecordsApi = {
+  getAll: (params) => api.get('/web/expenses', { params }),
+  getTotal: () => api.get('/web/expenses/summary/total'),
+  delete: (id) => api.delete(`/web/expenses/${id}`)
+}
+
 // AP Invoices (Expenses) API - Backend: /api/v1/ap/invoices
 export const expensesApi = {
   getAll: (params) => api.get('/ap/invoices', { params }),
