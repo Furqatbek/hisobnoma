@@ -22,6 +22,7 @@ const successMsg = ref('')
 // Settings
 const settingsForm = reactive({ enabled: false, apiToken: '', senderId: '4546' })
 const savingSettings = ref(false)
+const hasExistingToken = ref(false)
 
 // Balance
 const balance = ref(null)
@@ -39,7 +40,7 @@ const sendForm = reactive({ phone: '', message: '', from: '' })
 const sending = ref(false)
 const sendResult = ref(null)
 
-const isConfigured = computed(() => settingsForm.enabled && settingsForm.apiToken)
+const isConfigured = computed(() => settingsForm.enabled && (settingsForm.apiToken || hasExistingToken.value))
 
 onMounted(async () => {
   await loadData()
@@ -52,7 +53,8 @@ async function loadData() {
     const settingsRes = await smsApi.getSettings()
     const data = settingsRes.data?.data || settingsRes.data
     settingsForm.enabled = data.enabled || false
-    settingsForm.apiToken = data.apiToken || ''
+    settingsForm.apiToken = ''
+    hasExistingToken.value = !!(data.apiToken && data.apiToken.length > 0)
     settingsForm.senderId = data.senderId || '4546'
 
     if (data.configured) {
@@ -252,9 +254,11 @@ function formatDate(dateStr) {
                 v-model="settingsForm.apiToken"
                 type="text"
                 class="input font-mono text-sm"
-                :placeholder="$t('admin.sms.apiTokenPlaceholder')"
+                :placeholder="hasExistingToken ? '••••••••••••••••' : $t('admin.sms.apiTokenPlaceholder')"
               />
-              <p class="mt-1 text-xs text-gray-400">{{ $t('admin.sms.apiTokenHint') }}</p>
+              <p class="mt-1 text-xs text-gray-400">
+                {{ hasExistingToken ? $t('admin.sms.apiTokenExistingHint') : $t('admin.sms.apiTokenHint') }}
+              </p>
             </div>
             <div>
               <label class="label">{{ $t('admin.sms.senderId') }}</label>

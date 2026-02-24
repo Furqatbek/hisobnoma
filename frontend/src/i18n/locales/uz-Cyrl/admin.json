@@ -370,6 +370,7 @@
     "apiToken": "API токен",
     "apiTokenPlaceholder": "DevSMS.uz API токенингизни киритинг",
     "apiTokenHint": "DevSMS.uz шахсий кабинетдан олинган токен",
+    "apiTokenExistingHint": "Токен сақланган. Ўзгартириш учун янги токен киритинг",
     "senderId": "Юборувчи ID",
     "senderIdHint": "SMS юборувчи идентификатори (одатда 4546)",
     "sendSms": "SMS юбориш",

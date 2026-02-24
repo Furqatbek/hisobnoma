@@ -61,7 +61,7 @@ public class SmsService {
      */
     public void updateSettings(boolean enabled, String apiToken, String senderId) {
         smsProperties.setEnabled(enabled);
-        if (apiToken != null && !apiToken.isBlank()) {
+        if (apiToken != null && !apiToken.isBlank() && !apiToken.contains("****")) {
             smsProperties.setApiToken(apiToken);
         }
         if (senderId != null && !senderId.isBlank()) {
