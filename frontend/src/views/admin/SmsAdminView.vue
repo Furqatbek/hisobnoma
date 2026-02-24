@@ -277,7 +277,9 @@ const canBulkSend = computed(() => {
   for (const r of bulkForm.recipients) {
     if (!r.phone || !r.phone.trim()) return false
     for (const v of bulkSelectedTemplate.value.variables) {
-      if (!r.variables[v] || !r.variables[v].trim()) return false
+      const val = r.variables[v]
+      // Allow "0" as a valid value (e.g. for balance/amount)
+      if (val == null || String(val).trim() === '') return false
     }
   }
   return true
@@ -329,13 +331,25 @@ const filteredCustomers = computed(() => {
 const selectedCustomerIds = computed(() => new Set(bulkForm.recipients.map(r => r.customerId)))
 
 watch(() => bulkForm.templateId, () => {
+  if (!bulkSelectedTemplate.value) return
+  const allCustomers = [...customerList.value, ...debtorList.value]
   for (const r of bulkForm.recipients) {
     const old = { ...r.variables }
     r.variables = {}
-    if (bulkSelectedTemplate.value) {
-      for (const v of bulkSelectedTemplate.value.variables) {
-        r.variables[v] = old[v] || ''
-      }
+    // Find original customer data to auto-populate variables
+    const customer = allCustomers.find(c => (c.customerId || c.id) === r.customerId)
+    const name = customer ? (customer.customerName || customer.name || '') : (r.customerName || '')
+    const phone = r.phone || ''
+    const code = customer ? (customer.customerCode || customer.code || '') : ''
+    const balance = customer ? (customer.netBalance ?? customer.currentBalance) : null
+    for (const v of bulkSelectedTemplate.value.variables) {
+      if (old[v]) {
+        r.variables[v] = old[v]
+      } else if (v === 'name') r.variables[v] = name
+      else if (v === 'phone') r.variables[v] = phone
+      else if (v === 'code') r.variables[v] = code
+      else if (v === 'balance' || v === 'amount') r.variables[v] = balance != null ? String(balance) : ''
+      else r.variables[v] = ''
     }
   }
 })
@@ -357,7 +371,7 @@ function toggleCustomer(customer) {
       if (v === 'name') vars[v] = name
       else if (v === 'phone') vars[v] = phone
       else if (v === 'code') vars[v] = code
-      else if (v === 'balance' || v === 'amount') vars[v] = balance ? String(balance) : ''
+      else if (v === 'balance' || v === 'amount') vars[v] = balance != null ? String(balance) : ''
       else vars[v] = ''
     }
   }
