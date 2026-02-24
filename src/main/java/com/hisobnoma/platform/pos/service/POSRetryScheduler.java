@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.pos.service;
 
+import com.hisobnoma.platform.auth.security.UserPrincipal;
 import com.hisobnoma.platform.finance.dto.ARInvoiceDto;
 import com.hisobnoma.platform.finance.service.ARInvoiceService;
 import com.hisobnoma.platform.finance.service.GLIntegrationService;
@@ -10,6 +11,9 @@ import com.hisobnoma.platform.pos.repository.POSTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,7 +50,7 @@ public class POSRetryScheduler {
 
         for (POSTransaction transaction : failed) {
             try {
-                retryGlForTransaction(transaction);
+                runAsSystemUser(transaction.getTenantId(), () -> retryGlForTransaction(transaction));
                 success++;
             } catch (Exception e) {
                 errors++;
@@ -74,7 +78,7 @@ public class POSRetryScheduler {
 
         for (POSTransaction transaction : failed) {
             try {
-                retryArInvoiceForTransaction(transaction);
+                runAsSystemUser(transaction.getTenantId(), () -> retryArInvoiceForTransaction(transaction));
                 success++;
             } catch (Exception e) {
                 errors++;
@@ -113,5 +117,21 @@ public class POSRetryScheduler {
         transactionRepository.save(transaction);
         log.info("AR invoice retry succeeded for transaction {} -> invoice {}",
                 transaction.getTransactionNumber(), arInvoice.getInvoiceNumber());
+    }
+
+    private void runAsSystemUser(Long tenantId, Runnable action) {
+        var previous = SecurityContextHolder.getContext().getAuthentication();
+        try {
+            UserPrincipal systemPrincipal = new UserPrincipal(
+                    0L, "system", "", tenantId, true, true,
+                    List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+            );
+            SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken(systemPrincipal, null, systemPrincipal.getAuthorities())
+            );
+            action.run();
+        } finally {
+            SecurityContextHolder.getContext().setAuthentication(previous);
+        }
     }
 }
