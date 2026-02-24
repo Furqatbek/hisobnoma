@@ -91,6 +91,9 @@ async function handleSubmit() {
 
   try {
     const data = { ...form }
+    // Backend expects 'roleCodes', not 'roles'
+    data.roleCodes = data.roles
+    delete data.roles
     if (isEdit.value && !data.password) {
       delete data.password
     }

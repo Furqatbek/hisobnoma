@@ -123,6 +123,19 @@ public class UserService {
             user.setEnabled(request.getEnabled());
         }
 
+        // Handle role assignment if provided
+        if (request.getRoleCodes() != null) {
+            Long tenantId = securityContextHelper.getCurrentTenantId();
+            Set<Role> roles = new HashSet<>();
+            for (String roleCode : request.getRoleCodes()) {
+                Role role = roleRepository.findByCodeAndTenantId(roleCode, tenantId)
+                        .or(() -> roleRepository.findByCode(roleCode))
+                        .orElseThrow(() -> new NotFoundException("Role", "code", roleCode));
+                roles.add(role);
+            }
+            user.setRoles(roles);
+        }
+
         user = userRepository.save(user);
         log.info("Updated user: {}", user.getUsername());
 
