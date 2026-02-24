@@ -123,7 +123,7 @@ public interface POSTransactionRepository extends JpaRepository<POSTransaction, 
     @Query("SELECT DISTINCT t FROM POSTransaction t LEFT JOIN FETCH t.lines WHERE t.status = 'COMPLETED' AND t.glPosted = false ORDER BY t.completedAt ASC")
     List<POSTransaction> findAllCompletedWithoutGlPosting();
 
-    @Query("SELECT DISTINCT t FROM POSTransaction t LEFT JOIN FETCH t.payments LEFT JOIN FETCH t.lines WHERE t.status = 'COMPLETED' " +
+    @Query("SELECT DISTINCT t FROM POSTransaction t LEFT JOIN FETCH t.payments WHERE t.status = 'COMPLETED' " +
            "AND t.arInvoiceId IS NULL AND EXISTS (SELECT 1 FROM POSPayment p WHERE p.transaction = t AND p.paymentType = 'CREDIT' AND p.status = 'APPROVED') ORDER BY t.completedAt ASC")
     List<POSTransaction> findAllCompletedCreditWithoutArInvoice();
 
