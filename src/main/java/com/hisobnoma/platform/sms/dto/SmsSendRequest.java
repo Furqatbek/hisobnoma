@@ -11,7 +11,7 @@ import java.util.Map;
 public class SmsSendRequest {
 
     @NotBlank(message = "Телефон рақами киритилиши шарт")
-    @Pattern(regexp = "^998\\d{9}$", message = "Телефон рақами 998XXXXXXXXX форматида бўлиши керак")
+    @Pattern(regexp = "^\\+?998\\d{9}$", message = "Телефон рақами 998XXXXXXXXX ёки +998XXXXXXXXX форматида бўлиши керак")
     private String phone;
 
     @NotNull(message = "Шаблон танланиши шарт")

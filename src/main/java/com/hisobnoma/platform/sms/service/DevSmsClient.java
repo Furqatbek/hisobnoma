@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.sms.service;
 
 import com.hisobnoma.platform.sms.config.SmsProperties;
+import com.hisobnoma.platform.sms.util.PhoneUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
@@ -50,8 +51,11 @@ public class DevSmsClient {
             return Map.of("success", false, "error", "SMS not configured");
         }
         try {
+            String normalizedPhone = PhoneUtils.normalize(phone);
+            log.debug("Phone normalized: {} -> {}", phone, normalizedPhone);
+
             Map<String, Object> body = new HashMap<>();
-            body.put("phone", phone);
+            body.put("phone", normalizedPhone);
             body.put("message", message);
             body.put("from", from != null ? from : properties.getSenderId());
 
