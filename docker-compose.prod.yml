@@ -109,6 +109,27 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  # ==================== Frontend ====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: hisobnoma/frontend:${APP_VERSION:-latest}
+    container_name: hisobnoma-frontend
+    restart: unless-stopped
+    networks:
+      - hisobnoma-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # ==================== Nginx Reverse Proxy ====================
   nginx:
     image: nginx:alpine
@@ -116,6 +137,7 @@ services:
     restart: unless-stopped
     depends_on:
       - app
+      - frontend
     ports:
       - "80:80"
       - "443:443"
