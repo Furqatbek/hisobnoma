@@ -54,7 +54,7 @@ const recordSaving = ref(false)
 const newRecord = ref({
   category: '',
   total_amount: '',
-  generated_notes: ''
+  full_text: ''
 })
 
 // Salary GL entries state
@@ -158,9 +158,9 @@ async function createRecord() {
     await expenseRecordsApi.create({
       category: newRecord.value.category,
       total_amount: Number(newRecord.value.total_amount),
-      generated_notes: newRecord.value.generated_notes || null
+      full_text: newRecord.value.full_text || null
     })
-    newRecord.value = { category: '', total_amount: '', generated_notes: '' }
+    newRecord.value = { category: '', total_amount: '', full_text: '' }
     showRecordForm.value = false
     fetchExpenseRecords()
     fetchRecordsTotal()
@@ -434,12 +434,12 @@ function isOverdue(expense) {
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ $t('finance.expenses.recordNotes') }}</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ $t('finance.expenses.fullText') }}</label>
                 <input
-                  v-model="newRecord.generated_notes"
+                  v-model="newRecord.full_text"
                   type="text"
                   class="input"
-                  :placeholder="$t('finance.expenses.notesPlaceholder')"
+                  :placeholder="$t('finance.expenses.fullTextPlaceholder')"
                 />
               </div>
               <div class="flex items-end gap-2">
@@ -479,7 +479,7 @@ function isOverdue(expense) {
                 <th>{{ $t('date') }}</th>
                 <th>{{ $t('finance.expenses.recordCategory') }}</th>
                 <th class="text-right">{{ $t('amount') }}</th>
-                <th>{{ $t('finance.expenses.recordNotes') }}</th>
+                <th>{{ $t('finance.expenses.fullText') }}</th>
                 <th class="text-right">{{ $t('actions') }}</th>
               </tr>
             </thead>
@@ -491,7 +491,7 @@ function isOverdue(expense) {
                   <span class="badge badge-info">{{ record.category }}</span>
                 </td>
                 <td class="text-right font-medium">{{ formatCurrency(record.totalAmount) }} {{ record.currency || 'UZS' }}</td>
-                <td class="text-sm text-gray-500 max-w-xs truncate">{{ record.generatedNotes || '-' }}</td>
+                <td class="text-sm text-gray-500 max-w-xs truncate">{{ record.fullText || '-' }}</td>
                 <td class="text-right">
                   <button
                     @click="deleteRecord(record)"

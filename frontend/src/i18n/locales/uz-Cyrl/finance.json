@@ -95,6 +95,8 @@
     "categoryPlaceholder": "Масалан: Транспорт, Озиқ-овқат...",
     "notesPlaceholder": "Қўшимча маълумот...",
     "recordNotes": "Изоҳ",
+    "fullText": "Тўлиқ матн",
+    "fullTextPlaceholder": "Харажат тафсилоти...",
     "deleteRecord": "Ўчириш",
     "confirmDelete": "Бу харажатни ўчиришни тасдиқлайсизми?"
   },
