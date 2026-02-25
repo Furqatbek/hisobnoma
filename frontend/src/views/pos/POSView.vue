@@ -153,6 +153,12 @@ const change = computed(() => {
   return 0
 })
 
+// Whether the sale can be completed (existing splits + current form cover the total)
+const canCompleteSale = computed(() => {
+  const currentAmount = currentPayment.amount > 0 ? Math.min(currentPayment.amount, remainingAmount.value) : 0
+  return (totalPaid.value + currentAmount) >= total.value
+})
+
 // Check if debt sale requires customer
 const isDebtSale = computed(() => {
   return payments.value.some(p => p.method === 'CREDIT') || currentPayment.method === 'CREDIT'
@@ -1166,9 +1172,9 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Payment Method Selection -->
+          <!-- Payment Method Selection (always visible while there's remaining) -->
           <div v-if="remainingAmount > 0" class="space-y-4">
-            <p class="text-sm font-medium text-gray-700">{{ $t('pos.addPayment') }}:</p>
+            <p class="text-sm font-medium text-gray-700">{{ payments.length > 0 ? $t('pos.addNextPayment') : $t('pos.selectPaymentMethod') }}:</p>
 
             <div class="grid grid-cols-2 gap-3">
               <button
@@ -1219,14 +1225,15 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Add Split Payment Button -->
+            <!-- Add Split Payment Button (only useful when user wants to split — amount less than remaining) -->
             <button
+              v-if="currentPayment.amount > 0 && currentPayment.amount < remainingAmount"
               @click="addPaymentSplit"
-              :disabled="currentPayment.amount <= 0 || (currentPayment.method === 'CREDIT' && !cart.customerId)"
+              :disabled="currentPayment.method === 'CREDIT' && !cart.customerId"
               class="w-full py-2 border-2 border-primary-500 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
             >
               <PlusIcon class="h-5 w-5 inline mr-1" />
-              {{ $t('pos.addPayment') }}
+              {{ $t('pos.addSplit') }}
             </button>
           </div>
 
@@ -1237,7 +1244,7 @@ onMounted(() => {
             </button>
             <button
               @click="processPayment"
-              :disabled="totalPaid < total && remainingAmount > 0"
+              :disabled="!canCompleteSale || (currentPayment.method === 'CREDIT' && !cart.customerId)"
               class="btn-primary flex-1"
             >
               <CheckIcon class="h-5 w-5 mr-2" />
