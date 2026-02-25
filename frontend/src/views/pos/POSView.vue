@@ -503,6 +503,7 @@ async function processPayment() {
     return
   }
 
+  let transactionId = null
   try {
     // Create transaction
     const transactionData = {
@@ -522,7 +523,7 @@ async function processPayment() {
     }
 
     const txResponse = await posApi.createTransaction(transactionData)
-    const transactionId = txResponse.data.data?.id || txResponse.data.id
+    transactionId = txResponse.data.data?.id || txResponse.data.id
 
     // Apply transaction-level discount if set
     if (transactionDiscount.type && transactionDiscount.value > 0) {
@@ -561,6 +562,16 @@ async function processPayment() {
     alert(hasDebtPayment ? t('pos.saleCompletedWithDebt') : t('pos.saleComplete'))
   } catch (error) {
     console.error('Payment failed:', error)
+
+    // Auto-void the orphaned transaction so it doesn't block shift closure
+    if (transactionId) {
+      try {
+        await posApi.voidTransaction(transactionId, 'Auto-voided: payment processing failed')
+      } catch (voidError) {
+        console.error('Failed to auto-void transaction:', voidError)
+      }
+    }
+
     alert(t('pos.paymentFailed') + ': ' + (error.response?.data?.message || error.message))
   }
 }
