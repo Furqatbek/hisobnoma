@@ -1225,9 +1225,9 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Add Split Payment Button (only useful when user wants to split — amount less than remaining) -->
+            <!-- Add Split Payment Button -->
             <button
-              v-if="currentPayment.amount > 0 && currentPayment.amount < remainingAmount"
+              v-if="currentPayment.amount > 0"
               @click="addPaymentSplit"
               :disabled="currentPayment.method === 'CREDIT' && !cart.customerId"
               class="w-full py-2 border-2 border-primary-500 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
