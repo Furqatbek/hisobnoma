@@ -893,20 +893,21 @@ public class GLIntegrationService {
 
     /**
      * Posts a POS Transaction to the general ledger.
-     * This is a convenience method that extracts data from a POSTransaction object.
+     * Handles split payments correctly by debiting Cash for non-credit payments
+     * and Accounts Receivable for credit payments.
      *
      * @param transaction The POS transaction to post
      * @return The ID of the created journal entry
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Long postPOSTransaction(Object transaction) {
-        // Use reflection or duck typing to get transaction properties
-        // This allows us to avoid circular dependency with POS module
+        // Use reflection to get transaction properties (avoids circular dependency with POS module)
         try {
             java.lang.reflect.Method getId = transaction.getClass().getMethod("getId");
             java.lang.reflect.Method getTransactionNumber = transaction.getClass().getMethod("getTransactionNumber");
             java.lang.reflect.Method getTotalAmount = transaction.getClass().getMethod("getTotalAmount");
             java.lang.reflect.Method getLines = transaction.getClass().getMethod("getLines");
+            java.lang.reflect.Method getPayments = transaction.getClass().getMethod("getPayments");
 
             Long id = (Long) getId.invoke(transaction);
             String transactionNumber = (String) getTransactionNumber.invoke(transaction);
@@ -944,16 +945,78 @@ public class GLIntegrationService {
                 } catch (NoSuchMethodException ignored) {}
             }
 
-            JournalEntry entry = postSalesTransaction(
-                    id,
-                    transactionNumber,
-                    salesAmount,
-                    costAmount,
-                    discountAmount,
-                    "POS",
-                    "POS Sale: " + transactionNumber,
-                    LocalDate.now()
-            );
+            // Split payment amounts by type: cash-like vs credit (AR)
+            BigDecimal cashAmount = BigDecimal.ZERO;
+            BigDecimal creditAmount = BigDecimal.ZERO;
+
+            @SuppressWarnings("unchecked")
+            java.util.List<Object> payments = (java.util.List<Object>) getPayments.invoke(transaction);
+            for (Object payment : payments) {
+                java.lang.reflect.Method getStatus = payment.getClass().getMethod("getStatus");
+                Object status = getStatus.invoke(payment);
+                if (!"APPROVED".equals(status.toString())) continue;
+
+                java.lang.reflect.Method getAmount = payment.getClass().getMethod("getAmount");
+                BigDecimal paymentAmount = (BigDecimal) getAmount.invoke(payment);
+                if (paymentAmount == null || paymentAmount.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+                java.lang.reflect.Method getPaymentType = payment.getClass().getMethod("getPaymentType");
+                Object paymentType = getPaymentType.invoke(payment);
+
+                if ("CREDIT".equals(paymentType.toString())) {
+                    creditAmount = creditAmount.add(paymentAmount);
+                } else {
+                    cashAmount = cashAmount.add(paymentAmount);
+                }
+            }
+
+            // Handle overpayment (change) — cap cash at salesAmount minus credit
+            BigDecimal absSalesAmount = salesAmount.abs();
+            if (cashAmount.add(creditAmount).compareTo(absSalesAmount) > 0) {
+                cashAmount = absSalesAmount.subtract(creditAmount);
+            }
+
+            // Build journal entry lines
+            Long tenantId = securityContextHelper.getCurrentTenantId();
+            List<CreateJournalLineRequest> journalLines = new ArrayList<>();
+
+            // Debit Cash account for non-credit payments
+            if (cashAmount.compareTo(BigDecimal.ZERO) > 0) {
+                journalLines.add(createLine(CASH_ACCOUNT, cashAmount, null, "Cash/card payment for sale"));
+            }
+            // Debit AR account for credit payments
+            if (creditAmount.compareTo(BigDecimal.ZERO) > 0) {
+                journalLines.add(createLine(ACCOUNTS_RECEIVABLE, creditAmount, null, "Credit payment (accounts receivable)"));
+            }
+
+            // Credit Sales Revenue (gross if discount, net otherwise)
+            if (discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal grossRevenue = absSalesAmount.add(discountAmount);
+                journalLines.add(createLine(SALES_REVENUE_ACCOUNT, null, grossRevenue, "Sales revenue (gross)"));
+                journalLines.add(createLine(SALES_DISCOUNTS_ACCOUNT, discountAmount, null, "Sales discount given"));
+            } else {
+                journalLines.add(createLine(SALES_REVENUE_ACCOUNT, null, absSalesAmount, "Sales revenue"));
+            }
+
+            // COGS entry: Debit COGS, Credit Inventory
+            if (costAmount != null && costAmount.compareTo(BigDecimal.ZERO) > 0) {
+                journalLines.add(createLine(COGS_ACCOUNT, costAmount, null, "Cost of goods sold"));
+                journalLines.add(createLine(INVENTORY_ACCOUNT, null, costAmount, "Inventory reduction"));
+            }
+
+            CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
+                    .entryDate(LocalDate.now())
+                    .description("POS Sale: " + transactionNumber)
+                    .source(JournalSource.POS_SALE)
+                    .referenceType("SALE")
+                    .referenceId(id)
+                    .referenceNumber(transactionNumber)
+                    .lines(journalLines)
+                    .build();
+
+            log.info("Posting POS transaction to GL: {} - sales={} (cash={}, credit={}, discount={}, cogs={})",
+                    transactionNumber, salesAmount, cashAmount, creditAmount, discountAmount, costAmount);
+            JournalEntry entry = journalEntryService.createAndPostEntry(request, tenantId);
             return entry.getId();
         } catch (Exception e) {
             log.error("Failed to post POS transaction to GL: {}", e.getMessage());

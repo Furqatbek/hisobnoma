@@ -64,8 +64,9 @@ public class SalesReportService {
                 .map(t -> t.getDiscountAmount() != null ? t.getDiscountAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // Return transactions have negative totalAmount, so use abs() for the report metric
         BigDecimal returns = returnTransactions.stream()
-                .map(POSTransaction::getTotalAmount)
+                .map(t -> t.getTotalAmount().abs())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal netSales = grossSales.subtract(discounts).subtract(returns);

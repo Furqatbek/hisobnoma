@@ -472,13 +472,10 @@ public class ARInvoiceService {
         invoice.setLines(lines);
         invoice = arInvoiceRepository.save(invoice);
 
-        // Post to GL (non-critical - invoice is still valid without GL entry)
-        try {
-            glIntegrationService.postARInvoice(invoice);
-        } catch (Exception e) {
-            log.warn("Failed to post AR Invoice {} to GL: {}. Invoice created successfully, GL entry can be posted manually.",
-                    invoice.getInvoiceNumber(), e.getMessage());
-        }
+        // NOTE: Do NOT post AR invoice to GL here.
+        // The POS transaction GL entry (postPOSTransaction) already debits Accounts Receivable
+        // for the credit portion and credits Sales Revenue for the full amount.
+        // Posting the AR invoice to GL again would double-count revenue, COGS, and AR.
 
         // Update customer balance
         customerService.updateCustomerBalance(customer.getId(), creditAmount);
