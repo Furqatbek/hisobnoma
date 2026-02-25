@@ -79,6 +79,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: hisobnoma-frontend
+    depends_on:
+      - backend
     environment:
       # Points to backend service on the Docker network
       API_BACKEND_URL: http://backend:8080
