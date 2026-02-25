@@ -130,6 +130,9 @@ public interface POSTransactionRepository extends JpaRepository<POSTransaction, 
     @Query("SELECT COUNT(t) FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.shift.id = :shiftId AND t.status IN ('PENDING', 'HELD')")
     Long countUnresolvedByShiftId(@Param("shiftId") Long shiftId, @Param("tenantId") Long tenantId);
 
+    @Query("SELECT t FROM POSTransaction t WHERE t.tenantId = :tenantId AND t.shift.id = :shiftId AND t.status IN ('PENDING', 'HELD') ORDER BY t.createdAt DESC")
+    List<POSTransaction> findUnresolvedByShiftIdAndTenantId(@Param("shiftId") Long shiftId, @Param("tenantId") Long tenantId);
+
     // Mobile dashboard methods
     @Query("SELECT COALESCE(SUM(t.totalAmount), 0) FROM POSTransaction t WHERE t.tenantId = :tenantId " +
            "AND t.status = 'COMPLETED' AND t.transactionType = 'SALE' " +

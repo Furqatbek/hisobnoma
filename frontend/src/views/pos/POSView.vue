@@ -740,13 +740,9 @@ async function fetchUnresolvedTransactions() {
   if (!currentShift.value) return
   unresolvedLoading.value = true
   try {
-    const response = await posApi.getTransactions({
-      shiftId: currentShift.value.id,
-      status: 'PENDING,HELD',
-      size: 100
-    })
+    const response = await posApi.getUnresolved(currentShift.value.id)
     const data = response.data.data || response.data
-    unresolvedTransactions.value = data.content || []
+    unresolvedTransactions.value = Array.isArray(data) ? data : (data.content || [])
   } catch (e) {
     console.error('Failed to fetch unresolved transactions:', e)
   } finally {

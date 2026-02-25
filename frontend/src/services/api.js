@@ -227,6 +227,7 @@ export const posApi = {
   applyDiscount: (transactionId, data) => api.post(`/pos/transactions/${transactionId}/discount`, data),
   completeTransaction: (transactionId) => api.post(`/pos/transactions/${transactionId}/complete`),
   voidTransaction: (transactionId, reason) => api.post(`/pos/transactions/${transactionId}/void`, { reason }),
+  getUnresolved: (shiftId) => api.get(`/pos/transactions/shift/${shiftId}/unresolved`),
   getDailySummary: (date) => api.get('/pos/transactions/daily-summary', { params: { date } })
 }
 

@@ -104,6 +104,13 @@ public class POSTransactionService {
                 transactionRepository.findByShiftIdAndStatusAndTenantId(shiftId, TransactionStatus.HELD, tenantId));
     }
 
+    @Transactional(readOnly = true)
+    public List<POSTransactionDto> findUnresolvedTransactions(Long shiftId) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return transactionMapper.toDtoList(
+                transactionRepository.findUnresolvedByShiftIdAndTenantId(shiftId, tenantId));
+    }
+
     @Transactional
     public POSTransactionDto createTransaction(CreateTransactionRequest request) {
         Long tenantId = securityContextHelper.getCurrentTenantId();

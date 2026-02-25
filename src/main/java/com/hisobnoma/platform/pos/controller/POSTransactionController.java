@@ -71,6 +71,14 @@ public class POSTransactionController {
         return ResponseEntity.ok(ApiResponse.success(transactions));
     }
 
+    @GetMapping("/shift/{shiftId}/unresolved")
+    @RequiresPermission("POS_SALE_READ")
+    public ResponseEntity<ApiResponse<List<POSTransactionDto>>> getUnresolvedTransactions(
+            @PathVariable Long shiftId) {
+        List<POSTransactionDto> transactions = transactionService.findUnresolvedTransactions(shiftId);
+        return ResponseEntity.ok(ApiResponse.success(transactions));
+    }
+
     // ==================== Transaction Operations ====================
 
     @PostMapping
