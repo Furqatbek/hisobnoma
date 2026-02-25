@@ -80,6 +80,12 @@ public class ARPaymentController {
         return ResponseEntity.ok(arPaymentService.completePayment(id));
     }
 
+    @PostMapping("/pay")
+    @PreAuthorize("hasAuthority('FINANCE_AR_WRITE')")
+    public ResponseEntity<ARPaymentDto> createAndCompletePayment(@Valid @RequestBody CreateARPaymentRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(arPaymentService.createAndCompletePayment(request));
+    }
+
     @PostMapping("/{id}/allocations")
     @PreAuthorize("hasAuthority('FINANCE_AR_WRITE')")
     public ResponseEntity<ARPaymentDto> addAllocation(

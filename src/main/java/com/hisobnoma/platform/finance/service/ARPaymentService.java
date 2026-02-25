@@ -166,6 +166,17 @@ public class ARPaymentService {
         return arPaymentMapper.toDto(payment);
     }
 
+    /**
+     * Creates a payment and immediately completes it in a single transaction.
+     * This ensures atomicity — either the full operation succeeds (payment created,
+     * GL posted, invoices updated, customer balance adjusted) or nothing happens.
+     */
+    @Transactional
+    public ARPaymentDto createAndCompletePayment(CreateARPaymentRequest request) {
+        ARPaymentDto created = createPayment(request);
+        return completePayment(created.getId());
+    }
+
     @Transactional
     public ARPaymentDto addAllocation(Long paymentId, CreateARPaymentAllocationRequest request) {
         Long tenantId = securityContextHelper.getCurrentTenantId();

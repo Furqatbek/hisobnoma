@@ -267,6 +267,7 @@ export const arPaymentsApi = {
   getByStatus: (status, params) => api.get(`/finance/ar-payments/status/${status}`, { params }),
   getByDateRange: (startDate, endDate) => api.get('/finance/ar-payments/date-range', { params: { startDate, endDate } }),
   create: (data) => api.post('/finance/ar-payments', data),
+  createAndComplete: (data) => api.post('/finance/ar-payments/pay', data),
   complete: (id) => api.post(`/finance/ar-payments/${id}/complete`),
   cancel: (id, reason) => api.post(`/finance/ar-payments/${id}/cancel`, null, { params: { reason } })
 }

@@ -171,7 +171,8 @@ async function submitPayment() {
   paymentSubmitting.value = true
   paymentError.value = ''
   try {
-    const res = await arPaymentsApi.create({
+    // Single atomic call: creates payment, posts to GL, applies to invoice, updates customer balance
+    await arPaymentsApi.createAndComplete({
       customerId: selectedCustomer.value.customerId,
       paymentDate: paymentForm.date,
       paymentMethod: paymentForm.method,
@@ -182,11 +183,6 @@ async function submitPayment() {
         allocatedAmount: paymentForm.amount
       }]
     })
-
-    const paymentId = res.data?.data?.id || res.data?.id
-    if (paymentId) {
-      await arPaymentsApi.complete(paymentId)
-    }
 
     showPaymentModal.value = false
 
