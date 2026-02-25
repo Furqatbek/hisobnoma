@@ -1,0 +1,23 @@
+# Frontend-only compose
+# Usage:
+#   With backend in Docker:  docker compose -f docker-compose.frontend.yml up --build
+#   With backend on host:    API_BACKEND_URL=http://host.docker.internal:8080 docker compose -f docker-compose.frontend.yml up --build
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hisobnoma-frontend
+    environment:
+      # Default: backend running in Docker on the same network
+      # Override for host-native backend: http://host.docker.internal:8080
+      API_BACKEND_URL: ${API_BACKEND_URL:-http://host.docker.internal:8080}
+    ports:
+      - "3000:80"
+    networks:
+      - hisobnoma-network
+
+networks:
+  hisobnoma-network:
+    driver: bridge

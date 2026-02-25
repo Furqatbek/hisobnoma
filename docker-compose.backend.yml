@@ -1,12 +1,7 @@
-# Base infrastructure services (always needed)
-# Usage:
-#   All services:   docker compose up --build
-#   Backend only:   docker compose up postgres redis backend --build
-#   Frontend only:  docker compose up frontend --build
-#   Infra only:     docker compose up postgres redis
+# Backend-only compose (includes infra dependencies)
+# Usage: docker compose -f docker-compose.backend.yml up --build
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: hisobnoma-postgres
@@ -27,7 +22,6 @@ services:
     networks:
       - hisobnoma-network
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: hisobnoma-redis
@@ -43,7 +37,6 @@ services:
     networks:
       - hisobnoma-network
 
-  # Backend Application
   backend:
     build:
       context: .
@@ -70,20 +63,6 @@ services:
       - "8080:8080"
     volumes:
       - uploads_data:/app/uploads
-    networks:
-      - hisobnoma-network
-
-  # Frontend Application
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: hisobnoma-frontend
-    environment:
-      # Points to backend service on the Docker network
-      API_BACKEND_URL: http://backend:8080
-    ports:
-      - "3000:80"
     networks:
       - hisobnoma-network
 
