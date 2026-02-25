@@ -523,9 +523,11 @@ async function processPayment() {
     }
 
     const txResponse = await posApi.createTransaction(transactionData)
-    transactionId = txResponse.data.data?.id || txResponse.data.id
+    const txData = txResponse.data.data || txResponse.data
+    transactionId = txData.id
 
     // Apply transaction-level discount if set
+    let backendTotal = Number(txData.totalAmount) || 0
     if (transactionDiscount.type && transactionDiscount.value > 0) {
       const discountData = { reason: transactionDiscount.reason || undefined }
       if (transactionDiscount.type === 'percent') {
@@ -533,7 +535,27 @@ async function processPayment() {
       } else {
         discountData.amount = transactionDiscountAmount.value
       }
-      await posApi.applyDiscount(transactionId, discountData)
+      const discountResponse = await posApi.applyDiscount(transactionId, discountData)
+      const discountTxData = discountResponse.data.data || discountResponse.data
+      backendTotal = Number(discountTxData.totalAmount) || backendTotal
+    }
+
+    // Use the backend's authoritative totalAmount for payments.
+    // The frontend total may differ from the backend (e.g. per-product tax)
+    // so adjust the last payment to cover the exact backend balance.
+    const frontendTotal = payments.value.reduce((sum, p) => sum + p.amount, 0)
+    if (Math.abs(frontendTotal - backendTotal) > 0.001) {
+      // Scale all payments proportionally to match backend total
+      const ratio = backendTotal / frontendTotal
+      for (const p of payments.value) {
+        p.amount = Math.round(p.amount * ratio * 100) / 100
+      }
+      // Fix any rounding remainder on the last payment
+      const adjusted = payments.value.reduce((sum, p) => sum + p.amount, 0)
+      const diff = backendTotal - adjusted
+      if (payments.value.length > 0) {
+        payments.value[payments.value.length - 1].amount += diff
+      }
     }
 
     // Add all payments
