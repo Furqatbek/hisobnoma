@@ -54,6 +54,12 @@ public class CustomerController {
         return ResponseEntity.ok(customerService.searchCustomers(query, pageable));
     }
 
+    @GetMapping("/next-code")
+    @PreAuthorize("hasAuthority('FINANCE_AR_READ')")
+    public ResponseEntity<String> getNextCustomerCode() {
+        return ResponseEntity.ok(customerService.getNextCustomerCode());
+    }
+
     @PostMapping
     @PreAuthorize("hasAuthority('FINANCE_AR_WRITE')")
     public ResponseEntity<CustomerDto> createCustomer(@Valid @RequestBody CreateCustomerRequest request) {

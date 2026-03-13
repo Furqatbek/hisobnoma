@@ -238,6 +238,7 @@ export const customersApi = {
   create: (data) => api.post('/finance/customers', data),
   update: (id, data) => api.put(`/finance/customers/${id}`, data),
   delete: (id) => api.delete(`/finance/customers/${id}`),
+  getNextCode: () => api.get('/finance/customers/next-code'),
   search: (query) => api.get('/finance/customers/search', { params: { query } }),
   setCreditHold: (id, hold) => api.patch(`/finance/customers/${id}/credit-hold`, null, { params: { hold } }),
   updateCreditLimit: (id, creditLimit) => api.patch(`/finance/customers/${id}/credit-limit`, null, { params: { creditLimit } })

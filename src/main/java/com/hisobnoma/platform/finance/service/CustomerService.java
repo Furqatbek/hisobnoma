@@ -198,6 +198,15 @@ public class CustomerService {
         });
     }
 
+    /**
+     * Get the next auto-generated customer code for preview purposes.
+     */
+    @Transactional(readOnly = true)
+    public String getNextCustomerCode() {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return generateCustomerCode(tenantId);
+    }
+
     private String generateCustomerCode(Long tenantId) {
         Integer maxNumber = customerRepository.findMaxCustomerCodeNumber(tenantId);
         int nextNumber = (maxNumber != null ? maxNumber : 0) + 1;
