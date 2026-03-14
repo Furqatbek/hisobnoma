@@ -146,6 +146,16 @@ const routes = [
         name: 'customer-edit',
         component: () => import('@/views/customers/CustomerFormView.vue')
       },
+      {
+        path: 'customers/history',
+        name: 'customer-history',
+        component: () => import('@/views/customers/CustomerHistoryView.vue')
+      },
+      {
+        path: 'customers/history/:id',
+        name: 'customer-history-detail',
+        component: () => import('@/views/customers/CustomerHistoryView.vue')
+      },
       // Purchases
       {
         path: 'purchases',

@@ -73,9 +73,12 @@ const navigation = computed(() => [
   },
   {
     name: t('nav.customers'),
-    href: '/customers',
     icon: UsersIcon,
-    current: route.path.startsWith('/customers')
+    key: 'customers',
+    children: [
+      { name: t('nav.customerList'), href: '/customers', icon: UsersIcon },
+      { name: t('nav.customerHistory'), href: '/customers/history', icon: ClockIcon }
+    ]
   },
   {
     name: t('nav.purchases'),

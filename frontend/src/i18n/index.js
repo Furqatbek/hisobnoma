@@ -13,6 +13,7 @@ import hr from './locales/uz-Cyrl/hr.json'
 import finance from './locales/uz-Cyrl/finance.json'
 import reports from './locales/uz-Cyrl/reports.json'
 import enums from './locales/uz-Cyrl/enums.json'
+import customerHistory from './locales/uz-Cyrl/customerHistory.json'
 
 const i18n = createI18n({
   legacy: false,
@@ -33,7 +34,8 @@ const i18n = createI18n({
       hr,
       finance,
       reports,
-      enums
+      enums,
+      customerHistory
     }
   }
 })

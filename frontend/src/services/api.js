@@ -228,7 +228,8 @@ export const posApi = {
   completeTransaction: (transactionId) => api.post(`/pos/transactions/${transactionId}/complete`),
   voidTransaction: (transactionId, reason) => api.post(`/pos/transactions/${transactionId}/void`, { reason }),
   getUnresolved: (shiftId) => api.get(`/pos/transactions/shift/${shiftId}/unresolved`),
-  getDailySummary: (date) => api.get('/pos/transactions/daily-summary', { params: { date } })
+  getDailySummary: (date) => api.get('/pos/transactions/daily-summary', { params: { date } }),
+  getByCustomer: (customerId, params) => api.get(`/pos/transactions/customer/${customerId}`, { params })
 }
 
 // Customers API - Backend: /api/v1/finance/customers

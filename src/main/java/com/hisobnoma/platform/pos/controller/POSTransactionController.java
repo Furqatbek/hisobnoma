@@ -63,6 +63,15 @@ public class POSTransactionController {
         return ResponseEntity.ok(ApiResponse.success(transactions));
     }
 
+    @GetMapping("/customer/{customerId}")
+    @RequiresPermission("POS_SALE_READ")
+    public ResponseEntity<PageResponse<POSTransactionDto>> getByCustomer(
+            @PathVariable Long customerId,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<POSTransactionDto> page = transactionService.findByCustomer(customerId, pageable);
+        return ResponseEntity.ok(PageResponse.of(page));
+    }
+
     @GetMapping("/held")
     @RequiresPermission("POS_SALE_READ")
     public ResponseEntity<ApiResponse<List<POSTransactionDto>>> getHeldTransactions(

@@ -105,6 +105,13 @@ public class POSTransactionService {
     }
 
     @Transactional(readOnly = true)
+    public Page<POSTransactionDto> findByCustomer(Long customerId, Pageable pageable) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return transactionRepository.findByCustomerIdAndTenantId(customerId, tenantId, pageable)
+                .map(transactionMapper::toDtoWithoutDetails);
+    }
+
+    @Transactional(readOnly = true)
     public List<POSTransactionDto> findUnresolvedTransactions(Long shiftId) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         return transactionMapper.toDtoList(
