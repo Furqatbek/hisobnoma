@@ -288,7 +288,7 @@ onMounted(async () => {
                 <div class="flex items-center justify-between mt-0.5">
                   <span class="text-xs text-gray-400">{{ c.code }}</span>
                   <span v-if="c.currentBalance > 0" class="text-xs font-medium text-red-600">
-                    {{ formatCurrency(c.currentBalance) }} {{ t('common.sum') }}
+                    {{ formatCurrency(c.currentBalance) }} {{ t('sum') }}
                   </span>
                 </div>
               </button>
@@ -430,11 +430,11 @@ onMounted(async () => {
                     <thead>
                       <tr>
                         <th class="text-left">{{ t('customerHistory.invoiceNumber') }}</th>
-                        <th class="text-left">{{ t('common.date') }}</th>
-                        <th class="text-right">{{ t('common.total') }}</th>
+                        <th class="text-left">{{ t('date') }}</th>
+                        <th class="text-right">{{ t('total') }}</th>
                         <th class="text-right">{{ t('customerHistory.paid') }}</th>
-                        <th class="text-right">{{ t('common.balance') }}</th>
-                        <th class="text-center">{{ t('common.status') }}</th>
+                        <th class="text-right">{{ t('balance') }}</th>
+                        <th class="text-center">{{ t('status') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -473,10 +473,10 @@ onMounted(async () => {
                     <thead>
                       <tr>
                         <th class="text-left">{{ t('customerHistory.paymentNumber') }}</th>
-                        <th class="text-left">{{ t('common.date') }}</th>
+                        <th class="text-left">{{ t('date') }}</th>
                         <th class="text-left">{{ t('customerHistory.method') }}</th>
-                        <th class="text-right">{{ t('common.amount') }}</th>
-                        <th class="text-center">{{ t('common.status') }}</th>
+                        <th class="text-right">{{ t('amount') }}</th>
+                        <th class="text-center">{{ t('status') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -512,17 +512,17 @@ onMounted(async () => {
                     <thead>
                       <tr>
                         <th class="text-left">{{ t('customerHistory.txNumber') }}</th>
-                        <th class="text-left">{{ t('common.date') }}</th>
+                        <th class="text-left">{{ t('date') }}</th>
                         <th class="text-right">{{ t('customerHistory.items') }}</th>
-                        <th class="text-right">{{ t('common.total') }}</th>
-                        <th class="text-center">{{ t('common.status') }}</th>
+                        <th class="text-right">{{ t('total') }}</th>
+                        <th class="text-center">{{ t('status') }}</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr v-for="tx in transactions.slice(0, 5)" :key="tx.id" class="hover:bg-gray-50">
                         <td class="font-mono text-sm">{{ tx.transactionNumber }}</td>
                         <td class="text-sm">{{ formatDate(tx.createdAt) }}</td>
-                        <td class="text-right text-sm">{{ tx.itemCount }} {{ t('common.items') }}</td>
+                        <td class="text-right text-sm">{{ tx.itemCount }} {{ t('items') }}</td>
                         <td class="text-right text-sm font-medium">{{ formatCurrency(tx.totalAmount) }}</td>
                         <td class="text-center">
                           <span :class="['badge', getTxStatusClass(tx.status)]">
@@ -550,10 +550,10 @@ onMounted(async () => {
                         <th class="text-left">{{ t('customerHistory.invoiceNumber') }}</th>
                         <th class="text-left">{{ t('customerHistory.invoiceDate') }}</th>
                         <th class="text-left">{{ t('customerHistory.dueDate') }}</th>
-                        <th class="text-right">{{ t('common.total') }}</th>
+                        <th class="text-right">{{ t('total') }}</th>
                         <th class="text-right">{{ t('customerHistory.paid') }}</th>
-                        <th class="text-right">{{ t('common.balance') }}</th>
-                        <th class="text-center">{{ t('common.status') }}</th>
+                        <th class="text-right">{{ t('balance') }}</th>
+                        <th class="text-center">{{ t('status') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -607,9 +607,9 @@ onMounted(async () => {
                                 <thead>
                                   <tr class="text-gray-500 border-b">
                                     <th class="text-left py-1 font-medium">{{ t('customerHistory.product') }}</th>
-                                    <th class="text-right py-1 font-medium">{{ t('common.quantity') }}</th>
-                                    <th class="text-right py-1 font-medium">{{ t('common.price') }}</th>
-                                    <th class="text-right py-1 font-medium">{{ t('common.total') }}</th>
+                                    <th class="text-right py-1 font-medium">{{ t('quantity') }}</th>
+                                    <th class="text-right py-1 font-medium">{{ t('price') }}</th>
+                                    <th class="text-right py-1 font-medium">{{ t('total') }}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -631,11 +631,11 @@ onMounted(async () => {
                   <!-- Pagination -->
                   <div v-if="invoiceTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-200">
                     <button @click="loadInvoicePage(invoicePage - 1)" :disabled="invoicePage === 0" class="btn btn-secondary text-sm" :class="{ 'opacity-50': invoicePage === 0 }">
-                      {{ t('common.previous') }}
+                      {{ t('previous') }}
                     </button>
-                    <span class="text-sm text-gray-500">{{ t('common.page') }} {{ invoicePage + 1 }} {{ t('common.of') }} {{ invoiceTotalPages }}</span>
+                    <span class="text-sm text-gray-500">{{ t('page') }} {{ invoicePage + 1 }} {{ t('of') }} {{ invoiceTotalPages }}</span>
                     <button @click="loadInvoicePage(invoicePage + 1)" :disabled="invoicePage >= invoiceTotalPages - 1" class="btn btn-secondary text-sm" :class="{ 'opacity-50': invoicePage >= invoiceTotalPages - 1 }">
-                      {{ t('common.next') }}
+                      {{ t('next') }}
                     </button>
                   </div>
                 </div>
@@ -653,12 +653,12 @@ onMounted(async () => {
                     <thead>
                       <tr>
                         <th class="text-left">{{ t('customerHistory.paymentNumber') }}</th>
-                        <th class="text-left">{{ t('common.date') }}</th>
+                        <th class="text-left">{{ t('date') }}</th>
                         <th class="text-left">{{ t('customerHistory.method') }}</th>
-                        <th class="text-right">{{ t('common.amount') }}</th>
+                        <th class="text-right">{{ t('amount') }}</th>
                         <th class="text-right">{{ t('customerHistory.allocated') }}</th>
                         <th class="text-left">{{ t('customerHistory.reference') }}</th>
-                        <th class="text-center">{{ t('common.status') }}</th>
+                        <th class="text-center">{{ t('status') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -680,11 +680,11 @@ onMounted(async () => {
                   <!-- Pagination -->
                   <div v-if="paymentTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-200">
                     <button @click="loadPaymentPage(paymentPage - 1)" :disabled="paymentPage === 0" class="btn btn-secondary text-sm" :class="{ 'opacity-50': paymentPage === 0 }">
-                      {{ t('common.previous') }}
+                      {{ t('previous') }}
                     </button>
-                    <span class="text-sm text-gray-500">{{ t('common.page') }} {{ paymentPage + 1 }} {{ t('common.of') }} {{ paymentTotalPages }}</span>
+                    <span class="text-sm text-gray-500">{{ t('page') }} {{ paymentPage + 1 }} {{ t('of') }} {{ paymentTotalPages }}</span>
                     <button @click="loadPaymentPage(paymentPage + 1)" :disabled="paymentPage >= paymentTotalPages - 1" class="btn btn-secondary text-sm" :class="{ 'opacity-50': paymentPage >= paymentTotalPages - 1 }">
-                      {{ t('common.next') }}
+                      {{ t('next') }}
                     </button>
                   </div>
                 </div>
@@ -703,13 +703,13 @@ onMounted(async () => {
                       <tr>
                         <th></th>
                         <th class="text-left">{{ t('customerHistory.txNumber') }}</th>
-                        <th class="text-left">{{ t('common.date') }}</th>
+                        <th class="text-left">{{ t('date') }}</th>
                         <th class="text-left">{{ t('customerHistory.cashier') }}</th>
                         <th class="text-right">{{ t('customerHistory.items') }}</th>
                         <th class="text-right">{{ t('customerHistory.discount') }}</th>
-                        <th class="text-right">{{ t('common.total') }}</th>
+                        <th class="text-right">{{ t('total') }}</th>
                         <th class="text-right">{{ t('customerHistory.paid') }}</th>
-                        <th class="text-center">{{ t('common.status') }}</th>
+                        <th class="text-center">{{ t('status') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -746,9 +746,9 @@ onMounted(async () => {
                                     <thead>
                                       <tr class="text-gray-500 border-b">
                                         <th class="text-left py-1 font-medium">{{ t('customerHistory.product') }}</th>
-                                        <th class="text-right py-1 font-medium">{{ t('common.quantity') }}</th>
-                                        <th class="text-right py-1 font-medium">{{ t('common.price') }}</th>
-                                        <th class="text-right py-1 font-medium">{{ t('common.total') }}</th>
+                                        <th class="text-right py-1 font-medium">{{ t('quantity') }}</th>
+                                        <th class="text-right py-1 font-medium">{{ t('price') }}</th>
+                                        <th class="text-right py-1 font-medium">{{ t('total') }}</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -782,7 +782,7 @@ onMounted(async () => {
                                     <span>{{ tx.deliveryVillageName }}</span>
                                   </div>
                                   <div v-if="tx.notes" class="flex justify-between">
-                                    <span class="text-gray-500">{{ t('common.notes') }}:</span>
+                                    <span class="text-gray-500">{{ t('notes') }}:</span>
                                     <span>{{ tx.notes }}</span>
                                   </div>
                                 </div>
@@ -796,11 +796,11 @@ onMounted(async () => {
                   <!-- Pagination -->
                   <div v-if="txTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-200">
                     <button @click="loadTxPage(txPage - 1)" :disabled="txPage === 0" class="btn btn-secondary text-sm" :class="{ 'opacity-50': txPage === 0 }">
-                      {{ t('common.previous') }}
+                      {{ t('previous') }}
                     </button>
-                    <span class="text-sm text-gray-500">{{ t('common.page') }} {{ txPage + 1 }} {{ t('common.of') }} {{ txTotalPages }}</span>
+                    <span class="text-sm text-gray-500">{{ t('page') }} {{ txPage + 1 }} {{ t('of') }} {{ txTotalPages }}</span>
                     <button @click="loadTxPage(txPage + 1)" :disabled="txPage >= txTotalPages - 1" class="btn btn-secondary text-sm" :class="{ 'opacity-50': txPage >= txTotalPages - 1 }">
-                      {{ t('common.next') }}
+                      {{ t('next') }}
                     </button>
                   </div>
                 </div>

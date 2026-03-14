@@ -49,7 +49,7 @@ function formatDate(dateStr) {
 }
 
 function formatPeriod(year, month) {
-  return `${t('common.months.' + month)} ${year}`
+  return `${t('months.' + month)} ${year}`
 }
 
 // Fetch employees list
@@ -371,7 +371,7 @@ onMounted(async () => {
                         <th class="text-right">{{ t('employeeHistory.deduction') }}</th>
                         <th class="text-right">{{ t('employeeHistory.net') }}</th>
                         <th class="text-right">{{ t('employeeHistory.cashPaid') }}</th>
-                        <th class="text-center">{{ t('common.status') }}</th>
+                        <th class="text-center">{{ t('status') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -412,8 +412,8 @@ onMounted(async () => {
                       <tr>
                         <th class="text-left">{{ t('employeeHistory.period') }}</th>
                         <th class="text-left">{{ t('employeeHistory.advanceDate') }}</th>
-                        <th class="text-right">{{ t('common.amount') }}</th>
-                        <th class="text-center">{{ t('common.status') }}</th>
+                        <th class="text-right">{{ t('amount') }}</th>
+                        <th class="text-center">{{ t('status') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -451,7 +451,7 @@ onMounted(async () => {
                         <th class="text-right">{{ t('employeeHistory.net') }}</th>
                         <th class="text-right">{{ t('employeeHistory.advanceDeducted') }}</th>
                         <th class="text-right">{{ t('employeeHistory.cashPaid') }}</th>
-                        <th class="text-center">{{ t('common.status') }}</th>
+                        <th class="text-center">{{ t('status') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -567,10 +567,10 @@ onMounted(async () => {
                       <tr>
                         <th class="text-left">{{ t('employeeHistory.period') }}</th>
                         <th class="text-left">{{ t('employeeHistory.advanceDate') }}</th>
-                        <th class="text-right">{{ t('common.amount') }}</th>
-                        <th class="text-center">{{ t('common.status') }}</th>
+                        <th class="text-right">{{ t('amount') }}</th>
+                        <th class="text-center">{{ t('status') }}</th>
                         <th class="text-left">{{ t('employeeHistory.glEntry') }}</th>
-                        <th class="text-left">{{ t('common.notes') }}</th>
+                        <th class="text-left">{{ t('notes') }}</th>
                       </tr>
                     </thead>
                     <tbody>
