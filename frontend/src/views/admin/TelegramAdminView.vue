@@ -456,7 +456,7 @@ function formatDate(dateStr) {
                 <!-- Sales section toggle -->
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div class="flex items-center gap-3">
-                    <span class="text-lg">\uD83D\uDCB0</span>
+                    <span class="text-lg">💰</span>
                     <div>
                       <p class="font-medium text-gray-900 text-sm">{{ $t('admin.telegram.reportSales') }}</p>
                       <p class="text-xs text-gray-500">{{ $t('admin.telegram.reportSalesHint') }}</p>
@@ -481,7 +481,7 @@ function formatDate(dateStr) {
                 <!-- Inventory section toggle -->
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div class="flex items-center gap-3">
-                    <span class="text-lg">\uD83D\uDCE6</span>
+                    <span class="text-lg">📦</span>
                     <div>
                       <p class="font-medium text-gray-900 text-sm">{{ $t('admin.telegram.reportInventory') }}</p>
                       <p class="text-xs text-gray-500">{{ $t('admin.telegram.reportInventoryHint') }}</p>
@@ -506,7 +506,7 @@ function formatDate(dateStr) {
                 <!-- Finance section toggle -->
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div class="flex items-center gap-3">
-                    <span class="text-lg">\uD83C\uDFE6</span>
+                    <span class="text-lg">🏦</span>
                     <div>
                       <p class="font-medium text-gray-900 text-sm">{{ $t('admin.telegram.reportFinance') }}</p>
                       <p class="text-xs text-gray-500">{{ $t('admin.telegram.reportFinanceHint') }}</p>
