@@ -287,6 +287,16 @@ const routes = [
             path: 'salary',
             name: 'salary',
             component: () => import('@/views/hr/SalaryView.vue')
+          },
+          {
+            path: 'history',
+            name: 'employee-history',
+            component: () => import('@/views/hr/EmployeeHistoryView.vue')
+          },
+          {
+            path: 'history/:id',
+            name: 'employee-history-detail',
+            component: () => import('@/views/hr/EmployeeHistoryView.vue')
           }
         ]
       },

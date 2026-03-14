@@ -107,7 +107,8 @@ const navigation = computed(() => [
       { name: t('nav.employees'), href: '/hr/employees', icon: UserGroupIcon },
       { name: t('nav.departments'), href: '/hr/departments', icon: BuildingStorefrontIcon },
       { name: t('nav.positions'), href: '/hr/positions', icon: BriefcaseIcon },
-      { name: t('nav.salary'), href: '/hr/salary', icon: BanknotesIcon }
+      { name: t('nav.salary'), href: '/hr/salary', icon: BanknotesIcon },
+      { name: t('nav.employeeHistory'), href: '/hr/history', icon: ClockIcon }
     ]
   },
   {
