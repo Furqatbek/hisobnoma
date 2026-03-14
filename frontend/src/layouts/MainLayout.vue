@@ -86,7 +86,8 @@ const navigation = computed(() => [
     key: 'purchases',
     children: [
       { name: t('nav.suppliers'), href: '/purchases/suppliers', icon: UserGroupIcon },
-      { name: t('nav.purchaseOrders'), href: '/purchases/orders', icon: DocumentTextIcon }
+      { name: t('nav.purchaseOrders'), href: '/purchases/orders', icon: DocumentTextIcon },
+      { name: t('nav.supplierHistory'), href: '/purchases/history', icon: ClockIcon }
     ]
   },
   {

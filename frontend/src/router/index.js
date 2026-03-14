@@ -179,6 +179,16 @@ const routes = [
             path: 'orders/:id',
             name: 'purchase-order-detail',
             component: () => import('@/views/purchases/PurchaseOrderDetailView.vue')
+          },
+          {
+            path: 'history',
+            name: 'supplier-history',
+            component: () => import('@/views/purchases/SupplierHistoryView.vue')
+          },
+          {
+            path: 'history/:id',
+            name: 'supplier-history-detail',
+            component: () => import('@/views/purchases/SupplierHistoryView.vue')
           }
         ]
       },
