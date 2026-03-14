@@ -10,9 +10,11 @@ import com.hisobnoma.platform.auth.repository.UserRepository;
 import com.hisobnoma.platform.auth.security.JwtTokenProvider;
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.auth.security.UserPrincipal;
+import com.hisobnoma.platform.common.entity.Tenant;
 import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.exception.UnauthorizedException;
 import com.hisobnoma.platform.common.exception.ValidationException;
+import com.hisobnoma.platform.common.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +46,7 @@ public class AuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecurityContextHelper securityContextHelper;
+    private final TenantRepository tenantRepository;
 
     @Value("${app.security.max-login-attempts:5}")
     private int maxLoginAttempts;
@@ -333,7 +336,7 @@ public class AuthService {
                 .filter(auth -> !auth.startsWith("ROLE_"))
                 .collect(Collectors.toSet());
 
-        return AuthResponse.UserInfo.builder()
+        AuthResponse.UserInfo.UserInfoBuilder builder = AuthResponse.UserInfo.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .phone(user.getPhone())
@@ -341,8 +344,25 @@ public class AuthService {
                 .lastName(user.getLastName())
                 .fullName(user.getFullName())
                 .tenantId(user.getTenantId())
+                .phoneVerified(user.isPhoneVerified())
+                .enabled(user.isEnabled())
+                .lastLoginAt(user.getLastLoginAt())
+                .createdAt(user.getCreatedAt())
                 .roles(roles)
-                .permissions(permissions)
-                .build();
+                .permissions(permissions);
+
+        // Populate tenant/subscription info
+        if (user.getTenantId() != null) {
+            tenantRepository.findById(user.getTenantId()).ifPresent(tenant -> {
+                builder.tenantName(tenant.getName())
+                        .tenantCode(tenant.getCode())
+                        .subscriptionExpiresAt(tenant.getSubscriptionExpiresAt())
+                        .maxUsers(tenant.getMaxUsers())
+                        .maxLocations(tenant.getMaxLocations())
+                        .tenantActive(tenant.isActive());
+            });
+        }
+
+        return builder.build();
     }
 }
