@@ -51,6 +51,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByTelegramChatId(Long telegramChatId);
 
+    List<User> findAllByTelegramChatId(Long telegramChatId);
+
     @Query("SELECT u FROM User u WHERE u.telegramChatId IS NOT NULL AND u.tenantId = :tenantId")
     List<User> findUsersWithTelegramByTenantId(@Param("tenantId") Long tenantId);
 

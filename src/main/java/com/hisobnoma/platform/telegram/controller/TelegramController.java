@@ -57,7 +57,7 @@ public class TelegramController {
     }
 
     /**
-     * Unlink Telegram from the authenticated user's account.
+     * Unlink Telegram from the authenticated user's account only.
      */
     @DeleteMapping("/unlink")
     public ResponseEntity<Map<String, String>> unlink() {

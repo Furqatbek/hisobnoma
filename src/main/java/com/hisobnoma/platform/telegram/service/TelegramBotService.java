@@ -120,6 +120,8 @@ public class TelegramBotService {
                 2. "Kod olish" tugmasini bosing
                 3. Olingan 6 raqamli kodni shu yerga yuboring
 
+                Bir nechta akkauntni bitta chatga ulash mumkin!
+
                 Buyruqlar: /help /status /unlink""";
         telegramApi.sendMessage(chatId, msg);
     }
@@ -139,16 +141,18 @@ public class TelegramBotService {
 
     @Transactional(readOnly = true)
     public void handleStatus(Long chatId) {
-        var user = userRepository.findByTelegramChatId(chatId);
-        if (user.isPresent()) {
-            String msg = String.format("""
-                    <b>Ulangan akkaunt:</b> %s
-                    <b>Username:</b> %s
-                    <b>Ulangan sana:</b> %s""",
-                    user.get().getFullName(),
-                    user.get().getUsername(),
-                    user.get().getTelegramLinkedAt() != null ? user.get().getTelegramLinkedAt().toString().substring(0, 10) : "-");
-            telegramApi.sendMessage(chatId, msg);
+        var users = userRepository.findAllByTelegramChatId(chatId);
+        if (!users.isEmpty()) {
+            StringBuilder msg = new StringBuilder("<b>Ulangan akkauntlar:</b>\n");
+            for (int i = 0; i < users.size(); i++) {
+                var user = users.get(i);
+                msg.append(String.format("\n%d. <b>%s</b> (%s) — %s",
+                        i + 1,
+                        user.getFullName(),
+                        user.getUsername(),
+                        user.getTelegramLinkedAt() != null ? user.getTelegramLinkedAt().toString().substring(0, 10) : "-"));
+            }
+            telegramApi.sendMessage(chatId, msg.toString());
         } else {
             telegramApi.sendMessage(chatId, "Bu chat hech qanday akkauntga ulanmagan. /start ni bosing.");
         }
@@ -156,13 +160,15 @@ public class TelegramBotService {
 
     @Transactional
     public void handleUnlink(Long chatId) {
-        var userOpt = userRepository.findByTelegramChatId(chatId);
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            user.setTelegramChatId(null);
-            user.setTelegramLinkedAt(null);
-            userRepository.save(user);
-            telegramApi.sendMessage(chatId, "Akkaunt muvaffaqiyatli uzildi.");
+        var users = userRepository.findAllByTelegramChatId(chatId);
+        if (!users.isEmpty()) {
+            for (User user : users) {
+                user.setTelegramChatId(null);
+                user.setTelegramLinkedAt(null);
+                userRepository.save(user);
+            }
+            telegramApi.sendMessage(chatId,
+                    String.format("%d ta akkaunt muvaffaqiyatli uzildi.", users.size()));
         } else {
             telegramApi.sendMessage(chatId, "Bu chat hech qanday akkauntga ulanmagan.");
         }
@@ -177,14 +183,6 @@ public class TelegramBotService {
             return;
         }
 
-        // Check if this chat is already linked to another account
-        var existingUser = userRepository.findByTelegramChatId(chatId);
-        if (existingUser.isPresent() && !existingUser.get().getId().equals(request.userId())) {
-            telegramApi.sendMessage(chatId,
-                    "Bu chat boshqa akkauntga ulangan. Avval /unlink buyrug'ini yuboring.");
-            return;
-        }
-
         var userOpt = userRepository.findById(request.userId());
         if (userOpt.isEmpty()) {
             telegramApi.sendMessage(chatId, "Foydalanuvchi topilmadi.");
@@ -193,14 +191,27 @@ public class TelegramBotService {
         }
 
         User user = userOpt.get();
+
+        // Check if this user is already linked to this chat
+        if (chatId.equals(user.getTelegramChatId())) {
+            telegramApi.sendMessage(chatId,
+                    String.format("Bu akkaunt allaqachon ulangan: <b>%s</b>", user.getFullName()));
+            pendingLinks.remove(code);
+            return;
+        }
+
         user.setTelegramChatId(chatId);
         user.setTelegramLinkedAt(Instant.now());
         userRepository.save(user);
         pendingLinks.remove(code);
 
-        telegramApi.sendMessage(chatId,
-                String.format("Muvaffaqiyatli ulandi! Akkaunt: <b>%s</b>", user.getFullName()));
-        log.info("Telegram linked: userId={}, chatId={}", user.getId(), chatId);
+        int linkedCount = userRepository.findAllByTelegramChatId(chatId).size();
+        String msg = String.format("Muvaffaqiyatli ulandi! Akkaunt: <b>%s</b>", user.getFullName());
+        if (linkedCount > 1) {
+            msg += String.format("\n\nBu chatga jami <b>%d</b> ta akkaunt ulangan.", linkedCount);
+        }
+        telegramApi.sendMessage(chatId, msg);
+        log.info("Telegram linked: userId={}, chatId={}, totalLinked={}", user.getId(), chatId, linkedCount);
     }
 
     /**
