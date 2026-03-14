@@ -69,6 +69,10 @@ const selectedVillageId = ref(null)
 const showPaymentModal = ref(false)
 const showCustomerModal = ref(false)
 
+// Price editing state
+const editingPriceKey = ref(null)
+const editingPriceValue = ref('')
+
 // Split payment support - array of payments
 const payments = ref([])
 const currentPayment = reactive({
@@ -301,6 +305,23 @@ function removeFromCart(item) {
   if (index > -1) {
     cart.items.splice(index, 1)
   }
+}
+
+function startEditPrice(item) {
+  editingPriceKey.value = item._uomKey
+  editingPriceValue.value = String(item.price)
+}
+
+function saveEditPrice(item) {
+  const newPrice = parseFloat(editingPriceValue.value)
+  if (!isNaN(newPrice) && newPrice >= 0) {
+    item.price = newPrice
+  }
+  editingPriceKey.value = null
+}
+
+function cancelEditPrice() {
+  editingPriceKey.value = null
 }
 
 function selectCustomer(customer) {
@@ -1020,7 +1041,28 @@ onMounted(() => {
                 <div class="flex-1 min-w-0">
                   <p class="font-medium text-gray-900 truncate text-sm">{{ item.name }}</p>
                   <div class="flex items-center gap-1.5">
-                    <span class="text-xs text-gray-400">{{ formatCurrency(item.price) }} x {{ item.quantity }}</span>
+                    <span v-if="editingPriceKey !== item._uomKey" class="text-xs text-gray-400">
+                      <span
+                        class="cursor-pointer hover:text-primary-600 hover:underline"
+                        @click="startEditPrice(item)"
+                        :title="$t('pos.clickToEditPrice', 'Narxni o\'zgartirish')"
+                      >{{ formatCurrency(item.price) }}</span> x {{ item.quantity }}
+                    </span>
+                    <span v-else class="flex items-center gap-1">
+                      <input
+                        type="number"
+                        v-model="editingPriceValue"
+                        @keyup.enter="saveEditPrice(item)"
+                        @keyup.escape="cancelEditPrice()"
+                        @blur="saveEditPrice(item)"
+                        class="w-24 text-xs border border-primary-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        min="0"
+                        step="any"
+                        ref="priceInput"
+                        autofocus
+                      />
+                      <span class="text-xs text-gray-400">x {{ item.quantity }}</span>
+                    </span>
                     <span v-if="item.uomName" class="inline-flex items-center gap-0.5 text-xs px-1 py-0.5 rounded bg-blue-50 text-blue-700">
                       <ScaleIcon class="h-3 w-3" />
                       {{ item.uomName }}
