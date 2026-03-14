@@ -502,7 +502,9 @@ export const telegramApi = {
   getConnectedUsers: () => api.get('/telegram/admin/users'),
   sendMessage: (data) => api.post('/telegram/admin/send', data),
   broadcast: (data) => api.post('/telegram/admin/broadcast', data),
-  adminUnlinkUser: (userId) => api.delete(`/telegram/admin/users/${userId}/unlink`)
+  adminUnlinkUser: (userId) => api.delete(`/telegram/admin/users/${userId}/unlink`),
+  getDailyReportSettings: () => api.get('/telegram/admin/daily-report'),
+  saveDailyReportSettings: (data) => api.post('/telegram/admin/daily-report', data)
 }
 
 // SMS API - Backend: /api/v1/sms

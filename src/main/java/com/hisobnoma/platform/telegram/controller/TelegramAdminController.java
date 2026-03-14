@@ -248,6 +248,62 @@ public class TelegramAdminController {
         }
     }
 
+    // ======================= Daily Report Settings =======================
+
+    private static final String SETTING_REPORT_ENABLED = "telegram.daily_report.enabled";
+    private static final String SETTING_REPORT_TIME = "telegram.daily_report.time";
+    private static final String SETTING_REPORT_SALES = "telegram.daily_report.sales";
+    private static final String SETTING_REPORT_INVENTORY = "telegram.daily_report.inventory";
+    private static final String SETTING_REPORT_FINANCE = "telegram.daily_report.finance";
+
+    /**
+     * Get daily report settings.
+     */
+    @GetMapping("/daily-report")
+    @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
+    public ResponseEntity<Map<String, Object>> getDailyReportSettings() {
+        Map<String, Object> settings = new HashMap<>();
+        settings.put("enabled", getBoolSetting(SETTING_REPORT_ENABLED, true));
+        settings.put("time", getStrSetting(SETTING_REPORT_TIME, "20:00"));
+        settings.put("salesEnabled", getBoolSetting(SETTING_REPORT_SALES, true));
+        settings.put("inventoryEnabled", getBoolSetting(SETTING_REPORT_INVENTORY, true));
+        settings.put("financeEnabled", getBoolSetting(SETTING_REPORT_FINANCE, true));
+        return ResponseEntity.ok(settings);
+    }
+
+    /**
+     * Save daily report settings.
+     */
+    @PostMapping("/daily-report")
+    @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
+    public ResponseEntity<Map<String, String>> saveDailyReportSettings(@RequestBody DailyReportSettingsRequest request) {
+        tenantSettingService.updateSettings(Map.of(
+                SETTING_REPORT_ENABLED, String.valueOf(request.isEnabled()),
+                SETTING_REPORT_TIME, request.getTime() != null ? request.getTime() : "20:00",
+                SETTING_REPORT_SALES, String.valueOf(request.isSalesEnabled()),
+                SETTING_REPORT_INVENTORY, String.valueOf(request.isInventoryEnabled()),
+                SETTING_REPORT_FINANCE, String.valueOf(request.isFinanceEnabled())
+        ));
+        return ResponseEntity.ok(Map.of("status", "saved"));
+    }
+
+    private boolean getBoolSetting(String key, boolean defaultValue) {
+        try {
+            String val = tenantSettingService.getSettingValue(key, String.valueOf(defaultValue));
+            return "true".equalsIgnoreCase(val);
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    private String getStrSetting(String key, String defaultValue) {
+        try {
+            return tenantSettingService.getSettingValue(key, defaultValue);
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
     // ======================= Request DTOs =======================
 
     @Data
@@ -272,5 +328,14 @@ public class TelegramAdminController {
         private String title;
         @NotBlank
         private String message;
+    }
+
+    @Data
+    public static class DailyReportSettingsRequest {
+        private boolean enabled;
+        private String time;
+        private boolean salesEnabled;
+        private boolean inventoryEnabled;
+        private boolean financeEnabled;
     }
 }

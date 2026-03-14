@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { telegramApi } from '@/services/api'
-import { PaperAirplaneIcon, UserGroupIcon, SignalIcon, XMarkIcon, Cog6ToothIcon, CheckCircleIcon, LinkIcon } from '@heroicons/vue/24/outline'
+import { PaperAirplaneIcon, UserGroupIcon, SignalIcon, XMarkIcon, Cog6ToothIcon, CheckCircleIcon, LinkIcon, DocumentChartBarIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -34,10 +34,21 @@ const sendTarget = ref(null)
 const sendForm = reactive({ title: '', message: '' })
 const sending = ref(false)
 
+// Daily report settings
+const reportForm = reactive({
+  enabled: true,
+  time: '20:00',
+  salesEnabled: true,
+  inventoryEnabled: true,
+  financeEnabled: true
+})
+const savingReport = ref(false)
+const reportLoaded = ref(false)
+
 const botConnected = computed(() => botInfo.value && botInfo.value.botName)
 
 onMounted(async () => {
-  await Promise.all([loadData(), loadMyTelegramStatus()])
+  await Promise.all([loadData(), loadMyTelegramStatus(), loadDailyReportSettings()])
 })
 
 async function loadMyTelegramStatus() {
@@ -181,6 +192,41 @@ async function unlinkUser(user) {
     successMsg.value = t('admin.telegram.userUnlinked', { name: user.fullName })
   } catch (e) {
     error.value = e.response?.data?.message || t('admin.telegram.unlinkError')
+  }
+}
+
+async function loadDailyReportSettings() {
+  try {
+    const res = await telegramApi.getDailyReportSettings()
+    reportForm.enabled = res.data.enabled
+    reportForm.time = res.data.time || '20:00'
+    reportForm.salesEnabled = res.data.salesEnabled
+    reportForm.inventoryEnabled = res.data.inventoryEnabled
+    reportForm.financeEnabled = res.data.financeEnabled
+    reportLoaded.value = true
+  } catch (e) {
+    // Use defaults
+    reportLoaded.value = true
+  }
+}
+
+async function saveDailyReportSettings() {
+  savingReport.value = true
+  error.value = ''
+  successMsg.value = ''
+  try {
+    await telegramApi.saveDailyReportSettings({
+      enabled: reportForm.enabled,
+      time: reportForm.time,
+      salesEnabled: reportForm.salesEnabled,
+      inventoryEnabled: reportForm.inventoryEnabled,
+      financeEnabled: reportForm.financeEnabled
+    })
+    successMsg.value = t('admin.telegram.reportSettingsSaved')
+  } catch (e) {
+    error.value = e.response?.data?.message || t('admin.telegram.saveError')
+  } finally {
+    savingReport.value = false
   }
 }
 
@@ -357,6 +403,142 @@ function formatDate(dateStr) {
               class="btn-primary"
             >
               {{ myTelegram.generatingCode ? $t('admin.telegram.generating') : (myTelegram.linkCode ? $t('admin.telegram.getNewCode') : $t('admin.telegram.getCode')) }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daily Report Settings -->
+      <div class="card">
+        <div class="card-header flex items-center gap-2">
+          <DocumentChartBarIcon class="h-5 w-5 text-gray-500" />
+          <h3 class="text-lg font-medium">{{ $t('admin.telegram.dailyReport') }}</h3>
+        </div>
+        <div class="card-body space-y-4">
+          <!-- Enable daily report toggle -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-gray-900">{{ $t('admin.telegram.enableDailyReport') }}</p>
+              <p class="text-sm text-gray-500">{{ $t('admin.telegram.enableDailyReportHint') }}</p>
+            </div>
+            <button
+              @click="reportForm.enabled = !reportForm.enabled"
+              :class="[
+                'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                reportForm.enabled ? 'bg-primary-600' : 'bg-gray-200'
+              ]"
+            >
+              <span
+                :class="[
+                  'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                  reportForm.enabled ? 'translate-x-5' : 'translate-x-0'
+                ]"
+              />
+            </button>
+          </div>
+
+          <template v-if="reportForm.enabled">
+            <!-- Report time -->
+            <div>
+              <label class="label">{{ $t('admin.telegram.reportTime') }}</label>
+              <input
+                v-model="reportForm.time"
+                type="time"
+                class="input w-40"
+              />
+              <p class="mt-1 text-xs text-gray-400">{{ $t('admin.telegram.reportTimeHint') }}</p>
+            </div>
+
+            <!-- Report sections -->
+            <div>
+              <p class="font-medium text-gray-900 mb-3">{{ $t('admin.telegram.reportSections') }}</p>
+              <div class="space-y-3">
+                <!-- Sales section toggle -->
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div class="flex items-center gap-3">
+                    <span class="text-lg">\uD83D\uDCB0</span>
+                    <div>
+                      <p class="font-medium text-gray-900 text-sm">{{ $t('admin.telegram.reportSales') }}</p>
+                      <p class="text-xs text-gray-500">{{ $t('admin.telegram.reportSalesHint') }}</p>
+                    </div>
+                  </div>
+                  <button
+                    @click="reportForm.salesEnabled = !reportForm.salesEnabled"
+                    :class="[
+                      'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                      reportForm.salesEnabled ? 'bg-primary-600' : 'bg-gray-200'
+                    ]"
+                  >
+                    <span
+                      :class="[
+                        'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                        reportForm.salesEnabled ? 'translate-x-5' : 'translate-x-0'
+                      ]"
+                    />
+                  </button>
+                </div>
+
+                <!-- Inventory section toggle -->
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div class="flex items-center gap-3">
+                    <span class="text-lg">\uD83D\uDCE6</span>
+                    <div>
+                      <p class="font-medium text-gray-900 text-sm">{{ $t('admin.telegram.reportInventory') }}</p>
+                      <p class="text-xs text-gray-500">{{ $t('admin.telegram.reportInventoryHint') }}</p>
+                    </div>
+                  </div>
+                  <button
+                    @click="reportForm.inventoryEnabled = !reportForm.inventoryEnabled"
+                    :class="[
+                      'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                      reportForm.inventoryEnabled ? 'bg-primary-600' : 'bg-gray-200'
+                    ]"
+                  >
+                    <span
+                      :class="[
+                        'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                        reportForm.inventoryEnabled ? 'translate-x-5' : 'translate-x-0'
+                      ]"
+                    />
+                  </button>
+                </div>
+
+                <!-- Finance section toggle -->
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div class="flex items-center gap-3">
+                    <span class="text-lg">\uD83C\uDFE6</span>
+                    <div>
+                      <p class="font-medium text-gray-900 text-sm">{{ $t('admin.telegram.reportFinance') }}</p>
+                      <p class="text-xs text-gray-500">{{ $t('admin.telegram.reportFinanceHint') }}</p>
+                    </div>
+                  </div>
+                  <button
+                    @click="reportForm.financeEnabled = !reportForm.financeEnabled"
+                    :class="[
+                      'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                      reportForm.financeEnabled ? 'bg-primary-600' : 'bg-gray-200'
+                    ]"
+                  >
+                    <span
+                      :class="[
+                        'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                        reportForm.financeEnabled ? 'translate-x-5' : 'translate-x-0'
+                      ]"
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div class="flex justify-end">
+            <button
+              @click="saveDailyReportSettings"
+              :disabled="savingReport"
+              class="btn-primary inline-flex items-center gap-2"
+            >
+              <CheckCircleIcon class="h-4 w-4" />
+              {{ savingReport ? $t('saving') : $t('save') }}
             </button>
           </div>
         </div>
