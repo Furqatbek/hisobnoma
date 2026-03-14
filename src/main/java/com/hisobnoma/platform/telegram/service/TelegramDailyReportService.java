@@ -13,6 +13,7 @@ import com.hisobnoma.platform.inventory.repository.StockRepository;
 import com.hisobnoma.platform.pos.repository.POSTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,8 +26,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * Sends daily business reports via Telegram to all connected users.
- * Runs every minute to check if it's time to send for each tenant (configurable time).
+ * Sends daily business reports via Telegram to connected users.
+ * Supports three trigger modes:
+ * - FIXED_TIME: send at a configured time each day
+ * - SHIFT_CLOSE: send when a POS shift is closed
+ * - BOTH: send on both triggers (deduplicates per day for fixed time)
  */
 @Slf4j
 @Service
@@ -47,20 +51,21 @@ public class TelegramDailyReportService {
     private static final List<ARInvoiceStatus> AR_EXCLUDED = List.of(ARInvoiceStatus.CANCELLED, ARInvoiceStatus.PAID);
     private static final List<APInvoiceStatus> AP_EXCLUDED = List.of(APInvoiceStatus.CANCELLED, APInvoiceStatus.PAID);
 
-    private static final String SETTING_REPORT_ENABLED = "telegram.daily_report.enabled";
-    private static final String SETTING_REPORT_TIME = "telegram.daily_report.time";
-    private static final String SETTING_REPORT_SALES = "telegram.daily_report.sales";
-    private static final String SETTING_REPORT_INVENTORY = "telegram.daily_report.inventory";
-    private static final String SETTING_REPORT_FINANCE = "telegram.daily_report.finance";
+    static final String SETTING_REPORT_ENABLED = "telegram.daily_report.enabled";
+    static final String SETTING_REPORT_TRIGGER = "telegram.daily_report.trigger";
+    static final String SETTING_REPORT_TIME = "telegram.daily_report.time";
+    static final String SETTING_REPORT_SALES = "telegram.daily_report.sales";
+    static final String SETTING_REPORT_INVENTORY = "telegram.daily_report.inventory";
+    static final String SETTING_REPORT_FINANCE = "telegram.daily_report.finance";
 
-    /**
-     * Track which tenants have already received their report today to avoid duplicates.
-     */
-    private final Map<Long, LocalDate> lastSentDate = new HashMap<>();
+    /** Track which tenants already received their fixed-time report today. */
+    private final Map<Long, LocalDate> lastFixedTimeSentDate = new HashMap<>();
+
+    // ===================== Scheduled (fixed time) trigger =====================
 
     @Scheduled(cron = "0 * * * * *") // every minute
     @Transactional(readOnly = true)
-    public void sendDailyReports() {
+    public void sendScheduledReports() {
         if (!telegramApi.isConfigured()) return;
 
         LocalTime now = LocalTime.now().withSecond(0).withNano(0);
@@ -71,20 +76,48 @@ public class TelegramDailyReportService {
 
                 if (!getReportBoolSetting(tenantId, SETTING_REPORT_ENABLED, true)) return;
 
+                String trigger = getReportStrSetting(tenantId, SETTING_REPORT_TRIGGER, "FIXED_TIME");
+                if ("SHIFT_CLOSE".equals(trigger)) return; // only shift-close mode, skip fixed time
+
                 LocalTime reportTime = parseReportTime(getReportStrSetting(tenantId, SETTING_REPORT_TIME, "20:00"));
                 if (!now.equals(reportTime)) return;
 
-                // Skip if already sent today
                 LocalDate today = LocalDate.now();
-                if (today.equals(lastSentDate.get(tenantId))) return;
+                if (today.equals(lastFixedTimeSentDate.get(tenantId))) return;
 
                 sendReportForTenant(tenantId);
-                lastSentDate.put(tenantId, today);
+                lastFixedTimeSentDate.put(tenantId, today);
             } catch (Exception e) {
-                log.error("Failed to send daily report for tenantId={}: {}", tenant.getId(), e.getMessage());
+                log.error("Failed to send scheduled report for tenantId={}: {}", tenant.getId(), e.getMessage());
             }
         });
     }
+
+    // ===================== Shift close trigger =====================
+
+    /**
+     * Called by ShiftService when a shift is closed.
+     * Sends the report asynchronously if the tenant has SHIFT_CLOSE or BOTH trigger mode.
+     */
+    @Async
+    @Transactional(readOnly = true)
+    public void onShiftClosed(Long tenantId, String shiftNumber, String cashierName, String terminalCode) {
+        if (!telegramApi.isConfigured()) return;
+
+        try {
+            if (!getReportBoolSetting(tenantId, SETTING_REPORT_ENABLED, true)) return;
+
+            String trigger = getReportStrSetting(tenantId, SETTING_REPORT_TRIGGER, "FIXED_TIME");
+            if ("FIXED_TIME".equals(trigger)) return; // only fixed-time mode, skip shift close
+
+            log.info("Sending shift-close report for tenantId={}, shift={}", tenantId, shiftNumber);
+            sendReportForTenant(tenantId);
+        } catch (Exception e) {
+            log.error("Failed to send shift-close report for tenantId={}: {}", tenantId, e.getMessage());
+        }
+    }
+
+    // ===================== Core report logic =====================
 
     private void sendReportForTenant(Long tenantId) {
         List<User> users = userRepository.findUsersWithTelegramByTenantId(tenantId);
@@ -97,22 +130,18 @@ public class TelegramDailyReportService {
         String report = buildDailyReport(tenantId, showSales, showInventory, showFinance);
 
         // Group users by chatId to avoid sending duplicate reports to the same chat
-        Map<Long, List<User>> chatUsers = new LinkedHashMap<>();
+        Set<Long> sentChatIds = new HashSet<>();
         for (User user : users) {
-            if (user.getTelegramChatId() != null) {
-                chatUsers.computeIfAbsent(user.getTelegramChatId(), k -> new ArrayList<>()).add(user);
+            if (user.getTelegramChatId() != null && sentChatIds.add(user.getTelegramChatId())) {
+                try {
+                    telegramApi.sendMessage(user.getTelegramChatId(), report);
+                } catch (Exception e) {
+                    log.error("Failed to send report to chatId={}: {}", user.getTelegramChatId(), e.getMessage());
+                }
             }
         }
 
-        for (Long chatId : chatUsers.keySet()) {
-            try {
-                telegramApi.sendMessage(chatId, report);
-            } catch (Exception e) {
-                log.error("Failed to send daily report to chatId={}: {}", chatId, e.getMessage());
-            }
-        }
-
-        log.info("Daily report sent to {} chats for tenantId={}", chatUsers.size(), tenantId);
+        log.info("Daily report sent to {} chats for tenantId={}", sentChatIds.size(), tenantId);
     }
 
     private String buildDailyReport(Long tenantId, boolean showSales, boolean showInventory, boolean showFinance) {
@@ -125,11 +154,9 @@ public class TelegramDailyReportService {
         if (showSales) {
             appendSalesSection(sb, tenantId, today, zone);
         }
-
         if (showInventory) {
             appendInventorySection(sb, tenantId);
         }
-
         if (showFinance) {
             appendFinanceSection(sb, tenantId);
         }
@@ -198,6 +225,8 @@ public class TelegramDailyReportService {
         sb.append(String.format("Kreditorlik qarzi: %s", formatMoney(apBalance)));
     }
 
+    // ===================== Helpers =====================
+
     private LocalTime parseReportTime(String timeStr) {
         try {
             String[] parts = timeStr.split(":");
@@ -207,7 +236,7 @@ public class TelegramDailyReportService {
         }
     }
 
-    private boolean getReportBoolSetting(Long tenantId, String key, boolean defaultValue) {
+    boolean getReportBoolSetting(Long tenantId, String key, boolean defaultValue) {
         try {
             String val = tenantSettingService.getSettingValue(tenantId, key);
             return val != null ? "true".equalsIgnoreCase(val) : defaultValue;
@@ -216,7 +245,7 @@ public class TelegramDailyReportService {
         }
     }
 
-    private String getReportStrSetting(Long tenantId, String key, String defaultValue) {
+    String getReportStrSetting(Long tenantId, String key, String defaultValue) {
         try {
             String val = tenantSettingService.getSettingValue(tenantId, key);
             return val != null && !val.isBlank() ? val : defaultValue;

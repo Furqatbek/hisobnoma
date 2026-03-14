@@ -15,6 +15,7 @@ import com.hisobnoma.platform.pos.repository.POSTerminalRepository;
 import com.hisobnoma.platform.pos.repository.POSTransactionRepository;
 import com.hisobnoma.platform.pos.repository.ShiftRepository;
 import com.hisobnoma.platform.pos.entity.POSPaymentType;
+import com.hisobnoma.platform.telegram.service.TelegramDailyReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -42,6 +43,7 @@ public class ShiftService {
     private final ShiftMapper shiftMapper;
     private final SecurityContextHelper securityContextHelper;
     private final POSTerminalService terminalService;
+    private final TelegramDailyReportService telegramDailyReportService;
 
     @Transactional(readOnly = true)
     public Page<ShiftDto> findAll(Pageable pageable) {
@@ -178,6 +180,13 @@ public class ShiftService {
 
         log.info("Closed shift {} on terminal {} with difference {}",
                 shift.getShiftNumber(), shift.getTerminal().getTerminalCode(), shift.getCashDifference());
+
+        // Trigger daily report if configured for shift close
+        telegramDailyReportService.onShiftClosed(
+                shift.getTenantId(),
+                shift.getShiftNumber(),
+                shift.getCashierName(),
+                shift.getTerminal().getTerminalCode());
 
         return shiftMapper.toDto(shift);
     }

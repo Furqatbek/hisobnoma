@@ -37,6 +37,7 @@ const sending = ref(false)
 // Daily report settings
 const reportForm = reactive({
   enabled: true,
+  trigger: 'FIXED_TIME',
   time: '20:00',
   salesEnabled: true,
   inventoryEnabled: true,
@@ -199,6 +200,7 @@ async function loadDailyReportSettings() {
   try {
     const res = await telegramApi.getDailyReportSettings()
     reportForm.enabled = res.data.enabled
+    reportForm.trigger = res.data.trigger || 'FIXED_TIME'
     reportForm.time = res.data.time || '20:00'
     reportForm.salesEnabled = res.data.salesEnabled
     reportForm.inventoryEnabled = res.data.inventoryEnabled
@@ -217,6 +219,7 @@ async function saveDailyReportSettings() {
   try {
     await telegramApi.saveDailyReportSettings({
       enabled: reportForm.enabled,
+      trigger: reportForm.trigger,
       time: reportForm.time,
       salesEnabled: reportForm.salesEnabled,
       inventoryEnabled: reportForm.inventoryEnabled,
@@ -438,8 +441,42 @@ function formatDate(dateStr) {
           </div>
 
           <template v-if="reportForm.enabled">
-            <!-- Report time -->
+            <!-- Trigger mode -->
             <div>
+              <label class="label">{{ $t('admin.telegram.reportTrigger') }}</label>
+              <div class="space-y-2 mt-2">
+                <label class="flex items-start gap-3 p-3 rounded-lg cursor-pointer border transition-colors"
+                  :class="reportForm.trigger === 'FIXED_TIME' ? 'border-primary-300 bg-primary-50' : 'border-gray-200 bg-white hover:bg-gray-50'"
+                >
+                  <input type="radio" v-model="reportForm.trigger" value="FIXED_TIME" class="mt-0.5 text-primary-600 focus:ring-primary-500" />
+                  <div>
+                    <p class="font-medium text-sm text-gray-900">🕐 {{ $t('admin.telegram.triggerFixedTime') }}</p>
+                    <p class="text-xs text-gray-500">{{ $t('admin.telegram.triggerFixedTimeHint') }}</p>
+                  </div>
+                </label>
+                <label class="flex items-start gap-3 p-3 rounded-lg cursor-pointer border transition-colors"
+                  :class="reportForm.trigger === 'SHIFT_CLOSE' ? 'border-primary-300 bg-primary-50' : 'border-gray-200 bg-white hover:bg-gray-50'"
+                >
+                  <input type="radio" v-model="reportForm.trigger" value="SHIFT_CLOSE" class="mt-0.5 text-primary-600 focus:ring-primary-500" />
+                  <div>
+                    <p class="font-medium text-sm text-gray-900">🔒 {{ $t('admin.telegram.triggerShiftClose') }}</p>
+                    <p class="text-xs text-gray-500">{{ $t('admin.telegram.triggerShiftCloseHint') }}</p>
+                  </div>
+                </label>
+                <label class="flex items-start gap-3 p-3 rounded-lg cursor-pointer border transition-colors"
+                  :class="reportForm.trigger === 'BOTH' ? 'border-primary-300 bg-primary-50' : 'border-gray-200 bg-white hover:bg-gray-50'"
+                >
+                  <input type="radio" v-model="reportForm.trigger" value="BOTH" class="mt-0.5 text-primary-600 focus:ring-primary-500" />
+                  <div>
+                    <p class="font-medium text-sm text-gray-900">📋 {{ $t('admin.telegram.triggerBoth') }}</p>
+                    <p class="text-xs text-gray-500">{{ $t('admin.telegram.triggerBothHint') }}</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Report time (only for FIXED_TIME and BOTH) -->
+            <div v-if="reportForm.trigger !== 'SHIFT_CLOSE'">
               <label class="label">{{ $t('admin.telegram.reportTime') }}</label>
               <input
                 v-model="reportForm.time"

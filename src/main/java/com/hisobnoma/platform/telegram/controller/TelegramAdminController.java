@@ -251,6 +251,7 @@ public class TelegramAdminController {
     // ======================= Daily Report Settings =======================
 
     private static final String SETTING_REPORT_ENABLED = "telegram.daily_report.enabled";
+    private static final String SETTING_REPORT_TRIGGER = "telegram.daily_report.trigger";
     private static final String SETTING_REPORT_TIME = "telegram.daily_report.time";
     private static final String SETTING_REPORT_SALES = "telegram.daily_report.sales";
     private static final String SETTING_REPORT_INVENTORY = "telegram.daily_report.inventory";
@@ -264,6 +265,7 @@ public class TelegramAdminController {
     public ResponseEntity<Map<String, Object>> getDailyReportSettings() {
         Map<String, Object> settings = new HashMap<>();
         settings.put("enabled", getBoolSetting(SETTING_REPORT_ENABLED, true));
+        settings.put("trigger", getStrSetting(SETTING_REPORT_TRIGGER, "FIXED_TIME"));
         settings.put("time", getStrSetting(SETTING_REPORT_TIME, "20:00"));
         settings.put("salesEnabled", getBoolSetting(SETTING_REPORT_SALES, true));
         settings.put("inventoryEnabled", getBoolSetting(SETTING_REPORT_INVENTORY, true));
@@ -279,6 +281,7 @@ public class TelegramAdminController {
     public ResponseEntity<Map<String, String>> saveDailyReportSettings(@RequestBody DailyReportSettingsRequest request) {
         tenantSettingService.updateSettings(Map.of(
                 SETTING_REPORT_ENABLED, String.valueOf(request.isEnabled()),
+                SETTING_REPORT_TRIGGER, request.getTrigger() != null ? request.getTrigger() : "FIXED_TIME",
                 SETTING_REPORT_TIME, request.getTime() != null ? request.getTime() : "20:00",
                 SETTING_REPORT_SALES, String.valueOf(request.isSalesEnabled()),
                 SETTING_REPORT_INVENTORY, String.valueOf(request.isInventoryEnabled()),
@@ -333,6 +336,7 @@ public class TelegramAdminController {
     @Data
     public static class DailyReportSettingsRequest {
         private boolean enabled;
+        private String trigger; // FIXED_TIME, SHIFT_CLOSE, BOTH
         private String time;
         private boolean salesEnabled;
         private boolean inventoryEnabled;
