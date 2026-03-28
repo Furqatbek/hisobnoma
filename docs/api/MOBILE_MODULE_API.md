@@ -157,6 +157,8 @@ POST /auth/logout
 GET /dashboard/revenue
 ```
 
+**Required Permissions:** `MOBILE_DASHBOARD_VIEW`, `REPORTS_SALES_VIEW`, or `ADMIN_DASHBOARD_VIEW`
+
 **Response:** `200 OK`
 ```json
 {
@@ -174,7 +176,28 @@ GET /dashboard/revenue
     "todayTransactionCount": 45,
     "thisWeekTransactionCount": 312,
     "thisMonthTransactionCount": 1450,
-    "averageTransactionValue": 24137.93
+    "averageTransactionValue": 24137.93,
+    "hourlyRevenue": [
+      {
+        "label": "09:00",
+        "value": 250000.00,
+        "count": 8
+      }
+    ],
+    "dailyRevenue": [
+      {
+        "label": "2026-01-01",
+        "value": 1200000.00,
+        "count": 35
+      }
+    ],
+    "monthlyRevenue": [
+      {
+        "label": "2026-01",
+        "value": 35000000.00,
+        "count": 1450
+      }
+    ]
   }
 }
 ```
@@ -185,26 +208,37 @@ GET /dashboard/revenue
 GET /dashboard/revenue/chart
 ```
 
+**Required Permissions:** `MOBILE_DASHBOARD_VIEW`, `REPORTS_SALES_VIEW`, or `ADMIN_DASHBOARD_VIEW`
+
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| period | string | `hourly`, `daily`, or `monthly` |
+| period | string | `hourly`, `daily`, or `monthly` (default: `daily`) |
 
 **Response:** `200 OK`
 ```json
 {
   "success": true,
   "data": {
+    "hourlyRevenue": [
+      {
+        "label": "09:00",
+        "value": 250000.00,
+        "count": 8
+      }
+    ],
     "dailyRevenue": [
       {
         "label": "2026-01-01",
         "value": 1200000.00,
         "count": 35
-      },
+      }
+    ],
+    "monthlyRevenue": [
       {
-        "label": "2026-01-02",
-        "value": 1350000.00,
-        "count": 42
+        "label": "2026-01",
+        "value": 35000000.00,
+        "count": 1450
       }
     ]
   }
@@ -217,6 +251,8 @@ GET /dashboard/revenue/chart
 GET /dashboard/inventory
 ```
 
+**Required Permissions:** `MOBILE_DASHBOARD_VIEW`, `INVENTORY_STOCK_READ`, or `ADMIN_DASHBOARD_VIEW`
+
 **Response:** `200 OK`
 ```json
 {
@@ -227,7 +263,56 @@ GET /dashboard/inventory
     "totalInventoryValue": 250000000.00,
     "lowStockCount": 45,
     "outOfStockCount": 12,
-    "expiringCount": 8
+    "expiringCount": 8,
+    "reorderPendingCount": 15,
+    "lowStockItems": [
+      {
+        "productId": 123,
+        "productName": "Product Name",
+        "sku": "SKU-001",
+        "currentStock": 5.00,
+        "reorderPoint": 10.00,
+        "minStockLevel": 3.00,
+        "locationName": "Main Warehouse",
+        "urgency": "HIGH"
+      }
+    ],
+    "outOfStockItems": [
+      {
+        "productId": 456,
+        "productName": "Product Name",
+        "sku": "SKU-002",
+        "locationName": "Main Warehouse",
+        "lastStockDate": "2026-01-10",
+        "daysSinceOutOfStock": 5
+      }
+    ],
+    "expiringItems": [
+      {
+        "productId": 789,
+        "productName": "Product Name",
+        "sku": "SKU-003",
+        "batchNumber": "BATCH-001",
+        "quantity": 50.00,
+        "expiryDate": "2026-02-15",
+        "daysUntilExpiry": 30,
+        "locationName": "Main Warehouse"
+      }
+    ],
+    "recentMovements": [
+      {
+        "movementId": 1,
+        "movementType": "TRANSFER",
+        "productName": "Product Name",
+        "sku": "SKU-001",
+        "quantity": 25.00,
+        "fromLocation": "Main Warehouse",
+        "toLocation": "Store Front",
+        "reference": "TRF-20260115-001",
+        "createdBy": "admin",
+        "createdAt": "2026-01-15T09:30:00Z"
+      }
+    ]
   }
 }
 ```
@@ -235,19 +320,80 @@ GET /dashboard/inventory
 ### Get Financial Summary
 
 ```http
-GET /dashboard/financial
+GET /dashboard/finance
 ```
+
+**Required Permissions:** `MOBILE_DASHBOARD_VIEW`, `FINANCE_REPORTS_VIEW`, or `ADMIN_DASHBOARD_VIEW`
 
 **Response:** `200 OK`
 ```json
 {
   "success": true,
   "data": {
-    "totalBankBalance": 50000000.00,
     "totalCashBalance": 5000000.00,
+    "totalBankBalance": 50000000.00,
     "arOutstanding": 15000000.00,
     "apOutstanding": 8000000.00,
-    "netCashPosition": 57000000.00
+    "netCashPosition": 57000000.00,
+    "todayIncome": 1500000.00,
+    "todayExpenses": 800000.00,
+    "todayNetProfit": 700000.00,
+    "thisMonthIncome": 35000000.00,
+    "thisMonthExpenses": 22000000.00,
+    "thisMonthNetProfit": 13000000.00,
+    "profitMarginPercent": 37.14,
+    "cashFlow": {
+      "openingBalance": 4500000.00,
+      "totalInflows": 1500000.00,
+      "totalOutflows": 1000000.00,
+      "closingBalance": 5000000.00,
+      "recentFlows": [
+        {
+          "description": "Payment from Customer A",
+          "amount": 500000.00,
+          "type": "INFLOW",
+          "date": "2026-01-15T10:00:00Z"
+        }
+      ]
+    },
+    "receivables": {
+      "totalOutstanding": 15000000.00,
+      "current": 8000000.00,
+      "overdue1To30": 4000000.00,
+      "overdue31To60": 2000000.00,
+      "overdue61To90": 800000.00,
+      "overdueOver90": 200000.00,
+      "totalInvoices": 120,
+      "overdueInvoices": 35,
+      "topOverdueInvoices": [
+        {
+          "invoiceId": 1,
+          "invoiceNumber": "INV-2026-001",
+          "customerName": "Customer A",
+          "amount": 1500000.00,
+          "dueDate": "2025-12-15",
+          "daysOverdue": 31
+        }
+      ]
+    },
+    "payables": {
+      "totalOutstanding": 8000000.00,
+      "current": 5000000.00,
+      "dueSoon": 2000000.00,
+      "overdue": 1000000.00,
+      "totalInvoices": 80,
+      "dueSoonCount": 12,
+      "upcomingPayments": [
+        {
+          "invoiceId": 1,
+          "invoiceNumber": "BILL-2026-001",
+          "vendorName": "Vendor A",
+          "amount": 500000.00,
+          "dueDate": "2026-01-20",
+          "daysUntilDue": 5
+        }
+      ]
+    }
   }
 }
 ```
@@ -262,12 +408,14 @@ GET /dashboard/financial
 GET /alerts
 ```
 
+**Required Permissions:** `MOBILE_ALERTS_VIEW`
+
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| unreadOnly | boolean | Filter to unread alerts only |
 | page | int | Page number (0-based) |
 | size | int | Page size (default: 20) |
+| sort | string | Sort field (default: `createdAt,desc`) |
 
 **Response:** `200 OK`
 ```json
@@ -283,7 +431,11 @@ GET /alerts
         "priority": "HIGH",
         "entityType": "PRODUCT",
         "entityId": 123,
-        "isRead": false,
+        "actionUrl": "/inventory/products/123",
+        "data": "{\"currentStock\": 5, \"reorderPoint\": 10}",
+        "read": false,
+        "readAt": null,
+        "expiresAt": "2026-02-15T09:30:00Z",
         "createdAt": "2026-01-15T09:30:00Z"
       }
     ],
@@ -295,17 +447,60 @@ GET /alerts
 }
 ```
 
+### Get Unread Alerts
+
+```http
+GET /alerts/unread
+```
+
+**Required Permissions:** `MOBILE_ALERTS_VIEW`
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| page | int | Page number (0-based) |
+| size | int | Page size (default: 20) |
+| sort | string | Sort field (default: `createdAt,desc`) |
+
+**Response:** Same structure as [Get Alerts](#get-alerts), filtered to unread only.
+
+### Get Alerts by Type
+
+```http
+GET /alerts/type/{alertType}
+```
+
+**Required Permissions:** `MOBILE_ALERTS_VIEW`
+
+**Path Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| alertType | string | Alert type enum value (see [Alert Types](#alert-types)) |
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| page | int | Page number (0-based) |
+| size | int | Page size (default: 20) |
+| sort | string | Sort field (default: `createdAt,desc`) |
+
+**Response:** Same structure as [Get Alerts](#get-alerts), filtered by type.
+
 ### Get Unread Count
 
 ```http
-GET /alerts/unread-count
+GET /alerts/count
 ```
+
+**Required Permissions:** `MOBILE_ALERTS_VIEW`
 
 **Response:** `200 OK`
 ```json
 {
   "success": true,
-  "data": 5
+  "data": {
+    "unreadCount": 5
+  }
 }
 ```
 
@@ -315,17 +510,23 @@ GET /alerts/unread-count
 PUT /alerts/{id}/read
 ```
 
+**Required Permissions:** `MOBILE_ALERTS_VIEW`
+
 ### Mark All Alerts as Read
 
 ```http
 PUT /alerts/read-all
 ```
 
-### Get Alert Preferences
+**Required Permissions:** `MOBILE_ALERTS_VIEW`
+
+### Get Alert Settings
 
 ```http
-GET /alerts/preferences
+GET /alerts/settings
 ```
+
+**Required Permissions:** `MOBILE_ALERTS_VIEW`
 
 **Response:** `200 OK`
 ```json
@@ -339,17 +540,22 @@ GET /alerts/preferences
       "inAppEnabled": true,
       "emailEnabled": false,
       "smsEnabled": false,
-      "thresholdValue": 10
+      "telegramEnabled": false,
+      "thresholdValue": 10,
+      "quietHoursStart": 22,
+      "quietHoursEnd": 7
     }
   ]
 }
 ```
 
-### Update Alert Preference
+### Update Alert Settings
 
 ```http
-PUT /alerts/preferences/{alertType}
+PUT /alerts/settings/{alertType}
 ```
+
+**Required Permissions:** `MOBILE_ALERTS_MANAGE`
 
 **Request Body:**
 ```json
@@ -358,7 +564,10 @@ PUT /alerts/preferences/{alertType}
   "inAppEnabled": true,
   "emailEnabled": true,
   "smsEnabled": false,
-  "thresholdValue": 5
+  "telegramEnabled": false,
+  "thresholdValue": 5,
+  "quietHoursStart": 22,
+  "quietHoursEnd": 7
 }
 ```
 
@@ -369,8 +578,10 @@ PUT /alerts/preferences/{alertType}
 ### Barcode Lookup
 
 ```http
-GET /barcode/{barcode}
+GET /inventory/barcode/{barcode}
 ```
+
+**Required Permissions:** `INVENTORY_PRODUCT_READ`, `POS_SALE_CREATE`, or `MOBILE_INVENTORY_VIEW`
 
 **Response:** `200 OK`
 ```json
@@ -403,18 +614,29 @@ GET /barcode/{barcode}
 ### Quick Stock Count
 
 ```http
-POST /quick-count
+POST /inventory/quick-count
 ```
+
+**Required Permissions:** `MOBILE_QUICK_COUNT`, `INVENTORY_COUNT_CREATE`, or `INVENTORY_STOCK_ADJUST`
 
 **Request Body:**
 ```json
 {
   "productId": 123,
+  "variantId": null,
   "locationId": 1,
   "countedQuantity": 95,
   "notes": "Shelf count"
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| productId | long | Yes | Product ID |
+| variantId | long | No | Product variant ID |
+| locationId | long | Yes | Location ID |
+| countedQuantity | BigDecimal | Yes | Counted quantity (must be positive) |
+| notes | string | No | Optional notes |
 
 **Response:** `200 OK`
 ```json
@@ -436,19 +658,22 @@ POST /quick-count
 ### Quick Sale
 
 ```http
-POST /quick-sale
+POST /pos/quick-sale
 ```
+
+**Required Permissions:** `MOBILE_QUICK_SALE` or `POS_SALE_CREATE`
 
 **Request Body:**
 ```json
 {
   "terminalId": 1,
   "customerId": 5,
+  "customerName": "Walk-in Customer",
   "items": [
     {
       "productId": 123,
       "variantId": null,
-      "quantity": 2,
+      "quantity": 2.00,
       "unitPrice": 25000.00,
       "discountAmount": 0
     }
@@ -458,6 +683,21 @@ POST /quick-sale
   "notes": "Walk-in customer"
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| terminalId | long | Yes | POS terminal ID |
+| customerId | long | No | Customer ID |
+| customerName | string | No | Customer name (for walk-in customers) |
+| items | array | Yes | At least one item required |
+| items[].productId | long | Yes | Product ID |
+| items[].variantId | long | No | Product variant ID |
+| items[].quantity | BigDecimal | Yes | Quantity |
+| items[].unitPrice | BigDecimal | No | Unit price override |
+| items[].discountAmount | BigDecimal | No | Discount amount |
+| paymentType | string | Yes | Payment type (e.g., `CASH`, `CARD`) |
+| tenderedAmount | BigDecimal | No | Tendered amount |
+| notes | string | No | Optional notes |
 
 **Response:** `200 OK`
 ```json
@@ -479,14 +719,16 @@ POST /quick-sale
 ### Search Products
 
 ```http
-GET /products/search
+GET /inventory/search
 ```
+
+**Required Permissions:** `INVENTORY_PRODUCT_READ` or `POS_SALE_CREATE`
 
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | query | string | Search by name, SKU, or barcode |
-| page | int | Page number (0-based) |
+| page | int | Page number (0-based, default: 0) |
 | size | int | Page size (default: 20) |
 
 ### Search Customers
@@ -495,11 +737,13 @@ GET /products/search
 GET /customers/search
 ```
 
+**Required Permissions:** `FINANCE_AR_CUSTOMER_VIEW` or `POS_SALE_CREATE`
+
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | query | string | Search by name, code, or phone |
-| page | int | Page number (0-based) |
+| page | int | Page number (0-based, default: 0) |
 | size | int | Page size (default: 20) |
 
 ---
@@ -511,6 +755,8 @@ GET /customers/search
 ```http
 GET /sync/products
 ```
+
+**Required Permissions:** `MOBILE_SYNC_ACCESS`, `INVENTORY_PRODUCT_READ`, or `POS_SALE_CREATE`
 
 **Query Parameters:**
 | Parameter | Type | Description |
@@ -538,7 +784,20 @@ GET /sync/products
         "unitOfMeasure": "pcs",
         "trackInventory": true,
         "active": true,
+        "imageUrl": "https://example.com/images/product-123.jpg",
         "updatedAt": "2026-01-15T09:00:00Z"
+      }
+    ],
+    "prices": [
+      {
+        "productId": 123,
+        "priceListId": 1,
+        "priceListName": "Retail",
+        "unitPrice": 25000.00,
+        "minQuantity": 1.00,
+        "effectiveFrom": "2026-01-01T00:00:00Z",
+        "effectiveTo": null,
+        "updatedAt": "2026-01-01T00:00:00Z"
       }
     ]
   }
@@ -550,6 +809,8 @@ GET /sync/products
 ```http
 GET /sync/customers
 ```
+
+**Required Permissions:** `MOBILE_SYNC_ACCESS`, `FINANCE_AR_CUSTOMER_VIEW`, or `POS_SALE_CREATE`
 
 **Query Parameters:**
 | Parameter | Type | Description |
@@ -588,6 +849,8 @@ GET /sync/customers
 GET /sync/categories
 ```
 
+**Required Permissions:** `MOBILE_SYNC_ACCESS`, `INVENTORY_PRODUCT_READ`, or `POS_SALE_CREATE`
+
 **Response:** `200 OK`
 ```json
 {
@@ -615,11 +878,16 @@ GET /sync/categories
 GET /sync/last-updated
 ```
 
+**Required Permissions:** `MOBILE_SYNC_ACCESS`
+
 **Response:** `200 OK`
 ```json
 {
   "success": true,
-  "data": "2026-01-15T10:30:00Z"
+  "data": {
+    "lastUpdated": "2026-01-15T10:30:00Z",
+    "syncRequired": true
+  }
 }
 ```
 
@@ -633,13 +901,15 @@ GET /sync/last-updated
 | OUT_OF_STOCK | Product completely out of stock |
 | EXPIRING_INVENTORY | Stock batch expiring soon |
 | LARGE_TRANSACTION | Large transaction amount detected |
-| DAILY_SUMMARY | Daily business summary |
-| PRICE_CHANGE | Product price changed |
-| NEW_ORDER | New order received |
 | PAYMENT_RECEIVED | Payment received |
-| PAYMENT_DUE | Payment coming due |
 | PAYMENT_OVERDUE | Payment past due |
-| SYSTEM | System notification |
+| ORDER_PLACED | New order placed |
+| ORDER_CANCELLED | Order cancelled |
+| SYSTEM_ALERT | System notification |
+| DAILY_SUMMARY | Daily business summary |
+| WEEKLY_SUMMARY | Weekly business summary |
+| APPROVAL_REQUIRED | Action requires approval |
+| CUSTOM | Custom notification |
 
 ## Alert Priorities
 
