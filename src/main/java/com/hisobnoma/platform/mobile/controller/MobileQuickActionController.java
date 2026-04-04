@@ -77,4 +77,15 @@ public class MobileQuickActionController {
         Page<Map<String, Object>> results = quickActionService.searchProducts(query, page, size);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(results)));
     }
+
+    @GetMapping("/products/search")
+    @PreAuthorize("hasAnyAuthority('INVENTORY_PRODUCT_READ', 'POS_SALE_CREATE')")
+    @Operation(summary = "Search products by query", description = "Search products by name, SKU, or barcode (alias endpoint)")
+    public ResponseEntity<ApiResponse<PageResponse<Map<String, Object>>>> searchProductsByQuery(
+            @Parameter(description = "Search query") @RequestParam String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<Map<String, Object>> results = quickActionService.searchProducts(query, page, size);
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(results)));
+    }
 }
