@@ -6,10 +6,7 @@ import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.exception.NotFoundException;
 import com.hisobnoma.platform.pos.dto.*;
-import com.hisobnoma.platform.pos.entity.CashOperation;
-import com.hisobnoma.platform.pos.entity.POSTerminal;
-import com.hisobnoma.platform.pos.entity.Shift;
-import com.hisobnoma.platform.pos.entity.ShiftStatus;
+import com.hisobnoma.platform.pos.entity.*;
 import com.hisobnoma.platform.pos.mapper.CashOperationMapper;
 import com.hisobnoma.platform.pos.mapper.ShiftMapper;
 import com.hisobnoma.platform.pos.repository.CashOperationRepository;
@@ -259,6 +256,10 @@ public class ShiftService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
+        String cashierName = user.getFirstName() + " " + user.getLastName();
+        TransactionType txType = request.getOperationType() == CashOperationRequest.OperationType.CASH_IN
+                ? TransactionType.CASH_IN : TransactionType.CASH_OUT;
+
         // Save individual cash operation record
         CashOperation operation = CashOperation.builder()
                 .tenantId(shift.getTenantId())
@@ -267,9 +268,29 @@ public class ShiftService {
                 .amount(request.getAmount())
                 .reason(request.getReason())
                 .cashierId(userId)
-                .cashierName(user.getFirstName() + " " + user.getLastName())
+                .cashierName(cashierName)
                 .build();
         cashOperationRepository.save(operation);
+
+        // Create POSTransaction so it appears in the transactions list
+        String transactionNumber = generateCashTransactionNumber(shift.getTenantId());
+        POSTransaction transaction = POSTransaction.builder()
+                .tenantId(shift.getTenantId())
+                .transactionNumber(transactionNumber)
+                .terminal(shift.getTerminal())
+                .shift(shift)
+                .cashierId(userId)
+                .cashierName(cashierName)
+                .transactionType(txType)
+                .status(TransactionStatus.COMPLETED)
+                .subtotal(request.getAmount())
+                .totalAmount(request.getAmount())
+                .paidAmount(request.getAmount())
+                .completedAt(Instant.now())
+                .completedBy(userId)
+                .notes(request.getReason())
+                .build();
+        transactionRepository.save(transaction);
 
         // Update shift totals
         if (request.getOperationType() == CashOperationRequest.OperationType.CASH_IN) {
@@ -338,5 +359,22 @@ public class ShiftService {
         }
 
         return String.format("SH%s-%04d", datePart, next);
+    }
+
+    private String generateCashTransactionNumber(Long tenantId) {
+        String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefix = "TX" + datePart + "-";
+
+        String maxNumber = transactionRepository.findMaxTransactionNumberByPrefixAndTenantId(prefix, tenantId);
+
+        int next;
+        if (maxNumber != null) {
+            String suffix = maxNumber.substring(maxNumber.lastIndexOf('-') + 1);
+            next = Integer.parseInt(suffix) + 1;
+        } else {
+            next = 1;
+        }
+
+        return String.format("TX%s-%05d", datePart, next);
     }
 }
