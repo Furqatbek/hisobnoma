@@ -6,10 +6,13 @@ import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.exception.NotFoundException;
 import com.hisobnoma.platform.pos.dto.*;
+import com.hisobnoma.platform.pos.entity.CashOperation;
 import com.hisobnoma.platform.pos.entity.POSTerminal;
 import com.hisobnoma.platform.pos.entity.Shift;
 import com.hisobnoma.platform.pos.entity.ShiftStatus;
+import com.hisobnoma.platform.pos.mapper.CashOperationMapper;
 import com.hisobnoma.platform.pos.mapper.ShiftMapper;
+import com.hisobnoma.platform.pos.repository.CashOperationRepository;
 import com.hisobnoma.platform.pos.repository.POSPaymentRepository;
 import com.hisobnoma.platform.pos.repository.POSTerminalRepository;
 import com.hisobnoma.platform.pos.repository.POSTransactionRepository;
@@ -36,11 +39,13 @@ import java.util.List;
 public class ShiftService {
 
     private final ShiftRepository shiftRepository;
+    private final CashOperationRepository cashOperationRepository;
     private final POSTerminalRepository terminalRepository;
     private final POSTransactionRepository transactionRepository;
     private final POSPaymentRepository paymentRepository;
     private final UserRepository userRepository;
     private final ShiftMapper shiftMapper;
+    private final CashOperationMapper cashOperationMapper;
     private final SecurityContextHelper securityContextHelper;
     private final POSTerminalService terminalService;
     private final TelegramDailyReportService telegramDailyReportService;
@@ -250,16 +255,43 @@ public class ShiftService {
             throw new BusinessException("Shift is not open");
         }
 
+        Long userId = securityContextHelper.getCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        // Save individual cash operation record
+        CashOperation operation = CashOperation.builder()
+                .tenantId(shift.getTenantId())
+                .shift(shift)
+                .operationType(request.getOperationType())
+                .amount(request.getAmount())
+                .reason(request.getReason())
+                .cashierId(userId)
+                .cashierName(user.getFirstName() + " " + user.getLastName())
+                .build();
+        cashOperationRepository.save(operation);
+
+        // Update shift totals
         if (request.getOperationType() == CashOperationRequest.OperationType.CASH_IN) {
             shift.setCashIn(shift.getCashIn().add(request.getAmount()));
-            log.info("Cash in {} on shift {}", request.getAmount(), shift.getShiftNumber());
+            log.info("Cash in {} on shift {} - reason: {}", request.getAmount(), shift.getShiftNumber(), request.getReason());
         } else {
             shift.setCashOut(shift.getCashOut().add(request.getAmount()));
-            log.info("Cash out {} on shift {}", request.getAmount(), shift.getShiftNumber());
+            log.info("Cash out {} on shift {} - reason: {}", request.getAmount(), shift.getShiftNumber(), request.getReason());
         }
 
         shift = shiftRepository.save(shift);
         return shiftMapper.toDto(shift);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CashOperationDto> findCashOperationsByShift(Long shiftId) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        // Verify shift exists and belongs to tenant
+        shiftRepository.findByIdAndTenantId(shiftId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Shift not found: " + shiftId));
+        return cashOperationMapper.toDtoList(
+                cashOperationRepository.findByShiftIdAndTenantId(shiftId, tenantId));
     }
 
     @Transactional

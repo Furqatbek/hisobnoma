@@ -105,6 +105,13 @@ public class ShiftController {
         return ResponseEntity.ok(ApiResponse.success(shift, message));
     }
 
+    @GetMapping("/{id}/cash-operations")
+    @RequiresPermission("POS_SHIFT_READ")
+    public ResponseEntity<ApiResponse<List<CashOperationDto>>> getCashOperations(@PathVariable Long id) {
+        List<CashOperationDto> operations = shiftService.findCashOperationsByShift(id);
+        return ResponseEntity.ok(ApiResponse.success(operations));
+    }
+
     @PostMapping("/{id}/reconcile")
     @RequiresPermission("POS_SHIFT_CLOSE")
     public ResponseEntity<ApiResponse<ShiftDto>> reconcileShift(@PathVariable Long id) {
