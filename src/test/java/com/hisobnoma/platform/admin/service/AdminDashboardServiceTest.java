@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -103,10 +104,12 @@ class AdminDashboardServiceTest {
                 .thenReturn(auditPage);
         when(auditLogRepository.countFailedLoginsSince(eq(TENANT_ID), any()))
                 .thenReturn(3L);
-        List<Object[]> moduleRows1 = List.of(new Object[]{"INVENTORY", 20L});
+        List<Object[]> moduleRows1 = new ArrayList<>();
+        moduleRows1.add(new Object[]{"INVENTORY", 20L});
         when(auditLogRepository.countModuleActivityByTenantIdSince(eq(TENANT_ID), any()))
                 .thenReturn(moduleRows1);
-        List<Object[]> userRows1 = List.of(new Object[]{1L, "admin", 50L});
+        List<Object[]> userRows1 = new ArrayList<>();
+        userRows1.add(new Object[]{1L, "admin", 50L});
         when(auditLogRepository.findMostActiveUsersByTenantIdSince(eq(TENANT_ID), any()))
                 .thenReturn(userRows1);
         when(auditLogRepository.findByTenantId(eq(TENANT_ID), any()))
@@ -224,10 +227,12 @@ class AdminDashboardServiceTest {
         when(auditLogRepository.findByTenantIdAndDateRange(eq(TENANT_ID), any(), any(), any()))
                 .thenReturn(auditPage);
         when(auditLogRepository.countFailedLoginsSince(eq(TENANT_ID), any())).thenReturn(1L);
-        List<Object[]> moduleRows2 = List.of(new Object[]{"POS", 10L});
+        List<Object[]> moduleRows2 = new ArrayList<>();
+        moduleRows2.add(new Object[]{"POS", 10L});
         when(auditLogRepository.countModuleActivityByTenantIdSince(eq(TENANT_ID), any()))
                 .thenReturn(moduleRows2);
-        List<Object[]> userRows2 = List.of(new Object[]{2L, "cashier", 30L});
+        List<Object[]> userRows2 = new ArrayList<>();
+        userRows2.add(new Object[]{2L, "cashier", 30L});
         when(auditLogRepository.findMostActiveUsersByTenantIdSince(eq(TENANT_ID), any()))
                 .thenReturn(userRows2);
         when(auditLogRepository.findByTenantId(eq(TENANT_ID), any()))
