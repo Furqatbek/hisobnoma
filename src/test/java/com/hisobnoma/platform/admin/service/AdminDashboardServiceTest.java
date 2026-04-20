@@ -103,10 +103,12 @@ class AdminDashboardServiceTest {
                 .thenReturn(auditPage);
         when(auditLogRepository.countFailedLoginsSince(eq(TENANT_ID), any()))
                 .thenReturn(3L);
+        List<Object[]> moduleRows1 = List.of(new Object[]{"INVENTORY", 20L});
         when(auditLogRepository.countModuleActivityByTenantIdSince(eq(TENANT_ID), any()))
-                .thenReturn(List.of(new Object[]{"INVENTORY", 20L}));
+                .thenReturn(moduleRows1);
+        List<Object[]> userRows1 = List.of(new Object[]{1L, "admin", 50L});
         when(auditLogRepository.findMostActiveUsersByTenantIdSince(eq(TENANT_ID), any()))
-                .thenReturn(List.of(new Object[]{1L, "admin", 50L}));
+                .thenReturn(userRows1);
         when(auditLogRepository.findByTenantId(eq(TENANT_ID), any()))
                 .thenReturn(new PageImpl<>(Collections.emptyList()));
 
@@ -222,10 +224,12 @@ class AdminDashboardServiceTest {
         when(auditLogRepository.findByTenantIdAndDateRange(eq(TENANT_ID), any(), any(), any()))
                 .thenReturn(auditPage);
         when(auditLogRepository.countFailedLoginsSince(eq(TENANT_ID), any())).thenReturn(1L);
+        List<Object[]> moduleRows2 = List.of(new Object[]{"POS", 10L});
         when(auditLogRepository.countModuleActivityByTenantIdSince(eq(TENANT_ID), any()))
-                .thenReturn(List.of(new Object[]{"POS", 10L}));
+                .thenReturn(moduleRows2);
+        List<Object[]> userRows2 = List.of(new Object[]{2L, "cashier", 30L});
         when(auditLogRepository.findMostActiveUsersByTenantIdSince(eq(TENANT_ID), any()))
-                .thenReturn(List.of(new Object[]{2L, "cashier", 30L}));
+                .thenReturn(userRows2);
         when(auditLogRepository.findByTenantId(eq(TENANT_ID), any()))
                 .thenReturn(new PageImpl<>(List.of(
                         AuditLog.builder()
