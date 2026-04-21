@@ -389,11 +389,8 @@ class AuditLogServiceTest {
     @Test
     void log_success_savesAuditLogAndReturnsEntity() {
         // Given
-        UserPrincipal principal = UserPrincipal.builder()
-                .id(10L)
-                .username("admin")
-                .tenantId(TENANT_ID)
-                .build();
+        UserPrincipal principal = new UserPrincipal(
+                10L, "admin", "password", TENANT_ID, true, true, Collections.emptyList());
         when(securityContextHelper.getRequiredCurrentUser()).thenReturn(principal);
         when(auditLogRepository.save(any(AuditLog.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -414,11 +411,8 @@ class AuditLogServiceTest {
     @Test
     void log_withChanges_savesOldAndNewValues() {
         // Given
-        UserPrincipal principal = UserPrincipal.builder()
-                .id(10L)
-                .username("admin")
-                .tenantId(TENANT_ID)
-                .build();
+        UserPrincipal principal = new UserPrincipal(
+                10L, "admin", "password", TENANT_ID, true, true, Collections.emptyList());
         when(securityContextHelper.getRequiredCurrentUser()).thenReturn(principal);
         when(auditLogRepository.save(any(AuditLog.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -439,11 +433,8 @@ class AuditLogServiceTest {
     @Test
     void logFailure_savesWithSuccessFalseAndErrorMessage() {
         // Given
-        UserPrincipal principal = UserPrincipal.builder()
-                .id(10L)
-                .username("admin")
-                .tenantId(TENANT_ID)
-                .build();
+        UserPrincipal principal = new UserPrincipal(
+                10L, "admin", "password", TENANT_ID, true, true, Collections.emptyList());
         when(securityContextHelper.getRequiredCurrentUser()).thenReturn(principal);
         when(auditLogRepository.save(any(AuditLog.class))).thenAnswer(inv -> inv.getArgument(0));
 
