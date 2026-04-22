@@ -56,7 +56,7 @@ class AuthControllerTest {
                         .build())
                 .build();
 
-        when(authService.login(any(LoginRequest.class), anyString(), anyString()))
+        when(authService.login(any(LoginRequest.class), any(), any()))
                 .thenReturn(authResponse);
 
         // When/Then
