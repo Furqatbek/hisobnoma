@@ -102,6 +102,24 @@ class TenantSettingServiceTest {
         assertTrue(result.isEmpty());
     }
 
+    @Test
+    void getAllSettings_multiTenant_isolatedToRequestedTenant() {
+        // Given — only TENANT_ID settings returned; other tenant's data not visible
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(tenantSettingRepository.findAllActiveByTenantIdOrdered(TENANT_ID))
+                .thenReturn(List.of(sampleSetting));
+        when(tenantSettingMapper.toDtoList(List.of(sampleSetting)))
+                .thenReturn(List.of(sampleDto));
+
+        // When
+        List<TenantSettingDTO> result = tenantSettingService.getAllSettings();
+
+        // Then
+        assertEquals(1, result.size());
+        assertEquals(TENANT_ID, result.get(0).getTenantId());
+        verify(tenantSettingRepository).findAllActiveByTenantIdOrdered(TENANT_ID);
+    }
+
     // ---- getSettingsByCategory ----
 
     @Test
@@ -118,6 +136,39 @@ class TenantSettingServiceTest {
 
         // Then
         assertEquals(1, result.size());
+    }
+
+    @Test
+    void getSettingsByCategory_nonExistent_returnsEmptyList() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(tenantSettingRepository.findByTenantIdAndCategoryAndActiveTrue(TENANT_ID, "NONEXISTENT"))
+                .thenReturn(Collections.emptyList());
+        when(tenantSettingMapper.toDtoList(Collections.emptyList()))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<TenantSettingDTO> result = tenantSettingService.getSettingsByCategory("NONEXISTENT");
+
+        // Then
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getSettingsByCategory_otherTenantCategory_notReturned() {
+        // Given — another tenant has POS settings, this tenant does not
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(tenantSettingRepository.findByTenantIdAndCategoryAndActiveTrue(TENANT_ID, "POS"))
+                .thenReturn(Collections.emptyList());
+        when(tenantSettingMapper.toDtoList(Collections.emptyList()))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<TenantSettingDTO> result = tenantSettingService.getSettingsByCategory("POS");
+
+        // Then
+        assertTrue(result.isEmpty());
+        verify(tenantSettingRepository).findByTenantIdAndCategoryAndActiveTrue(TENANT_ID, "POS");
     }
 
     // ---- getSetting ----
@@ -282,6 +333,36 @@ class TenantSettingServiceTest {
         assertEquals(2, result.size());
     }
 
+    @Test
+    void getCategories_noSettings_returnsEmptyList() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(tenantSettingRepository.findDistinctCategoriesByTenantId(TENANT_ID))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<String> result = tenantSettingService.getCategories();
+
+        // Then
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getCategories_multiTenant_isolatedCategories() {
+        // Given — only this tenant's categories returned
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(tenantSettingRepository.findDistinctCategoriesByTenantId(TENANT_ID))
+                .thenReturn(List.of("POS"));
+
+        // When
+        List<String> result = tenantSettingService.getCategories();
+
+        // Then
+        assertEquals(1, result.size());
+        assertEquals("POS", result.get(0));
+        verify(tenantSettingRepository).findDistinctCategoriesByTenantId(TENANT_ID);
+    }
+
     // ---- createSetting ----
 
     @Test
@@ -339,6 +420,27 @@ class TenantSettingServiceTest {
         verify(tenantSettingRepository, never()).save(any());
     }
 
+    @Test
+    void createSetting_sameKeyDifferentTenant_succeeds() {
+        // Given — same key exists for tenant 2, but not for TENANT_ID
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(tenantSettingRepository.existsByTenantIdAndSettingKey(TENANT_ID, "pos.receipt.header"))
+                .thenReturn(false);
+        when(tenantSettingMapper.toEntity(sampleDto)).thenReturn(sampleSetting);
+        when(systemSettingRepository.findBySettingKey("pos.receipt.header"))
+                .thenReturn(Optional.empty());
+        when(tenantSettingRepository.save(sampleSetting)).thenReturn(sampleSetting);
+        when(tenantSettingMapper.toDto(sampleSetting)).thenReturn(sampleDto);
+
+        // When
+        TenantSettingDTO result = tenantSettingService.createSetting(sampleDto);
+
+        // Then
+        assertNotNull(result);
+        verify(tenantSettingRepository).existsByTenantIdAndSettingKey(TENANT_ID, "pos.receipt.header");
+        verify(tenantSettingRepository).save(any());
+    }
+
     // ---- updateSetting ----
 
     @Test
@@ -368,6 +470,18 @@ class TenantSettingServiceTest {
         // When / Then
         assertThrows(NotFoundException.class, () ->
                 tenantSettingService.updateSetting("missing", sampleDto));
+    }
+
+    @Test
+    void updateSetting_wrongTenant_throwsNotFoundException() {
+        // Given — key exists for tenant 2, but not for TENANT_ID
+        Long otherTenantId = 2L;
+        when(tenantSettingRepository.findByTenantIdAndSettingKey(otherTenantId, "pos.receipt.header"))
+                .thenReturn(Optional.empty());
+
+        // When / Then
+        assertThrows(NotFoundException.class, () ->
+                tenantSettingService.updateSetting(otherTenantId, "pos.receipt.header", sampleDto));
     }
 
     // ---- updateSettingValue ----
@@ -420,6 +534,47 @@ class TenantSettingServiceTest {
         verify(tenantSettingRepository).save(any(TenantSetting.class));
     }
 
+    @Test
+    void updateSettingValue_nonExistentKey_autoCreatesNewSetting() {
+        // Given — key doesn't exist for tenant, no system setting either
+        // Service auto-creates via createNewTenantSetting
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(tenantSettingRepository.findByTenantIdAndSettingKey(TENANT_ID, "new.key"))
+                .thenReturn(Optional.empty());
+        when(systemSettingRepository.findBySettingKey("new.key"))
+                .thenReturn(Optional.empty());
+        when(tenantSettingRepository.save(any(TenantSetting.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(tenantSettingMapper.toDto(any(TenantSetting.class))).thenReturn(
+                TenantSettingDTO.builder().settingKey("new.key").settingValue("val").build());
+
+        // When
+        TenantSettingDTO result = tenantSettingService.updateSettingValue("new.key", "val");
+
+        // Then
+        assertNotNull(result);
+        verify(tenantSettingRepository).save(any(TenantSetting.class));
+    }
+
+    @Test
+    void updateSettingValue_crossTenantKey_autoCreatesForRequestedTenant() {
+        // Given — key belongs to another tenant; this tenant gets a new setting
+        Long otherTenantId = 2L;
+        when(tenantSettingRepository.findByTenantIdAndSettingKey(otherTenantId, "pos.receipt.header"))
+                .thenReturn(Optional.empty());
+        when(systemSettingRepository.findBySettingKey("pos.receipt.header"))
+                .thenReturn(Optional.empty());
+        when(tenantSettingRepository.save(any(TenantSetting.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(tenantSettingMapper.toDto(any(TenantSetting.class))).thenReturn(
+                TenantSettingDTO.builder().settingKey("pos.receipt.header").settingValue("New").tenantId(otherTenantId).build());
+
+        // When
+        TenantSettingDTO result = tenantSettingService.updateSettingValue(otherTenantId, "pos.receipt.header", "New");
+
+        // Then
+        assertNotNull(result);
+        verify(tenantSettingRepository).save(any(TenantSetting.class));
+    }
+
     // ---- updateSettings (batch) ----
 
     @Test
@@ -434,6 +589,45 @@ class TenantSettingServiceTest {
         Map<String, String> updates = Map.of(
                 "pos.receipt.header", "Updated",
                 "pos.receipt.footer", "Thank you"
+        );
+
+        // When
+        tenantSettingService.updateSettings(updates);
+
+        // Then
+        verify(tenantSettingRepository, times(2)).save(any());
+    }
+
+    @Test
+    void updateSettings_emptyMap_noOp() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        Map<String, String> updates = Collections.emptyMap();
+
+        // When
+        tenantSettingService.updateSettings(updates);
+
+        // Then
+        verify(tenantSettingRepository, never()).findByTenantIdAndSettingKey(any(), any());
+        verify(tenantSettingRepository, never()).save(any());
+    }
+
+    @Test
+    void updateSettings_partialInvalidKeys_autoCreatesNewSettings() {
+        // Given — one key exists, one doesn't; service auto-creates the missing one
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(tenantSettingRepository.findByTenantIdAndSettingKey(TENANT_ID, "pos.receipt.header"))
+                .thenReturn(Optional.of(sampleSetting));
+        when(tenantSettingRepository.findByTenantIdAndSettingKey(TENANT_ID, "missing.key"))
+                .thenReturn(Optional.empty());
+        when(systemSettingRepository.findBySettingKey("missing.key"))
+                .thenReturn(Optional.empty());
+        when(tenantSettingRepository.save(any(TenantSetting.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(tenantSettingMapper.toDto(any(TenantSetting.class))).thenReturn(sampleDto);
+
+        Map<String, String> updates = Map.of(
+                "pos.receipt.header", "Updated",
+                "missing.key", "NewValue"
         );
 
         // When
@@ -485,6 +679,36 @@ class TenantSettingServiceTest {
         // Then
         assertEquals(1, result.size());
         assertEquals("Welcome to our store", result.get("pos.receipt.header"));
+    }
+
+    @Test
+    void getSettingsAsMap_noSettings_returnsEmptyMap() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(tenantSettingRepository.findByTenantIdAndActiveTrue(TENANT_ID))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        Map<String, String> result = tenantSettingService.getSettingsAsMap();
+
+        // Then
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getSettingsAsMap_multiTenant_isolatedToRequestedTenant() {
+        // Given — only this tenant's settings returned
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(tenantSettingRepository.findByTenantIdAndActiveTrue(TENANT_ID))
+                .thenReturn(List.of(sampleSetting));
+
+        // When
+        Map<String, String> result = tenantSettingService.getSettingsAsMap();
+
+        // Then
+        assertEquals(1, result.size());
+        assertEquals("Welcome to our store", result.get("pos.receipt.header"));
+        verify(tenantSettingRepository).findByTenantIdAndActiveTrue(TENANT_ID);
     }
 
     @Test
