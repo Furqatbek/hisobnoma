@@ -232,9 +232,9 @@ class JwtTokenProviderTest {
         // Given
         UserPrincipal principal = buildPrincipal("alice", 1L, 42L);
         String token = tokenProvider.generateAccessToken(principal);
-        // Flip last character of signature segment
-        String tampered = token.substring(0, token.length() - 1) +
-                (token.charAt(token.length() - 1) == 'A' ? 'B' : 'A');
+        // Replace entire signature segment with garbage
+        String[] parts = token.split("\\.");
+        String tampered = parts[0] + "." + parts[1] + ".AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
         // When
         boolean result = tokenProvider.validateToken(tampered);
