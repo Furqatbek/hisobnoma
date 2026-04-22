@@ -93,6 +93,32 @@ class SystemSettingServiceTest {
         assertTrue(result.isEmpty());
     }
 
+    @Test
+    void getAllSettings_returnsCorrectCount() {
+        // Given — exactly 5 settings
+        SystemSetting s1 = SystemSetting.builder().settingKey("k1").category("A").active(true).build();
+        SystemSetting s2 = SystemSetting.builder().settingKey("k2").category("A").active(true).build();
+        SystemSetting s3 = SystemSetting.builder().settingKey("k3").category("B").active(true).build();
+        SystemSetting s4 = SystemSetting.builder().settingKey("k4").category("B").active(true).build();
+        SystemSetting s5 = SystemSetting.builder().settingKey("k5").category("C").active(true).build();
+        List<SystemSetting> settings = List.of(s1, s2, s3, s4, s5);
+        List<SystemSettingDTO> dtos = List.of(
+                SystemSettingDTO.builder().settingKey("k1").build(),
+                SystemSettingDTO.builder().settingKey("k2").build(),
+                SystemSettingDTO.builder().settingKey("k3").build(),
+                SystemSettingDTO.builder().settingKey("k4").build(),
+                SystemSettingDTO.builder().settingKey("k5").build()
+        );
+        when(systemSettingRepository.findAllActiveOrderedByCategoryAndSortOrder()).thenReturn(settings);
+        when(systemSettingMapper.toDtoList(settings)).thenReturn(dtos);
+
+        // When
+        List<SystemSettingDTO> result = systemSettingService.getAllSettings();
+
+        // Then
+        assertEquals(5, result.size());
+    }
+
     // ---- getSettingsByCategory ----
 
     @Test
@@ -108,6 +134,36 @@ class SystemSettingServiceTest {
 
         // Then
         assertEquals(1, result.size());
+    }
+
+    @Test
+    void getSettingsByCategory_nonExistent_returnsEmptyList() {
+        // Given
+        when(systemSettingRepository.findByCategoryAndActiveTrue("NONEXISTENT"))
+                .thenReturn(Collections.emptyList());
+        when(systemSettingMapper.toDtoList(Collections.emptyList()))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<SystemSettingDTO> result = systemSettingService.getSettingsByCategory("NONEXISTENT");
+
+        // Then
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getSettingsByCategory_caseSensitive_noMatch() {
+        // Given — only "SECURITY" uppercase exists, querying lowercase
+        when(systemSettingRepository.findByCategoryAndActiveTrue("security"))
+                .thenReturn(Collections.emptyList());
+        when(systemSettingMapper.toDtoList(Collections.emptyList()))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<SystemSettingDTO> result = systemSettingService.getSettingsByCategory("security");
+
+        // Then
+        assertTrue(result.isEmpty());
     }
 
     // ---- getSetting ----
@@ -136,6 +192,17 @@ class SystemSettingServiceTest {
         // When / Then
         assertThrows(NotFoundException.class, () ->
                 systemSettingService.getSetting("nonexistent"));
+    }
+
+    @Test
+    void getSetting_nullKey_throwsException() {
+        // Given
+        when(systemSettingRepository.findBySettingKey(null))
+                .thenReturn(Optional.empty());
+
+        // When / Then
+        assertThrows(NotFoundException.class, () ->
+                systemSettingService.getSetting(null));
     }
 
     // ---- getSettingValue ----
@@ -271,6 +338,33 @@ class SystemSettingServiceTest {
         assertEquals(2, result.size());
     }
 
+    @Test
+    void getCategories_noSettings_returnsEmptyList() {
+        // Given
+        when(systemSettingRepository.findDistinctCategories())
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<String> result = systemSettingService.getCategories();
+
+        // Then
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getCategories_singleCategory_returnsSingleEntry() {
+        // Given
+        when(systemSettingRepository.findDistinctCategories())
+                .thenReturn(List.of("GENERAL"));
+
+        // When
+        List<String> result = systemSettingService.getCategories();
+
+        // Then
+        assertEquals(1, result.size());
+        assertEquals("GENERAL", result.get(0));
+    }
+
     // ---- createSetting ----
 
     @Test
@@ -299,6 +393,23 @@ class SystemSettingServiceTest {
         assertThrows(DuplicateResourceException.class, () ->
                 systemSettingService.createSetting(sampleDto));
         verify(systemSettingRepository, never()).save(any());
+    }
+
+    @Test
+    void createSetting_nullKey_throwsException() {
+        // Given — DTO with null key
+        SystemSettingDTO nullKeyDto = SystemSettingDTO.builder()
+                .settingKey(null)
+                .settingValue("value")
+                .build();
+        when(systemSettingRepository.existsBySettingKey(null)).thenReturn(false);
+        when(systemSettingMapper.toEntity(nullKeyDto)).thenReturn(
+                SystemSetting.builder().settingKey(null).settingValue("value").build());
+        when(systemSettingRepository.save(any())).thenThrow(new RuntimeException("Constraint violation"));
+
+        // When / Then
+        assertThrows(RuntimeException.class, () ->
+                systemSettingService.createSetting(nullKeyDto));
     }
 
     // ---- updateSetting ----
@@ -343,6 +454,23 @@ class SystemSettingServiceTest {
         verify(systemSettingRepository, never()).save(any());
     }
 
+    @Test
+    void updateSetting_sameValue_stillSucceeds() {
+        // Given — DTO value is the same as existing
+        when(systemSettingRepository.findBySettingKey("app.name"))
+                .thenReturn(Optional.of(sampleSetting));
+        when(systemSettingRepository.save(sampleSetting)).thenReturn(sampleSetting);
+        when(systemSettingMapper.toDto(sampleSetting)).thenReturn(sampleDto);
+
+        // When
+        SystemSettingDTO result = systemSettingService.updateSetting("app.name", sampleDto);
+
+        // Then
+        assertNotNull(result);
+        verify(systemSettingMapper).updateEntity(eq(sampleDto), eq(sampleSetting));
+        verify(systemSettingRepository).save(sampleSetting);
+    }
+
     // ---- updateSettingValue ----
 
     @Test
@@ -373,6 +501,33 @@ class SystemSettingServiceTest {
                 systemSettingService.updateSettingValue("app.name", "NewName"));
     }
 
+    @Test
+    void updateSettingValue_nonExistentKey_throwsNotFoundException() {
+        // Given
+        when(systemSettingRepository.findBySettingKey("nonexistent.key"))
+                .thenReturn(Optional.empty());
+
+        // When / Then
+        assertThrows(NotFoundException.class, () ->
+                systemSettingService.updateSettingValue("nonexistent.key", "60"));
+    }
+
+    @Test
+    void updateSettingValue_emptyValue_successfullySetToEmpty() {
+        // Given
+        when(systemSettingRepository.findBySettingKey("app.name"))
+                .thenReturn(Optional.of(sampleSetting));
+        when(systemSettingRepository.save(sampleSetting)).thenReturn(sampleSetting);
+        when(systemSettingMapper.toDto(sampleSetting)).thenReturn(sampleDto);
+
+        // When
+        SystemSettingDTO result = systemSettingService.updateSettingValue("app.name", "");
+
+        // Then
+        assertNotNull(result);
+        assertEquals("", sampleSetting.getSettingValue());
+    }
+
     // ---- updateSettings (batch) ----
 
     @Test
@@ -400,6 +555,58 @@ class SystemSettingServiceTest {
         // Then
         assertEquals("Updated", sampleSetting.getSettingValue());
         assertEquals("old", readonlySetting.getSettingValue());
+    }
+
+    @Test
+    void updateSettings_mapOfThreeKeys_allThreeUpdated() {
+        // Given
+        SystemSetting s1 = SystemSetting.builder().settingKey("k1").settingValue("old1").readonly(false).build();
+        SystemSetting s2 = SystemSetting.builder().settingKey("k2").settingValue("old2").readonly(false).build();
+        SystemSetting s3 = SystemSetting.builder().settingKey("k3").settingValue("old3").readonly(false).build();
+        when(systemSettingRepository.findBySettingKey("k1")).thenReturn(Optional.of(s1));
+        when(systemSettingRepository.findBySettingKey("k2")).thenReturn(Optional.of(s2));
+        when(systemSettingRepository.findBySettingKey("k3")).thenReturn(Optional.of(s3));
+
+        Map<String, String> updates = Map.of("k1", "new1", "k2", "new2", "k3", "new3");
+
+        // When
+        systemSettingService.updateSettings(updates);
+
+        // Then
+        assertEquals("new1", s1.getSettingValue());
+        assertEquals("new2", s2.getSettingValue());
+        assertEquals("new3", s3.getSettingValue());
+        verify(systemSettingRepository, times(3)).save(any());
+    }
+
+    @Test
+    void updateSettings_emptyMap_noUpdatesPerformed() {
+        // Given
+        Map<String, String> updates = Collections.emptyMap();
+
+        // When
+        systemSettingService.updateSettings(updates);
+
+        // Then
+        verify(systemSettingRepository, never()).findBySettingKey(any());
+        verify(systemSettingRepository, never()).save(any());
+    }
+
+    @Test
+    void updateSettings_mapWithOneInvalidKey_skipsInvalidKey() {
+        // Given — service uses ifPresent, so missing keys are silently skipped
+        SystemSetting existing = SystemSetting.builder().settingKey("k1").settingValue("old").readonly(false).build();
+        when(systemSettingRepository.findBySettingKey("k1")).thenReturn(Optional.of(existing));
+        when(systemSettingRepository.findBySettingKey("missing.key")).thenReturn(Optional.empty());
+
+        Map<String, String> updates = Map.of("k1", "new1", "missing.key", "value");
+
+        // When
+        systemSettingService.updateSettings(updates);
+
+        // Then
+        assertEquals("new1", existing.getSettingValue());
+        verify(systemSettingRepository, times(1)).save(any());
     }
 
     // ---- deleteSetting ----
@@ -439,6 +646,17 @@ class SystemSettingServiceTest {
         // When / Then
         assertThrows(BusinessException.class, () ->
                 systemSettingService.deleteSetting("app.name"));
+    }
+
+    @Test
+    void deleteSetting_alreadyDeleted_throwsNotFoundException() {
+        // Given — key was previously deleted (not found in repository)
+        when(systemSettingRepository.findBySettingKey("session.timeout"))
+                .thenReturn(Optional.empty());
+
+        // When / Then
+        assertThrows(NotFoundException.class, () ->
+                systemSettingService.deleteSetting("session.timeout"));
     }
 
     // ---- getSettingsAsMap ----
