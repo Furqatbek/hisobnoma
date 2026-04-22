@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 
 @SpringBootTest(
         properties = {
+                "spring.main.allow-bean-definition-overriding=true",
                 "spring.autoconfigure.exclude=" +
                         "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration," +
                         "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration"
