@@ -10,7 +10,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,7 +44,7 @@ class PermissionCacheServiceTest {
         // Given
         Permission p1 = Permission.builder().code("INVENTORY_READ").build();
         Permission p2 = Permission.builder().code("POS_READ").build();
-        when(permissionRepository.findAllByUserId(USER_ID)).thenReturn(List.of(p1, p2));
+        when(permissionRepository.findAllByUserId(USER_ID)).thenReturn(Set.of(p1, p2));
 
         // When
         Set<String> result = permissionCacheService.getUserPermissions(USER_ID);
@@ -64,7 +63,7 @@ class PermissionCacheServiceTest {
     void getPermissions_cacheHit_returnsCachedValueWithoutDbCall() {
         // Given — prime the cache
         Permission p1 = Permission.builder().code("INVENTORY_READ").build();
-        when(permissionRepository.findAllByUserId(USER_ID)).thenReturn(List.of(p1));
+        when(permissionRepository.findAllByUserId(USER_ID)).thenReturn(Set.of(p1));
 
         // First call — populates cache
         permissionCacheService.getUserPermissions(USER_ID);
@@ -84,7 +83,7 @@ class PermissionCacheServiceTest {
     void evictUserPermissions_removesEntryAndForcesDbOnNextCall() {
         // Given — prime the cache
         Permission p1 = Permission.builder().code("INVENTORY_READ").build();
-        when(permissionRepository.findAllByUserId(USER_ID)).thenReturn(List.of(p1));
+        when(permissionRepository.findAllByUserId(USER_ID)).thenReturn(Set.of(p1));
 
         permissionCacheService.getUserPermissions(USER_ID);
         assertNotNull(cacheManager.getCache(CACHE_NAME).get(USER_ID));
