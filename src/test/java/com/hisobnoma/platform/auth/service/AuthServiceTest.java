@@ -422,7 +422,7 @@ class AuthServiceTest {
 
         // Then
         assertEquals("$2a$10$newhash", user.getPasswordHash());
-        assertNotNull(token.getUsedAt());
+        assertTrue(token.isUsed());
         verify(refreshTokenRepository).revokeAllByUser(user);
     }
 
