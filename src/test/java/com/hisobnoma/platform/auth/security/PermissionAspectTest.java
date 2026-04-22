@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.auth.security;
 
 import com.hisobnoma.platform.common.exception.ForbiddenException;
+import com.hisobnoma.platform.common.exception.UnauthorizedException;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.BeforeEach;
@@ -114,6 +115,31 @@ class PermissionAspectTest {
 
         // When/Then
         assertThrows(ForbiddenException.class, () -> permissionAspect.checkPermission(joinPoint));
+    }
+
+    @Test
+    void shouldThrowUnauthorizedWhenNoAuthentication() throws Throwable {
+        // Given — SecurityContextHelper.getRequiredCurrentUser() throws when no auth
+        when(joinPoint.getSignature()).thenReturn(methodSignature);
+        when(methodSignature.getMethod()).thenReturn(getAnnotatedMethod("methodWithSinglePermission"));
+        when(securityContextHelper.getRequiredCurrentUser())
+                .thenThrow(new UnauthorizedException("User not authenticated"));
+
+        // When / Then — UnauthorizedException propagates
+        assertThrows(UnauthorizedException.class, () -> permissionAspect.checkPermission(joinPoint));
+        verify(joinPoint, never()).proceed();
+    }
+
+    @Test
+    void shouldDenyAccessWhenAnyOfPermissions_userHasNeither() throws Throwable {
+        // Given — user without required permissions, method requires any-of
+        when(joinPoint.getSignature()).thenReturn(methodSignature);
+        when(methodSignature.getMethod()).thenReturn(getAnnotatedMethod("methodWithAnyOfPermissions"));
+        when(securityContextHelper.getRequiredCurrentUser()).thenReturn(userWithoutPermissions);
+
+        // When / Then
+        assertThrows(ForbiddenException.class, () -> permissionAspect.checkPermission(joinPoint));
+        verify(joinPoint, never()).proceed();
     }
 
     // Helper methods for test annotations
