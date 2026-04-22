@@ -82,6 +82,39 @@ class SecurityContextHelperTest {
     }
 
     @Test
+    void getCurrentUserId_unauthenticatedContext_throwsUnauthorizedException() {
+        // When / Then — actual contract throws UnauthorizedException for missing auth
+        assertThrows(UnauthorizedException.class, () ->
+                securityContextHelper.getCurrentUserId());
+    }
+
+    @Test
+    void getCurrentUsername_authenticatedContext_returnsString() {
+        // Given
+        setAuthentication(userPrincipal);
+
+        // When
+        String username = securityContextHelper.getCurrentUsername();
+
+        // Then
+        assertEquals("testuser", username);
+    }
+
+    @Test
+    void getCurrentUsername_unauthenticatedContext_throwsUnauthorizedException() {
+        // When / Then
+        assertThrows(UnauthorizedException.class, () ->
+                securityContextHelper.getCurrentUsername());
+    }
+
+    @Test
+    void getCurrentTenantId_unauthenticatedContext_throwsUnauthorizedException() {
+        // When / Then
+        assertThrows(UnauthorizedException.class, () ->
+                securityContextHelper.getCurrentTenantId());
+    }
+
+    @Test
     void shouldReturnTenantIdWhenAuthenticated() {
         // Given
         setAuthentication(userPrincipal);
