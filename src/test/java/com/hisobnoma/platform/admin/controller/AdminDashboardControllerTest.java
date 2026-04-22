@@ -62,10 +62,10 @@ class AdminDashboardControllerTest {
     }
 
     @Test
-    void getDashboardStats_unauthenticated_returns401() throws Exception {
-        // When / Then — no auth token
+    void getDashboardStats_unauthenticated_returns403() throws Exception {
+        // When / Then — no auth token; Spring Security returns 403 for unauthenticated stateless requests
         mockMvc.perform(get("/api/v1/admin/dashboard/stats"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
