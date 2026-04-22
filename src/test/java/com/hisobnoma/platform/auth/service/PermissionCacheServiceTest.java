@@ -5,9 +5,17 @@ import com.hisobnoma.platform.auth.repository.PermissionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Set;
@@ -15,9 +23,26 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
+@SpringBootTest(
+        properties = {
+                "spring.autoconfigure.exclude=" +
+                        "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration," +
+                        "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration"
+        }
+)
 @ActiveProfiles("test")
+@Import(PermissionCacheServiceTest.TestCacheConfig.class)
 class PermissionCacheServiceTest {
+
+    @TestConfiguration
+    @EnableCaching
+    static class TestCacheConfig {
+        @Bean
+        @Primary
+        public CacheManager cacheManager() {
+            return new ConcurrentMapCacheManager("user-permissions");
+        }
+    }
 
     @Autowired
     private PermissionCacheService permissionCacheService;
@@ -33,7 +58,6 @@ class PermissionCacheServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Ensure cache is clean before each test
         if (cacheManager.getCache(CACHE_NAME) != null) {
             cacheManager.getCache(CACHE_NAME).clear();
         }
@@ -54,34 +78,29 @@ class PermissionCacheServiceTest {
         assertTrue(result.contains("INVENTORY_READ"));
         assertTrue(result.contains("POS_READ"));
         verify(permissionRepository, times(1)).findAllByUserId(USER_ID);
-
-        // Verify cache was populated
         assertNotNull(cacheManager.getCache(CACHE_NAME).get(USER_ID));
     }
 
     @Test
     void getPermissions_cacheHit_returnsCachedValueWithoutDbCall() {
-        // Given — prime the cache
+        // Given
         Permission p1 = Permission.builder().code("INVENTORY_READ").build();
         when(permissionRepository.findAllByUserId(USER_ID)).thenReturn(Set.of(p1));
 
-        // First call — populates cache
         permissionCacheService.getUserPermissions(USER_ID);
         verify(permissionRepository, times(1)).findAllByUserId(USER_ID);
 
-        // When — second call should hit cache
+        // When
         Set<String> result = permissionCacheService.getUserPermissions(USER_ID);
 
         // Then
         assertEquals(1, result.size());
-        assertTrue(result.contains("INVENTORY_READ"));
-        // Repository not called again — still 1 total invocation
         verify(permissionRepository, times(1)).findAllByUserId(USER_ID);
     }
 
     @Test
     void evictUserPermissions_removesEntryAndForcesDbOnNextCall() {
-        // Given — prime the cache
+        // Given
         Permission p1 = Permission.builder().code("INVENTORY_READ").build();
         when(permissionRepository.findAllByUserId(USER_ID)).thenReturn(Set.of(p1));
 
@@ -91,10 +110,8 @@ class PermissionCacheServiceTest {
         // When
         permissionCacheService.evictUserPermissions(USER_ID);
 
-        // Then — cache entry removed
+        // Then
         assertNull(cacheManager.getCache(CACHE_NAME).get(USER_ID));
-
-        // Subsequent call triggers a fresh DB query
         permissionCacheService.getUserPermissions(USER_ID);
         verify(permissionRepository, times(2)).findAllByUserId(USER_ID);
     }
