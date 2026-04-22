@@ -102,6 +102,28 @@ class AuditLogServiceTest {
     }
 
     @Test
+    void getAuditLogs_validTenant_pageContentMatchesTenant() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        AuditLog log1 = AuditLog.builder().tenantId(TENANT_ID).action(AuditLog.AuditAction.CREATE).build();
+        AuditLog log2 = AuditLog.builder().tenantId(TENANT_ID).action(AuditLog.AuditAction.UPDATE).build();
+        AuditLogDTO dto1 = AuditLogDTO.builder().tenantId(TENANT_ID).action(AuditLog.AuditAction.CREATE).build();
+        AuditLogDTO dto2 = AuditLogDTO.builder().tenantId(TENANT_ID).action(AuditLog.AuditAction.UPDATE).build();
+        Page<AuditLog> page = new PageImpl<>(List.of(log1, log2), pageable, 2L);
+        when(auditLogRepository.findByTenantId(TENANT_ID, pageable)).thenReturn(page);
+        when(auditLogMapper.toDto(log1)).thenReturn(dto1);
+        when(auditLogMapper.toDto(log2)).thenReturn(dto2);
+
+        // When
+        PageResponse<AuditLogDTO> result = auditLogService.getAuditLogs(pageable);
+
+        // Then
+        assertEquals(2, result.getContent().size());
+        result.getContent().forEach(dto ->
+                assertEquals(TENANT_ID, dto.getTenantId()));
+    }
+
+    @Test
     void getAuditLogs_noLogs_returnsEmptyPage() {
         // Given
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
@@ -135,6 +157,26 @@ class AuditLogServiceTest {
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
         assertEquals(userId, result.getContent().get(0).getUserId());
+    }
+
+    @Test
+    void getAuditLogsByUser_multipleUsers_onlyTargetUserReturned() {
+        // Given
+        Long targetUserId = 10L;
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        AuditLog targetLog = AuditLog.builder().tenantId(TENANT_ID).userId(targetUserId).username("admin").build();
+        AuditLogDTO targetDto = AuditLogDTO.builder().tenantId(TENANT_ID).userId(targetUserId).username("admin").build();
+        Page<AuditLog> page = new PageImpl<>(List.of(targetLog), pageable, 1L);
+        when(auditLogRepository.findByTenantIdAndUserId(TENANT_ID, targetUserId, pageable)).thenReturn(page);
+        when(auditLogMapper.toDto(targetLog)).thenReturn(targetDto);
+
+        // When
+        PageResponse<AuditLogDTO> result = auditLogService.getAuditLogsByUser(targetUserId, pageable);
+
+        // Then
+        assertEquals(1, result.getContent().size());
+        result.getContent().forEach(dto ->
+                assertEquals(targetUserId, dto.getUserId()));
     }
 
     @Test
@@ -189,10 +231,59 @@ class AuditLogServiceTest {
         assertTrue(result.getContent().isEmpty());
     }
 
+    @Test
+    void getAuditLogsByEntity_differentEntityType_excludedFromResults() {
+        // Given — Order logs exist, but we query for Product
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        Page<AuditLog> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0L);
+        when(auditLogRepository.findByTenantIdAndEntityTypeAndEntityId(TENANT_ID, "Product", 100L, pageable))
+                .thenReturn(emptyPage);
+
+        // When
+        PageResponse<AuditLogDTO> result = auditLogService.getAuditLogsByEntity("Product", 100L, pageable);
+
+        // Then
+        assertTrue(result.getContent().isEmpty());
+    }
+
     // ---- getAuditLogsByAction ----
 
     @Test
-    void getAuditLogsByAction_matchingAction_returnsFilteredLogs() {
+    void getAuditLogsByAction_deleteAction_returnsOnlyDeleteLogs() {
+        // Given
+        AuditLog deleteLog = AuditLog.builder().tenantId(TENANT_ID).action(AuditLog.AuditAction.DELETE).build();
+        AuditLogDTO deleteDto = AuditLogDTO.builder().tenantId(TENANT_ID).action(AuditLog.AuditAction.DELETE).build();
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        Page<AuditLog> page = new PageImpl<>(List.of(deleteLog), pageable, 1L);
+        when(auditLogRepository.findByTenantIdAndAction(TENANT_ID, AuditLog.AuditAction.DELETE, pageable))
+                .thenReturn(page);
+        when(auditLogMapper.toDto(deleteLog)).thenReturn(deleteDto);
+
+        // When
+        PageResponse<AuditLogDTO> result = auditLogService.getAuditLogsByAction(AuditLog.AuditAction.DELETE, pageable);
+
+        // Then
+        assertEquals(1, result.getContent().size());
+        assertEquals(AuditLog.AuditAction.DELETE, result.getContent().get(0).getAction());
+    }
+
+    @Test
+    void getAuditLogsByAction_noMatchingAction_returnsEmptyPage() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        Page<AuditLog> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0L);
+        when(auditLogRepository.findByTenantIdAndAction(TENANT_ID, AuditLog.AuditAction.DELETE, pageable))
+                .thenReturn(emptyPage);
+
+        // When
+        PageResponse<AuditLogDTO> result = auditLogService.getAuditLogsByAction(AuditLog.AuditAction.DELETE, pageable);
+
+        // Then
+        assertTrue(result.getContent().isEmpty());
+    }
+
+    @Test
+    void getAuditLogsByAction_createAction_returnsOnlyCreateLogs() {
         // Given
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         Page<AuditLog> page = new PageImpl<>(List.of(sampleLog), pageable, 1L);
@@ -218,6 +309,40 @@ class AuditLogServiceTest {
         when(auditLogRepository.findByTenantIdAndModule(TENANT_ID, "INVENTORY", pageable))
                 .thenReturn(page);
         when(auditLogMapper.toDto(sampleLog)).thenReturn(sampleDto);
+
+        // When
+        PageResponse<AuditLogDTO> result = auditLogService.getAuditLogsByModule("INVENTORY", pageable);
+
+        // Then
+        assertEquals(1, result.getContent().size());
+        assertEquals("INVENTORY", result.getContent().get(0).getModule());
+    }
+
+    @Test
+    void getAuditLogsByModule_noMatchingModule_returnsEmptyPage() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        Page<AuditLog> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0L);
+        when(auditLogRepository.findByTenantIdAndModule(TENANT_ID, "INVENTORY", pageable))
+                .thenReturn(emptyPage);
+
+        // When
+        PageResponse<AuditLogDTO> result = auditLogService.getAuditLogsByModule("INVENTORY", pageable);
+
+        // Then
+        assertTrue(result.getContent().isEmpty());
+    }
+
+    @Test
+    void getAuditLogsByModule_multipleModules_onlyTargetReturned() {
+        // Given — INVENTORY and POS logs exist, but repository filters for INVENTORY only
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        AuditLog inventoryLog = AuditLog.builder().tenantId(TENANT_ID).module("INVENTORY").build();
+        AuditLogDTO inventoryDto = AuditLogDTO.builder().tenantId(TENANT_ID).module("INVENTORY").build();
+        Page<AuditLog> page = new PageImpl<>(List.of(inventoryLog), pageable, 1L);
+        when(auditLogRepository.findByTenantIdAndModule(TENANT_ID, "INVENTORY", pageable))
+                .thenReturn(page);
+        when(auditLogMapper.toDto(inventoryLog)).thenReturn(inventoryDto);
 
         // When
         PageResponse<AuditLogDTO> result = auditLogService.getAuditLogsByModule("INVENTORY", pageable);
@@ -264,6 +389,23 @@ class AuditLogServiceTest {
         assertTrue(result.getContent().isEmpty());
     }
 
+    @Test
+    void getAuditLogsByDateRange_endBeforeStart_returnsEmptyOrThrows() {
+        // Given — endDate is before startDate
+        Instant start = Instant.now();
+        Instant end = Instant.now().minusSeconds(3600);
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        Page<AuditLog> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0L);
+        when(auditLogRepository.findByTenantIdAndDateRange(TENANT_ID, start, end, pageable))
+                .thenReturn(emptyPage);
+
+        // When
+        PageResponse<AuditLogDTO> result = auditLogService.getAuditLogsByDateRange(start, end, pageable);
+
+        // Then
+        assertTrue(result.getContent().isEmpty());
+    }
+
     // ---- getFailedActions ----
 
     @Test
@@ -295,6 +437,42 @@ class AuditLogServiceTest {
         assertFalse(result.getContent().get(0).isSuccess());
     }
 
+    @Test
+    void getFailedActions_noFailedActions_returnsEmptyPage() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        Page<AuditLog> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0L);
+        when(auditLogRepository.findFailedActionsByTenantId(TENANT_ID, pageable)).thenReturn(emptyPage);
+
+        // When
+        PageResponse<AuditLogDTO> result = auditLogService.getFailedActions(pageable);
+
+        // Then
+        assertTrue(result.getContent().isEmpty());
+        assertEquals(0L, result.getPage().getTotalElements());
+    }
+
+    @Test
+    void getFailedActions_allFailed_returnsAllLogs() {
+        // Given
+        AuditLog fail1 = AuditLog.builder().tenantId(TENANT_ID).success(false).action(AuditLog.AuditAction.LOGIN_FAILED).build();
+        AuditLog fail2 = AuditLog.builder().tenantId(TENANT_ID).success(false).action(AuditLog.AuditAction.DELETE).build();
+        AuditLogDTO failDto1 = AuditLogDTO.builder().success(false).action(AuditLog.AuditAction.LOGIN_FAILED).build();
+        AuditLogDTO failDto2 = AuditLogDTO.builder().success(false).action(AuditLog.AuditAction.DELETE).build();
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        Page<AuditLog> page = new PageImpl<>(List.of(fail1, fail2), pageable, 2L);
+        when(auditLogRepository.findFailedActionsByTenantId(TENANT_ID, pageable)).thenReturn(page);
+        when(auditLogMapper.toDto(fail1)).thenReturn(failDto1);
+        when(auditLogMapper.toDto(fail2)).thenReturn(failDto2);
+
+        // When
+        PageResponse<AuditLogDTO> result = auditLogService.getFailedActions(pageable);
+
+        // Then
+        assertEquals(2, result.getContent().size());
+        result.getContent().forEach(dto -> assertFalse(dto.isSuccess()));
+    }
+
     // ---- getActionStats ----
 
     @Test
@@ -316,6 +494,41 @@ class AuditLogServiceTest {
         assertEquals(25L, result.get(0)[1]);
     }
 
+    @Test
+    void getActionStats_noActivity_returnsEmptyList() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(auditLogRepository.countActionsByTenantIdSince(eq(TENANT_ID), any(Instant.class)))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<Object[]> result = auditLogService.getActionStats(7);
+
+        // Then
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getActionStats_countAccuracy_matchesExpected() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        List<Object[]> stats = new ArrayList<>();
+        stats.add(new Object[]{"DELETE", 3L});
+        stats.add(new Object[]{"CREATE", 5L});
+        when(auditLogRepository.countActionsByTenantIdSince(eq(TENANT_ID), any(Instant.class)))
+                .thenReturn(stats);
+
+        // When
+        List<Object[]> result = auditLogService.getActionStats(7);
+
+        // Then
+        assertEquals(2, result.size());
+        assertEquals("DELETE", result.get(0)[0]);
+        assertEquals(3L, result.get(0)[1]);
+        assertEquals("CREATE", result.get(1)[0]);
+        assertEquals(5L, result.get(1)[1]);
+    }
+
     // ---- getModuleActivityStats ----
 
     @Test
@@ -335,6 +548,41 @@ class AuditLogServiceTest {
         assertEquals("INVENTORY", result.get(0)[0]);
     }
 
+    @Test
+    void getModuleActivityStats_noActivity_returnsEmptyList() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(auditLogRepository.countModuleActivityByTenantIdSince(eq(TENANT_ID), any(Instant.class)))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<Object[]> result = auditLogService.getModuleActivityStats(30);
+
+        // Then
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getModuleActivityStats_countAccuracy_matchesExpected() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        List<Object[]> stats = new ArrayList<>();
+        stats.add(new Object[]{"INVENTORY", 10L});
+        stats.add(new Object[]{"POS", 4L});
+        when(auditLogRepository.countModuleActivityByTenantIdSince(eq(TENANT_ID), any(Instant.class)))
+                .thenReturn(stats);
+
+        // When
+        List<Object[]> result = auditLogService.getModuleActivityStats(30);
+
+        // Then
+        assertEquals(2, result.size());
+        assertEquals("INVENTORY", result.get(0)[0]);
+        assertEquals(10L, result.get(0)[1]);
+        assertEquals("POS", result.get(1)[0]);
+        assertEquals(4L, result.get(1)[1]);
+    }
+
     // ---- getMostActiveUsers ----
 
     @Test
@@ -352,6 +600,44 @@ class AuditLogServiceTest {
         // Then
         assertEquals(1, result.size());
         assertEquals("admin", result.get(0)[1]);
+    }
+
+    @Test
+    void getMostActiveUsers_noActivity_returnsEmptyList() {
+        // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(auditLogRepository.findMostActiveUsersByTenantIdSince(eq(TENANT_ID), any(Instant.class)))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<Object[]> result = auditLogService.getMostActiveUsers(30);
+
+        // Then
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getMostActiveUsers_sortOrderCorrect() {
+        // Given — User A: 10, User C: 7, User B: 3
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        List<Object[]> users = new ArrayList<>();
+        users.add(new Object[]{1L, "userA", 10L});
+        users.add(new Object[]{3L, "userC", 7L});
+        users.add(new Object[]{2L, "userB", 3L});
+        when(auditLogRepository.findMostActiveUsersByTenantIdSince(eq(TENANT_ID), any(Instant.class)))
+                .thenReturn(users);
+
+        // When
+        List<Object[]> result = auditLogService.getMostActiveUsers(30);
+
+        // Then
+        assertEquals(3, result.size());
+        assertEquals("userA", result.get(0)[1]);
+        assertEquals(10L, result.get(0)[2]);
+        assertEquals("userC", result.get(1)[1]);
+        assertEquals(7L, result.get(1)[2]);
+        assertEquals("userB", result.get(2)[1]);
+        assertEquals(3L, result.get(2)[2]);
     }
 
     // ---- getFailedLoginCount ----
@@ -382,6 +668,21 @@ class AuditLogServiceTest {
 
         // Then
         assertEquals(0L, result);
+    }
+
+    @Test
+    void getFailedLoginCount_exactBoundary_inclusiveOfBoundary() {
+        // Given — failed login exactly 24 hours ago should be included
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(auditLogRepository.countFailedLoginsSince(eq(TENANT_ID), any(Instant.class)))
+                .thenReturn(1L);
+
+        // When
+        long result = auditLogService.getFailedLoginCount(24);
+
+        // Then
+        assertEquals(1L, result);
+        verify(auditLogRepository).countFailedLoginsSince(eq(TENANT_ID), any(Instant.class));
     }
 
     // ---- log (sync) ----
