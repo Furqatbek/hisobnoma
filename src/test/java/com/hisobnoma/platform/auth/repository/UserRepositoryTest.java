@@ -47,7 +47,12 @@ class UserRepositoryTest {
     }
 
     private User persistUserWithRolesAndPermissions(String username, String phone, Long tenantId) {
-        Permission perm = Permission.builder().code("INVENTORY_READ").build();
+        Permission perm = Permission.builder()
+                .name("Inventory Read")
+                .code("INVENTORY_READ_" + username)
+                .module(Permission.Module.INVENTORY)
+                .action(Permission.Action.READ)
+                .build();
         em.persistAndFlush(perm);
 
         Role role = Role.builder()
