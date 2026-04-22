@@ -59,7 +59,7 @@ class AuthControllerIntegrationTest {
     @Test
     void login_validCredentials_returns200WithTokens() throws Exception {
         LoginRequest request = LoginRequest.builder().username("admin").password("admin123").build();
-        when(authService.login(any(LoginRequest.class), anyString(), anyString()))
+        when(authService.login(any(LoginRequest.class), any(), any()))
                 .thenReturn(sampleAuthResponse());
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -75,7 +75,7 @@ class AuthControllerIntegrationTest {
     @Test
     void login_wrongPassword_returns401() throws Exception {
         LoginRequest request = LoginRequest.builder().username("admin").password("wrong").build();
-        when(authService.login(any(LoginRequest.class), anyString(), anyString()))
+        when(authService.login(any(LoginRequest.class), any(), any()))
                 .thenThrow(new UnauthorizedException("Invalid credentials"));
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -88,7 +88,7 @@ class AuthControllerIntegrationTest {
     void login_lockedAccount_returns403() throws Exception {
         // Given — LockedException maps to 423 LOCKED or 403 FORBIDDEN depending on handler
         LoginRequest request = LoginRequest.builder().username("admin").password("admin123").build();
-        when(authService.login(any(LoginRequest.class), anyString(), anyString()))
+        when(authService.login(any(LoginRequest.class), any(), any()))
                 .thenThrow(new LockedException("Account is locked"));
 
         // The global handler should map to 4xx (locked or forbidden)
@@ -113,7 +113,7 @@ class AuthControllerIntegrationTest {
     @Test
     void pinLogin_validPin_returns200() throws Exception {
         PinLoginRequest request = PinLoginRequest.builder().username("admin").pin("1234").build();
-        when(authService.loginWithPin(any(PinLoginRequest.class), anyString(), anyString()))
+        when(authService.loginWithPin(any(PinLoginRequest.class), any(), any()))
                 .thenReturn(sampleAuthResponse());
 
         mockMvc.perform(post("/api/v1/auth/pin-login")
@@ -126,7 +126,7 @@ class AuthControllerIntegrationTest {
     @Test
     void pinLogin_wrongPin_returns401() throws Exception {
         PinLoginRequest request = PinLoginRequest.builder().username("admin").pin("9999").build();
-        when(authService.loginWithPin(any(PinLoginRequest.class), anyString(), anyString()))
+        when(authService.loginWithPin(any(PinLoginRequest.class), any(), any()))
                 .thenThrow(new UnauthorizedException("Invalid PIN"));
 
         mockMvc.perform(post("/api/v1/auth/pin-login")
