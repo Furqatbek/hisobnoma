@@ -1,6 +1,8 @@
 package com.hisobnoma.platform.reports.service;
 
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
+import com.hisobnoma.platform.common.entity.Tenant;
+import com.hisobnoma.platform.common.repository.TenantRepository;
 import com.hisobnoma.platform.pos.entity.POSTransaction;
 import com.hisobnoma.platform.pos.entity.POSTransactionLine;
 import com.hisobnoma.platform.pos.entity.TransactionStatus;
@@ -31,6 +33,22 @@ public class SalesReportService {
 
     private final SecurityContextHelper securityContextHelper;
     private final POSTransactionRepository transactionRepository;
+    private final TenantRepository tenantRepository;
+
+    private ZoneId resolveTenantZone(Long tenantId) {
+        return tenantRepository.findById(tenantId)
+                .map(Tenant::getTimezone)
+                .filter(tz -> tz != null && !tz.isBlank())
+                .map(tz -> {
+                    try {
+                        return ZoneId.of(tz);
+                    } catch (Exception e) {
+                        log.warn("Invalid tenant timezone '{}', falling back to UTC", tz);
+                        return ZoneOffset.UTC;
+                    }
+                })
+                .orElse(ZoneOffset.UTC);
+    }
 
     /**
      * Generate Sales Summary Report.
@@ -44,8 +62,9 @@ public class SalesReportService {
 
         log.info("Generating Sales Summary report for tenant {} from {} to {}", tenantId, startDate, endDate);
 
-        Instant startInstant = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
-        Instant endInstant = endDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        ZoneId zone = resolveTenantZone(tenantId);
+        Instant startInstant = startDate.atStartOfDay(zone).toInstant();
+        Instant endInstant = endDate.plusDays(1).atStartOfDay(zone).toInstant();
 
         // Get all completed sales transactions in the date range
         List<POSTransaction> salesTransactions = transactionRepository.findByTypeAndDateRangeAndTenantId(
@@ -114,7 +133,7 @@ public class SalesReportService {
                 .sum();
 
         // Build daily breakdown
-        List<SalesSummaryReportDTO.DailySales> dailyBreakdown = buildDailyBreakdown(salesTransactions, startDate, endDate);
+        List<SalesSummaryReportDTO.DailySales> dailyBreakdown = buildDailyBreakdown(salesTransactions, startDate, endDate, zone);
 
         // Build category breakdown — use line-level net total as denominator so percentages sum to ~100%
         BigDecimal totalLineNet = salesTransactions.stream()
@@ -156,10 +175,10 @@ public class SalesReportService {
                 .build();
     }
 
-    private List<SalesSummaryReportDTO.DailySales> buildDailyBreakdown(List<POSTransaction> transactions, LocalDate startDate, LocalDate endDate) {
+    private List<SalesSummaryReportDTO.DailySales> buildDailyBreakdown(List<POSTransaction> transactions, LocalDate startDate, LocalDate endDate, ZoneId zone) {
         Map<LocalDate, List<POSTransaction>> byDate = transactions.stream()
                 .collect(Collectors.groupingBy(t ->
-                        t.getCompletedAt().atZone(ZoneId.systemDefault()).toLocalDate()));
+                        t.getCompletedAt().atZone(zone).toLocalDate()));
 
         List<SalesSummaryReportDTO.DailySales> result = new ArrayList<>();
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
