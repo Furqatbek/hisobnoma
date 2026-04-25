@@ -43,5 +43,6 @@
   "sms": "SMS хизмати",
   "settings": "Созламалар",
   "systemSettings": "Тизим созламалари",
+  "tenantSettings": "Ижарачи созламалари",
   "auditLog": "Аудит журнали"
 }

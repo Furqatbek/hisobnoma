@@ -385,6 +385,17 @@ export const systemSettingsApi = {
   delete: (key) => api.delete(`/admin/settings/system/${key}`)
 }
 
+export const tenantSettingsApi = {
+  getAll: () => api.get('/admin/settings/tenant'),
+  getCategories: () => api.get('/admin/settings/tenant/categories'),
+  getByCategory: (category) => api.get(`/admin/settings/tenant/category/${category}`),
+  create: (data) => api.post('/admin/settings/tenant', data),
+  update: (key, data) => api.put(`/admin/settings/tenant/${key}`, data),
+  updateValue: (key, value) => api.put(`/admin/settings/tenant/${key}/value`, { value }),
+  batchUpdate: (settings) => api.put('/admin/settings/tenant/batch', settings),
+  getMap: () => api.get('/admin/settings/tenant/map')
+}
+
 // Audit Logs API - Backend: /api/v1/admin/audit-logs
 export const auditLogsApi = {
   getAll: (params) => api.get('/admin/audit-logs', { params }),

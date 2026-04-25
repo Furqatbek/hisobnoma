@@ -569,5 +569,26 @@
     "confirmDelete": "\"{key}\" созламасини ўчирмоқчимисиз?",
     "saveError": "Созламани сақлашда хатолик",
     "createSetting": "Яратиш"
+  },
+  "tenantSettings": {
+    "title": "Ижарачи созламалари",
+    "subtitle": "Ижарачига хос созламаларни бошқариш",
+    "addSetting": "Созлама қўшиш",
+    "editSetting": "Созламани таҳрирлаш",
+    "newSetting": "Янги созлама",
+    "key": "Калит",
+    "keyRequired": "Калит киритилиши шарт",
+    "category": "Категория",
+    "categoryPlaceholder": "Категория номи",
+    "valueType": "Қиймат тури",
+    "value": "Қиймат",
+    "descriptionPlaceholder": "Тавсиф",
+    "sensitive": "Махфий",
+    "sensitiveBadge": "Махфий",
+    "clickToEdit": "Ўзгартириш учун босинг",
+    "noSettings": "Созламалар топилмади",
+    "uncategorized": "Категориясиз",
+    "saveError": "Созламани сақлашда хатолик",
+    "createSetting": "Яратиш"
   }
 }

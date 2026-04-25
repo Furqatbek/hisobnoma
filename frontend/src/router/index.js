@@ -345,6 +345,12 @@ const routes = [
             meta: { permission: 'ADMIN_SETTINGS_MANAGE' }
           },
           {
+            path: 'tenant-settings',
+            name: 'tenant-settings',
+            component: () => import('@/views/admin/TenantSettingsView.vue'),
+            meta: { permission: 'TENANT_SETTINGS_MANAGE' }
+          },
+          {
             path: 'audit-logs',
             name: 'audit-logs',
             component: () => import('@/views/admin/AuditLogsView.vue'),
