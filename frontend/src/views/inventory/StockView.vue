@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { stockApi, warehousesApi } from '@/services/api'
-import { MagnifyingGlassIcon, ExclamationTriangleIcon, BuildingStorefrontIcon } from '@heroicons/vue/24/outline'
+import { MagnifyingGlassIcon, ExclamationTriangleIcon, BuildingStorefrontIcon, PencilSquareIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 
@@ -15,6 +15,13 @@ const selectedLocationId = ref('')
 const page = ref(0)
 const totalElements = ref(0)
 const pageSize = 50
+
+// Adjust modal state
+const showAdjustModal = ref(false)
+const adjusting = ref(false)
+const adjustItem = ref(null)
+const adjustForm = ref({ newQuantity: '', reason: '', notes: '' })
+const adjustErrors = ref({})
 
 async function fetchLocations() {
   try {
@@ -78,6 +85,54 @@ function formatQty(val) {
   if (val == null) return '0'
   const n = Number(val)
   return n % 1 === 0 ? n.toFixed(0) : n.toFixed(2)
+}
+
+function openAdjustModal(item) {
+  adjustItem.value = item
+  adjustForm.value = {
+    newQuantity: item.quantityOnHand ?? 0,
+    reason: '',
+    notes: ''
+  }
+  adjustErrors.value = {}
+  showAdjustModal.value = true
+}
+
+function closeAdjustModal() {
+  showAdjustModal.value = false
+  adjustItem.value = null
+}
+
+async function submitAdjust() {
+  adjustErrors.value = {}
+  const qty = adjustForm.value.newQuantity
+  if (qty === '' || qty === null || isNaN(Number(qty))) {
+    adjustErrors.value.newQuantity = t('inventory.stock.qtyRequired')
+  }
+  if (!adjustForm.value.reason.trim()) {
+    adjustErrors.value.reason = t('inventory.stock.reasonRequired')
+  }
+  if (Object.keys(adjustErrors.value).length > 0) return
+
+  adjusting.value = true
+  try {
+    await stockApi.adjust({
+      locationId: adjustItem.value.locationId,
+      reason: adjustForm.value.reason.trim(),
+      notes: adjustForm.value.notes.trim() || null,
+      items: [{
+        productId: adjustItem.value.productId,
+        newQuantity: Number(qty)
+      }]
+    })
+    closeAdjustModal()
+    fetchStock()
+  } catch (error) {
+    console.error('Adjust failed:', error)
+    adjustErrors.value.api = error.response?.data?.message || t('inventory.stock.adjustError')
+  } finally {
+    adjusting.value = false
+  }
 }
 </script>
 
@@ -164,6 +219,7 @@ function formatQty(val) {
               <th class="text-right">{{ $t('inventory.stock.reserved') }}</th>
               <th class="text-right">{{ $t('inventory.stock.free') }}</th>
               <th>{{ $t('status') }}</th>
+              <th class="w-10"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -192,13 +248,107 @@ function formatQty(val) {
                   {{ getStockStatus(item).label }}
                 </span>
               </td>
+              <td>
+                <button
+                  @click="openAdjustModal(item)"
+                  class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  :title="$t('inventory.stock.adjust')"
+                >
+                  <PencilSquareIcon class="h-4.5 w-4.5" />
+                </button>
+              </td>
             </tr>
             <tr v-if="filteredStock.length === 0">
-              <td colspan="7" class="text-center text-gray-400 py-8">{{ $t('inventory.stock.noStock') }}</td>
+              <td colspan="8" class="text-center text-gray-400 py-8">{{ $t('inventory.stock.noStock') }}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <!-- Adjust Modal -->
+    <Teleport to="body">
+      <div v-if="showAdjustModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+          <div class="fixed inset-0 bg-black/30" @click="closeAdjustModal"></div>
+          <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-5">
+            <!-- Header -->
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-gray-900">{{ $t('inventory.stock.adjustTitle') }}</h3>
+              <button @click="closeAdjustModal" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+                <XMarkIcon class="h-5 w-5" />
+              </button>
+            </div>
+
+            <!-- Product info -->
+            <div class="bg-gray-50 rounded-lg p-3 space-y-1">
+              <p class="font-medium text-gray-900">{{ adjustItem?.productName }}</p>
+              <p class="text-sm text-gray-500">{{ adjustItem?.locationName }} &middot; {{ adjustItem?.productSku }}</p>
+            </div>
+
+            <!-- API error -->
+            <div v-if="adjustErrors.api" class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">
+              {{ adjustErrors.api }}
+            </div>
+
+            <!-- Form -->
+            <div class="space-y-4">
+              <div>
+                <label class="label">{{ $t('inventory.stock.currentQty') }}</label>
+                <input type="text" class="input bg-gray-50" :value="formatQty(adjustItem?.quantityOnHand)" disabled />
+              </div>
+
+              <div>
+                <label class="label">{{ $t('inventory.stock.newQty') }} <span class="text-red-500">*</span></label>
+                <input
+                  v-model.number="adjustForm.newQuantity"
+                  type="number"
+                  step="any"
+                  min="0"
+                  class="input"
+                  :class="{ 'border-red-500': adjustErrors.newQuantity }"
+                  @keyup.enter="submitAdjust"
+                />
+                <p v-if="adjustErrors.newQuantity" class="text-sm text-red-500 mt-1">{{ adjustErrors.newQuantity }}</p>
+              </div>
+
+              <div>
+                <label class="label">{{ $t('inventory.stock.adjustReason') }} <span class="text-red-500">*</span></label>
+                <input
+                  v-model="adjustForm.reason"
+                  type="text"
+                  class="input"
+                  :class="{ 'border-red-500': adjustErrors.reason }"
+                  :placeholder="$t('inventory.stock.adjustReasonPlaceholder')"
+                  @keyup.enter="submitAdjust"
+                />
+                <p v-if="adjustErrors.reason" class="text-sm text-red-500 mt-1">{{ adjustErrors.reason }}</p>
+              </div>
+
+              <div>
+                <label class="label">{{ $t('inventory.stock.adjustNotes') }}</label>
+                <textarea
+                  v-model="adjustForm.notes"
+                  rows="2"
+                  class="input"
+                  :placeholder="$t('inventory.stock.adjustNotesPlaceholder')"
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex justify-end gap-3 pt-2">
+              <button @click="closeAdjustModal" class="btn btn-secondary">
+                {{ $t('cancel') }}
+              </button>
+              <button @click="submitAdjust" :disabled="adjusting" class="btn btn-primary">
+                <span v-if="adjusting" class="animate-spin inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+                {{ $t('save') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

@@ -165,6 +165,18 @@
     "reserved": "Банд",
     "free": "Эркин",
     "minLevel": "Мин. даража",
-    "noStock": "Захира маълумотлари йўқ"
+    "noStock": "Захира маълумотлари йўқ",
+    "adjust": "Тузатиш",
+    "adjustTitle": "Захирани тузатиш",
+    "currentQty": "Ҳозирги миқдор",
+    "newQty": "Янги миқдор",
+    "adjustReason": "Сабаб",
+    "adjustReasonPlaceholder": "Масалан: Инвентаризация, қолдиқ тузатиш...",
+    "adjustNotes": "Изоҳ",
+    "adjustNotesPlaceholder": "Қўшимча маълумот...",
+    "adjustSuccess": "Захира миқдори муваффақиятли тузатилди",
+    "adjustError": "Захирани тузатишда хатолик",
+    "reasonRequired": "Сабаб киритилиши шарт",
+    "qtyRequired": "Миқдор киритилиши шарт"
   }
 }
