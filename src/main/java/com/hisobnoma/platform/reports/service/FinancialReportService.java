@@ -55,9 +55,9 @@ public class FinancialReportService {
     }
 
     private static final List<ARInvoiceStatus> AR_EXCLUDED_STATUSES = Arrays.asList(
-            ARInvoiceStatus.CANCELLED, ARInvoiceStatus.PAID);
+            ARInvoiceStatus.DRAFT, ARInvoiceStatus.CANCELLED, ARInvoiceStatus.PAID, ARInvoiceStatus.WRITTEN_OFF);
     private static final List<APInvoiceStatus> AP_EXCLUDED_STATUSES = Arrays.asList(
-            APInvoiceStatus.CANCELLED, APInvoiceStatus.PAID);
+            APInvoiceStatus.DRAFT, APInvoiceStatus.CANCELLED, APInvoiceStatus.PAID);
 
     /**
      * Generate Trial Balance Report.
@@ -231,11 +231,28 @@ public class FinancialReportService {
      */
     public AgingReportDTO generateARAgingReport(GenerateReportRequest request) {
         Long tenantId = securityContextHelper.getRequiredTenantId();
-        LocalDate asOfDate = request.getEndDate() != null ? request.getEndDate() : LocalDate.now();
+        LocalDate asOfDate = request.getEndDate() != null ? request.getEndDate() : today(tenantId);
 
         log.info("Generating AR Aging report for tenant {} as of {}", tenantId, asOfDate);
 
-        List<Customer> customers = customerRepository.findAllActiveByTenantId(tenantId);
+        // Single query: open invoices (NOT paid/cancelled/draft/written-off) dated on or before asOfDate.
+        // Includes OVERDUE and DISPUTED statuses, which were silently dropped by the previous filter.
+        List<ARInvoice> invoices = arInvoiceRepository.findUnpaidInvoicesAsOf(
+                tenantId, asOfDate, AR_EXCLUDED_STATUSES);
+
+        // Group by customer driven from the invoice side so inactive customers with debt are still reported.
+        Map<Long, List<ARInvoice>> invoicesByCustomer = new LinkedHashMap<>();
+        for (ARInvoice invoice : invoices) {
+            if (invoice.getCustomer() == null) continue;
+            invoicesByCustomer
+                    .computeIfAbsent(invoice.getCustomer().getId(), k -> new ArrayList<>())
+                    .add(invoice);
+        }
+
+        Map<Long, Customer> customerById = customerRepository
+                .findAllById(invoicesByCustomer.keySet())
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(Customer::getId, c -> c));
 
         List<AgingReportDTO.AgingDetail> details = new ArrayList<>();
         BigDecimal totalOutstanding = BigDecimal.ZERO;
@@ -247,11 +264,9 @@ public class FinancialReportService {
         int totalAccounts = 0;
         int overdueAccounts = 0;
 
-        for (Customer customer : customers) {
-            List<ARInvoice> invoices = arInvoiceRepository.findByTenantIdAndCustomer_IdAndStatusIn(
-                    tenantId, customer.getId(), Arrays.asList(ARInvoiceStatus.PENDING, ARInvoiceStatus.SENT, ARInvoiceStatus.PARTIAL));
-
-            if (invoices.isEmpty()) continue;
+        for (Map.Entry<Long, List<ARInvoice>> entry : invoicesByCustomer.entrySet()) {
+            Long customerId = entry.getKey();
+            List<ARInvoice> custInvoices = entry.getValue();
 
             BigDecimal current = BigDecimal.ZERO;
             BigDecimal days1to30 = BigDecimal.ZERO;
@@ -262,16 +277,14 @@ public class FinancialReportService {
             int overdueInvoices = 0;
             LocalDate oldestInvoiceDate = null;
 
-            for (ARInvoice invoice : invoices) {
-                if (invoice.getBalanceDue() == null || invoice.getBalanceDue().compareTo(BigDecimal.ZERO) <= 0) {
-                    continue;
-                }
-
-                BigDecimal balance = invoice.getBalanceDue();
+            for (ARInvoice invoice : custInvoices) {
+                BigDecimal balance = toBaseCurrency(invoice.getBalanceDue(), invoice.getExchangeRate());
                 customerTotal = customerTotal.add(balance);
 
                 LocalDate dueDate = invoice.getDueDate();
-                long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(dueDate, asOfDate);
+                long daysOverdue = dueDate != null
+                        ? java.time.temporal.ChronoUnit.DAYS.between(dueDate, asOfDate)
+                        : 0L;
 
                 if (daysOverdue <= 0) {
                     current = current.add(balance);
@@ -289,18 +302,20 @@ public class FinancialReportService {
                     overdueInvoices++;
                 }
 
-                if (oldestInvoiceDate == null || invoice.getInvoiceDate().isBefore(oldestInvoiceDate)) {
+                if (invoice.getInvoiceDate() != null
+                        && (oldestInvoiceDate == null || invoice.getInvoiceDate().isBefore(oldestInvoiceDate))) {
                     oldestInvoiceDate = invoice.getInvoiceDate();
                 }
             }
 
             if (customerTotal.compareTo(BigDecimal.ZERO) > 0) {
+                Customer customer = customerById.get(customerId);
                 details.add(AgingReportDTO.AgingDetail.builder()
-                        .entityId(customer.getId())
-                        .entityCode(customer.getCode())
-                        .entityName(customer.getName())
-                        .contactInfo(customer.getPhone())
-                        .creditLimit(customer.getCreditLimit())
+                        .entityId(customerId)
+                        .entityCode(customer != null ? customer.getCode() : null)
+                        .entityName(customer != null ? customer.getName() : custInvoices.get(0).getCustomerName())
+                        .contactInfo(customer != null ? customer.getPhone() : null)
+                        .creditLimit(customer != null ? customer.getCreditLimit() : null)
                         .totalOutstanding(customerTotal)
                         .current(current)
                         .days1to30(days1to30)
@@ -347,17 +362,28 @@ public class FinancialReportService {
     }
 
     /**
+     * Convert an invoice amount to base currency using its stored exchange rate.
+     * Falls back to the raw amount when rate is missing or non-positive.
+     */
+    private BigDecimal toBaseCurrency(BigDecimal amount, BigDecimal exchangeRate) {
+        if (amount == null) return BigDecimal.ZERO;
+        if (exchangeRate == null || exchangeRate.compareTo(BigDecimal.ZERO) <= 0) return amount;
+        return amount.multiply(exchangeRate);
+    }
+
+    /**
      * Generate AP Aging Report.
      */
     public AgingReportDTO generateAPAgingReport(GenerateReportRequest request) {
         Long tenantId = securityContextHelper.getRequiredTenantId();
-        LocalDate asOfDate = request.getEndDate() != null ? request.getEndDate() : LocalDate.now();
+        LocalDate asOfDate = request.getEndDate() != null ? request.getEndDate() : today(tenantId);
 
         log.info("Generating AP Aging report for tenant {} as of {}", tenantId, asOfDate);
 
-        // Get all unpaid AP invoices
-        List<APInvoice> allInvoices = apInvoiceRepository.findUnpaidInvoices(tenantId,
-                Arrays.asList(APInvoiceStatus.PENDING_APPROVAL, APInvoiceStatus.APPROVED, APInvoiceStatus.PARTIAL));
+        // Open invoices (NOT paid/cancelled/draft) dated on or before asOfDate.
+        // Includes ON_HOLD which was previously dropped by the IN-list filter.
+        List<APInvoice> allInvoices = apInvoiceRepository.findUnpaidInvoicesAsOf(
+                tenantId, asOfDate, AP_EXCLUDED_STATUSES);
 
         // Group by vendor
         Map<Long, List<APInvoice>> invoicesByVendor = new HashMap<>();
@@ -397,15 +423,13 @@ public class FinancialReportService {
             LocalDate oldestInvoiceDate = null;
 
             for (APInvoice invoice : invoices) {
-                if (invoice.getBalanceDue() == null || invoice.getBalanceDue().compareTo(BigDecimal.ZERO) <= 0) {
-                    continue;
-                }
-
-                BigDecimal balance = invoice.getBalanceDue();
+                BigDecimal balance = toBaseCurrency(invoice.getBalanceDue(), invoice.getExchangeRate());
                 vendorTotal = vendorTotal.add(balance);
 
                 LocalDate dueDate = invoice.getDueDate();
-                long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(dueDate, asOfDate);
+                long daysOverdue = dueDate != null
+                        ? java.time.temporal.ChronoUnit.DAYS.between(dueDate, asOfDate)
+                        : 0L;
 
                 if (daysOverdue <= 0) {
                     current = current.add(balance);
@@ -423,7 +447,8 @@ public class FinancialReportService {
                     overdueInvoices++;
                 }
 
-                if (oldestInvoiceDate == null || invoice.getInvoiceDate().isBefore(oldestInvoiceDate)) {
+                if (invoice.getInvoiceDate() != null
+                        && (oldestInvoiceDate == null || invoice.getInvoiceDate().isBefore(oldestInvoiceDate))) {
                     oldestInvoiceDate = invoice.getInvoiceDate();
                 }
             }

@@ -34,6 +34,14 @@ public interface ARInvoiceRepository extends JpaRepository<ARInvoice, Long> {
     List<ARInvoice> findUnpaidInvoices(@Param("tenantId") Long tenantId,
                                         @Param("statuses") List<ARInvoiceStatus> statuses);
 
+    @Query("SELECT i FROM ARInvoice i WHERE i.tenantId = :tenantId " +
+           "AND i.status NOT IN :excludedStatuses " +
+           "AND i.invoiceDate <= :asOfDate " +
+           "AND i.balanceDue > 0 ORDER BY i.dueDate ASC")
+    List<ARInvoice> findUnpaidInvoicesAsOf(@Param("tenantId") Long tenantId,
+                                            @Param("asOfDate") LocalDate asOfDate,
+                                            @Param("excludedStatuses") List<ARInvoiceStatus> excludedStatuses);
+
     @Query("SELECT i FROM ARInvoice i WHERE i.tenantId = :tenantId AND i.customer.id = :customerId " +
            "AND i.status IN :statuses AND i.balanceDue > 0 ORDER BY i.dueDate ASC")
     List<ARInvoice> findUnpaidByCustomer(@Param("tenantId") Long tenantId,

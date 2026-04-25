@@ -34,6 +34,14 @@ public interface APInvoiceRepository extends JpaRepository<APInvoice, Long> {
     List<APInvoice> findUnpaidInvoices(@Param("tenantId") Long tenantId,
                                         @Param("statuses") List<APInvoiceStatus> statuses);
 
+    @Query("SELECT i FROM APInvoice i WHERE i.tenantId = :tenantId " +
+           "AND i.status NOT IN :excludedStatuses " +
+           "AND i.invoiceDate <= :asOfDate " +
+           "AND i.balanceDue > 0 ORDER BY i.dueDate ASC")
+    List<APInvoice> findUnpaidInvoicesAsOf(@Param("tenantId") Long tenantId,
+                                            @Param("asOfDate") LocalDate asOfDate,
+                                            @Param("excludedStatuses") List<APInvoiceStatus> excludedStatuses);
+
     @Query("SELECT i FROM APInvoice i WHERE i.tenantId = :tenantId AND i.vendorId = :vendorId " +
            "AND i.status IN :statuses AND i.balanceDue > 0 ORDER BY i.dueDate ASC")
     List<APInvoice> findUnpaidInvoicesByVendor(@Param("tenantId") Long tenantId,
