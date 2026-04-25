@@ -102,6 +102,7 @@ const navigation = computed(() => [
     children: [
       { name: t('nav.debtors'), href: '/finance/debtors', icon: UsersIcon },
       { name: t('nav.payments'), href: '/finance/payments', icon: BanknotesIcon },
+      { name: t('nav.arInvoices'), href: '/finance/invoices', icon: DocumentTextIcon },
       { name: t('nav.expenses'), href: '/finance/expenses', icon: CurrencyDollarIcon }
     ]
   },

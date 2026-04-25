@@ -257,12 +257,20 @@ export const arReportsApi = {
 
 // AR Invoices API - Backend: /api/v1/finance/ar-invoices
 export const arInvoicesApi = {
-  getUnpaidByCustomer: (customerId) => api.get(`/finance/ar-invoices/customer/${customerId}/unpaid`),
-  getByCustomer: (customerId, params) => api.get(`/finance/ar-invoices/customer/${customerId}`, { params }),
+  getAll: (params) => api.get('/finance/ar-invoices', { params }),
   getById: (id) => api.get(`/finance/ar-invoices/${id}`),
+  getByStatus: (status, params) => api.get(`/finance/ar-invoices/status/${status}`, { params }),
+  getByNumber: (invoiceNumber) => api.get(`/finance/ar-invoices/number/${invoiceNumber}`),
+  getByCustomer: (customerId, params) => api.get(`/finance/ar-invoices/customer/${customerId}`, { params }),
+  getUnpaidByCustomer: (customerId) => api.get(`/finance/ar-invoices/customer/${customerId}/unpaid`),
+  getOutstandingByCustomer: (customerId) => api.get(`/finance/ar-invoices/customer/${customerId}/outstanding`),
+  getOverdue: () => api.get('/finance/ar-invoices/overdue'),
   create: (data) => api.post('/finance/ar-invoices', data),
   update: (id, data) => api.put(`/finance/ar-invoices/${id}`, data),
-  post: (id) => api.post(`/finance/ar-invoices/${id}/post`)
+  post: (id) => api.post(`/finance/ar-invoices/${id}/post`),
+  send: (id) => api.post(`/finance/ar-invoices/${id}/send`),
+  cancel: (id, reason) => api.post(`/finance/ar-invoices/${id}/cancel`, null, { params: { reason } }),
+  checkOverdue: () => api.post('/finance/ar-invoices/check-overdue')
 }
 
 // AR Payments API - Backend: /api/v1/finance/ar-payments
