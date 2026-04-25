@@ -254,7 +254,7 @@ async function submitAdjust() {
                   class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
                   :title="$t('inventory.stock.adjust')"
                 >
-                  <PencilSquareIcon class="h-4.5 w-4.5" />
+                  <PencilSquareIcon class="h-5 w-5" />
                 </button>
               </td>
             </tr>
