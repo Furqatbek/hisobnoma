@@ -111,6 +111,16 @@ const routes = [
             path: 'uom',
             name: 'uom',
             component: () => import('@/views/inventory/UOMView.vue')
+          },
+          {
+            path: 'receiving',
+            name: 'receiving',
+            component: () => import('@/views/inventory/ReceivingView.vue')
+          },
+          {
+            path: 'receiving/new',
+            name: 'receiving-create',
+            component: () => import('@/views/inventory/ReceivingFormView.vue')
           }
         ]
       },

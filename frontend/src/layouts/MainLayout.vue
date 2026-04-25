@@ -33,7 +33,8 @@ import {
   MapPinIcon,
   MapIcon,
   WrenchScrewdriverIcon,
-  AdjustmentsHorizontalIcon
+  AdjustmentsHorizontalIcon,
+  InboxArrowDownIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -60,7 +61,8 @@ const navigation = computed(() => [
       { name: t('nav.brands'), href: '/inventory/brands', icon: BuildingStorefrontIcon },
       { name: t('nav.stock'), href: '/inventory/stock', icon: ClipboardDocumentListIcon },
       { name: t('nav.warehouses'), href: '/inventory/warehouses', icon: BuildingStorefrontIcon },
-      { name: t('nav.unitsOfMeasure'), href: '/inventory/uom', icon: TagIcon }
+      { name: t('nav.unitsOfMeasure'), href: '/inventory/uom', icon: TagIcon },
+      { name: t('nav.receiving'), href: '/inventory/receiving', icon: InboxArrowDownIcon }
     ]
   },
   {
