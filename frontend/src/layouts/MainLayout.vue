@@ -31,7 +31,8 @@ import {
   PaperAirplaneIcon,
   ChatBubbleLeftRightIcon,
   MapPinIcon,
-  MapIcon
+  MapIcon,
+  WrenchScrewdriverIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -136,6 +137,7 @@ const navigation = computed(() => [
       { name: t('nav.telegramBot'), href: '/admin/telegram', icon: PaperAirplaneIcon },
       { name: t('nav.sms'), href: '/admin/sms', icon: ChatBubbleLeftRightIcon },
       { name: t('nav.settings'), href: '/admin/settings', icon: Cog6ToothIcon },
+      { name: t('nav.systemSettings'), href: '/admin/system-settings', icon: WrenchScrewdriverIcon },
       { name: t('nav.auditLog'), href: '/admin/audit-logs', icon: DocumentTextIcon }
     ]
   }

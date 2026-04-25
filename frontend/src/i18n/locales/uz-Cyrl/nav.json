@@ -42,5 +42,6 @@
   "telegramBot": "Телеграм бот",
   "sms": "SMS хизмати",
   "settings": "Созламалар",
+  "systemSettings": "Тизим созламалари",
   "auditLog": "Аудит журнали"
 }

@@ -372,6 +372,19 @@ export const warehousesApi = {
 // Alias for locations
 export const locationsApi = warehousesApi
 
+// System Settings API - Backend: /api/v1/admin/settings/system
+export const systemSettingsApi = {
+  getAll: () => api.get('/admin/settings/system'),
+  getCategories: () => api.get('/admin/settings/system/categories'),
+  getByCategory: (category) => api.get(`/admin/settings/system/category/${category}`),
+  getByKey: (key) => api.get(`/admin/settings/system/${key}`),
+  create: (data) => api.post('/admin/settings/system', data),
+  update: (key, data) => api.put(`/admin/settings/system/${key}`, data),
+  updateValue: (key, value) => api.put(`/admin/settings/system/${key}/value`, { value }),
+  batchUpdate: (settings) => api.put('/admin/settings/system/batch', settings),
+  delete: (key) => api.delete(`/admin/settings/system/${key}`)
+}
+
 // Audit Logs API - Backend: /api/v1/admin/audit-logs
 export const auditLogsApi = {
   getAll: (params) => api.get('/admin/audit-logs', { params }),

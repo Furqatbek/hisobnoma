@@ -339,6 +339,12 @@ const routes = [
             meta: { permission: 'ADMIN_SETTINGS_MANAGE' }
           },
           {
+            path: 'system-settings',
+            name: 'system-settings',
+            component: () => import('@/views/admin/SystemSettingsView.vue'),
+            meta: { permission: 'ADMIN_SETTINGS_MANAGE' }
+          },
+          {
             path: 'audit-logs',
             name: 'audit-logs',
             component: () => import('@/views/admin/AuditLogsView.vue'),
