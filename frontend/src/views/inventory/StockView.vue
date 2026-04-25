@@ -122,7 +122,8 @@ async function submitAdjust() {
       notes: adjustForm.value.notes.trim() || null,
       items: [{
         productId: adjustItem.value.productId,
-        newQuantity: Number(qty)
+        newQuantity: Number(qty),
+        adjustmentQuantity: Number(qty) - (adjustItem.value.quantityOnHand ?? 0)
       }]
     })
     closeAdjustModal()
