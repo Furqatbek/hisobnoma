@@ -5,6 +5,8 @@ import com.hisobnoma.platform.common.entity.Tenant;
 import com.hisobnoma.platform.common.repository.TenantRepository;
 import com.hisobnoma.platform.finance.entity.*;
 import com.hisobnoma.platform.finance.repository.*;
+import com.hisobnoma.platform.inventory.entity.Vendor;
+import com.hisobnoma.platform.inventory.repository.VendorRepository;
 import com.hisobnoma.platform.reports.dto.AgingReportDTO;
 import com.hisobnoma.platform.reports.dto.GenerateReportRequest;
 import com.hisobnoma.platform.reports.dto.IncomeStatementDTO;
@@ -36,6 +38,7 @@ public class FinancialReportService {
     private final ARInvoiceRepository arInvoiceRepository;
     private final APInvoiceRepository apInvoiceRepository;
     private final CustomerRepository customerRepository;
+    private final VendorRepository vendorRepository;
     private final TenantRepository tenantRepository;
 
     private LocalDate today(Long tenantId) {
@@ -385,19 +388,20 @@ public class FinancialReportService {
         List<APInvoice> allInvoices = apInvoiceRepository.findUnpaidInvoicesAsOf(
                 tenantId, asOfDate, AP_EXCLUDED_STATUSES);
 
-        // Group by vendor
-        Map<Long, List<APInvoice>> invoicesByVendor = new HashMap<>();
-        Map<Long, String> vendorNames = new HashMap<>();
-        Map<Long, String> vendorCodes = new HashMap<>();
-
+        // Group by vendor (preserve due-date ordering from the query)
+        Map<Long, List<APInvoice>> invoicesByVendor = new LinkedHashMap<>();
         for (APInvoice invoice : allInvoices) {
             Long vendorId = invoice.getVendorId();
+            if (vendorId == null) continue;
             invoicesByVendor.computeIfAbsent(vendorId, k -> new ArrayList<>()).add(invoice);
-            if (!vendorNames.containsKey(vendorId)) {
-                vendorNames.put(vendorId, invoice.getVendorName());
-                vendorCodes.put(vendorId, "V-" + vendorId);
-            }
         }
+
+        // Batch lookup of real vendor records — provides current code/name/phone/credit limit
+        // instead of synthetic "V-{id}" and stale denormalized snapshots.
+        Map<Long, Vendor> vendorById = vendorRepository
+                .findAllById(invoicesByVendor.keySet())
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(Vendor::getId, v -> v));
 
         List<AgingReportDTO.AgingDetail> details = new ArrayList<>();
         BigDecimal totalOutstanding = BigDecimal.ZERO;
@@ -454,12 +458,18 @@ public class FinancialReportService {
             }
 
             if (vendorTotal.compareTo(BigDecimal.ZERO) > 0) {
+                Vendor vendor = vendorById.get(vendorId);
+                String entityCode = vendor != null ? vendor.getCode() : "V-" + vendorId;
+                String entityName = vendor != null ? vendor.getName() : invoices.get(0).getVendorName();
+                String contactInfo = vendor != null ? vendor.getPhone() : null;
+                BigDecimal creditLimit = vendor != null ? vendor.getCreditLimit() : null;
+
                 details.add(AgingReportDTO.AgingDetail.builder()
                         .entityId(vendorId)
-                        .entityCode(vendorCodes.get(vendorId))
-                        .entityName(vendorNames.get(vendorId))
-                        .contactInfo(null)
-                        .creditLimit(null)
+                        .entityCode(entityCode)
+                        .entityName(entityName)
+                        .contactInfo(contactInfo)
+                        .creditLimit(creditLimit)
                         .totalOutstanding(vendorTotal)
                         .current(current)
                         .days1to30(days1to30)
