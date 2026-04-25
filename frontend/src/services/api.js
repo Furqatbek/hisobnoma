@@ -90,7 +90,10 @@ export const usersApi = {
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`),
   setPin: (id, pin) => api.put(`/users/${id}/set-pin`, { pin }),
-  clearPin: (id) => api.put(`/users/${id}/set-pin`, { pin: null })
+  clearPin: (id) => api.put(`/users/${id}/set-pin`, { pin: null }),
+  assignRoles: (id, roleCodes) => api.put(`/users/${id}/roles`, roleCodes),
+  lockUser: (id, locked) => api.put(`/users/${id}/lock`, { locked }),
+  resetPassword: (id, password) => api.put(`/users/${id}/reset-password`, { password })
 }
 
 // Products API - Backend: /api/v1/inventory/products
