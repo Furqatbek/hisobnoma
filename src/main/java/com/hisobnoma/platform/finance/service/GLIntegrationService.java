@@ -1,7 +1,9 @@
 package com.hisobnoma.platform.finance.service;
 
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
+import com.hisobnoma.platform.common.entity.Tenant;
 import com.hisobnoma.platform.common.exception.BusinessException;
+import com.hisobnoma.platform.common.repository.TenantRepository;
 import com.hisobnoma.platform.finance.dto.CreateJournalEntryRequest;
 import com.hisobnoma.platform.finance.dto.CreateJournalLineRequest;
 import com.hisobnoma.platform.finance.entity.*;
@@ -13,7 +15,10 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +35,23 @@ public class GLIntegrationService {
     private final JournalEntryService journalEntryService;
     private final SecurityContextHelper securityContextHelper;
     private final AccountRepository accountRepository;
+    private final TenantRepository tenantRepository;
+
+    private ZoneId resolveTenantZone(Long tenantId) {
+        if (tenantId == null) return ZoneOffset.UTC;
+        return tenantRepository.findById(tenantId)
+                .map(Tenant::getTimezone)
+                .filter(tz -> tz != null && !tz.isBlank())
+                .map(tz -> {
+                    try {
+                        return ZoneId.of(tz);
+                    } catch (Exception e) {
+                        log.warn("Invalid tenant timezone '{}', falling back to UTC", tz);
+                        return (ZoneId) ZoneOffset.UTC;
+                    }
+                })
+                .orElse(ZoneOffset.UTC);
+    }
 
     // Account codes - these should be configurable per tenant
     // For now, these are placeholder values that should be set up in the chart of accounts
@@ -913,6 +935,14 @@ public class GLIntegrationService {
             String transactionNumber = (String) getTransactionNumber.invoke(transaction);
             BigDecimal salesAmount = (BigDecimal) getTotalAmount.invoke(transaction);
 
+            // Extract sale date from transaction.completedAt so the GL entry lands in the
+            // period the sale actually occurred — not the day the GL post job runs
+            Instant completedAt = null;
+            try {
+                java.lang.reflect.Method getCompletedAt = transaction.getClass().getMethod("getCompletedAt");
+                completedAt = (Instant) getCompletedAt.invoke(transaction);
+            } catch (NoSuchMethodException ignored) {}
+
             // Extract discount amount (transaction-level + line-level)
             BigDecimal discountAmount = BigDecimal.ZERO;
             try {
@@ -1004,8 +1034,13 @@ public class GLIntegrationService {
                 journalLines.add(createLine(INVENTORY_ACCOUNT, null, costAmount, "Inventory reduction"));
             }
 
+            ZoneId zone = resolveTenantZone(tenantId);
+            LocalDate entryDate = completedAt != null
+                    ? completedAt.atZone(zone).toLocalDate()
+                    : LocalDate.now(zone);
+
             CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
-                    .entryDate(LocalDate.now())
+                    .entryDate(entryDate)
                     .description("POS Sale: " + transactionNumber)
                     .source(JournalSource.POS_SALE)
                     .referenceType("SALE")

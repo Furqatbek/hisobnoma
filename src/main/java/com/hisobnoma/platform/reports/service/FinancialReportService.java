@@ -1,6 +1,8 @@
 package com.hisobnoma.platform.reports.service;
 
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
+import com.hisobnoma.platform.common.entity.Tenant;
+import com.hisobnoma.platform.common.repository.TenantRepository;
 import com.hisobnoma.platform.finance.entity.*;
 import com.hisobnoma.platform.finance.repository.*;
 import com.hisobnoma.platform.reports.dto.AgingReportDTO;
@@ -15,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -32,6 +36,23 @@ public class FinancialReportService {
     private final ARInvoiceRepository arInvoiceRepository;
     private final APInvoiceRepository apInvoiceRepository;
     private final CustomerRepository customerRepository;
+    private final TenantRepository tenantRepository;
+
+    private LocalDate today(Long tenantId) {
+        ZoneId zone = tenantRepository.findById(tenantId)
+                .map(Tenant::getTimezone)
+                .filter(tz -> tz != null && !tz.isBlank())
+                .map(tz -> {
+                    try {
+                        return ZoneId.of(tz);
+                    } catch (Exception e) {
+                        log.warn("Invalid tenant timezone '{}', falling back to UTC", tz);
+                        return (ZoneId) ZoneOffset.UTC;
+                    }
+                })
+                .orElse(ZoneOffset.UTC);
+        return LocalDate.now(zone);
+    }
 
     private static final List<ARInvoiceStatus> AR_EXCLUDED_STATUSES = Arrays.asList(
             ARInvoiceStatus.CANCELLED, ARInvoiceStatus.PAID);
@@ -131,8 +152,9 @@ public class FinancialReportService {
     public IncomeStatementDTO generateIncomeStatement(GenerateReportRequest request) {
         Long tenantId = securityContextHelper.getRequiredTenantId();
 
-        LocalDate startDate = request.getStartDate() != null ? request.getStartDate() : LocalDate.now().withDayOfMonth(1);
-        LocalDate endDate = request.getEndDate() != null ? request.getEndDate() : LocalDate.now();
+        LocalDate today = today(tenantId);
+        LocalDate startDate = request.getStartDate() != null ? request.getStartDate() : today.withDayOfMonth(1);
+        LocalDate endDate = request.getEndDate() != null ? request.getEndDate() : today;
 
         log.info("Generating Income Statement for tenant {} from {} to {}", tenantId, startDate, endDate);
 
