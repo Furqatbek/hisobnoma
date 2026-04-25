@@ -55,18 +55,26 @@ public class SalesReportService {
         List<POSTransaction> returnTransactions = transactionRepository.findByTypeAndDateRangeAndTenantId(
                 TransactionType.RETURN, startInstant, endInstant, tenantId);
 
-        // Calculate summary
+        // Calculate summary — all amounts exclude tax for consistency
         BigDecimal grossSales = salesTransactions.stream()
-                .map(POSTransaction::getSubtotal)
+                .flatMap(t -> t.getLines().stream())
+                .map(POSTransactionLine::getGrossAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal discounts = salesTransactions.stream()
+        BigDecimal lineDiscounts = salesTransactions.stream()
+                .flatMap(t -> t.getLines().stream())
+                .map(line -> line.getDiscountAmount() != null ? line.getDiscountAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal transactionDiscounts = salesTransactions.stream()
                 .map(t -> t.getDiscountAmount() != null ? t.getDiscountAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Return transactions have negative totalAmount, so use abs() for the report metric
+        BigDecimal discounts = lineDiscounts.add(transactionDiscounts);
+
         BigDecimal returns = returnTransactions.stream()
-                .map(t -> t.getTotalAmount().abs())
+                .flatMap(t -> t.getLines().stream())
+                .map(line -> line.getNetAmount().abs())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal netSales = grossSales.subtract(discounts).subtract(returns);
@@ -108,8 +116,12 @@ public class SalesReportService {
         // Build daily breakdown
         List<SalesSummaryReportDTO.DailySales> dailyBreakdown = buildDailyBreakdown(salesTransactions, startDate, endDate);
 
-        // Build category breakdown
-        List<SalesSummaryReportDTO.CategorySales> byCategory = buildCategoryBreakdown(salesTransactions, netSales);
+        // Build category breakdown — use line-level net total as denominator so percentages sum to ~100%
+        BigDecimal totalLineNet = salesTransactions.stream()
+                .flatMap(t -> t.getLines().stream())
+                .map(POSTransactionLine::getNetAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<SalesSummaryReportDTO.CategorySales> byCategory = buildCategoryBreakdown(salesTransactions, totalLineNet);
 
         // Build top products
         List<SalesSummaryReportDTO.ProductSales> topProducts = buildTopProducts(salesTransactions, 10);
@@ -153,9 +165,14 @@ public class SalesReportService {
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
             List<POSTransaction> dayTransactions = byDate.getOrDefault(date, Collections.emptyList());
 
-            BigDecimal dayNetSales = dayTransactions.stream()
-                    .map(POSTransaction::getTotalAmount)
+            BigDecimal dayLineNet = dayTransactions.stream()
+                    .flatMap(t -> t.getLines().stream())
+                    .map(POSTransactionLine::getNetAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal dayTxnDiscount = dayTransactions.stream()
+                    .map(t -> t.getDiscountAmount() != null ? t.getDiscountAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal dayNetSales = dayLineNet.subtract(dayTxnDiscount);
 
             int count = dayTransactions.size();
             BigDecimal avgTransaction = count > 0
