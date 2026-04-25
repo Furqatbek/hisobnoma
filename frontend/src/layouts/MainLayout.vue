@@ -62,7 +62,8 @@ const navigation = computed(() => [
       { name: t('nav.stock'), href: '/inventory/stock', icon: ClipboardDocumentListIcon },
       { name: t('nav.warehouses'), href: '/inventory/warehouses', icon: BuildingStorefrontIcon },
       { name: t('nav.unitsOfMeasure'), href: '/inventory/uom', icon: TagIcon },
-      { name: t('nav.receiving'), href: '/inventory/receiving', icon: InboxArrowDownIcon }
+      { name: t('nav.receiving'), href: '/inventory/receiving', icon: InboxArrowDownIcon },
+      { name: t('nav.inventoryPlanning'), href: '/inventory/planning', icon: ChartBarIcon }
     ]
   },
   {

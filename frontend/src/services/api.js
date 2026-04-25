@@ -313,6 +313,13 @@ export const receivingApi = {
   cancel: (id, reason) => api.put(`/inventory/receiving/${id}/cancel`, { reason })
 }
 
+export const inventoryPlanningApi = {
+  getReorderSuggestions: (locationId) => api.get('/inventory/planning/reorder-suggestions', { params: locationId ? { locationId } : {} }),
+  getAbcAnalysis: (days = 365) => api.get('/inventory/planning/abc-analysis', { params: { days } }),
+  getSlowMoving: (days = 90, locationId) => api.get('/inventory/planning/slow-moving', { params: { days, ...(locationId ? { locationId } : {}) } }),
+  getDeadStock: (days = 180, locationId) => api.get('/inventory/planning/dead-stock', { params: { days, ...(locationId ? { locationId } : {}) } })
+}
+
 // Reports API - Backend: /api/v1/reports (uses POST with request body)
 export const reportsApi = {
   // Sales Reports

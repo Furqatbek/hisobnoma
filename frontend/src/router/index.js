@@ -121,6 +121,11 @@ const routes = [
             path: 'receiving/new',
             name: 'receiving-create',
             component: () => import('@/views/inventory/ReceivingFormView.vue')
+          },
+          {
+            path: 'planning',
+            name: 'inventory-planning',
+            component: () => import('@/views/inventory/InventoryPlanningView.vue')
           }
         ]
       },

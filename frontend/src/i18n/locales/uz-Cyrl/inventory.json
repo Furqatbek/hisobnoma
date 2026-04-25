@@ -253,5 +253,57 @@
       "createReceiving": "Қабулни яратиш",
       "saveError": "Қабулни сақлашда хатолик"
     }
+  },
+  "planning": {
+    "title": "Инвентар режалаштириш",
+    "subtitle": "Буюртма таклифлари, ABC таҳлил ва ўлик захира",
+    "refresh": "Янгилаш",
+    "filterLocation": "Жойлашув",
+    "period": "Давр",
+    "days": "кун",
+    "noSalesDays": "Сотилмаган давр",
+    "noData": "Маълумотлар топилмади",
+    "product": "Маҳсулот",
+    "location": "Жойлашув",
+    "category": "Категория",
+    "currentStock": "Жорий захира",
+    "stockValue": "Захира қиймати",
+    "tabs": {
+      "reorder": "Буюртма таклифлари",
+      "abc": "ABC таҳлил",
+      "slowMoving": "Секин сотилувчи",
+      "deadStock": "Ўлик захира"
+    },
+    "reorderPoint": "Буюртма нуқтаси",
+    "suggestedQty": "Таклиф миқдори",
+    "estimatedCost": "Тахминий нарх",
+    "daysOfStock": "Захира кунлари",
+    "vendor": "Етказиб берувчи",
+    "priority": "Муҳимлик",
+    "noReorder": "Буюртма таклифлари йўқ — барча захиралар етарли",
+    "priorityLevel": {
+      "CRITICAL": "Жуда муҳим",
+      "HIGH": "Юқори",
+      "MEDIUM": "Ўрта",
+      "LOW": "Паст"
+    },
+    "class": "Синф",
+    "classA": "A синф",
+    "classADesc": "Юқори қийматли (80%)",
+    "classB": "B синф",
+    "classBDesc": "Ўрта қийматли (15%)",
+    "classC": "C синф",
+    "classCDesc": "Паст қийматли (5%)",
+    "totalValue": "Умумий қиймат",
+    "percentOfTotal": "Улуши %",
+    "cumulativePercent": "Жами %",
+    "daysSinceLastSale": "Кунлар",
+    "recommendation": "Тавсия",
+    "noSlowMoving": "Секин сотилувчи маҳсулотлар топилмади",
+    "noDeadStock": "Ўлик захира топилмади",
+    "rec": {
+      "DISCOUNT": "Чегирма қилиш",
+      "WRITE_OFF": "Ҳисобдан чиқариш"
+    }
   }
 }
