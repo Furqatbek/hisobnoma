@@ -281,6 +281,11 @@ const routes = [
             path: 'invoices',
             name: 'ar-invoices',
             component: () => import('@/views/finance/ARInvoicesView.vue')
+          },
+          {
+            path: 'accounts',
+            name: 'chart-of-accounts',
+            component: () => import('@/views/finance/ChartOfAccountsView.vue')
           }
         ]
       },

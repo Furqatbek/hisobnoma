@@ -438,6 +438,32 @@ export const rolesApi = {
   getAllPermissions: () => api.get('/roles/permissions')
 }
 
+// Accounts / Chart of Accounts API - Backend: /api/v1/finance/accounts
+export const accountsApi = {
+  getAll: (params) => api.get('/finance/accounts', { params }),
+  getAllList: () => api.get('/finance/accounts/all'),
+  getRoots: () => api.get('/finance/accounts/roots'),
+  getChildren: (id) => api.get(`/finance/accounts/${id}/children`),
+  getActive: () => api.get('/finance/accounts/active'),
+  getPostable: () => api.get('/finance/accounts/postable'),
+  getByType: (accountType) => api.get(`/finance/accounts/type/${accountType}`),
+  getById: (id) => api.get(`/finance/accounts/${id}`),
+  getTree: (id) => api.get(`/finance/accounts/${id}/tree`),
+  getByCode: (code) => api.get(`/finance/accounts/code/${code}`),
+  search: (query, params) => api.get('/finance/accounts/search', { params: { q: query, ...params } }),
+  create: (data) => api.post('/finance/accounts', data),
+  update: (id, data) => api.put(`/finance/accounts/${id}`, data),
+  delete: (id) => api.delete(`/finance/accounts/${id}`),
+  activate: (id) => api.put(`/finance/accounts/${id}/activate`),
+  deactivate: (id) => api.put(`/finance/accounts/${id}/deactivate`),
+  importCsv: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/finance/accounts/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
+  generateDefault: () => api.post('/finance/accounts/generate-default')
+}
+
 // Journal Entries API - Backend: /api/v1/finance/journal-entries
 export const journalEntriesApi = {
   getAll: (params) => api.get('/finance/journal-entries', { params }),
