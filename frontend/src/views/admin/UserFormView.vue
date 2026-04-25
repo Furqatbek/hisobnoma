@@ -232,7 +232,7 @@ function toggleRole(roleCode) {
           </div>
           <div>
             <label class="label">{{ $t('phone') }}</label>
-            <input v-model="form.phone" type="tel" :class="[errors.phone ? 'input-error' : 'input']" placeholder="+998901234567" />
+            <input v-model="form.phone" type="tel" :class="[errors.phone ? 'input-error' : 'input']" :placeholder="$t('admin.userForm.phonePlaceholder')" />
             <p v-if="errors.phone" class="mt-1 text-sm text-red-600">{{ errors.phone }}</p>
           </div>
           <div class="flex items-center">

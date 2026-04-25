@@ -308,7 +308,7 @@ function formatDate(dateStr) {
                 v-model="settingsForm.botToken"
                 type="text"
                 class="input font-mono text-sm"
-                placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                :placeholder="$t('admin.telegram.botTokenPlaceholder')"
               />
               <p class="mt-1 text-xs text-gray-400">{{ $t('admin.telegram.botTokenHint') }}</p>
             </div>
@@ -320,7 +320,7 @@ function formatDate(dateStr) {
                   v-model="settingsForm.botUsername"
                   type="text"
                   class="input rounded-l-none"
-                  placeholder="hisobnoma_bot"
+                  :placeholder="$t('admin.telegram.botUsernamePlaceholder')"
                 />
               </div>
             </div>

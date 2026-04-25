@@ -177,7 +177,7 @@ async function handlePasswordSubmit() {
               <div class="flex items-center justify-center gap-1 mt-0.5">
                 <LockClosedIcon v-if="u.hasPin" class="h-3 w-3 text-green-500" />
                 <KeyIcon v-else class="h-3 w-3 text-gray-400" />
-                <span class="text-[10px] text-gray-400">{{ u.hasPin ? 'PIN' : $t('auth.password') }}</span>
+                <span class="text-[10px] text-gray-400">{{ u.hasPin ? $t('auth.pin') : $t('auth.password') }}</span>
               </div>
             </div>
           </button>

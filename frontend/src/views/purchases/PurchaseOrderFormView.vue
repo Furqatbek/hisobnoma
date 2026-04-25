@@ -222,9 +222,9 @@ function formatCurrency(value) {
             <select v-model="form.paymentTerms" class="input">
               <option value="">{{ $t('purchases.orderForm.selectPaymentTerms') }}</option>
               <option value="PREPAID">{{ $t('purchases.orderForm.prepaid') }}</option>
-              <option value="NET15">Net 15</option>
-              <option value="NET30">Net 30</option>
-              <option value="NET60">Net 60</option>
+              <option value="NET15">{{ $t('purchases.orderForm.net15') }}</option>
+              <option value="NET30">{{ $t('purchases.orderForm.net30') }}</option>
+              <option value="NET60">{{ $t('purchases.orderForm.net60') }}</option>
               <option value="COD">{{ $t('purchases.orderForm.cod') }}</option>
             </select>
           </div>

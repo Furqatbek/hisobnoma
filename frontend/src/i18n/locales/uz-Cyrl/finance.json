@@ -110,6 +110,7 @@
     "noSupplier": "Танланмаган (мустақил харажат)",
     "noSupplierHint": "Ижара, коммунал ва бошқа харажатлар учун бўш қолдиринг",
     "invoiceNumber": "Етказиб берувчи ҳисоб-фактура №",
+    "invoiceNumberPlaceholder": "INV-001",
     "invoiceDate": "Сана",
     "dueDate": "Тўлов муддати",
     "descriptionPlaceholder": "Масалан: Ижара тўлови, Коммунал харажат...",

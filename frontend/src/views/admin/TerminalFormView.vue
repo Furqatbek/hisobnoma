@@ -171,7 +171,7 @@ onMounted(() => {
               type="text"
               class="input uppercase"
               :class="{ 'border-red-500': errors.code }"
-              placeholder="TERMINAL-01"
+              :placeholder="$t('admin.terminalForm.codePlaceholder')"
               :disabled="isEdit"
             />
             <p v-if="errors.code" class="text-sm text-red-500 mt-1">{{ errors.code }}</p>

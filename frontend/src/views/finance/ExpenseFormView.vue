@@ -315,7 +315,7 @@ onMounted(() => {
                   v-model="form.vendorInvoiceNumber"
                   type="text"
                   class="input"
-                  placeholder="INV-001"
+                  :placeholder="$t('finance.expenseForm.invoiceNumberPlaceholder')"
                 />
               </div>
             </div>

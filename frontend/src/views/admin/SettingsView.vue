@@ -296,7 +296,7 @@ const tabs = computed(() => [
                       v-model="receiptSettings.phone"
                       type="tel"
                       class="input"
-                      placeholder="+998 XX XXX XX XX"
+                      :placeholder="$t('admin.settings.phonePlaceholder')"
                     />
                   </div>
                   <div>
@@ -305,7 +305,7 @@ const tabs = computed(() => [
                       v-model="receiptSettings.website"
                       type="text"
                       class="input"
-                      placeholder="www.example.uz"
+                      :placeholder="$t('admin.settings.websitePlaceholder')"
                     />
                   </div>
                 </div>
@@ -315,7 +315,7 @@ const tabs = computed(() => [
                     v-model="receiptSettings.taxId"
                     type="text"
                     class="input"
-                    placeholder="123456789"
+                    :placeholder="$t('admin.settings.taxIdPlaceholder')"
                   />
                 </div>
                 <div>

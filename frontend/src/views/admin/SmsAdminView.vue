@@ -853,7 +853,7 @@ function formatDate(dateStr) {
               v-model="templateForm.code"
               type="text"
               class="input font-mono text-sm uppercase"
-              placeholder="DEBT_REMINDER"
+              :placeholder="$t('admin.sms.templateCodePlaceholder')"
             />
             <p class="mt-1 text-xs text-gray-400">{{ $t('admin.sms.templateCodeHint') }}</p>
           </div>
