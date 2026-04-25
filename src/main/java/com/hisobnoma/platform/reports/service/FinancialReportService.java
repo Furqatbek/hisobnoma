@@ -40,6 +40,7 @@ public class FinancialReportService {
     private final CustomerRepository customerRepository;
     private final VendorRepository vendorRepository;
     private final TenantRepository tenantRepository;
+    private final FiscalYearRepository fiscalYearRepository;
 
     private LocalDate today(Long tenantId) {
         ZoneId zone = tenantRepository.findById(tenantId)
@@ -64,52 +65,82 @@ public class FinancialReportService {
 
     /**
      * Generate Trial Balance Report.
+     *
+     * Computed from posted journal lines so the asOfDate parameter is honored
+     * (previously the method ignored it and always used the YTD snapshot stored
+     * on the Account entity).
+     *
+     * Permanent accounts (Asset/Liability/Equity) carry forward openingBalance plus
+     * all posted activity through asOfDate. Temporary accounts (Revenue/Expense)
+     * show only activity within the fiscal year containing asOfDate, since they
+     * are closed to retained earnings annually.
      */
     public TrialBalanceReportDTO generateTrialBalanceReport(GenerateReportRequest request) {
         Long tenantId = securityContextHelper.getRequiredTenantId();
+        LocalDate asOfDate = request.getEndDate() != null ? request.getEndDate() : today(tenantId);
 
-        LocalDate asOfDate = request.getEndDate() != null ? request.getEndDate() : LocalDate.now();
         log.info("Generating Trial Balance report for tenant {} as of {}", tenantId, asOfDate);
 
-        List<Account> accounts = accountRepository.findAllActiveByTenantId(tenantId);
-        accounts.sort(Comparator.comparing(Account::getCode));
+        // Resolve fiscal year boundaries. Fall back to calendar year if no FiscalYear is configured for asOfDate.
+        var fiscalYear = fiscalYearRepository.findByDateAndTenantId(asOfDate, tenantId);
+        LocalDate fiscalYearStart = fiscalYear
+                .map(fy -> fy.getStartDate())
+                .orElse(LocalDate.of(asOfDate.getYear(), 1, 1));
+        String fiscalYearLabel = fiscalYear
+                .map(fy -> String.valueOf(fy.getYear()))
+                .orElse(String.valueOf(asOfDate.getYear()));
+
+        // Include all accounts (active + inactive) — inactive accounts can still hold historical balances
+        // and excluding them would unbalance the trial balance.
+        List<Account> accounts = accountRepository.findAllByTenantId(tenantId);
 
         List<TrialBalanceReportDTO.AccountBalance> balances = new ArrayList<>();
         BigDecimal totalDebits = BigDecimal.ZERO;
         BigDecimal totalCredits = BigDecimal.ZERO;
 
         for (Account account : accounts) {
+            boolean temporary = account.getAccountType() == AccountType.REVENUE
+                    || account.getAccountType() == AccountType.EXPENSE;
+
+            BigDecimal debit;
+            BigDecimal credit;
+            if (temporary) {
+                // Revenue/Expense: only activity within the fiscal year containing asOfDate.
+                debit = journalLineRepository.sumDebitByAccountAndDateRange(
+                        account.getId(), tenantId, fiscalYearStart, asOfDate);
+                credit = journalLineRepository.sumCreditByAccountAndDateRange(
+                        account.getId(), tenantId, fiscalYearStart, asOfDate);
+            } else {
+                // Asset/Liability/Equity: cumulative through asOfDate.
+                debit = journalLineRepository.sumDebitByAccountAsOf(account.getId(), tenantId, asOfDate);
+                credit = journalLineRepository.sumCreditByAccountAsOf(account.getId(), tenantId, asOfDate);
+            }
+            if (debit == null) debit = BigDecimal.ZERO;
+            if (credit == null) credit = BigDecimal.ZERO;
+
+            // Opening balance applies to permanent accounts only — temporary accounts close annually.
+            BigDecimal opening = !temporary && account.getOpeningBalance() != null
+                    ? account.getOpeningBalance()
+                    : BigDecimal.ZERO;
+
+            // Net balance on the account's natural side.
+            BigDecimal netBalance = account.getNormalBalance() == NormalBalance.DEBIT
+                    ? opening.add(debit).subtract(credit)
+                    : opening.add(credit).subtract(debit);
+
             BigDecimal debitBalance = BigDecimal.ZERO;
             BigDecimal creditBalance = BigDecimal.ZERO;
-
-            // Get opening balance
-            BigDecimal openingBalance = account.getOpeningBalance() != null ? account.getOpeningBalance() : BigDecimal.ZERO;
-
-            // Get YTD debits and credits
-            BigDecimal ytdDebit = account.getYtdDebit() != null ? account.getYtdDebit() : BigDecimal.ZERO;
-            BigDecimal ytdCredit = account.getYtdCredit() != null ? account.getYtdCredit() : BigDecimal.ZERO;
-
-            // Calculate net balance
-            BigDecimal netBalance = openingBalance.add(ytdDebit).subtract(ytdCredit);
-
-            // Determine if it's a debit or credit balance based on account type
-            if (account.getNormalBalance() == NormalBalance.DEBIT) {
-                if (netBalance.compareTo(BigDecimal.ZERO) >= 0) {
-                    debitBalance = netBalance;
+            if (netBalance.signum() != 0) {
+                boolean naturalSide = netBalance.signum() > 0;
+                BigDecimal magnitude = netBalance.abs();
+                if (account.getNormalBalance() == NormalBalance.DEBIT) {
+                    if (naturalSide) debitBalance = magnitude; else creditBalance = magnitude;
                 } else {
-                    creditBalance = netBalance.abs();
-                }
-            } else {
-                netBalance = openingBalance.add(ytdCredit).subtract(ytdDebit);
-                if (netBalance.compareTo(BigDecimal.ZERO) >= 0) {
-                    creditBalance = netBalance;
-                } else {
-                    debitBalance = netBalance.abs();
+                    if (naturalSide) creditBalance = magnitude; else debitBalance = magnitude;
                 }
             }
 
-            // Only include accounts with balances
-            if (debitBalance.compareTo(BigDecimal.ZERO) != 0 || creditBalance.compareTo(BigDecimal.ZERO) != 0) {
+            if (debitBalance.signum() != 0 || creditBalance.signum() != 0) {
                 balances.add(TrialBalanceReportDTO.AccountBalance.builder()
                         .accountId(account.getId())
                         .accountCode(account.getCode())
@@ -127,6 +158,8 @@ public class FinancialReportService {
             }
         }
 
+        balances.sort(Comparator.comparing(TrialBalanceReportDTO.AccountBalance::getAccountCode));
+
         BigDecimal difference = totalDebits.subtract(totalCredits).abs();
         boolean isBalanced = difference.compareTo(new BigDecimal("0.01")) < 0;
 
@@ -135,7 +168,7 @@ public class FinancialReportService {
                         .reportName("Trial Balance")
                         .generatedAt(Instant.now())
                         .asOfDate(asOfDate)
-                        .fiscalYear(String.valueOf(asOfDate.getYear()))
+                        .fiscalYear(fiscalYearLabel)
                         .period(asOfDate.getMonth().name())
                         .build())
                 .accounts(balances)

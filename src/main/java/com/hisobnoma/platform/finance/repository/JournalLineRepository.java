@@ -57,6 +57,16 @@ public interface JournalLineRepository extends JpaRepository<JournalLine, Long> 
     BigDecimal sumCreditByAccountAndDateRange(@Param("accountId") Long accountId, @Param("tenantId") Long tenantId,
                                                @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
+    @Query("SELECT COALESCE(SUM(jl.baseDebitAmount), 0) FROM JournalLine jl WHERE jl.account.id = :accountId AND jl.tenantId = :tenantId " +
+           "AND jl.journalEntry.status = 'POSTED' AND jl.journalEntry.entryDate <= :asOfDate")
+    BigDecimal sumDebitByAccountAsOf(@Param("accountId") Long accountId, @Param("tenantId") Long tenantId,
+                                      @Param("asOfDate") LocalDate asOfDate);
+
+    @Query("SELECT COALESCE(SUM(jl.baseCreditAmount), 0) FROM JournalLine jl WHERE jl.account.id = :accountId AND jl.tenantId = :tenantId " +
+           "AND jl.journalEntry.status = 'POSTED' AND jl.journalEntry.entryDate <= :asOfDate")
+    BigDecimal sumCreditByAccountAsOf(@Param("accountId") Long accountId, @Param("tenantId") Long tenantId,
+                                       @Param("asOfDate") LocalDate asOfDate);
+
     @Query("SELECT jl FROM JournalLine jl WHERE jl.tenantId = :tenantId AND jl.costCenter = :costCenter AND jl.journalEntry.status = 'POSTED'")
     List<JournalLine> findByCostCenterAndTenantId(@Param("tenantId") Long tenantId, @Param("costCenter") String costCenter);
 
