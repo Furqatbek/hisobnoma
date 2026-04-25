@@ -177,6 +177,21 @@
     "adjustSuccess": "Захира миқдори муваффақиятли тузатилди",
     "adjustError": "Захирани тузатишда хатолик",
     "reasonRequired": "Сабаб киритилиши шарт",
-    "qtyRequired": "Миқдор киритилиши шарт"
+    "qtyRequired": "Миқдор киритилиши шарт",
+    "history": {
+      "title": "Ҳаракатлар тарихи",
+      "noMovements": "Ҳаракатлар топилмади",
+      "stockIn": "Кирим",
+      "stockOut": "Чиқим",
+      "transfer": "Ўтказма",
+      "adjustment": "Тузатиш",
+      "initial": "Бошланғич",
+      "return": "Қайтарим",
+      "reservation": "Банд қилиш",
+      "unreservation": "Бандни бекор қилиш",
+      "writeOff": "Ҳисобдан чиқариш",
+      "production": "Ишлаб чиқариш",
+      "consumption": "Сарфлаш"
+    }
   }
 }

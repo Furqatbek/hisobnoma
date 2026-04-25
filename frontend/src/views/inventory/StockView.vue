@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { stockApi, warehousesApi } from '@/services/api'
-import { MagnifyingGlassIcon, ExclamationTriangleIcon, BuildingStorefrontIcon, PencilSquareIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { MagnifyingGlassIcon, ExclamationTriangleIcon, BuildingStorefrontIcon, PencilSquareIcon, XMarkIcon, ClockIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 
@@ -135,6 +135,98 @@ async function submitAdjust() {
     adjusting.value = false
   }
 }
+
+// History modal state
+const showHistoryModal = ref(false)
+const historyItem = ref(null)
+const historyLoading = ref(false)
+const historyMovements = ref([])
+const historyPage = ref(0)
+const historyTotalPages = ref(0)
+
+async function openHistoryModal(item) {
+  historyItem.value = item
+  historyPage.value = 0
+  historyMovements.value = []
+  showHistoryModal.value = true
+  await fetchHistory()
+}
+
+function closeHistoryModal() {
+  showHistoryModal.value = false
+  historyItem.value = null
+}
+
+async function fetchHistory() {
+  historyLoading.value = true
+  try {
+    const response = await stockApi.getMovementsByProduct(historyItem.value.productId, {
+      page: historyPage.value,
+      size: 20,
+      sort: 'movementDate,desc'
+    })
+    historyMovements.value = response.data.content || []
+    historyTotalPages.value = response.data.totalPages || 0
+  } catch (error) {
+    console.error('Failed to fetch history:', error)
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+function historyPrev() {
+  if (historyPage.value > 0) {
+    historyPage.value--
+    fetchHistory()
+  }
+}
+
+function historyNext() {
+  if (historyPage.value < historyTotalPages.value - 1) {
+    historyPage.value++
+    fetchHistory()
+  }
+}
+
+const movementTypeLabels = {
+  STOCK_IN: 'inventory.stock.history.stockIn',
+  STOCK_OUT: 'inventory.stock.history.stockOut',
+  TRANSFER: 'inventory.stock.history.transfer',
+  ADJUSTMENT: 'inventory.stock.history.adjustment',
+  INITIAL: 'inventory.stock.history.initial',
+  RETURN: 'inventory.stock.history.return',
+  RESERVATION: 'inventory.stock.history.reservation',
+  UNRESERVATION: 'inventory.stock.history.unreservation',
+  WRITE_OFF: 'inventory.stock.history.writeOff',
+  PRODUCTION: 'inventory.stock.history.production',
+  CONSUMPTION: 'inventory.stock.history.consumption'
+}
+
+function movementTypeLabel(type) {
+  return movementTypeLabels[type] ? t(movementTypeLabels[type]) : type
+}
+
+function movementTypeClass(type) {
+  switch (type) {
+    case 'STOCK_IN': case 'RETURN': case 'PRODUCTION': case 'INITIAL': return 'text-green-700 bg-green-50'
+    case 'STOCK_OUT': case 'CONSUMPTION': case 'WRITE_OFF': return 'text-red-700 bg-red-50'
+    case 'TRANSFER': return 'text-blue-700 bg-blue-50'
+    case 'ADJUSTMENT': return 'text-amber-700 bg-amber-50'
+    default: return 'text-gray-700 bg-gray-50'
+  }
+}
+
+function isIncoming(m) {
+  return ['STOCK_IN', 'RETURN', 'PRODUCTION', 'INITIAL', 'UNRESERVATION'].includes(m.movementType) ||
+    (m.movementType === 'ADJUSTMENT' && m.quantityAfter > m.quantityBefore)
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('uz-Cyrl', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+    ' ' + d.toLocaleTimeString('uz-Cyrl', { hour: '2-digit', minute: '2-digit' })
+}
 </script>
 
 <template>
@@ -220,7 +312,7 @@ async function submitAdjust() {
               <th class="text-right">{{ $t('inventory.stock.reserved') }}</th>
               <th class="text-right">{{ $t('inventory.stock.free') }}</th>
               <th>{{ $t('status') }}</th>
-              <th class="w-10"></th>
+              <th class="w-20"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -250,13 +342,22 @@ async function submitAdjust() {
                 </span>
               </td>
               <td>
-                <button
-                  @click="openAdjustModal(item)"
-                  class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
-                  :title="$t('inventory.stock.adjust')"
-                >
-                  <PencilSquareIcon class="h-5 w-5" />
-                </button>
+                <div class="flex items-center gap-1">
+                  <button
+                    @click="openHistoryModal(item)"
+                    class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    :title="$t('inventory.stock.history.title')"
+                  >
+                    <ClockIcon class="h-5 w-5" />
+                  </button>
+                  <button
+                    @click="openAdjustModal(item)"
+                    class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    :title="$t('inventory.stock.adjust')"
+                  >
+                    <PencilSquareIcon class="h-5 w-5" />
+                  </button>
+                </div>
               </td>
             </tr>
             <tr v-if="filteredStock.length === 0">
@@ -345,6 +446,99 @@ async function submitAdjust() {
               <button @click="submitAdjust" :disabled="adjusting" class="btn btn-primary">
                 <span v-if="adjusting" class="animate-spin inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
                 {{ $t('save') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- History Modal -->
+    <Teleport to="body">
+      <div v-if="showHistoryModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+          <div class="fixed inset-0 bg-black/30" @click="closeHistoryModal"></div>
+          <div class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 space-y-4">
+            <!-- Header -->
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">{{ $t('inventory.stock.history.title') }}</h3>
+                <p class="text-sm text-gray-500">{{ historyItem?.productName }} &middot; {{ historyItem?.productSku }}</p>
+              </div>
+              <button @click="closeHistoryModal" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+                <XMarkIcon class="h-5 w-5" />
+              </button>
+            </div>
+
+            <!-- Loading -->
+            <div v-if="historyLoading" class="flex items-center justify-center h-32">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+
+            <!-- Movements list -->
+            <div v-else-if="historyMovements.length > 0" class="space-y-2 max-h-[60vh] overflow-y-auto">
+              <div
+                v-for="m in historyMovements"
+                :key="m.id"
+                class="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50"
+              >
+                <div
+                  :class="['flex-shrink-0 p-1.5 rounded-full', isIncoming(m) ? 'bg-green-100' : 'bg-red-100']"
+                >
+                  <ArrowDownIcon v-if="isIncoming(m)" class="h-4 w-4 text-green-600" />
+                  <ArrowUpIcon v-else class="h-4 w-4 text-red-600" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span :class="['text-xs font-medium px-2 py-0.5 rounded-full', movementTypeClass(m.movementType)]">
+                      {{ movementTypeLabel(m.movementType) }}
+                    </span>
+                    <span class="text-xs text-gray-400">{{ formatDate(m.movementDate) }}</span>
+                  </div>
+                  <div class="mt-1 flex items-baseline gap-2">
+                    <span class="text-sm text-gray-500">{{ formatQty(m.quantityBefore) }}</span>
+                    <span class="text-xs text-gray-400">&rarr;</span>
+                    <span class="text-sm font-semibold text-gray-900">{{ formatQty(m.quantityAfter) }}</span>
+                    <span :class="['text-xs font-medium', isIncoming(m) ? 'text-green-600' : 'text-red-600']">
+                      {{ isIncoming(m) ? '+' : '-' }}{{ formatQty(m.quantity) }}
+                    </span>
+                  </div>
+                  <p v-if="m.reason" class="mt-0.5 text-xs text-gray-500">{{ m.reason }}</p>
+                  <p v-if="m.toLocationName || m.fromLocationName" class="mt-0.5 text-xs text-gray-400">
+                    <template v-if="m.fromLocationName && m.toLocationName">
+                      {{ m.fromLocationName }} &rarr; {{ m.toLocationName }}
+                    </template>
+                    <template v-else>
+                      {{ m.toLocationName || m.fromLocationName }}
+                    </template>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty -->
+            <div v-else class="text-center text-gray-400 py-8">
+              {{ $t('inventory.stock.history.noMovements') }}
+            </div>
+
+            <!-- Pagination -->
+            <div v-if="historyTotalPages > 1" class="flex items-center justify-between pt-2 border-t">
+              <button
+                @click="historyPrev"
+                :disabled="historyPage === 0"
+                class="btn btn-secondary btn-sm"
+              >
+                {{ $t('previous') }}
+              </button>
+              <span class="text-sm text-gray-500">
+                {{ historyPage + 1 }} / {{ historyTotalPages }}
+              </span>
+              <button
+                @click="historyNext"
+                :disabled="historyPage >= historyTotalPages - 1"
+                class="btn btn-secondary btn-sm"
+              >
+                {{ $t('next') }}
               </button>
             </div>
           </div>
