@@ -374,7 +374,17 @@ export const locationsApi = warehousesApi
 
 // Audit Logs API - Backend: /api/v1/admin/audit-logs
 export const auditLogsApi = {
-  getAll: (params) => api.get('/admin/audit-logs', { params })
+  getAll: (params) => api.get('/admin/audit-logs', { params }),
+  getByUser: (userId, params) => api.get(`/admin/audit-logs/user/${userId}`, { params }),
+  getByEntity: (entityType, entityId, params) => api.get(`/admin/audit-logs/entity/${entityType}/${entityId}`, { params }),
+  getByAction: (action, params) => api.get(`/admin/audit-logs/action/${action}`, { params }),
+  getByModule: (module, params) => api.get(`/admin/audit-logs/module/${module}`, { params }),
+  getByDateRange: (startDate, endDate, params) => api.get('/admin/audit-logs/date-range', { params: { startDate, endDate, ...params } }),
+  getFailed: (params) => api.get('/admin/audit-logs/failed', { params }),
+  getActionStats: (days = 7) => api.get('/admin/audit-logs/stats/actions', { params: { days } }),
+  getModuleStats: (days = 7) => api.get('/admin/audit-logs/stats/modules', { params: { days } }),
+  getActiveUsers: (days = 7) => api.get('/admin/audit-logs/stats/users', { params: { days } }),
+  getFailedLogins: (hours = 24) => api.get('/admin/audit-logs/stats/failed-logins', { params: { hours } })
 }
 
 // Roles API - Backend: /api/v1/roles
