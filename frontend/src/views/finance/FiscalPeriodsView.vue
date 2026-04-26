@@ -17,6 +17,12 @@ const loading = ref(true)
 const error = ref('')
 const successMsg = ref('')
 
+// Pagination (for getYears paginated mode)
+const usePaginated = ref(false)
+const totalPages = ref(0)
+const currentPage = ref(0)
+const pageSize = 20
+
 // Year modal
 const showYearModal = ref(false)
 const editingYear = ref(null)
@@ -66,18 +72,36 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('uz-UZ')
 }
 
-async function fetchYears() {
+async function fetchYears(page = 0) {
   loading.value = true
   error.value = ''
   try {
-    const res = await fiscalApi.getAllYears()
+    let res
+    if (usePaginated.value) {
+      res = await fiscalApi.getYears({ page, size: pageSize, sort: 'year,desc' })
+    } else {
+      res = await fiscalApi.getAllYears()
+    }
     const data = res.data.data || res.data
-    years.value = Array.isArray(data) ? data : (data.content || [])
+    if (Array.isArray(data)) {
+      years.value = data
+      totalPages.value = 1
+      currentPage.value = 0
+    } else {
+      years.value = data.content || []
+      totalPages.value = data.page?.totalPages || data.totalPages || 1
+      currentPage.value = data.page?.number ?? data.number ?? 0
+    }
   } catch (e) {
     if (e.response?.status !== 403) error.value = e.response?.data?.message || t('failedToLoad')
   } finally {
     loading.value = false
   }
+}
+
+function togglePaginated() {
+  usePaginated.value = !usePaginated.value
+  fetchYears(0)
 }
 
 async function fetchCurrentYear() {
@@ -514,6 +538,15 @@ onMounted(() => {
 
     <!-- Fiscal Years Table -->
     <div class="card">
+      <div class="px-6 py-3 border-b border-gray-200 flex items-center justify-between">
+        <h3 class="text-sm font-medium text-gray-700">{{ $t('finance.fiscal.title') }}</h3>
+        <button
+          @click="togglePaginated"
+          :class="['btn-secondary text-xs', usePaginated ? 'ring-2 ring-primary-500 bg-primary-50' : '']"
+        >
+          {{ $t('finance.fiscal.paginatedView') }}
+        </button>
+      </div>
       <div v-if="loading" class="flex items-center justify-center h-64">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
@@ -682,6 +715,23 @@ onMounted(() => {
             </template>
           </tbody>
         </table>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="usePaginated && totalPages > 1" class="flex items-center justify-between px-6 py-3 border-t border-gray-200">
+        <p class="text-sm text-gray-500">{{ $t('page') }} {{ currentPage + 1 }} / {{ totalPages }}</p>
+        <div class="flex gap-2">
+          <button
+            @click="fetchYears(currentPage - 1)"
+            :disabled="currentPage === 0"
+            class="btn-secondary text-sm"
+          >{{ $t('previous') }}</button>
+          <button
+            @click="fetchYears(currentPage + 1)"
+            :disabled="currentPage >= totalPages - 1"
+            class="btn-secondary text-sm"
+          >{{ $t('next') }}</button>
+        </div>
       </div>
     </div>
 

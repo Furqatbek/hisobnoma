@@ -159,10 +159,18 @@ async function openCreateModal() {
   ]
   if (accounts.value.length === 0) {
     try {
-      const res = await accountsApi.getAll()
-      accounts.value = res.data.content || res.data || []
-    } catch (error) {
-      console.error('Failed to load accounts:', error)
+      // Use getPostable() to only show accounts that allow direct posting
+      const res = await accountsApi.getPostable()
+      const data = res.data.data || res.data
+      accounts.value = data.content || data || []
+    } catch (e) {
+      // Fallback to getAll if getPostable fails
+      try {
+        const res = await accountsApi.getAll()
+        accounts.value = res.data.content || res.data || []
+      } catch (error) {
+        console.error('Failed to load accounts:', error)
+      }
     }
   }
 }
