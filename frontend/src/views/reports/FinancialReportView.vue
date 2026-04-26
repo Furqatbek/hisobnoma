@@ -2,14 +2,23 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { reportsApi } from '@/services/api'
-import { ArrowDownTrayIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
+import { ArrowDownTrayIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, CheckCircleIcon, ExclamationTriangleIcon, ClockIcon, DocumentTextIcon, CalendarDaysIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 const loading = ref(true)
+const activeTab = ref('financial')
 const trialBalance = ref(null)
 const incomeStatement = ref(null)
 const arAging = ref(null)
 const apAging = ref(null)
+
+// Report Management state
+const definitions = ref([])
+const schedules = ref([])
+const executions = ref([])
+const loadingDefinitions = ref(false)
+const loadingSchedules = ref(false)
+const loadingExecutions = ref(false)
 
 const filters = reactive({
   startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0],
@@ -45,20 +54,117 @@ async function exportReport() {
       endDate: filters.endDate,
       exportFormat: 'EXCEL'
     })
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `financial-report-${filters.startDate}-${filters.endDate}.xlsx`)
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
+    downloadBlob(response.data, `financial-report-${filters.startDate}-${filters.endDate}.xlsx`)
   } catch (error) {
     console.error('Export failed:', error)
   }
 }
 
+async function exportIncomeStatement() {
+  try {
+    const response = await reportsApi.exportIncomeStatement({
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      exportFormat: 'EXCEL'
+    })
+    downloadBlob(response.data, `income-statement-${filters.startDate}-${filters.endDate}.xlsx`)
+  } catch (error) {
+    console.error('Export income statement failed:', error)
+  }
+}
+
+async function exportARAgingReport() {
+  try {
+    const response = await reportsApi.exportARAgingReport({
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      exportFormat: 'EXCEL'
+    })
+    downloadBlob(response.data, `ar-aging-${filters.startDate}-${filters.endDate}.xlsx`)
+  } catch (error) {
+    console.error('Export AR aging failed:', error)
+  }
+}
+
+async function exportAPAgingReport() {
+  try {
+    const response = await reportsApi.exportAPAgingReport({
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      exportFormat: 'EXCEL'
+    })
+    downloadBlob(response.data, `ap-aging-${filters.startDate}-${filters.endDate}.xlsx`)
+  } catch (error) {
+    console.error('Export AP aging failed:', error)
+  }
+}
+
+function downloadBlob(data, filename) {
+  const url = window.URL.createObjectURL(new Blob([data]))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', filename)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+async function fetchDefinitions() {
+  loadingDefinitions.value = true
+  try {
+    const response = await reportsApi.getDefinitions({})
+    const data = response.data.data || response.data
+    definitions.value = data.content || data || []
+  } catch (error) {
+    console.error('Failed to fetch definitions:', error)
+  } finally {
+    loadingDefinitions.value = false
+  }
+}
+
+async function fetchSchedules() {
+  loadingSchedules.value = true
+  try {
+    const response = await reportsApi.getSchedules({})
+    const data = response.data.data || response.data
+    schedules.value = data.content || data || []
+  } catch (error) {
+    console.error('Failed to fetch schedules:', error)
+  } finally {
+    loadingSchedules.value = false
+  }
+}
+
+async function fetchExecutions() {
+  loadingExecutions.value = true
+  try {
+    const response = await reportsApi.getExecutions({})
+    const data = response.data.data || response.data
+    executions.value = data.content || data || []
+  } catch (error) {
+    console.error('Failed to fetch executions:', error)
+  } finally {
+    loadingExecutions.value = false
+  }
+}
+
+function switchTab(tab) {
+  activeTab.value = tab
+  if (tab === 'management' && definitions.value.length === 0 && !loadingDefinitions.value) {
+    fetchDefinitions()
+    fetchSchedules()
+    fetchExecutions()
+  }
+}
+
 function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value || 0)
+}
+
+function formatDateTime(value) {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('uz-UZ')
 }
 </script>
 
@@ -69,11 +175,42 @@ function formatCurrency(value) {
         <h1 class="text-2xl font-bold text-gray-900">{{ $t('reports.financial.title') }}</h1>
         <p class="mt-1 text-sm text-gray-500">{{ $t('reports.financial.subtitle') }}</p>
       </div>
-      <button @click="exportReport" class="btn-secondary">
+      <button v-if="activeTab === 'financial'" @click="exportReport" class="btn-secondary">
         <ArrowDownTrayIcon class="h-5 w-5 mr-2" />
         {{ $t('export') }}
       </button>
     </div>
+
+    <!-- Tabs -->
+    <div class="border-b border-gray-200">
+      <nav class="-mb-px flex space-x-8">
+        <button
+          @click="switchTab('financial')"
+          :class="[
+            'whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm',
+            activeTab === 'financial'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ]"
+        >
+          {{ $t('reports.financial.tabFinancial') }}
+        </button>
+        <button
+          @click="switchTab('management')"
+          :class="[
+            'whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm',
+            activeTab === 'management'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ]"
+        >
+          {{ $t('reports.financial.tabManagement') }}
+        </button>
+      </nav>
+    </div>
+
+    <!-- Financial Reports Tab -->
+    <template v-if="activeTab === 'financial'">
 
     <!-- Filters -->
     <div class="card">
@@ -154,7 +291,14 @@ function formatCurrency(value) {
       </div>
 
       <!-- Income Statement Breakdown -->
-      <div v-if="incomeStatement" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div v-if="incomeStatement" class="space-y-4">
+        <div class="flex justify-end">
+          <button @click="exportIncomeStatement" class="btn-secondary">
+            <ArrowDownTrayIcon class="h-5 w-5 mr-2" />
+            {{ $t('reports.financial.exportIncomeStatement') }}
+          </button>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Revenue breakdown -->
         <div class="card">
           <div class="card-header bg-green-50">
@@ -218,13 +362,18 @@ function formatCurrency(value) {
           </div>
           <div v-else class="card-body text-center text-gray-500">{{ $t('reports.financial.noExpenses') }}</div>
         </div>
+        </div>
       </div>
 
       <!-- Receivables & Payables from aging reports -->
       <div v-if="arAging || apAging" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div v-if="arAging" class="card">
-          <div class="card-header bg-green-50">
+          <div class="card-header bg-green-50 flex items-center justify-between">
             <h3 class="text-lg font-medium text-green-800">{{ $t('reports.financial.receivables') }}</h3>
+            <button @click="exportARAgingReport" class="btn-secondary text-sm">
+              <ArrowDownTrayIcon class="h-4 w-4 mr-1" />
+              {{ $t('export') }}
+            </button>
           </div>
           <div class="card-body">
             <div class="text-center py-4">
@@ -257,8 +406,12 @@ function formatCurrency(value) {
         </div>
 
         <div v-if="apAging" class="card">
-          <div class="card-header bg-red-50">
+          <div class="card-header bg-red-50 flex items-center justify-between">
             <h3 class="text-lg font-medium text-red-800">{{ $t('reports.financial.payables') }}</h3>
+            <button @click="exportAPAgingReport" class="btn-secondary text-sm">
+              <ArrowDownTrayIcon class="h-4 w-4 mr-1" />
+              {{ $t('export') }}
+            </button>
           </div>
           <div class="card-body">
             <div class="text-center py-4">
@@ -415,6 +568,136 @@ function formatCurrency(value) {
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </template>
+    </template>
+
+    <!-- Report Management Tab -->
+    <template v-if="activeTab === 'management'">
+      <div class="space-y-6">
+        <!-- Report Definitions -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="text-lg font-medium">{{ $t('reports.financial.definitions') }}</h3>
+              <p class="text-sm text-gray-500 mt-1">{{ $t('reports.financial.definitionsSubtitle') }}</p>
+            </div>
+          </div>
+          <div v-if="loadingDefinitions" class="card-body text-center text-gray-500">
+            {{ $t('reports.financial.loadingDefinitions') }}
+          </div>
+          <div v-else-if="definitions.length" class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ $t('reports.financial.reportName') }}</th>
+                  <th>{{ $t('reports.financial.reportType') }}</th>
+                  <th>{{ $t('reports.financial.description') }}</th>
+                  <th>{{ $t('status') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="def in definitions" :key="def.id">
+                  <td class="font-medium">{{ def.name }}</td>
+                  <td class="text-sm text-gray-500">{{ def.reportType || def.type }}</td>
+                  <td class="text-sm text-gray-500">{{ def.description || '-' }}</td>
+                  <td>
+                    <span :class="['badge', def.active || def.status === 'ACTIVE' ? 'badge-success' : 'badge-secondary']">
+                      {{ def.active || def.status === 'ACTIVE' ? $t('active') : $t('inactive') }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="card-body text-center text-gray-500">
+            {{ $t('reports.financial.noDefinitions') }}
+          </div>
+        </div>
+
+        <!-- Report Schedules -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="text-lg font-medium">{{ $t('reports.financial.schedules') }}</h3>
+              <p class="text-sm text-gray-500 mt-1">{{ $t('reports.financial.schedulesSubtitle') }}</p>
+            </div>
+          </div>
+          <div v-if="loadingSchedules" class="card-body text-center text-gray-500">
+            {{ $t('reports.financial.loadingSchedules') }}
+          </div>
+          <div v-else-if="schedules.length" class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ $t('reports.financial.reportName') }}</th>
+                  <th>{{ $t('reports.financial.frequency') }}</th>
+                  <th>{{ $t('reports.financial.nextRun') }}</th>
+                  <th>{{ $t('reports.financial.lastRun') }}</th>
+                  <th>{{ $t('status') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="schedule in schedules" :key="schedule.id">
+                  <td class="font-medium">{{ schedule.name || schedule.reportName }}</td>
+                  <td class="text-sm text-gray-500">{{ schedule.frequency || schedule.cronExpression }}</td>
+                  <td class="text-sm text-gray-500">{{ formatDateTime(schedule.nextRunAt || schedule.nextRun) }}</td>
+                  <td class="text-sm text-gray-500">{{ formatDateTime(schedule.lastRunAt || schedule.lastRun) }}</td>
+                  <td>
+                    <span :class="['badge', schedule.active || schedule.status === 'ACTIVE' ? 'badge-success' : 'badge-secondary']">
+                      {{ schedule.active || schedule.status === 'ACTIVE' ? $t('active') : $t('inactive') }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="card-body text-center text-gray-500">
+            {{ $t('reports.financial.noSchedules') }}
+          </div>
+        </div>
+
+        <!-- Report Executions -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="text-lg font-medium">{{ $t('reports.financial.executions') }}</h3>
+              <p class="text-sm text-gray-500 mt-1">{{ $t('reports.financial.executionsSubtitle') }}</p>
+            </div>
+          </div>
+          <div v-if="loadingExecutions" class="card-body text-center text-gray-500">
+            {{ $t('reports.financial.loadingExecutions') }}
+          </div>
+          <div v-else-if="executions.length" class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ $t('reports.financial.reportName') }}</th>
+                  <th>{{ $t('reports.financial.executedAt') }}</th>
+                  <th>{{ $t('reports.financial.executedBy') }}</th>
+                  <th>{{ $t('reports.financial.duration') }}</th>
+                  <th>{{ $t('status') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="exec in executions" :key="exec.id">
+                  <td class="font-medium">{{ exec.reportName || exec.name }}</td>
+                  <td class="text-sm text-gray-500">{{ formatDateTime(exec.executedAt || exec.startedAt) }}</td>
+                  <td class="text-sm text-gray-500">{{ exec.executedBy || exec.userName || '-' }}</td>
+                  <td class="text-sm text-gray-500">{{ exec.duration || exec.durationMs ? (exec.durationMs || exec.duration) + ' ms' : '-' }}</td>
+                  <td>
+                    <span :class="['badge', exec.status === 'COMPLETED' || exec.status === 'SUCCESS' ? 'badge-success' : exec.status === 'FAILED' ? 'badge-danger' : 'badge-warning']">
+                      {{ exec.status }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="card-body text-center text-gray-500">
+            {{ $t('reports.financial.noExecutions') }}
+          </div>
         </div>
       </div>
     </template>

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { arPaymentsApi, apPaymentsApi } from '@/services/api'
-import { MagnifyingGlassIcon, XMarkIcon, EyeIcon, XCircleIcon, ArrowDownTrayIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline'
+import { MagnifyingGlassIcon, XMarkIcon, EyeIcon, XCircleIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, CheckCircleIcon, CalendarDaysIcon, FunnelIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 const activeTab = ref('ar') // 'ar' or 'ap'
@@ -22,6 +22,12 @@ const apCurrentPage = ref(0)
 
 const search = ref('')
 const statusFilter = ref('all')
+
+// Date range filter for AP
+const apDateStart = ref('')
+const apDateEnd = ref('')
+const apDateRangeTotal = ref(null)
+const showUnreconciled = ref(false)
 
 // Detail modal
 const showDetailModal = ref(false)
@@ -58,7 +64,11 @@ async function fetchAPPayments(page = 0) {
   error.value = ''
   try {
     let res
-    if (statusFilter.value !== 'all') {
+    if (showUnreconciled.value) {
+      res = await apPaymentsApi.getUnreconciled()
+    } else if (apDateStart.value && apDateEnd.value) {
+      res = await apPaymentsApi.getByDateRange(apDateStart.value, apDateEnd.value)
+    } else if (statusFilter.value !== 'all') {
       res = await apPaymentsApi.getByStatus(statusFilter.value, { page, size: 20, sort: 'createdAt,desc' })
     } else {
       res = await apPaymentsApi.getAll({ page, size: 20, sort: 'createdAt,desc' })
@@ -73,6 +83,56 @@ async function fetchAPPayments(page = 0) {
     }
   } finally {
     loading.value = false
+  }
+}
+
+async function fetchDateRangeTotal() {
+  if (!apDateStart.value || !apDateEnd.value) {
+    apDateRangeTotal.value = null
+    return
+  }
+  try {
+    const res = await apPaymentsApi.getDateRangeTotal(apDateStart.value, apDateEnd.value)
+    const data = res.data.data || res.data
+    apDateRangeTotal.value = data
+  } catch (e) {
+    apDateRangeTotal.value = null
+  }
+}
+
+function applyApDateFilter() {
+  showUnreconciled.value = false
+  statusFilter.value = 'all'
+  fetchAPPayments(0)
+  fetchDateRangeTotal()
+}
+
+function clearApDateFilter() {
+  apDateStart.value = ''
+  apDateEnd.value = ''
+  apDateRangeTotal.value = null
+  fetchAPPayments(0)
+}
+
+function toggleUnreconciled() {
+  showUnreconciled.value = !showUnreconciled.value
+  if (showUnreconciled.value) {
+    statusFilter.value = 'all'
+    apDateStart.value = ''
+    apDateEnd.value = ''
+    apDateRangeTotal.value = null
+  }
+  fetchAPPayments(0)
+}
+
+async function reconcilePayment(payment) {
+  error.value = ''
+  try {
+    await apPaymentsApi.reconcile(payment.id)
+    successMsg.value = t('finance.payments.reconcileSuccess')
+    fetchAPPayments(apCurrentPage.value)
+  } catch (e) {
+    error.value = e.response?.data?.message || t('finance.payments.reconcileError')
   }
 }
 
@@ -324,6 +384,50 @@ const statusOptions = computed(() => {
       </div>
     </div>
 
+    <!-- AP Date Range Filter & Unreconciled Toggle -->
+    <div v-if="activeTab === 'ap'" class="card">
+      <div class="card-body">
+        <div class="flex flex-col sm:flex-row gap-4 items-end">
+          <div>
+            <label class="label">{{ $t('finance.payments.startDate') }}</label>
+            <input v-model="apDateStart" type="date" class="input" />
+          </div>
+          <div>
+            <label class="label">{{ $t('finance.payments.endDate') }}</label>
+            <input v-model="apDateEnd" type="date" class="input" />
+          </div>
+          <div class="flex gap-2">
+            <button @click="applyApDateFilter" class="btn-primary" :disabled="!apDateStart || !apDateEnd">
+              <CalendarDaysIcon class="h-5 w-5 mr-1" />
+              {{ $t('finance.payments.applyDateFilter') }}
+            </button>
+            <button v-if="apDateStart || apDateEnd" @click="clearApDateFilter" class="btn-secondary">
+              {{ $t('finance.payments.clearDateFilter') }}
+            </button>
+          </div>
+          <div class="sm:ml-auto">
+            <button
+              @click="toggleUnreconciled"
+              :class="[
+                'inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors',
+                showUnreconciled
+                  ? 'bg-amber-50 border-amber-300 text-amber-700'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              ]"
+            >
+              <FunnelIcon class="h-4 w-4 mr-1.5" />
+              {{ $t('finance.payments.unreconciledTab') }}
+            </button>
+          </div>
+        </div>
+        <!-- Date Range Total -->
+        <div v-if="apDateRangeTotal !== null && apDateStart && apDateEnd" class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p class="text-sm text-blue-600 font-medium">{{ $t('finance.payments.dateRangeTotal') }}</p>
+          <p class="text-2xl font-bold text-blue-700 mt-1">{{ formatCurrency(apDateRangeTotal) }} {{ $t('sum') }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- ==================== AR Payments Table ==================== -->
     <div v-if="activeTab === 'ar'" class="card">
       <div v-if="loading" class="flex items-center justify-center h-64">
@@ -455,13 +559,23 @@ const statusOptions = computed(() => {
                 </span>
               </td>
               <td class="text-right">
-                <button
-                  @click="viewAPPayment(payment)"
-                  class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  :title="$t('finance.payments.viewDetails')"
-                >
-                  <EyeIcon class="h-5 w-5" />
-                </button>
+                <div class="flex items-center justify-end space-x-1">
+                  <button
+                    @click="viewAPPayment(payment)"
+                    class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
+                    :title="$t('finance.payments.viewDetails')"
+                  >
+                    <EyeIcon class="h-5 w-5" />
+                  </button>
+                  <button
+                    v-if="payment.status === 'COMPLETED' && !payment.reconciled"
+                    @click="reconcilePayment(payment)"
+                    class="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-gray-100 inline-flex"
+                    :title="$t('finance.payments.reconcile')"
+                  >
+                    <CheckCircleIcon class="h-5 w-5" />
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>

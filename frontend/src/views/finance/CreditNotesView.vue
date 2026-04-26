@@ -2,7 +2,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { creditNotesApi, customersApi } from '@/services/api'
-import { PlusIcon, EyeIcon, XMarkIcon, CheckIcon, NoSymbolIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, EyeIcon, XMarkIcon, CheckIcon, NoSymbolIcon, PencilIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 
@@ -26,9 +26,107 @@ async function fetchEntries() {
   finally { loading.value = false }
 }
 
-onMounted(fetchEntries)
+// Customer filter
+const customerFilter = ref(null)
+const filterCustomers = ref([])
+const availableCredit = ref(null)
+const availableCreditNotes = ref([])
 
-function switchTab(tab) { activeTab.value = tab; pagination.value.page = 0; fetchEntries() }
+// Number search
+const numberSearch = ref('')
+const numberSearchResult = ref(null)
+const numberSearchError = ref('')
+
+// Edit
+const showEdit = ref(false)
+const editingId = ref(null)
+const editForm = reactive({ customerId: null, reason: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] })
+const updating = ref(false)
+
+async function loadFilterCustomers() {
+  if (!filterCustomers.value.length) {
+    try { filterCustomers.value = (await customersApi.getActive()).data || [] } catch (e) { console.error(e) }
+  }
+}
+
+async function onCustomerFilter() {
+  pagination.value.page = 0
+  availableCredit.value = null
+  availableCreditNotes.value = []
+  if (customerFilter.value) {
+    loading.value = true
+    try {
+      const params = { page: pagination.value.page, size: pagination.value.size }
+      const res = await creditNotesApi.getByCustomer(customerFilter.value, params)
+      entries.value = res.data.content || []
+      pagination.value.totalPages = res.data.page?.totalPages || 0
+      pagination.value.totalElements = res.data.page?.totalElements || 0
+    } catch (e) { console.error(e) }
+    finally { loading.value = false }
+    // Also fetch available credit info
+    try {
+      const creditRes = await creditNotesApi.getAvailableCredit(customerFilter.value)
+      availableCredit.value = creditRes.data.data ?? creditRes.data
+    } catch (e) { console.error(e) }
+    try {
+      const notesRes = await creditNotesApi.getAvailableByCustomer(customerFilter.value)
+      const data = notesRes.data.data || notesRes.data
+      availableCreditNotes.value = data.content || data || []
+    } catch (e) { console.error(e) }
+  } else {
+    fetchEntries()
+  }
+}
+
+async function searchByNumber() {
+  numberSearchResult.value = null
+  numberSearchError.value = ''
+  if (!numberSearch.value.trim()) return
+  try {
+    const res = await creditNotesApi.getByNumber(numberSearch.value.trim())
+    numberSearchResult.value = res.data.data || res.data
+  } catch (e) {
+    numberSearchError.value = t('finance.creditNotes.numberNotFound')
+  }
+}
+
+async function openEdit(entry) {
+  editingId.value = entry.id
+  try {
+    const res = await creditNotesApi.getById(entry.id)
+    const data = res.data.data || res.data
+    editForm.customerId = data.customerId || null
+    editForm.reason = data.reason || ''
+    editForm.lines = data.lines?.length ? data.lines.map(l => ({ description: l.description || '', quantity: l.quantity || 1, unitPrice: l.unitPrice || 0 })) : [{ description: '', quantity: 1, unitPrice: 0 }]
+  } catch (e) {
+    editForm.customerId = entry.customerId || null
+    editForm.reason = entry.reason || ''
+    editForm.lines = [{ description: '', quantity: 1, unitPrice: 0 }]
+  }
+  if (!customers.value.length) {
+    try { customers.value = (await customersApi.getActive()).data || [] } catch (e) { console.error(e) }
+  }
+  showEdit.value = true
+  showDetail.value = false
+}
+
+function addEditLine() { editForm.lines.push({ description: '', quantity: 1, unitPrice: 0 }) }
+function removeEditLine(i) { if (editForm.lines.length > 1) editForm.lines.splice(i, 1) }
+
+async function handleUpdate() {
+  if (!editForm.customerId) return
+  updating.value = true
+  try {
+    await creditNotesApi.update(editingId.value, editForm)
+    showEdit.value = false
+    fetchEntries()
+  } catch (e) { alert(e.response?.data?.message || 'Error') }
+  finally { updating.value = false }
+}
+
+onMounted(() => { fetchEntries(); loadFilterCustomers() })
+
+function switchTab(tab) { activeTab.value = tab; pagination.value.page = 0; customerFilter.value = null; availableCredit.value = null; availableCreditNotes.value = []; fetchEntries() }
 
 // Detail
 const showDetail = ref(false)
@@ -109,6 +207,73 @@ function statusColor(s) { return { DRAFT: 'badge-warning', APPROVED: 'badge-info
       </nav>
     </div>
 
+    <!-- Filters: Customer & Number Search -->
+    <div class="card">
+      <div class="card-body">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Customer filter -->
+          <div>
+            <label class="label">{{ $t('finance.creditNotes.filterByCustomer') }}</label>
+            <select v-model="customerFilter" @change="onCustomerFilter" class="input">
+              <option :value="null">{{ $t('finance.creditNotes.allCustomers') }}</option>
+              <option v-for="c in filterCustomers" :key="c.id" :value="c.id">{{ c.name }} ({{ c.code }})</option>
+            </select>
+          </div>
+          <!-- Number search -->
+          <div>
+            <label class="label">{{ $t('finance.creditNotes.numberSearch') }}</label>
+            <div class="flex gap-2">
+              <input v-model="numberSearch" @keyup.enter="searchByNumber" type="text" class="input flex-1" :placeholder="$t('finance.creditNotes.numberSearchPlaceholder')" />
+              <button @click="searchByNumber" class="btn-secondary px-3">
+                <MagnifyingGlassIcon class="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          <!-- Available credit (shown when customer selected) -->
+          <div v-if="customerFilter && availableCredit !== null">
+            <label class="label">{{ $t('finance.creditNotes.availableCredit') }}</label>
+            <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p class="text-lg font-bold text-green-800">{{ formatCurrency(availableCredit) }}</p>
+            </div>
+          </div>
+        </div>
+        <!-- Number search result -->
+        <div v-if="numberSearchResult" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div class="flex items-center justify-between">
+            <div class="text-sm">
+              <span class="font-mono font-medium">{{ numberSearchResult.creditNoteNumber }}</span>
+              <span class="text-gray-500 ml-2">{{ numberSearchResult.customerName }}</span>
+              <span class="ml-2 font-medium">{{ formatCurrency(numberSearchResult.totalAmount) }}</span>
+              <span :class="['badge ml-2', statusColor(numberSearchResult.status)]">{{ $t(`finance.creditNotes.status.${numberSearchResult.status}`) }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button @click="openDetail(numberSearchResult)" class="p-1 text-primary-600 hover:text-primary-800"><EyeIcon class="h-4 w-4" /></button>
+              <button @click="numberSearchResult = null" class="text-gray-400 hover:text-gray-600 text-sm">&times;</button>
+            </div>
+          </div>
+        </div>
+        <div v-if="numberSearchError" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p class="text-sm text-red-600">{{ numberSearchError }}</p>
+        </div>
+        <!-- Available credit notes for selected customer -->
+        <div v-if="customerFilter && availableCreditNotes.length" class="mt-4">
+          <h4 class="text-sm font-medium text-gray-700 mb-2">{{ $t('finance.creditNotes.availableCreditNotes') }}</h4>
+          <div class="space-y-2">
+            <div v-for="cn in availableCreditNotes" :key="cn.id" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+              <div>
+                <span class="font-mono">{{ cn.creditNoteNumber }}</span>
+                <span class="text-gray-500 ml-2">{{ formatCurrency(cn.totalAmount) }}</span>
+              </div>
+              <button @click="openDetail(cn)" class="text-primary-600 hover:text-primary-800"><EyeIcon class="h-4 w-4" /></button>
+            </div>
+          </div>
+        </div>
+        <div v-if="customerFilter && availableCreditNotes.length === 0 && availableCredit !== null" class="mt-4">
+          <p class="text-sm text-gray-500">{{ $t('finance.creditNotes.noAvailableNotes') }}</p>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div v-if="loading" class="flex items-center justify-center h-64"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>
       <div v-else-if="entries.length === 0" class="text-center py-12"><p class="text-gray-500">{{ $t('finance.creditNotes.noNotes') }}</p></div>
@@ -130,6 +295,7 @@ function statusColor(s) { return { DRAFT: 'badge-warning', APPROVED: 'badge-info
               <td class="text-right">
                 <div class="flex items-center justify-end space-x-1">
                   <button @click="openDetail(e)" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100"><EyeIcon class="h-5 w-5" /></button>
+                  <button v-if="e.status === 'DRAFT'" @click="openEdit(e)" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100"><PencilIcon class="h-5 w-5" /></button>
                   <button v-if="e.status === 'DRAFT'" @click="openCancel(e)" class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100"><NoSymbolIcon class="h-5 w-5" /></button>
                 </div>
               </td>
@@ -171,6 +337,7 @@ function statusColor(s) { return { DRAFT: 'badge-warning', APPROVED: 'badge-info
           </div>
           <div class="flex justify-end gap-2">
             <button v-if="detail.status === 'DRAFT'" @click="openCancel(detail)" class="btn-danger"><NoSymbolIcon class="h-4 w-4 mr-1" />{{ $t('cancel') }}</button>
+            <button v-if="detail.status === 'DRAFT'" @click="openEdit(detail)" class="btn-secondary"><PencilIcon class="h-4 w-4 mr-1" />{{ $t('finance.creditNotes.editNote') }}</button>
             <button v-if="detail.status === 'APPROVED'" @click="openApply(detail)" class="btn-secondary">{{ $t('finance.creditNotes.applyToInvoice') }}</button>
             <button v-if="detail.status === 'DRAFT'" @click="approveNote" class="btn-primary"><CheckIcon class="h-4 w-4 mr-1" />{{ $t('finance.creditNotes.approve') }}</button>
           </div>
@@ -239,6 +406,38 @@ function statusColor(s) { return { DRAFT: 'badge-warning', APPROVED: 'badge-info
           <div class="mt-6 flex justify-end gap-3">
             <button @click="showCreate = false" class="btn-secondary">{{ $t('cancel') }}</button>
             <button @click="handleCreate" :disabled="creating || !createForm.customerId" class="btn-primary">{{ creating ? $t('saving') : $t('save') }}</button>
+          </div>
+        </div>
+      </div>
+    </div></Teleport>
+
+    <!-- Edit Modal -->
+    <Teleport to="body"><div v-if="showEdit" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showEdit = false"></div>
+        <div class="relative bg-white rounded-lg max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6">
+          <h3 class="text-lg font-medium mb-4">{{ $t('finance.creditNotes.editNote') }}</h3>
+          <div class="space-y-4">
+            <div><label class="label">{{ $t('finance.creditNotes.customer') }} *</label>
+              <select v-model="editForm.customerId" class="input">
+                <option :value="null">{{ $t('finance.creditNotes.selectCustomer') }}</option>
+                <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }} ({{ c.code }})</option>
+              </select>
+            </div>
+            <div><label class="label">{{ $t('finance.creditNotes.reason') }}</label><textarea v-model="editForm.reason" rows="2" class="input"></textarea></div>
+            <div>
+              <div class="flex items-center justify-between mb-2"><label class="label mb-0">{{ $t('finance.creditNotes.lines') }}</label><button type="button" @click="addEditLine" class="text-sm text-primary-600 hover:text-primary-800">+ {{ $t('finance.creditNotes.addLine') }}</button></div>
+              <div v-for="(line, i) in editForm.lines" :key="i" class="flex gap-2 mb-2">
+                <input v-model="line.description" type="text" class="input flex-1" :placeholder="$t('description')" />
+                <input v-model.number="line.quantity" type="number" min="1" class="input w-20" />
+                <input v-model.number="line.unitPrice" type="number" step="0.01" min="0" class="input w-28" :placeholder="$t('price')" />
+                <button v-if="editForm.lines.length > 1" @click="removeEditLine(i)" class="p-2 text-red-500 hover:text-red-700">&times;</button>
+              </div>
+            </div>
+          </div>
+          <div class="mt-6 flex justify-end gap-3">
+            <button @click="showEdit = false" class="btn-secondary">{{ $t('cancel') }}</button>
+            <button @click="handleUpdate" :disabled="updating || !editForm.customerId" class="btn-primary">{{ updating ? $t('saving') : $t('save') }}</button>
           </div>
         </div>
       </div>

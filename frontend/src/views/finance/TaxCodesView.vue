@@ -5,7 +5,8 @@ import { taxCodesApi } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   XMarkIcon, ChevronDownIcon, ChevronRightIcon, CalculatorIcon,
-  DocumentChartBarIcon
+  DocumentChartBarIcon, FunnelIcon, ArrowPathIcon, TableCellsIcon,
+  TagIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -70,6 +71,26 @@ const vatForm = reactive({
 const vatSummary = ref(null)
 const vatLoading = ref(false)
 
+// Active Only toggle
+const activeOnly = ref(false)
+
+// All list (no pagination)
+const allListLoaded = ref(false)
+
+// Code lookup
+const codeLookupInput = ref('')
+const codeLookupResult = ref(null)
+const codeLookupLoading = ref(false)
+const codeLookupError = ref('')
+
+// Summary by Type
+const summaryByTypeForm = reactive({
+  periodStart: '',
+  periodEnd: ''
+})
+const summaryByType = ref(null)
+const summaryByTypeLoading = ref(false)
+
 async function fetchTaxCodes(page = 0) {
   loading.value = true
   error.value = ''
@@ -77,8 +98,16 @@ async function fetchTaxCodes(page = 0) {
     let res
     if (search.value.trim()) {
       res = await taxCodesApi.search(search.value.trim(), { page, size: pageSize, sort: 'code,asc' })
+    } else if (activeOnly.value) {
+      res = await taxCodesApi.getActive()
+    } else if (activeTab.value === 'SALES_QUICK') {
+      res = await taxCodesApi.getSales()
+    } else if (activeTab.value === 'PURCHASES_QUICK') {
+      res = await taxCodesApi.getPurchases()
     } else if (activeTab.value !== 'ALL') {
       res = await taxCodesApi.getByType(activeTab.value)
+    } else if (allListLoaded.value) {
+      res = await taxCodesApi.getAllList()
     } else {
       res = await taxCodesApi.getAll({ page, size: pageSize, sort: 'code,asc' })
     }
@@ -106,23 +135,55 @@ onMounted(() => fetchTaxCodes(0))
 function switchTab(tab) {
   activeTab.value = tab
   search.value = ''
+  activeOnly.value = false
+  allListLoaded.value = false
   fetchTaxCodes(0)
 }
 
 function handleSearch() {
   activeTab.value = 'ALL'
+  activeOnly.value = false
+  allListLoaded.value = false
   fetchTaxCodes(0)
 }
 
-function openModal(taxCode = null) {
-  editingTaxCode.value = taxCode
+function toggleActiveOnly() {
+  activeOnly.value = !activeOnly.value
+  allListLoaded.value = false
+  fetchTaxCodes(0)
+}
+
+function loadAllList() {
+  allListLoaded.value = true
+  activeOnly.value = false
+  activeTab.value = 'ALL'
+  search.value = ''
+  fetchTaxCodes(0)
+}
+
+async function openModal(taxCode = null) {
   if (taxCode) {
-    form.code = taxCode.code || ''
-    form.name = taxCode.name || ''
-    form.description = taxCode.description || ''
-    form.taxType = taxCode.taxType || 'SALES'
-    form.active = taxCode.active !== false
+    // Fetch fresh data using getById before editing
+    try {
+      const res = await taxCodesApi.getById(taxCode.id)
+      const fresh = res.data.data || res.data
+      editingTaxCode.value = fresh
+      form.code = fresh.code || ''
+      form.name = fresh.name || ''
+      form.description = fresh.description || ''
+      form.taxType = fresh.taxType || 'SALES'
+      form.active = fresh.active !== false
+    } catch (e) {
+      // Fallback to existing data if fetch fails
+      editingTaxCode.value = taxCode
+      form.code = taxCode.code || ''
+      form.name = taxCode.name || ''
+      form.description = taxCode.description || ''
+      form.taxType = taxCode.taxType || 'SALES'
+      form.active = taxCode.active !== false
+    }
   } else {
+    editingTaxCode.value = null
     form.code = ''
     form.name = ''
     form.description = ''
@@ -283,6 +344,42 @@ async function loadVatSummary() {
   }
 }
 
+// Code Lookup (getByCode)
+async function lookupByCode() {
+  if (!codeLookupInput.value.trim()) return
+  codeLookupLoading.value = true
+  codeLookupError.value = ''
+  codeLookupResult.value = null
+  try {
+    const res = await taxCodesApi.getByCode(codeLookupInput.value.trim())
+    codeLookupResult.value = res.data.data || res.data
+  } catch (e) {
+    if (e.response?.status === 404) {
+      codeLookupError.value = t('finance.taxCodes.codeNotFound')
+    } else {
+      codeLookupError.value = e.response?.data?.message || t('errorOccurred')
+    }
+  } finally {
+    codeLookupLoading.value = false
+  }
+}
+
+// Summary by Type (getSummaryByType)
+async function loadSummaryByType() {
+  if (!summaryByTypeForm.periodStart || !summaryByTypeForm.periodEnd) return
+  summaryByTypeLoading.value = true
+  error.value = ''
+  try {
+    const res = await taxCodesApi.getSummaryByType(summaryByTypeForm.periodStart, summaryByTypeForm.periodEnd)
+    const data = res.data.data || res.data
+    summaryByType.value = Array.isArray(data) ? data : [data]
+  } catch (e) {
+    error.value = e.response?.data?.message || t('errorOccurred')
+  } finally {
+    summaryByTypeLoading.value = false
+  }
+}
+
 function getTypeClass(type) {
   switch (type) {
     case 'SALES': return 'badge-info'
@@ -354,9 +451,41 @@ const tabs = computed(() => [
       </nav>
     </div>
 
-    <!-- Search -->
+    <!-- Quick Filters & Search -->
     <div class="card">
-      <div class="card-body">
+      <div class="card-body space-y-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            @click="toggleActiveOnly"
+            :class="['btn-secondary text-sm', activeOnly ? 'ring-2 ring-primary-500 bg-primary-50' : '']"
+          >
+            <FunnelIcon class="h-4 w-4 mr-1" />
+            {{ $t('finance.taxCodes.activeOnly') }}
+          </button>
+          <button
+            @click="switchTab('SALES_QUICK')"
+            :class="['btn-secondary text-sm', activeTab === 'SALES_QUICK' ? 'ring-2 ring-blue-500 bg-blue-50' : '']"
+          >
+            <TagIcon class="h-4 w-4 mr-1" />
+            {{ $t('finance.taxCodes.salesFilter') }}
+          </button>
+          <button
+            @click="switchTab('PURCHASES_QUICK')"
+            :class="['btn-secondary text-sm', activeTab === 'PURCHASES_QUICK' ? 'ring-2 ring-yellow-500 bg-yellow-50' : '']"
+          >
+            <TagIcon class="h-4 w-4 mr-1" />
+            {{ $t('finance.taxCodes.purchasesFilter') }}
+          </button>
+          <button
+            @click="loadAllList"
+            :class="['btn-secondary text-sm', allListLoaded ? 'ring-2 ring-green-500 bg-green-50' : '']"
+            :title="$t('finance.taxCodes.loadAllHint')"
+          >
+            <TableCellsIcon class="h-4 w-4 mr-1" />
+            {{ $t('finance.taxCodes.loadAll') }}
+          </button>
+          <span v-if="allListLoaded" class="text-xs text-green-600 font-medium">{{ $t('finance.taxCodes.allLoaded') }}</span>
+        </div>
         <div class="relative">
           <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
@@ -620,6 +749,122 @@ const tabs = computed(() => [
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code Lookup -->
+    <div class="card">
+      <div class="p-6">
+        <div class="flex items-center mb-4">
+          <MagnifyingGlassIcon class="h-5 w-5 text-gray-500 mr-2" />
+          <h3 class="text-lg font-medium text-gray-900">{{ $t('finance.taxCodes.codeLookup') }}</h3>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="label">{{ $t('finance.taxCodes.code') }}</label>
+            <input
+              v-model="codeLookupInput"
+              @keyup.enter="lookupByCode"
+              type="text"
+              class="input font-mono"
+              :placeholder="$t('finance.taxCodes.codeLookupPlaceholder')"
+            />
+          </div>
+          <div class="flex items-end">
+            <button @click="lookupByCode" class="btn-primary" :disabled="codeLookupLoading || !codeLookupInput.trim()">
+              <MagnifyingGlassIcon class="h-5 w-5 mr-2" />
+              {{ $t('finance.taxCodes.lookup') }}
+            </button>
+          </div>
+        </div>
+        <div v-if="codeLookupLoading" class="flex items-center justify-center py-4">
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+        </div>
+        <div v-if="codeLookupError" class="mt-4 p-4 bg-red-50 rounded-lg">
+          <p class="text-sm text-red-600">{{ codeLookupError }}</p>
+        </div>
+        <div v-if="codeLookupResult" class="mt-4 p-4 bg-gray-50 rounded-lg">
+          <h4 class="text-sm font-medium text-gray-700 mb-2">{{ $t('finance.taxCodes.codeLookupResult') }}</h4>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span class="text-gray-500">{{ $t('finance.taxCodes.code') }}:</span>
+              <span class="ml-2 font-mono font-semibold">{{ codeLookupResult.code }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">{{ $t('finance.taxCodes.name') }}:</span>
+              <span class="ml-2 font-semibold">{{ codeLookupResult.name }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">{{ $t('finance.taxCodes.taxType') }}:</span>
+              <span :class="['ml-2 badge text-xs', getTypeClass(codeLookupResult.taxType)]">
+                {{ $t(`finance.taxCodes.type.${codeLookupResult.taxType}`) }}
+              </span>
+            </div>
+            <div>
+              <span class="text-gray-500">{{ $t('finance.taxCodes.currentRate') }}:</span>
+              <span class="ml-2 font-semibold">{{ formatRate(codeLookupResult.currentRate) }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary by Type -->
+    <div class="card">
+      <div class="p-6">
+        <div class="flex items-center mb-2">
+          <DocumentChartBarIcon class="h-5 w-5 text-gray-500 mr-2" />
+          <h3 class="text-lg font-medium text-gray-900">{{ $t('finance.taxCodes.summaryByType') }}</h3>
+        </div>
+        <p class="text-sm text-gray-500 mb-4">{{ $t('finance.taxCodes.summaryByTypeDesc') }}</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="label">{{ $t('finance.taxCodes.periodStart') }}</label>
+            <input v-model="summaryByTypeForm.periodStart" type="date" class="input" />
+          </div>
+          <div>
+            <label class="label">{{ $t('finance.taxCodes.periodEnd') }}</label>
+            <input v-model="summaryByTypeForm.periodEnd" type="date" class="input" />
+          </div>
+          <div class="flex items-end">
+            <button @click="loadSummaryByType" class="btn-primary" :disabled="summaryByTypeLoading">
+              <DocumentChartBarIcon class="h-5 w-5 mr-2" />
+              {{ $t('finance.taxCodes.loadSummaryByType') }}
+            </button>
+          </div>
+        </div>
+        <div v-if="summaryByTypeLoading" class="flex items-center justify-center py-6">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+        <div v-if="summaryByType && summaryByType.length > 0" class="mt-4">
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ $t('finance.taxCodes.taxType') }}</th>
+                  <th class="text-right">{{ $t('finance.taxCodes.taxableAmount') }}</th>
+                  <th class="text-right">{{ $t('finance.taxCodes.taxAmount') }}</th>
+                  <th class="text-right">{{ $t('finance.taxCodes.totalAmount') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="(row, idx) in summaryByType" :key="idx">
+                  <td>
+                    <span :class="['badge text-xs', getTypeClass(row.taxType || row.type)]">
+                      {{ row.taxType || row.type || '-' }}
+                    </span>
+                  </td>
+                  <td class="text-right font-semibold text-sm">{{ formatCurrency(row.taxableAmount) }}</td>
+                  <td class="text-right font-semibold text-sm">{{ formatCurrency(row.taxAmount) }}</td>
+                  <td class="text-right font-semibold text-sm">{{ formatCurrency(row.totalAmount) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div v-else-if="summaryByType && summaryByType.length === 0" class="mt-4 text-center py-6">
+          <p class="text-sm text-gray-400">{{ $t('finance.taxCodes.noSummaryByType') }}</p>
         </div>
       </div>
     </div>

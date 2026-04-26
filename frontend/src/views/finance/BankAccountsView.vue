@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { bankAccountsApi } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
-  StarIcon, XMarkIcon, BuildingLibraryIcon
+  StarIcon, XMarkIcon, BuildingLibraryIcon, FunnelIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -38,6 +38,13 @@ const form = reactive({
   active: true
 })
 
+// Quick filters
+const quickFilter = ref('')
+const codeLookup = ref('')
+const codeLookupResult = ref(null)
+const codeLookupError = ref('')
+const defaultAccountId = ref(null)
+
 // Delete confirmation
 const showDeleteConfirm = ref(false)
 const deletingAccount = ref(null)
@@ -49,6 +56,12 @@ async function fetchAccounts(page = 0) {
     let res
     if (search.value.trim()) {
       res = await bankAccountsApi.search(search.value.trim(), { page, size: pageSize, sort: 'accountCode,asc' })
+    } else if (quickFilter.value === 'ACTIVE') {
+      res = await bankAccountsApi.getActive()
+    } else if (quickFilter.value === 'PAYMENT') {
+      res = await bankAccountsApi.getPaymentAccounts()
+    } else if (quickFilter.value === 'RECEIPT') {
+      res = await bankAccountsApi.getReceiptAccounts()
     } else if (activeTab.value !== 'ALL') {
       res = await bankAccountsApi.getByType(activeTab.value)
     } else {
@@ -73,33 +86,95 @@ async function fetchAccounts(page = 0) {
   }
 }
 
-onMounted(() => fetchAccounts(0))
+async function fetchDefaultAccount() {
+  try {
+    const res = await bankAccountsApi.getDefault()
+    const data = res.data.data || res.data
+    if (data) {
+      defaultAccountId.value = data.id
+    }
+  } catch (e) {
+    // Default account may not be set
+  }
+}
+
+function applyQuickFilter(filter) {
+  if (quickFilter.value === filter) {
+    quickFilter.value = ''
+  } else {
+    quickFilter.value = filter
+  }
+  activeTab.value = 'ALL'
+  search.value = ''
+  fetchAccounts(0)
+}
+
+async function lookupByCode() {
+  if (!codeLookup.value.trim()) return
+  codeLookupError.value = ''
+  codeLookupResult.value = null
+  try {
+    const res = await bankAccountsApi.getByCode(codeLookup.value.trim())
+    const data = res.data.data || res.data
+    if (data) {
+      codeLookupResult.value = data
+    } else {
+      codeLookupError.value = t('finance.bankAccounts.codeNotFound')
+    }
+  } catch (e) {
+    codeLookupError.value = e.response?.data?.message || t('finance.bankAccounts.codeNotFound')
+  }
+}
+
+onMounted(() => {
+  fetchAccounts(0)
+  fetchDefaultAccount()
+})
 
 function switchTab(tab) {
   activeTab.value = tab
   search.value = ''
+  quickFilter.value = ''
   fetchAccounts(0)
 }
 
 function handleSearch() {
   activeTab.value = 'ALL'
+  quickFilter.value = ''
   fetchAccounts(0)
 }
 
-function openModal(account = null) {
-  editingAccount.value = account
+async function openModal(account = null) {
   if (account) {
-    form.accountCode = account.accountCode || ''
-    form.accountName = account.accountName || ''
-    form.accountType = account.accountType || 'BANK'
-    form.bankName = account.bankName || ''
-    form.bankAccountNumber = account.bankAccountNumber || ''
-    form.openingBalance = account.openingBalance || 0
-    form.description = account.description || ''
-    form.isPaymentAccount = account.isPaymentAccount || false
-    form.isReceiptAccount = account.isReceiptAccount || false
-    form.active = account.active !== false
+    try {
+      const res = await bankAccountsApi.getById(account.id)
+      const freshData = res.data.data || res.data
+      editingAccount.value = freshData
+      form.accountCode = freshData.accountCode || ''
+      form.accountName = freshData.accountName || ''
+      form.accountType = freshData.accountType || 'BANK'
+      form.bankName = freshData.bankName || ''
+      form.bankAccountNumber = freshData.bankAccountNumber || ''
+      form.openingBalance = freshData.openingBalance || 0
+      form.description = freshData.description || ''
+      form.isPaymentAccount = freshData.isPaymentAccount || false
+      form.isReceiptAccount = freshData.isReceiptAccount || false
+      form.active = freshData.active !== false
+    } catch (e) {
+      editingAccount.value = account
+      form.accountCode = account.accountCode || ''
+      form.accountName = account.accountName || ''
+      form.accountType = account.accountType || 'BANK'
+      form.bankName = account.bankName || ''
+      form.bankAccountNumber = account.bankAccountNumber || ''
+      form.openingBalance = account.openingBalance || 0
+      form.description = account.description || ''
+      form.isPaymentAccount = account.isPaymentAccount || false
+      form.isReceiptAccount = account.isReceiptAccount || false
+      form.active = account.active !== false
+    }
   } else {
+    editingAccount.value = null
     form.accountCode = ''
     form.accountName = ''
     form.accountType = 'BANK'
@@ -150,6 +225,7 @@ async function setDefault(account) {
   error.value = ''
   try {
     await bankAccountsApi.setDefault(account.id)
+    defaultAccountId.value = account.id
     successMsg.value = t('finance.bankAccounts.defaultSuccess', { name: account.accountName })
     fetchAccounts(currentPage.value)
   } catch (e) {
@@ -245,18 +321,95 @@ const tabs = computed(() => [
       </nav>
     </div>
 
-    <!-- Search -->
+    <!-- Quick Filters -->
+    <div class="flex flex-wrap gap-2">
+      <button
+        @click="applyQuickFilter('ACTIVE')"
+        :class="[
+          'inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors',
+          quickFilter === 'ACTIVE'
+            ? 'bg-green-50 border-green-300 text-green-700'
+            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+        ]"
+      >
+        <FunnelIcon class="h-4 w-4 mr-1.5" />
+        {{ $t('finance.bankAccounts.filterActive') }}
+      </button>
+      <button
+        @click="applyQuickFilter('PAYMENT')"
+        :class="[
+          'inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors',
+          quickFilter === 'PAYMENT'
+            ? 'bg-blue-50 border-blue-300 text-blue-700'
+            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+        ]"
+      >
+        <FunnelIcon class="h-4 w-4 mr-1.5" />
+        {{ $t('finance.bankAccounts.filterPayment') }}
+      </button>
+      <button
+        @click="applyQuickFilter('RECEIPT')"
+        :class="[
+          'inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors',
+          quickFilter === 'RECEIPT'
+            ? 'bg-purple-50 border-purple-300 text-purple-700'
+            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+        ]"
+      >
+        <FunnelIcon class="h-4 w-4 mr-1.5" />
+        {{ $t('finance.bankAccounts.filterReceipt') }}
+      </button>
+    </div>
+
+    <!-- Search and Code Lookup -->
     <div class="card">
       <div class="card-body">
-        <div class="relative">
-          <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            v-model="search"
-            @keyup.enter="handleSearch"
-            type="text"
-            :placeholder="$t('finance.bankAccounts.searchPlaceholder')"
-            class="input pl-10"
-          />
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="relative">
+            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              v-model="search"
+              @keyup.enter="handleSearch"
+              type="text"
+              :placeholder="$t('finance.bankAccounts.searchPlaceholder')"
+              class="input pl-10"
+            />
+          </div>
+          <div class="flex gap-2">
+            <input
+              v-model="codeLookup"
+              @keyup.enter="lookupByCode"
+              type="text"
+              :placeholder="$t('finance.bankAccounts.codeLookupPlaceholder')"
+              class="input font-mono flex-1"
+            />
+            <button @click="lookupByCode" class="btn-secondary">
+              {{ $t('finance.bankAccounts.lookup') }}
+            </button>
+          </div>
+        </div>
+        <!-- Code Lookup Result -->
+        <div v-if="codeLookupResult" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+          <div>
+            <span class="font-mono font-medium text-sm">{{ codeLookupResult.accountCode }}</span>
+            <span class="mx-2 text-gray-400">—</span>
+            <span class="text-sm font-medium">{{ codeLookupResult.accountName }}</span>
+            <span v-if="codeLookupResult.bankName" class="ml-2 text-sm text-gray-500">({{ codeLookupResult.bankName }})</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button @click="openModal(codeLookupResult)" class="text-primary-600 hover:text-primary-800 text-sm font-medium">
+              {{ $t('edit') }}
+            </button>
+            <button @click="codeLookupResult = null" class="text-gray-400 hover:text-gray-600">
+              <XMarkIcon class="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <div v-if="codeLookupError" class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+          <p class="text-sm text-red-600">{{ codeLookupError }}</p>
+          <button @click="codeLookupError = ''" class="text-red-400 hover:text-red-600">
+            <XMarkIcon class="h-4 w-4" />
+          </button>
         </div>
       </div>
     </div>
@@ -287,7 +440,7 @@ const tabs = computed(() => [
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="account in accounts" :key="account.id">
+            <tr v-for="account in accounts" :key="account.id" :class="{ 'bg-yellow-50': account.id === defaultAccountId || account.defaultAccount }">
               <td>
                 <code class="font-mono font-medium text-sm">{{ account.accountCode }}</code>
               </td>

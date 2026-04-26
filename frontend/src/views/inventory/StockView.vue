@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { stockApi, warehousesApi } from '@/services/api'
-import { MagnifyingGlassIcon, ExclamationTriangleIcon, BuildingStorefrontIcon, PencilSquareIcon, XMarkIcon, ClockIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/vue/24/outline'
+import { MagnifyingGlassIcon, ExclamationTriangleIcon, BuildingStorefrontIcon, PencilSquareIcon, XMarkIcon, ClockIcon, ArrowUpIcon, ArrowDownIcon, ChevronDownIcon, ChevronUpIcon, CurrencyDollarIcon, ArrowsRightLeftIcon, CheckCircleIcon, XCircleIcon, InboxArrowDownIcon, ArrowRightStartOnRectangleIcon, ShieldCheckIcon, FunnelIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 
@@ -15,6 +15,44 @@ const selectedLocationId = ref('')
 const page = ref(0)
 const totalElements = ref(0)
 const pageSize = 50
+
+// Tab state
+const activeTab = ref('stockList')
+
+// Product detail state
+const selectedProduct = ref(null)
+const productDetail = ref(null)
+const productDetailLoading = ref(false)
+const productAvailable = ref(null)
+const productLocationStock = ref(null)
+const detailLocationId = ref('')
+
+// Low stock tab state
+const lowStockItems = ref([])
+const lowStockLoading = ref(false)
+
+// Valuation tab state
+const valuationData = ref(null)
+const valuationLoading = ref(false)
+
+// Check availability state
+const showAvailabilityTool = ref(false)
+const availabilityForm = ref({ productId: '', locationId: '', quantity: '' })
+const availabilityResult = ref(null)
+const availabilityErrors = ref({})
+const availabilityChecking = ref(false)
+
+// Operations state
+const operationSubTab = ref('receive')
+const operationSubmitting = ref(false)
+const operationErrors = ref({})
+const operationSuccess = ref('')
+const receiveForm = ref({ productId: '', locationId: '', quantity: '', reference: '', notes: '' })
+const issueForm = ref({ productId: '', locationId: '', quantity: '', reference: '', notes: '' })
+const transferForm = ref({ productId: '', fromLocationId: '', toLocationId: '', quantity: '', reference: '', notes: '' })
+
+// History location filter
+const historyLocationId = ref('')
 
 // Adjust modal state
 const showAdjustModal = ref(false)
@@ -148,6 +186,7 @@ async function openHistoryModal(item) {
   historyItem.value = item
   historyPage.value = 0
   historyMovements.value = []
+  historyLocationId.value = ''
   showHistoryModal.value = true
   await fetchHistory()
 }
@@ -155,23 +194,12 @@ async function openHistoryModal(item) {
 function closeHistoryModal() {
   showHistoryModal.value = false
   historyItem.value = null
+  historyLocationId.value = ''
 }
 
-async function fetchHistory() {
-  historyLoading.value = true
-  try {
-    const response = await stockApi.getMovementsByProduct(historyItem.value.productId, {
-      page: historyPage.value,
-      size: 20,
-      sort: 'movementDate,desc'
-    })
-    historyMovements.value = response.data.content || []
-    historyTotalPages.value = response.data.totalPages || 0
-  } catch (error) {
-    console.error('Failed to fetch history:', error)
-  } finally {
-    historyLoading.value = false
-  }
+function onHistoryLocationChange() {
+  historyPage.value = 0
+  fetchHistory()
 }
 
 function historyPrev() {
@@ -227,14 +255,305 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('uz-Cyrl', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
     ' ' + d.toLocaleTimeString('uz-Cyrl', { hour: '2-digit', minute: '2-digit' })
 }
+
+// Product detail functions (getByProduct, getAvailable, getByProductAndLocation)
+async function selectProduct(item) {
+  if (selectedProduct.value?.productId === item.productId) {
+    selectedProduct.value = null
+    productDetail.value = null
+    productAvailable.value = null
+    productLocationStock.value = null
+    detailLocationId.value = ''
+    return
+  }
+  selectedProduct.value = item
+  productDetailLoading.value = true
+  productLocationStock.value = null
+  detailLocationId.value = ''
+  try {
+    const [detailRes, availRes] = await Promise.all([
+      stockApi.getByProduct(item.productId),
+      stockApi.getAvailable(item.productId)
+    ])
+    productDetail.value = detailRes.data.data || detailRes.data || []
+    productAvailable.value = availRes.data.data ?? availRes.data ?? null
+  } catch (error) {
+    console.error('Failed to fetch product detail:', error)
+    productDetail.value = null
+    productAvailable.value = null
+  } finally {
+    productDetailLoading.value = false
+  }
+}
+
+async function fetchProductLocationStock() {
+  if (!selectedProduct.value || !detailLocationId.value) {
+    productLocationStock.value = null
+    return
+  }
+  try {
+    const response = await stockApi.getByProductAndLocation(selectedProduct.value.productId, detailLocationId.value)
+    productLocationStock.value = response.data.data || response.data || null
+  } catch (error) {
+    console.error('Failed to fetch product location stock:', error)
+    productLocationStock.value = null
+  }
+}
+
+watch(detailLocationId, () => {
+  fetchProductLocationStock()
+})
+
+// Low stock tab
+async function fetchLowStock() {
+  lowStockLoading.value = true
+  try {
+    const response = await stockApi.getLowStock()
+    const data = response.data.data || response.data
+    lowStockItems.value = data.content || data || []
+  } catch (error) {
+    console.error('Failed to fetch low stock:', error)
+  } finally {
+    lowStockLoading.value = false
+  }
+}
+
+// Valuation tab
+async function fetchValuation() {
+  valuationLoading.value = true
+  try {
+    const response = await stockApi.getValuation()
+    valuationData.value = response.data.data || response.data || null
+  } catch (error) {
+    console.error('Failed to fetch valuation:', error)
+  } finally {
+    valuationLoading.value = false
+  }
+}
+
+// Tab change handler
+watch(activeTab, (tab) => {
+  if (tab === 'lowStock') fetchLowStock()
+  if (tab === 'valuation') fetchValuation()
+})
+
+// Check availability
+async function checkAvailability() {
+  availabilityErrors.value = {}
+  availabilityResult.value = null
+  if (!availabilityForm.value.productId) {
+    availabilityErrors.value.productId = t('inventory.stock.availability.productIdRequired')
+  }
+  if (!availabilityForm.value.quantity || Number(availabilityForm.value.quantity) <= 0) {
+    availabilityErrors.value.quantity = t('inventory.stock.availability.quantityRequired')
+  }
+  if (Object.keys(availabilityErrors.value).length > 0) return
+
+  availabilityChecking.value = true
+  try {
+    const params = {
+      productId: availabilityForm.value.productId,
+      quantity: Number(availabilityForm.value.quantity)
+    }
+    if (availabilityForm.value.locationId) {
+      params.locationId = availabilityForm.value.locationId
+    }
+    const response = await stockApi.checkAvailability(params)
+    availabilityResult.value = response.data.data ?? response.data
+  } catch (error) {
+    console.error('Check availability failed:', error)
+    availabilityErrors.value.api = error.response?.data?.message || t('inventory.stock.operations.error')
+  } finally {
+    availabilityChecking.value = false
+  }
+}
+
+function closeAvailabilityTool() {
+  showAvailabilityTool.value = false
+  availabilityForm.value = { productId: '', locationId: '', quantity: '' }
+  availabilityResult.value = null
+  availabilityErrors.value = {}
+}
+
+// History location filter - getMovementsByLocation
+async function fetchHistory() {
+  historyLoading.value = true
+  try {
+    let response
+    if (historyLocationId.value) {
+      response = await stockApi.getMovementsByLocation(historyLocationId.value, {
+        page: historyPage.value,
+        size: 20,
+        sort: 'movementDate,desc'
+      })
+    } else {
+      response = await stockApi.getMovementsByProduct(historyItem.value.productId, {
+        page: historyPage.value,
+        size: 20,
+        sort: 'movementDate,desc'
+      })
+    }
+    historyMovements.value = response.data.content || []
+    historyTotalPages.value = response.data.totalPages || 0
+  } catch (error) {
+    console.error('Failed to fetch history:', error)
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+// Operations: receive, issue, transfer
+function resetOperationForms() {
+  receiveForm.value = { productId: '', locationId: '', quantity: '', reference: '', notes: '' }
+  issueForm.value = { productId: '', locationId: '', quantity: '', reference: '', notes: '' }
+  transferForm.value = { productId: '', fromLocationId: '', toLocationId: '', quantity: '', reference: '', notes: '' }
+  operationErrors.value = {}
+  operationSuccess.value = ''
+}
+
+function validateOperationForm(form, type) {
+  const errors = {}
+  if (!form.productId) errors.productId = t('inventory.stock.operations.productIdRequired')
+  if (type === 'transfer') {
+    if (!form.fromLocationId) errors.fromLocationId = t('inventory.stock.operations.fromLocationRequired')
+    if (!form.toLocationId) errors.toLocationId = t('inventory.stock.operations.toLocationRequired')
+  } else {
+    if (!form.locationId) errors.locationId = t('inventory.stock.operations.locationIdRequired')
+  }
+  if (!form.quantity || Number(form.quantity) <= 0) errors.quantity = t('inventory.stock.operations.quantityPositive')
+  return errors
+}
+
+async function submitReceive() {
+  operationErrors.value = {}
+  operationSuccess.value = ''
+  const errors = validateOperationForm(receiveForm.value, 'receive')
+  if (Object.keys(errors).length > 0) { operationErrors.value = errors; return }
+
+  operationSubmitting.value = true
+  try {
+    await stockApi.receive({
+      productId: receiveForm.value.productId,
+      locationId: receiveForm.value.locationId,
+      quantity: Number(receiveForm.value.quantity),
+      reference: receiveForm.value.reference || null,
+      notes: receiveForm.value.notes || null
+    })
+    operationSuccess.value = t('inventory.stock.operations.success')
+    receiveForm.value = { productId: '', locationId: '', quantity: '', reference: '', notes: '' }
+    fetchStock()
+  } catch (error) {
+    operationErrors.value.api = error.response?.data?.message || t('inventory.stock.operations.error')
+  } finally {
+    operationSubmitting.value = false
+  }
+}
+
+async function submitIssue() {
+  operationErrors.value = {}
+  operationSuccess.value = ''
+  const errors = validateOperationForm(issueForm.value, 'issue')
+  if (Object.keys(errors).length > 0) { operationErrors.value = errors; return }
+
+  operationSubmitting.value = true
+  try {
+    await stockApi.issue({
+      productId: issueForm.value.productId,
+      locationId: issueForm.value.locationId,
+      quantity: Number(issueForm.value.quantity),
+      reference: issueForm.value.reference || null,
+      notes: issueForm.value.notes || null
+    })
+    operationSuccess.value = t('inventory.stock.operations.success')
+    issueForm.value = { productId: '', locationId: '', quantity: '', reference: '', notes: '' }
+    fetchStock()
+  } catch (error) {
+    operationErrors.value.api = error.response?.data?.message || t('inventory.stock.operations.error')
+  } finally {
+    operationSubmitting.value = false
+  }
+}
+
+async function submitTransfer() {
+  operationErrors.value = {}
+  operationSuccess.value = ''
+  const errors = validateOperationForm(transferForm.value, 'transfer')
+  if (Object.keys(errors).length > 0) { operationErrors.value = errors; return }
+
+  operationSubmitting.value = true
+  try {
+    await stockApi.transfer({
+      productId: transferForm.value.productId,
+      fromLocationId: transferForm.value.fromLocationId,
+      toLocationId: transferForm.value.toLocationId,
+      quantity: Number(transferForm.value.quantity),
+      reference: transferForm.value.reference || null,
+      notes: transferForm.value.notes || null
+    })
+    operationSuccess.value = t('inventory.stock.operations.success')
+    transferForm.value = { productId: '', fromLocationId: '', toLocationId: '', quantity: '', reference: '', notes: '' }
+    fetchStock()
+  } catch (error) {
+    operationErrors.value.api = error.response?.data?.message || t('inventory.stock.operations.error')
+  } finally {
+    operationSubmitting.value = false
+  }
+}
+
+function formatCurrency(val) {
+  if (val == null) return '0'
+  return Number(val).toLocaleString('uz-Cyrl', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+}
 </script>
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900">{{ $t('inventory.stock.title') }}</h1>
-      <p class="mt-1 text-sm text-gray-500">{{ $t('inventory.stock.subtitle') }}</p>
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('inventory.stock.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('inventory.stock.subtitle') }}</p>
+      </div>
+      <button @click="showAvailabilityTool = true" class="btn btn-secondary inline-flex items-center gap-2">
+        <ShieldCheckIcon class="h-5 w-5" />
+        {{ $t('inventory.stock.availability.title') }}
+      </button>
     </div>
+
+    <!-- Tab Navigation -->
+    <div class="border-b border-gray-200">
+      <nav class="flex gap-4 -mb-px">
+        <button
+          @click="activeTab = 'stockList'"
+          :class="['pb-3 px-1 text-sm font-medium border-b-2 transition-colors', activeTab === 'stockList' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']"
+        >
+          {{ $t('inventory.stock.tabs.stockList') }}
+        </button>
+        <button
+          @click="activeTab = 'lowStock'"
+          :class="['pb-3 px-1 text-sm font-medium border-b-2 transition-colors', activeTab === 'lowStock' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']"
+        >
+          <ExclamationTriangleIcon class="h-4 w-4 inline mr-1" />
+          {{ $t('inventory.stock.tabs.lowStock') }}
+        </button>
+        <button
+          @click="activeTab = 'valuation'"
+          :class="['pb-3 px-1 text-sm font-medium border-b-2 transition-colors', activeTab === 'valuation' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']"
+        >
+          <CurrencyDollarIcon class="h-4 w-4 inline mr-1" />
+          {{ $t('inventory.stock.tabs.valuation') }}
+        </button>
+        <button
+          @click="activeTab = 'operations'"
+          :class="['pb-3 px-1 text-sm font-medium border-b-2 transition-colors', activeTab === 'operations' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']"
+        >
+          <ArrowsRightLeftIcon class="h-4 w-4 inline mr-1" />
+          {{ $t('inventory.stock.tabs.operations') }}
+        </button>
+      </nav>
+    </div>
+
+    <!-- Stock List Tab -->
+    <template v-if="activeTab === 'stockList'">
 
     <!-- Stats -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -316,7 +635,7 @@ function formatDate(dateStr) {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="item in filteredStock" :key="item.id">
+            <tr v-for="item in filteredStock" :key="item.id" @click="selectProduct(item)" class="cursor-pointer" :class="{ 'bg-primary-50': selectedProduct?.productId === item.productId }">
               <td>
                 <div class="flex items-center">
                   <ExclamationTriangleIcon
@@ -324,6 +643,8 @@ function formatDate(dateStr) {
                     class="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0"
                   />
                   <span class="font-medium">{{ item.productName }}</span>
+                  <ChevronDownIcon v-if="selectedProduct?.productId !== item.productId" class="h-4 w-4 text-gray-400 ml-1" />
+                  <ChevronUpIcon v-else class="h-4 w-4 text-primary-500 ml-1" />
                 </div>
               </td>
               <td class="font-mono text-sm text-gray-500">{{ item.productSku }}</td>
@@ -367,6 +688,425 @@ function formatDate(dateStr) {
         </table>
       </div>
     </div>
+
+    <!-- Product Detail Panel -->
+    <div v-if="selectedProduct" class="card">
+      <div class="card-header flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900">{{ $t('inventory.stock.detail.title') }}: {{ selectedProduct.productName }}</h3>
+        <button @click="selectedProduct = null; productDetail = null; productAvailable = null; productLocationStock = null" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+          <XMarkIcon class="h-5 w-5" />
+        </button>
+      </div>
+      <div class="card-body">
+        <div v-if="productDetailLoading" class="flex items-center justify-center h-24">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+        <div v-else class="space-y-4">
+          <!-- Available quantity summary -->
+          <div v-if="productAvailable != null" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-gray-50 rounded-lg p-3 text-center">
+              <p class="text-2xl font-bold text-gray-900">{{ formatQty(productAvailable.totalOnHand ?? productAvailable) }}</p>
+              <p class="text-sm text-gray-500">{{ $t('inventory.stock.detail.totalOnHand') }}</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-3 text-center">
+              <p class="text-2xl font-bold text-amber-600">{{ formatQty(productAvailable.totalReserved ?? 0) }}</p>
+              <p class="text-sm text-gray-500">{{ $t('inventory.stock.detail.totalReserved') }}</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-3 text-center">
+              <p class="text-2xl font-bold text-primary-600">{{ formatQty(productAvailable.totalAvailable ?? productAvailable) }}</p>
+              <p class="text-sm text-gray-500">{{ $t('inventory.stock.detail.totalAvailable') }}</p>
+            </div>
+          </div>
+
+          <!-- Stock by location from getByProduct -->
+          <div v-if="Array.isArray(productDetail) && productDetail.length > 0">
+            <h4 class="text-sm font-medium text-gray-700 mb-2">{{ $t('inventory.stock.detail.stockByProduct') }}</h4>
+            <div class="space-y-2">
+              <div v-for="s in productDetail" :key="s.id || s.locationId" class="flex items-center justify-between p-2 rounded-lg border border-gray-100">
+                <span class="text-sm text-gray-700 inline-flex items-center gap-1">
+                  <BuildingStorefrontIcon class="h-4 w-4 text-gray-400" />
+                  {{ s.locationName }}
+                </span>
+                <span class="text-sm font-medium">{{ formatQty(s.quantityOnHand) }} / {{ formatQty(s.quantityAvailable) }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="!Array.isArray(productDetail)">
+            <p class="text-sm text-gray-400">{{ $t('inventory.stock.detail.noData') }}</p>
+          </div>
+
+          <!-- Stock at specific location (getByProductAndLocation) -->
+          <div class="border-t pt-4">
+            <h4 class="text-sm font-medium text-gray-700 mb-2">{{ $t('inventory.stock.detail.stockAtLocation') }}</h4>
+            <div class="flex gap-3 items-end">
+              <div class="flex-1">
+                <select v-model="detailLocationId" class="input">
+                  <option value="">{{ $t('inventory.stock.detail.selectLocation') }}</option>
+                  <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+                </select>
+              </div>
+            </div>
+            <div v-if="productLocationStock" class="mt-3 bg-gray-50 rounded-lg p-3">
+              <div class="grid grid-cols-3 gap-4 text-center text-sm">
+                <div>
+                  <p class="font-semibold">{{ formatQty(productLocationStock.quantityOnHand) }}</p>
+                  <p class="text-gray-500">{{ $t('inventory.stock.available') }}</p>
+                </div>
+                <div>
+                  <p class="font-semibold">{{ formatQty(productLocationStock.quantityReserved) }}</p>
+                  <p class="text-gray-500">{{ $t('inventory.stock.reserved') }}</p>
+                </div>
+                <div>
+                  <p class="font-semibold text-primary-600">{{ formatQty(productLocationStock.quantityAvailable) }}</p>
+                  <p class="text-gray-500">{{ $t('inventory.stock.free') }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </template>
+
+    <!-- Low Stock Tab -->
+    <template v-if="activeTab === 'lowStock'">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="text-lg font-semibold text-gray-900">{{ $t('inventory.stock.lowStockTab.title') }}</h3>
+        <p class="text-sm text-gray-500">{{ $t('inventory.stock.lowStockTab.subtitle') }}</p>
+      </div>
+      <div v-if="lowStockLoading" class="flex items-center justify-center h-64">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+      <div v-else-if="lowStockItems.length > 0" class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>{{ $t('inventory.stock.product') }}</th>
+              <th>{{ $t('inventory.products.sku') }}</th>
+              <th>{{ $t('inventory.stock.warehouse') }}</th>
+              <th class="text-right">{{ $t('inventory.stock.available') }}</th>
+              <th class="text-right">{{ $t('inventory.stock.lowStockTab.reorderPoint') }}</th>
+              <th class="text-right">{{ $t('inventory.stock.lowStockTab.deficit') }}</th>
+              <th>{{ $t('status') }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <tr v-for="item in lowStockItems" :key="item.id">
+              <td>
+                <div class="flex items-center">
+                  <ExclamationTriangleIcon class="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0" />
+                  <span class="font-medium">{{ item.productName }}</span>
+                </div>
+              </td>
+              <td class="font-mono text-sm text-gray-500">{{ item.productSku }}</td>
+              <td>
+                <span class="inline-flex items-center gap-1 text-sm text-gray-700">
+                  <BuildingStorefrontIcon class="h-4 w-4 text-gray-400" />
+                  {{ item.locationName }}
+                </span>
+              </td>
+              <td class="text-right font-medium">{{ formatQty(item.quantityOnHand) }}</td>
+              <td class="text-right text-gray-500">{{ formatQty(item.reorderPoint ?? item.minimumQuantity) }}</td>
+              <td class="text-right font-medium text-red-600">{{ formatQty((item.reorderPoint ?? item.minimumQuantity ?? 0) - (item.quantityOnHand ?? 0)) }}</td>
+              <td>
+                <span :class="['badge', getStockStatus(item).class]">
+                  {{ getStockStatus(item).label }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else class="card-body text-center text-gray-400 py-8">
+        {{ $t('inventory.stock.lowStockTab.noItems') }}
+      </div>
+    </div>
+    </template>
+
+    <!-- Valuation Tab -->
+    <template v-if="activeTab === 'valuation'">
+    <div class="space-y-4">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="text-lg font-semibold text-gray-900">{{ $t('inventory.stock.valuationTab.title') }}</h3>
+          <p class="text-sm text-gray-500">{{ $t('inventory.stock.valuationTab.subtitle') }}</p>
+        </div>
+        <div v-if="valuationLoading" class="flex items-center justify-center h-64">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+        <template v-else-if="valuationData">
+          <div class="card-body">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+              <div class="bg-primary-50 rounded-lg p-4 text-center">
+                <p class="text-2xl font-bold text-primary-700">{{ formatCurrency(valuationData.totalValue ?? valuationData.totalCost) }}</p>
+                <p class="text-sm text-primary-600">{{ $t('inventory.stock.valuationTab.totalValue') }}</p>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-4 text-center">
+                <p class="text-2xl font-bold text-gray-900">{{ valuationData.totalItems ?? valuationData.itemCount ?? '-' }}</p>
+                <p class="text-sm text-gray-500">{{ $t('inventory.stock.valuationTab.totalItems') }}</p>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-4 text-center">
+                <p class="text-2xl font-bold text-gray-900">{{ formatQty(valuationData.totalQuantity) }}</p>
+                <p class="text-sm text-gray-500">{{ $t('inventory.stock.valuationTab.totalQuantity') }}</p>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-4 text-center">
+                <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(valuationData.averageCost ?? valuationData.avgCost) }}</p>
+                <p class="text-sm text-gray-500">{{ $t('inventory.stock.valuationTab.avgCost') }}</p>
+              </div>
+            </div>
+          </div>
+          <div v-if="valuationData.items || valuationData.content" class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ $t('inventory.stock.valuationTab.product') }}</th>
+                  <th class="text-right">{{ $t('inventory.stock.valuationTab.quantity') }}</th>
+                  <th class="text-right">{{ $t('inventory.stock.valuationTab.unitCost') }}</th>
+                  <th class="text-right">{{ $t('inventory.stock.valuationTab.totalCost') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="item in (valuationData.items || valuationData.content)" :key="item.productId || item.id">
+                  <td class="font-medium">{{ item.productName }}</td>
+                  <td class="text-right">{{ formatQty(item.quantity ?? item.quantityOnHand) }}</td>
+                  <td class="text-right text-gray-500">{{ formatCurrency(item.unitCost ?? item.costPrice) }}</td>
+                  <td class="text-right font-medium">{{ formatCurrency(item.totalCost ?? item.totalValue) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+        <div v-else class="card-body text-center text-gray-400 py-8">
+          {{ $t('inventory.stock.valuationTab.noData') }}
+        </div>
+      </div>
+    </div>
+    </template>
+
+    <!-- Operations Tab -->
+    <template v-if="activeTab === 'operations'">
+    <div class="space-y-4">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="text-lg font-semibold text-gray-900">{{ $t('inventory.stock.operations.title') }}</h3>
+          <p class="text-sm text-gray-500">{{ $t('inventory.stock.operations.subtitle') }}</p>
+        </div>
+        <div class="card-body">
+          <!-- Operation sub-tabs -->
+          <div class="flex gap-2 mb-6">
+            <button
+              @click="operationSubTab = 'receive'; resetOperationForms()"
+              :class="['btn btn-sm inline-flex items-center gap-1', operationSubTab === 'receive' ? 'btn-primary' : 'btn-secondary']"
+            >
+              <InboxArrowDownIcon class="h-4 w-4" />
+              {{ $t('inventory.stock.operations.receive') }}
+            </button>
+            <button
+              @click="operationSubTab = 'issue'; resetOperationForms()"
+              :class="['btn btn-sm inline-flex items-center gap-1', operationSubTab === 'issue' ? 'btn-primary' : 'btn-secondary']"
+            >
+              <ArrowRightStartOnRectangleIcon class="h-4 w-4" />
+              {{ $t('inventory.stock.operations.issue') }}
+            </button>
+            <button
+              @click="operationSubTab = 'transfer'; resetOperationForms()"
+              :class="['btn btn-sm inline-flex items-center gap-1', operationSubTab === 'transfer' ? 'btn-primary' : 'btn-secondary']"
+            >
+              <ArrowsRightLeftIcon class="h-4 w-4" />
+              {{ $t('inventory.stock.operations.transfer') }}
+            </button>
+          </div>
+
+          <!-- Success message -->
+          <div v-if="operationSuccess" class="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg p-3 mb-4 flex items-center gap-2">
+            <CheckCircleIcon class="h-5 w-5 flex-shrink-0" />
+            {{ operationSuccess }}
+          </div>
+
+          <!-- API error -->
+          <div v-if="operationErrors.api" class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 mb-4 flex items-center gap-2">
+            <XCircleIcon class="h-5 w-5 flex-shrink-0" />
+            {{ operationErrors.api }}
+          </div>
+
+          <!-- Receive Form -->
+          <div v-if="operationSubTab === 'receive'" class="space-y-4 max-w-lg">
+            <h4 class="font-medium text-gray-900">{{ $t('inventory.stock.operations.receiveTitle') }}</h4>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.productId') }} <span class="text-red-500">*</span></label>
+              <input v-model="receiveForm.productId" type="text" class="input" :class="{ 'border-red-500': operationErrors.productId }" />
+              <p v-if="operationErrors.productId" class="text-sm text-red-500 mt-1">{{ operationErrors.productId }}</p>
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.locationId') }} <span class="text-red-500">*</span></label>
+              <select v-model="receiveForm.locationId" class="input" :class="{ 'border-red-500': operationErrors.locationId }">
+                <option value="">{{ $t('inventory.stock.detail.selectLocation') }}</option>
+                <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+              </select>
+              <p v-if="operationErrors.locationId" class="text-sm text-red-500 mt-1">{{ operationErrors.locationId }}</p>
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.quantity') }} <span class="text-red-500">*</span></label>
+              <input v-model.number="receiveForm.quantity" type="number" step="any" min="0" class="input" :class="{ 'border-red-500': operationErrors.quantity }" />
+              <p v-if="operationErrors.quantity" class="text-sm text-red-500 mt-1">{{ operationErrors.quantity }}</p>
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.reference') }}</label>
+              <input v-model="receiveForm.reference" type="text" class="input" />
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.notes') }}</label>
+              <textarea v-model="receiveForm.notes" rows="2" class="input"></textarea>
+            </div>
+            <button @click="submitReceive" :disabled="operationSubmitting" class="btn btn-primary">
+              <span v-if="operationSubmitting" class="animate-spin inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+              {{ $t('inventory.stock.operations.submit') }}
+            </button>
+          </div>
+
+          <!-- Issue Form -->
+          <div v-if="operationSubTab === 'issue'" class="space-y-4 max-w-lg">
+            <h4 class="font-medium text-gray-900">{{ $t('inventory.stock.operations.issueTitle') }}</h4>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.productId') }} <span class="text-red-500">*</span></label>
+              <input v-model="issueForm.productId" type="text" class="input" :class="{ 'border-red-500': operationErrors.productId }" />
+              <p v-if="operationErrors.productId" class="text-sm text-red-500 mt-1">{{ operationErrors.productId }}</p>
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.locationId') }} <span class="text-red-500">*</span></label>
+              <select v-model="issueForm.locationId" class="input" :class="{ 'border-red-500': operationErrors.locationId }">
+                <option value="">{{ $t('inventory.stock.detail.selectLocation') }}</option>
+                <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+              </select>
+              <p v-if="operationErrors.locationId" class="text-sm text-red-500 mt-1">{{ operationErrors.locationId }}</p>
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.quantity') }} <span class="text-red-500">*</span></label>
+              <input v-model.number="issueForm.quantity" type="number" step="any" min="0" class="input" :class="{ 'border-red-500': operationErrors.quantity }" />
+              <p v-if="operationErrors.quantity" class="text-sm text-red-500 mt-1">{{ operationErrors.quantity }}</p>
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.reference') }}</label>
+              <input v-model="issueForm.reference" type="text" class="input" />
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.notes') }}</label>
+              <textarea v-model="issueForm.notes" rows="2" class="input"></textarea>
+            </div>
+            <button @click="submitIssue" :disabled="operationSubmitting" class="btn btn-primary">
+              <span v-if="operationSubmitting" class="animate-spin inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+              {{ $t('inventory.stock.operations.submit') }}
+            </button>
+          </div>
+
+          <!-- Transfer Form -->
+          <div v-if="operationSubTab === 'transfer'" class="space-y-4 max-w-lg">
+            <h4 class="font-medium text-gray-900">{{ $t('inventory.stock.operations.transferTitle') }}</h4>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.productId') }} <span class="text-red-500">*</span></label>
+              <input v-model="transferForm.productId" type="text" class="input" :class="{ 'border-red-500': operationErrors.productId }" />
+              <p v-if="operationErrors.productId" class="text-sm text-red-500 mt-1">{{ operationErrors.productId }}</p>
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.fromLocationId') }} <span class="text-red-500">*</span></label>
+              <select v-model="transferForm.fromLocationId" class="input" :class="{ 'border-red-500': operationErrors.fromLocationId }">
+                <option value="">{{ $t('inventory.stock.detail.selectLocation') }}</option>
+                <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+              </select>
+              <p v-if="operationErrors.fromLocationId" class="text-sm text-red-500 mt-1">{{ operationErrors.fromLocationId }}</p>
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.toLocationId') }} <span class="text-red-500">*</span></label>
+              <select v-model="transferForm.toLocationId" class="input" :class="{ 'border-red-500': operationErrors.toLocationId }">
+                <option value="">{{ $t('inventory.stock.detail.selectLocation') }}</option>
+                <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+              </select>
+              <p v-if="operationErrors.toLocationId" class="text-sm text-red-500 mt-1">{{ operationErrors.toLocationId }}</p>
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.quantity') }} <span class="text-red-500">*</span></label>
+              <input v-model.number="transferForm.quantity" type="number" step="any" min="0" class="input" :class="{ 'border-red-500': operationErrors.quantity }" />
+              <p v-if="operationErrors.quantity" class="text-sm text-red-500 mt-1">{{ operationErrors.quantity }}</p>
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.reference') }}</label>
+              <input v-model="transferForm.reference" type="text" class="input" />
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.stock.operations.notes') }}</label>
+              <textarea v-model="transferForm.notes" rows="2" class="input"></textarea>
+            </div>
+            <button @click="submitTransfer" :disabled="operationSubmitting" class="btn btn-primary">
+              <span v-if="operationSubmitting" class="animate-spin inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+              {{ $t('inventory.stock.operations.submit') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    </template>
+
+    <!-- Check Availability Modal -->
+    <Teleport to="body">
+      <div v-if="showAvailabilityTool" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+          <div class="fixed inset-0 bg-black/30" @click="closeAvailabilityTool"></div>
+          <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-5">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-gray-900">{{ $t('inventory.stock.availability.title') }}</h3>
+              <button @click="closeAvailabilityTool" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+                <XMarkIcon class="h-5 w-5" />
+              </button>
+            </div>
+
+            <div v-if="availabilityErrors.api" class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">
+              {{ availabilityErrors.api }}
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="label">{{ $t('inventory.stock.availability.productId') }} <span class="text-red-500">*</span></label>
+                <input v-model="availabilityForm.productId" type="text" class="input" :class="{ 'border-red-500': availabilityErrors.productId }" />
+                <p v-if="availabilityErrors.productId" class="text-sm text-red-500 mt-1">{{ availabilityErrors.productId }}</p>
+              </div>
+              <div>
+                <label class="label">{{ $t('inventory.stock.availability.locationId') }}</label>
+                <select v-model="availabilityForm.locationId" class="input">
+                  <option value="">{{ $t('inventory.stock.allWarehouses') }}</option>
+                  <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="label">{{ $t('inventory.stock.availability.quantity') }} <span class="text-red-500">*</span></label>
+                <input v-model.number="availabilityForm.quantity" type="number" step="any" min="0" class="input" :class="{ 'border-red-500': availabilityErrors.quantity }" />
+                <p v-if="availabilityErrors.quantity" class="text-sm text-red-500 mt-1">{{ availabilityErrors.quantity }}</p>
+              </div>
+            </div>
+
+            <!-- Result -->
+            <div v-if="availabilityResult != null" class="rounded-lg p-4" :class="availabilityResult === true || availabilityResult.available ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'">
+              <div class="flex items-center gap-2">
+                <CheckCircleIcon v-if="availabilityResult === true || availabilityResult.available" class="h-6 w-6 text-green-600" />
+                <XCircleIcon v-else class="h-6 w-6 text-red-600" />
+                <span class="font-medium" :class="availabilityResult === true || availabilityResult.available ? 'text-green-700' : 'text-red-700'">
+                  {{ (availabilityResult === true || availabilityResult.available) ? $t('inventory.stock.availability.isAvailable') : $t('inventory.stock.availability.notAvailable') }}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+              <button @click="closeAvailabilityTool" class="btn btn-secondary">{{ $t('cancel') }}</button>
+              <button @click="checkAvailability" :disabled="availabilityChecking" class="btn btn-primary">
+                <span v-if="availabilityChecking" class="animate-spin inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+                {{ $t('inventory.stock.availability.check') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Adjust Modal -->
     <Teleport to="body">
@@ -468,6 +1208,19 @@ function formatDate(dateStr) {
               <button @click="closeHistoryModal" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
                 <XMarkIcon class="h-5 w-5" />
               </button>
+            </div>
+
+            <!-- Location filter for movements -->
+            <div class="flex items-center gap-2">
+              <FunnelIcon class="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <select
+                v-model="historyLocationId"
+                @change="onHistoryLocationChange"
+                class="input text-sm"
+              >
+                <option value="">{{ $t('inventory.stock.history.allLocations') }}</option>
+                <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+              </select>
             </div>
 
             <!-- Loading -->
