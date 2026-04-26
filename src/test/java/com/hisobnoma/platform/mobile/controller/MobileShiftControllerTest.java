@@ -114,7 +114,7 @@ class MobileShiftControllerTest {
     void openShift_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/mobile/shifts/open")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"terminalId\":1,\"openingCash\":100000}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -148,7 +148,7 @@ class MobileShiftControllerTest {
     void closeShift_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/mobile/shifts/1/close")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"closingCash\":150000}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -183,7 +183,7 @@ class MobileShiftControllerTest {
     void cashOperation_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/mobile/shifts/1/cash-operation")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"operationType\":\"CASH_IN\",\"amount\":50000}"))
                 .andExpect(status().isForbidden());
     }
 }

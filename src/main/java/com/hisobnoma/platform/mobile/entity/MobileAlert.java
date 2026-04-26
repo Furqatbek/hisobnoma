@@ -50,7 +50,7 @@ public class MobileAlert extends TenantAwareEntity {
     @Column(name = "action_url", length = 500)
     private String actionUrl;
 
-    @Column(name = "data", columnDefinition = "jsonb")
+    @Column(name = "data", columnDefinition = "TEXT")
     private String data;
 
     @Column(name = "is_read", nullable = false)

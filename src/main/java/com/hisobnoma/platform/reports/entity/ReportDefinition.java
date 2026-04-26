@@ -65,10 +65,10 @@ public class ReportDefinition extends TenantAwareEntity {
     @Builder.Default
     private List<ExportFormat> supportedFormats = new ArrayList<>();
 
-    @Column(name = "parameter_schema", columnDefinition = "JSONB")
+    @Column(name = "parameter_schema", columnDefinition = "TEXT")
     private String parameterSchema;
 
-    @Column(name = "default_parameters", columnDefinition = "JSONB")
+    @Column(name = "default_parameters", columnDefinition = "TEXT")
     private String defaultParameters;
 
     @Column(name = "is_system_report")

@@ -140,6 +140,9 @@ class PriceListControllerTest {
     @Test
     void createPriceList_authenticated_returns201() throws Exception {
         CreatePriceListRequest request = new CreatePriceListRequest();
+        request.setCode("PL-001");
+        request.setName("Default");
+        request.setType(com.hisobnoma.platform.pos.enums.PriceListType.STANDARD);
         PriceListDto dto = PriceListDto.builder().id(1L).code("PL-001").name("Default").build();
         when(priceListService.createPriceList(any())).thenReturn(dto);
 
@@ -164,7 +167,7 @@ class PriceListControllerTest {
         mockMvc.perform(post("/api/v1/pos/price-lists")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"code\":\"PL-001\",\"name\":\"Default\",\"type\":\"STANDARD\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -173,6 +176,9 @@ class PriceListControllerTest {
     @Test
     void updatePriceList_authenticated_returns200() throws Exception {
         CreatePriceListRequest request = new CreatePriceListRequest();
+        request.setCode("PL-001");
+        request.setName("Updated");
+        request.setType(com.hisobnoma.platform.pos.enums.PriceListType.STANDARD);
         PriceListDto dto = PriceListDto.builder().id(1L).code("PL-001").name("Updated").build();
         when(priceListService.updatePriceList(any(), any())).thenReturn(dto);
 
@@ -196,7 +202,7 @@ class PriceListControllerTest {
         mockMvc.perform(put("/api/v1/pos/price-lists/1")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"code\":\"PL-001\",\"name\":\"Updated\",\"type\":\"STANDARD\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -244,6 +250,7 @@ class PriceListControllerTest {
     @Test
     void addPriceListItem_authenticated_returns201() throws Exception {
         CreatePriceListItemRequest request = new CreatePriceListItemRequest();
+        request.setProductId(1L);
         PriceListItemDto dto = PriceListItemDto.builder().id(1L).build();
         when(priceListService.addPriceListItem(any(), any())).thenReturn(dto);
 
@@ -267,7 +274,7 @@ class PriceListControllerTest {
         mockMvc.perform(post("/api/v1/pos/price-lists/1/items")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"productId\":1}"))
                 .andExpect(status().isForbidden());
     }
 

@@ -61,7 +61,7 @@ public class ReportSchedule extends TenantAwareEntity {
     @Column(name = "day_of_month")
     private Integer dayOfMonth;
 
-    @Column(name = "parameters", columnDefinition = "JSONB")
+    @Column(name = "parameters", columnDefinition = "TEXT")
     private String parameters;
 
     @Enumerated(EnumType.STRING)

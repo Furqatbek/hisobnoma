@@ -136,6 +136,8 @@ class ShiftControllerTest {
     @Test
     void openShift_authenticated_returns201() throws Exception {
         OpenShiftRequest request = new OpenShiftRequest();
+        request.setTerminalId(1L);
+        request.setOpeningCash(java.math.BigDecimal.ZERO);
         ShiftDto dto = ShiftDto.builder().id(1L).build();
         when(shiftService.openShift(any())).thenReturn(dto);
 
@@ -159,7 +161,7 @@ class ShiftControllerTest {
         mockMvc.perform(post("/api/v1/pos/shifts/open")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"terminalId\":1,\"openingCash\":0}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -168,6 +170,7 @@ class ShiftControllerTest {
     @Test
     void closeShift_authenticated_returns200() throws Exception {
         CloseShiftRequest request = new CloseShiftRequest();
+        request.setClosingCash(java.math.BigDecimal.ZERO);
         ShiftDto dto = ShiftDto.builder().id(1L).build();
         when(shiftService.closeShift(any(), any())).thenReturn(dto);
 
@@ -191,7 +194,7 @@ class ShiftControllerTest {
         mockMvc.perform(post("/api/v1/pos/shifts/1/close")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"closingCash\":0}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -201,6 +204,7 @@ class ShiftControllerTest {
     void cashOperation_authenticated_returns200() throws Exception {
         CashOperationRequest request = new CashOperationRequest();
         request.setOperationType(CashOperationRequest.OperationType.CASH_IN);
+        request.setAmount(new java.math.BigDecimal("100.00"));
         ShiftDto dto = ShiftDto.builder().id(1L).build();
         when(shiftService.cashOperation(any(), any())).thenReturn(dto);
 
@@ -224,7 +228,7 @@ class ShiftControllerTest {
         mockMvc.perform(post("/api/v1/pos/shifts/1/cash-operation")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"operationType\":\"CASH_IN\",\"amount\":100.00}"))
                 .andExpect(status().isForbidden());
     }
 

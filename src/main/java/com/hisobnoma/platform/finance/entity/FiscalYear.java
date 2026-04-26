@@ -25,7 +25,7 @@ import java.util.List;
 @NoArgsConstructor
 public class FiscalYear extends TenantAwareEntity {
 
-    @Column(nullable = false)
+    @Column(name = "`year`", nullable = false)
     private Integer year;
 
     @Column(nullable = false, length = 100)

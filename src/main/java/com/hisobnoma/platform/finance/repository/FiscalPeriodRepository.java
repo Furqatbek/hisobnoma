@@ -38,7 +38,7 @@ public interface FiscalPeriodRepository extends JpaRepository<FiscalPeriod, Long
     List<FiscalPeriod> findOpenPeriodsByTenantId(@Param("tenantId") Long tenantId);
 
     @Query("SELECT fp FROM FiscalPeriod fp WHERE fp.tenantId = :tenantId AND fp.status = 'OPEN' " +
-           "ORDER BY fp.fiscalYear.year, fp.periodNumber")
+           "ORDER BY fp.fiscalYear.year, fp.periodNumber LIMIT 1")
     Optional<FiscalPeriod> findFirstOpenPeriodByTenantId(@Param("tenantId") Long tenantId);
 
     @Query("SELECT fp FROM FiscalPeriod fp WHERE fp.fiscalYear.id = :fiscalYearId AND fp.periodNumber = :periodNumber")

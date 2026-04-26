@@ -94,7 +94,7 @@ class MobileQuickActionControllerTest {
     void quickStockCount_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/mobile/inventory/quick-count")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"productId\":1,\"locationId\":1,\"countedQuantity\":10}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -133,7 +133,7 @@ class MobileQuickActionControllerTest {
     void quickSale_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/mobile/pos/quick-sale")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"terminalId\":1,\"paymentType\":\"CASH\",\"items\":[{\"productId\":1,\"quantity\":1}]}"))
                 .andExpect(status().isForbidden());
     }
 

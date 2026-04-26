@@ -157,6 +157,9 @@ class PromotionControllerTest {
     @Test
     void createPromotion_authenticated_returns201() throws Exception {
         CreatePromotionRequest request = new CreatePromotionRequest();
+        request.setCode("PROMO-001");
+        request.setName("Summer Sale");
+        request.setType(com.hisobnoma.platform.pos.enums.PromotionType.PERCENTAGE_OFF);
         PromotionDto dto = PromotionDto.builder().id(1L).code("PROMO-001").name("Summer Sale").build();
         when(promotionService.create(any())).thenReturn(dto);
 
@@ -181,7 +184,7 @@ class PromotionControllerTest {
         mockMvc.perform(post("/api/v1/pos/promotions")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"code\":\"PROMO-001\",\"name\":\"Summer Sale\",\"type\":\"PERCENTAGE_OFF\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -190,6 +193,9 @@ class PromotionControllerTest {
     @Test
     void updatePromotion_authenticated_returns200() throws Exception {
         CreatePromotionRequest request = new CreatePromotionRequest();
+        request.setCode("PROMO-001");
+        request.setName("Updated");
+        request.setType(com.hisobnoma.platform.pos.enums.PromotionType.PERCENTAGE_OFF);
         PromotionDto dto = PromotionDto.builder().id(1L).code("PROMO-001").name("Updated").build();
         when(promotionService.update(any(), any())).thenReturn(dto);
 
@@ -213,7 +219,7 @@ class PromotionControllerTest {
         mockMvc.perform(put("/api/v1/pos/promotions/1")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"code\":\"PROMO-001\",\"name\":\"Updated\",\"type\":\"PERCENTAGE_OFF\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -278,6 +284,7 @@ class PromotionControllerTest {
     @Test
     void addCondition_authenticated_returns201() throws Exception {
         CreatePromotionConditionRequest request = new CreatePromotionConditionRequest();
+        request.setConditionType(com.hisobnoma.platform.pos.enums.PromotionConditionType.MINIMUM_PURCHASE);
         PromotionDto dto = PromotionDto.builder().id(1L).code("PROMO-001").build();
         when(promotionService.addCondition(any(), any())).thenReturn(dto);
 
@@ -301,7 +308,7 @@ class PromotionControllerTest {
         mockMvc.perform(post("/api/v1/pos/promotions/1/conditions")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"conditionType\":\"MINIMUM_PURCHASE\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -327,6 +334,7 @@ class PromotionControllerTest {
     @Test
     void addAction_authenticated_returns201() throws Exception {
         CreatePromotionActionRequest request = new CreatePromotionActionRequest();
+        request.setActionType("PERCENTAGE_DISCOUNT");
         PromotionDto dto = PromotionDto.builder().id(1L).code("PROMO-001").build();
         when(promotionService.addAction(any(), any())).thenReturn(dto);
 
@@ -350,7 +358,7 @@ class PromotionControllerTest {
         mockMvc.perform(post("/api/v1/pos/promotions/1/actions")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"actionType\":\"PERCENTAGE_DISCOUNT\"}"))
                 .andExpect(status().isForbidden());
     }
 

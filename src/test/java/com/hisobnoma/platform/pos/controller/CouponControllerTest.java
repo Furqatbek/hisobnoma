@@ -125,6 +125,8 @@ class CouponControllerTest {
     @Test
     void createCoupon_authenticated_returns201() throws Exception {
         CreateCouponRequest request = new CreateCouponRequest();
+        request.setCode("COUP-001");
+        request.setPromotionId(1L);
         CouponDto dto = CouponDto.builder().id(1L).code("COUP-001").build();
         when(couponService.createCoupon(any())).thenReturn(dto);
 
@@ -149,7 +151,7 @@ class CouponControllerTest {
         mockMvc.perform(post("/api/v1/pos/coupons")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"code\":\"COUP-001\",\"promotionId\":1}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -158,6 +160,8 @@ class CouponControllerTest {
     @Test
     void updateCoupon_authenticated_returns200() throws Exception {
         CreateCouponRequest request = new CreateCouponRequest();
+        request.setCode("COUP-001");
+        request.setPromotionId(1L);
         CouponDto dto = CouponDto.builder().id(1L).code("COUP-001").build();
         when(couponService.updateCoupon(any(), any())).thenReturn(dto);
 
@@ -181,7 +185,7 @@ class CouponControllerTest {
         mockMvc.perform(put("/api/v1/pos/coupons/1")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"code\":\"COUP-001\",\"promotionId\":1}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -301,6 +305,8 @@ class CouponControllerTest {
     @Test
     void generateCoupons_authenticated_returns201() throws Exception {
         CreateCouponRequest request = new CreateCouponRequest();
+        request.setCode("GEN-001");
+        request.setPromotionId(1L);
         CouponDto dto = CouponDto.builder().id(1L).code("GEN-001").build();
         when(couponService.generateCoupons(eq(1L), eq(5), any())).thenReturn(List.of(dto));
 
@@ -327,7 +333,7 @@ class CouponControllerTest {
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .param("count", "5")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"code\":\"GEN-001\",\"promotionId\":1}"))
                 .andExpect(status().isForbidden());
     }
 }

@@ -176,6 +176,7 @@ class POSTransactionControllerTest {
     @Test
     void create_authenticated_returns201() throws Exception {
         CreateTransactionRequest request = new CreateTransactionRequest();
+        request.setTerminalId(1L);
         POSTransactionDto dto = POSTransactionDto.builder().id(1L).transactionNumber("TXN-001").build();
         when(transactionService.createTransaction(any())).thenReturn(dto);
 
@@ -200,7 +201,7 @@ class POSTransactionControllerTest {
         mockMvc.perform(post("/api/v1/pos/transactions")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"terminalId\":1}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -273,6 +274,7 @@ class POSTransactionControllerTest {
     @Test
     void voidTransaction_authenticated_returns200() throws Exception {
         VoidTransactionRequest request = new VoidTransactionRequest();
+        request.setReason("Customer changed mind");
         POSTransactionDto dto = POSTransactionDto.builder().id(1L).transactionNumber("TXN-001").build();
         when(transactionService.voidTransaction(any(), any())).thenReturn(dto);
 
@@ -296,7 +298,7 @@ class POSTransactionControllerTest {
         mockMvc.perform(post("/api/v1/pos/transactions/1/void")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"reason\":\"Customer changed mind\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -344,6 +346,8 @@ class POSTransactionControllerTest {
     @Test
     void addPayment_authenticated_returns201() throws Exception {
         AddPaymentRequest request = new AddPaymentRequest();
+        request.setPaymentType(com.hisobnoma.platform.pos.entity.POSPaymentType.CASH);
+        request.setAmount(new BigDecimal("100.00"));
         POSPaymentDto dto = POSPaymentDto.builder().id(1L).build();
         when(paymentService.addPayment(any(), any())).thenReturn(dto);
 
@@ -367,7 +371,7 @@ class POSTransactionControllerTest {
         mockMvc.perform(post("/api/v1/pos/transactions/1/payments")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"paymentType\":\"CASH\",\"amount\":100.00}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -403,7 +407,15 @@ class POSTransactionControllerTest {
 
     @Test
     void createReturn_authenticated_returns201() throws Exception {
-        CreateReturnRequest request = new CreateReturnRequest();
+        CreateReturnRequest.ReturnLineItem returnItem = CreateReturnRequest.ReturnLineItem.builder()
+                .productId(1L)
+                .quantity(BigDecimal.ONE)
+                .build();
+        CreateReturnRequest request = CreateReturnRequest.builder()
+                .returnReason("Defective product")
+                .refundMethod(CreateReturnRequest.RefundMethod.CASH)
+                .items(List.of(returnItem))
+                .build();
         POSTransactionDto dto = POSTransactionDto.builder().id(1L).transactionNumber("RET-001").build();
         when(transactionService.createReturn(any())).thenReturn(dto);
 
@@ -427,7 +439,7 @@ class POSTransactionControllerTest {
         mockMvc.perform(post("/api/v1/pos/transactions/returns")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"returnReason\":\"Defective product\",\"refundMethod\":\"CASH\",\"items\":[{\"productId\":1,\"quantity\":1}]}"))
                 .andExpect(status().isForbidden());
     }
 

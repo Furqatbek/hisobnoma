@@ -147,7 +147,7 @@ class PricingControllerTest {
         mockMvc.perform(post("/api/v1/pos/pricing/apply-coupon")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"couponCode\":\"SAVE10\"}"))
                 .andExpect(status().isForbidden());
     }
 

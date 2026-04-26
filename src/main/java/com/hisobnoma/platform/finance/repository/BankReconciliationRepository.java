@@ -39,7 +39,7 @@ public interface BankReconciliationRepository extends JpaRepository<BankReconcil
             @Param("tenantId") Long tenantId);
 
     @Query("SELECT br FROM BankReconciliation br WHERE br.bankAccount.id = :bankAccountId " +
-           "AND br.status = 'COMPLETED' AND br.tenantId = :tenantId ORDER BY br.statementDate DESC")
+           "AND br.status = 'COMPLETED' AND br.tenantId = :tenantId ORDER BY br.statementDate DESC LIMIT 1")
     Optional<BankReconciliation> findLastCompletedByBankAccountId(
             @Param("bankAccountId") Long bankAccountId,
             @Param("tenantId") Long tenantId);

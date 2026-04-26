@@ -59,7 +59,7 @@ public class ReportExecution extends TenantAwareEntity {
     @Builder.Default
     private ExecutionStatus status = ExecutionStatus.PENDING;
 
-    @Column(name = "parameters", columnDefinition = "JSONB")
+    @Column(name = "parameters", columnDefinition = "TEXT")
     private String parameters;
 
     @Enumerated(EnumType.STRING)

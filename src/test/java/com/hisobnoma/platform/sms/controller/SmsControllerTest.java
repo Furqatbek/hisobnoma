@@ -74,7 +74,7 @@ class SmsControllerTest {
     void sendSms_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/sms/send")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"phone\":\"+998901234567\",\"templateId\":1}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -109,7 +109,7 @@ class SmsControllerTest {
     void sendBulkSms_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/sms/send-bulk")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"templateId\":1,\"recipients\":[{\"phone\":\"+998901234567\"}]}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -193,7 +193,7 @@ class SmsControllerTest {
     void createTemplate_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/sms/templates")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"code\":\"TEST_CODE\",\"name\":\"Test\",\"template\":\"Hello\"}"))
                 .andExpect(status().isForbidden());
     }
 

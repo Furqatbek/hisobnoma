@@ -157,6 +157,9 @@ class POSTerminalControllerTest {
     @Test
     void create_authenticated_returns201() throws Exception {
         CreateTerminalRequest request = new CreateTerminalRequest();
+        request.setTerminalCode("T-001");
+        request.setName("Terminal-1");
+        request.setLocationId(1L);
         POSTerminalDto dto = POSTerminalDto.builder().id(1L).name("Terminal-1").terminalCode("T-001").build();
         when(terminalService.create(any())).thenReturn(dto);
 
@@ -181,7 +184,7 @@ class POSTerminalControllerTest {
         mockMvc.perform(post("/api/v1/pos/terminals")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"terminalCode\":\"T-001\",\"name\":\"Terminal-1\",\"locationId\":1}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -190,6 +193,9 @@ class POSTerminalControllerTest {
     @Test
     void update_authenticated_returns200() throws Exception {
         CreateTerminalRequest request = new CreateTerminalRequest();
+        request.setTerminalCode("T-001");
+        request.setName("Updated");
+        request.setLocationId(1L);
         POSTerminalDto dto = POSTerminalDto.builder().id(1L).name("Updated").terminalCode("T-001").build();
         when(terminalService.update(any(), any())).thenReturn(dto);
 
@@ -214,7 +220,7 @@ class POSTerminalControllerTest {
         mockMvc.perform(put("/api/v1/pos/terminals/1")
                         .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"terminalCode\":\"T-001\",\"name\":\"Terminal-1\",\"locationId\":1}"))
                 .andExpect(status().isForbidden());
     }
 
