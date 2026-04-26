@@ -54,5 +54,7 @@
   "clickToLoadAging": "Эскириш маълумотларини юклаш учун \"Юклаш\" тугмасини босинг",
   "vendor": "Таъминотчи",
   "current": "Жорий",
-  "vendorPaymentTotal": "Жами тўловлар суммаси"
+  "vendorPaymentTotal": "Жами тўловлар суммаси",
+  "unpaidInvoices": "Тўланмаган фактуралар",
+  "pcs": "дона"
 }

@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { journalEntriesApi, accountsApi } from '@/services/api'
 import {
   PlusIcon, MagnifyingGlassIcon, EyeIcon, TrashIcon,
-  CheckIcon, ArrowUturnLeftIcon, XMarkIcon
+  CheckIcon, ArrowUturnLeftIcon, XMarkIcon, CalendarDaysIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -18,34 +18,67 @@ const pagination = ref({ page: 0, size: 20, totalPages: 0, totalElements: 0 })
 const statusTabs = ['ALL', 'DRAFT', 'POSTED', 'REVERSED']
 const sourceTypes = ['MANUAL', 'AR_INVOICE', 'AR_PAYMENT', 'AP_INVOICE', 'AP_PAYMENT', 'PAYROLL']
 
+const dateRangeStart = ref('')
+const dateRangeEnd = ref('')
+const dateRangeActive = ref(false)
+
 async function fetchEntries() {
   loading.value = true
   try {
     let response
-    if (search.value) {
+    if (dateRangeActive.value && dateRangeStart.value && dateRangeEnd.value) {
+      response = await journalEntriesApi.getByDateRange(dateRangeStart.value, dateRangeEnd.value)
+      const data = response.data.data || response.data
+      entries.value = data.content || data || []
+      pagination.value.totalPages = data.page?.totalPages || 0
+      pagination.value.totalElements = data.page?.totalElements || Array.isArray(entries.value) ? entries.value.length : 0
+    } else if (search.value) {
       response = await journalEntriesApi.search(search.value, {
         page: pagination.value.page,
         size: pagination.value.size
       })
+      entries.value = response.data.content || []
+      pagination.value.totalPages = response.data.page?.totalPages || 0
+      pagination.value.totalElements = response.data.page?.totalElements || 0
     } else if (activeTab.value !== 'ALL') {
       response = await journalEntriesApi.getByStatus(activeTab.value, {
         page: pagination.value.page,
         size: pagination.value.size
       })
+      entries.value = response.data.content || []
+      pagination.value.totalPages = response.data.page?.totalPages || 0
+      pagination.value.totalElements = response.data.page?.totalElements || 0
     } else {
       response = await journalEntriesApi.getAll({
         page: pagination.value.page,
         size: pagination.value.size
       })
+      entries.value = response.data.content || []
+      pagination.value.totalPages = response.data.page?.totalPages || 0
+      pagination.value.totalElements = response.data.page?.totalElements || 0
     }
-    entries.value = response.data.content || []
-    pagination.value.totalPages = response.data.page?.totalPages || 0
-    pagination.value.totalElements = response.data.page?.totalElements || 0
   } catch (error) {
     console.error('Failed to fetch journal entries:', error)
   } finally {
     loading.value = false
   }
+}
+
+function applyDateFilter() {
+  if (!dateRangeStart.value || !dateRangeEnd.value) return
+  dateRangeActive.value = true
+  search.value = ''
+  activeTab.value = 'ALL'
+  pagination.value.page = 0
+  fetchEntries()
+}
+
+function clearDateFilter() {
+  dateRangeStart.value = ''
+  dateRangeEnd.value = ''
+  dateRangeActive.value = false
+  pagination.value.page = 0
+  fetchEntries()
 }
 
 onMounted(fetchEntries)
@@ -54,12 +87,14 @@ function switchTab(tab) {
   activeTab.value = tab
   pagination.value.page = 0
   search.value = ''
+  dateRangeActive.value = false
   fetchEntries()
 }
 
 function handleSearch() {
   pagination.value.page = 0
   activeTab.value = 'ALL'
+  dateRangeActive.value = false
   fetchEntries()
 }
 
@@ -72,8 +107,14 @@ async function openDetail(entry) {
   showDetail.value = true
   detailLoading.value = true
   try {
-    const res = await journalEntriesApi.getWithLines(entry.id)
-    detailEntry.value = res.data
+    // Fetch fresh base data via getById, then enrich with lines
+    const [baseRes, linesRes] = await Promise.all([
+      journalEntriesApi.getById(entry.id),
+      journalEntriesApi.getWithLines(entry.id)
+    ])
+    const baseData = baseRes.data.data || baseRes.data
+    const linesData = linesRes.data.data || linesRes.data
+    detailEntry.value = { ...baseData, lines: linesData.lines || baseData.lines || [] }
   } catch (error) {
     console.error('Failed to load journal entry:', error)
   } finally {
@@ -269,6 +310,43 @@ function statusColor(status) {
             :placeholder="$t('finance.journalEntries.searchPlaceholder')"
             class="input pl-10"
           />
+        </div>
+      </div>
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="card">
+      <div class="card-body">
+        <div class="flex items-center gap-2 mb-3">
+          <CalendarDaysIcon class="h-5 w-5 text-gray-500" />
+          <h3 class="text-sm font-medium text-gray-700">{{ $t('finance.journalEntries.dateRangeFilter') }}</h3>
+        </div>
+        <div class="flex flex-wrap items-end gap-3">
+          <div>
+            <label class="label text-xs">{{ $t('finance.journalEntries.startDate') }}</label>
+            <input v-model="dateRangeStart" type="date" class="input text-sm" />
+          </div>
+          <div>
+            <label class="label text-xs">{{ $t('finance.journalEntries.endDate') }}</label>
+            <input v-model="dateRangeEnd" type="date" class="input text-sm" />
+          </div>
+          <button
+            @click="applyDateFilter"
+            :disabled="!dateRangeStart || !dateRangeEnd"
+            class="btn-primary text-sm px-4 py-2"
+          >
+            {{ $t('finance.journalEntries.applyDateFilter') }}
+          </button>
+          <button
+            v-if="dateRangeActive"
+            @click="clearDateFilter"
+            class="btn-secondary text-sm px-4 py-2"
+          >
+            {{ $t('finance.journalEntries.clearDateFilter') }}
+          </button>
+        </div>
+        <div v-if="dateRangeActive" class="mt-2 text-xs text-primary-600">
+          {{ $t('finance.journalEntries.dateRangeFilter') }}: {{ dateRangeStart }} — {{ dateRangeEnd }}
         </div>
       </div>
     </div>

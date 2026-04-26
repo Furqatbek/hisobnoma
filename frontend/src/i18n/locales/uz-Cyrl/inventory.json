@@ -388,6 +388,9 @@
     "poFilterPlaceholder": "Харид буюртмаси рақами бўйича фильтрлаш...",
     "filterByPo": "ХБ бўйича фильтрлаш",
     "clearPoFilter": "Фильтрни тозалаш",
+    "createInvoice": "Ҳисоб-фактура яратиш",
+    "createInvoiceSuccess": "Ҳисоб-фактура муваффақиятли яратилди",
+    "createInvoiceError": "Ҳисоб-фактурани яратишда хатолик юз берди",
     "status": {
       "DRAFT": "Қоралама",
       "PENDING": "Кутилмоқда",
