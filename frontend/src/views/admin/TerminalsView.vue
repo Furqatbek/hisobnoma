@@ -9,7 +9,8 @@ import {
   ComputerDesktopIcon,
   MagnifyingGlassIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  XMarkIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -20,6 +21,11 @@ const locations = ref([])
 const loading = ref(true)
 const search = ref('')
 const statusFilter = ref('all')
+const codeLookup = ref('')
+const codeLookupLoading = ref(false)
+const codeLookupResult = ref(null)
+const codeLookupError = ref('')
+const locationFilter = ref('')
 
 const pagination = ref({
   page: 0,
@@ -102,6 +108,54 @@ async function deleteTerminal(terminal) {
   }
 }
 
+async function lookupByCode() {
+  if (!codeLookup.value.trim()) return
+  codeLookupLoading.value = true
+  codeLookupError.value = ''
+  codeLookupResult.value = null
+  try {
+    const response = await terminalsApi.getByCode(codeLookup.value.trim())
+    const data = response.data.data || response.data
+    codeLookupResult.value = data
+  } catch (error) {
+    codeLookupError.value = error.response?.status === 404
+      ? t('admin.terminals.codeNotFound')
+      : (error.response?.data?.message || t('admin.terminals.codeLookupError'))
+  } finally {
+    codeLookupLoading.value = false
+  }
+}
+
+function clearCodeLookup() {
+  codeLookup.value = ''
+  codeLookupResult.value = null
+  codeLookupError.value = ''
+}
+
+async function filterByLocation() {
+  if (!locationFilter.value) {
+    fetchTerminals()
+    return
+  }
+  loading.value = true
+  try {
+    const response = await terminalsApi.getByLocation(locationFilter.value)
+    const data = response.data.data || response.data
+    let items = data.content || data || []
+    items = items.map(t => ({
+      ...t,
+      status: t.status || (t.active ? 'ACTIVE' : 'INACTIVE')
+    }))
+    terminals.value = items
+    pagination.value.totalPages = 1
+    pagination.value.totalElements = items.length
+  } catch (error) {
+    console.error('Жойлашув бўйича фильтрлашда хатолик:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(() => {
   fetchTerminals()
   fetchLocations()
@@ -134,6 +188,49 @@ function handleSearch() {
       </RouterLink>
     </div>
 
+    <!-- Code Lookup -->
+    <div class="card">
+      <div class="card-body">
+        <div class="flex items-center gap-3">
+          <div class="flex-1 relative">
+            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              v-model="codeLookup"
+              type="text"
+              :placeholder="$t('admin.terminals.codeLookupPlaceholder')"
+              class="input pl-10 font-mono"
+              @keyup.enter="lookupByCode"
+            />
+          </div>
+          <button @click="lookupByCode" :disabled="codeLookupLoading || !codeLookup.trim()" class="btn btn-secondary">
+            {{ codeLookupLoading ? '...' : $t('admin.terminals.lookupCode') }}
+          </button>
+          <button v-if="codeLookupResult || codeLookupError" @click="clearCodeLookup" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
+            <XCircleIcon class="h-5 w-5" />
+          </button>
+        </div>
+        <div v-if="codeLookupResult" class="mt-3 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <ComputerDesktopIcon class="h-5 w-5 text-gray-400" />
+                <span class="font-medium">{{ codeLookupResult.name }}</span>
+                <code class="text-sm text-gray-500 bg-white px-2 py-0.5 rounded">{{ codeLookupResult.terminalCode || codeLookupResult.code }}</code>
+                <span :class="['badge', codeLookupResult.active || codeLookupResult.status === 'ACTIVE' ? 'badge-success' : 'badge-danger']">
+                  {{ codeLookupResult.active || codeLookupResult.status === 'ACTIVE' ? $t('active') : $t('inactive') }}
+                </span>
+              </div>
+              <p class="text-sm text-gray-500 mt-1">{{ $t('admin.terminals.location') }}: {{ getLocationName(codeLookupResult.locationId) }}</p>
+            </div>
+            <RouterLink :to="`/admin/terminals/${codeLookupResult.id}/edit`" class="btn btn-secondary text-sm">{{ $t('edit') }}</RouterLink>
+          </div>
+        </div>
+        <div v-if="codeLookupError" class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          {{ codeLookupError }}
+        </div>
+      </div>
+    </div>
+
     <!-- Filters -->
     <div class="card">
       <div class="card-body flex flex-col sm:flex-row gap-4">
@@ -147,6 +244,10 @@ function handleSearch() {
             @keyup.enter="handleSearch"
           />
         </div>
+        <select v-model="locationFilter" @change="filterByLocation" class="input w-auto">
+          <option value="">{{ $t('admin.terminals.allLocations') }}</option>
+          <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+        </select>
         <select v-model="statusFilter" @change="fetchTerminals" class="input w-auto">
           <option value="all">{{ $t('admin.terminals.allStatuses') }}</option>
           <option value="ACTIVE">{{ $t('active') }}</option>

@@ -15,7 +15,8 @@ import {
   PencilSquareIcon,
   TrashIcon,
   UsersIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -58,6 +59,13 @@ const showBulkModal = ref(false)
 const bulkForm = reactive({ templateId: null, recipients: [] })
 const bulkSending = ref(false)
 const bulkResult = ref(null)
+
+// Status checker
+const showStatusChecker = ref(false)
+const statusCheckForm = reactive({ messageId: '', phone: '' })
+const statusCheckLoading = ref(false)
+const statusCheckResult = ref(null)
+const statusCheckError = ref('')
 
 // Customer list for bulk modal
 const bulkTab = ref('customers') // 'customers' | 'debtors'
@@ -436,6 +444,31 @@ async function handleBulkSend() {
   }
 }
 
+async function checkSmsStatus() {
+  if (!statusCheckForm.messageId && !statusCheckForm.phone) return
+  statusCheckLoading.value = true
+  statusCheckError.value = ''
+  statusCheckResult.value = null
+  try {
+    const params = {}
+    if (statusCheckForm.messageId) params.messageId = statusCheckForm.messageId
+    if (statusCheckForm.phone) params.phone = statusCheckForm.phone
+    const response = await smsApi.getStatus(params)
+    statusCheckResult.value = response.data?.data || response.data
+  } catch (e) {
+    statusCheckError.value = e.response?.data?.message || t('admin.sms.statusCheckError')
+  } finally {
+    statusCheckLoading.value = false
+  }
+}
+
+function clearStatusCheck() {
+  statusCheckForm.messageId = ''
+  statusCheckForm.phone = ''
+  statusCheckResult.value = null
+  statusCheckError.value = ''
+}
+
 function filterHistory(status) {
   historyFilter.value = status
   historyOffset.value = 0
@@ -618,6 +651,89 @@ function formatDate(dateStr) {
                 <p class="text-sm text-gray-500">{{ $t('admin.sms.status') }}</p>
                 <p class="text-lg font-bold text-green-600">{{ $t('admin.sms.active') }}</p>
               </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- SMS Status Checker -->
+      <template v-if="isConfigured">
+        <div class="card">
+          <div class="card-header flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <MagnifyingGlassIcon class="h-5 w-5 text-gray-500" />
+              <h3 class="text-lg font-medium">{{ $t('admin.sms.statusChecker') }}</h3>
+            </div>
+            <button @click="showStatusChecker = !showStatusChecker" class="text-sm text-primary-600 hover:text-primary-800">
+              {{ showStatusChecker ? $t('admin.sms.hide') : $t('admin.sms.show') }}
+            </button>
+          </div>
+          <div v-if="showStatusChecker" class="card-body space-y-4">
+            <p class="text-sm text-gray-500">{{ $t('admin.sms.statusCheckerDescription') }}</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="label">{{ $t('admin.sms.messageId') }}</label>
+                <input
+                  v-model="statusCheckForm.messageId"
+                  type="text"
+                  class="input font-mono text-sm"
+                  :placeholder="$t('admin.sms.messageIdPlaceholder')"
+                  @keyup.enter="checkSmsStatus"
+                />
+              </div>
+              <div>
+                <label class="label">{{ $t('admin.sms.phone') }}</label>
+                <input
+                  v-model="statusCheckForm.phone"
+                  type="text"
+                  class="input font-mono text-sm"
+                  placeholder="998XXXXXXXXX"
+                  @keyup.enter="checkSmsStatus"
+                />
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                @click="checkSmsStatus"
+                :disabled="statusCheckLoading || (!statusCheckForm.messageId && !statusCheckForm.phone)"
+                class="btn-primary inline-flex items-center gap-2"
+              >
+                <MagnifyingGlassIcon class="h-4 w-4" />
+                {{ statusCheckLoading ? $t('admin.sms.checking') : $t('admin.sms.checkStatus') }}
+              </button>
+              <button v-if="statusCheckResult || statusCheckError" @click="clearStatusCheck" class="btn-secondary">
+                {{ $t('admin.sms.clear') }}
+              </button>
+            </div>
+            <!-- Status check result -->
+            <div v-if="statusCheckResult" class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div class="space-y-2">
+                <div v-if="statusCheckResult.status" class="flex items-center gap-2">
+                  <span class="text-sm font-medium text-gray-500">{{ $t('admin.sms.smsStatus') }}:</span>
+                  <span :class="['px-2 py-1 text-xs font-medium rounded-full', getStatusColor(statusCheckResult.status)]">
+                    {{ statusCheckResult.status }}
+                  </span>
+                </div>
+                <div v-if="statusCheckResult.phone_number || statusCheckResult.phone" class="text-sm">
+                  <span class="text-gray-500">{{ $t('admin.sms.phone') }}:</span>
+                  <span class="ml-2 font-mono">{{ statusCheckResult.phone_number || statusCheckResult.phone }}</span>
+                </div>
+                <div v-if="statusCheckResult.message" class="text-sm">
+                  <span class="text-gray-500">{{ $t('admin.sms.messageText') }}:</span>
+                  <span class="ml-2">{{ statusCheckResult.message }}</span>
+                </div>
+                <div v-if="statusCheckResult.sent_at || statusCheckResult.created_at" class="text-sm">
+                  <span class="text-gray-500">{{ $t('admin.sms.date') }}:</span>
+                  <span class="ml-2">{{ formatDate(statusCheckResult.sent_at || statusCheckResult.created_at) }}</span>
+                </div>
+                <div v-if="statusCheckResult.total_cost != null" class="text-sm">
+                  <span class="text-gray-500">{{ $t('admin.sms.cost') }}:</span>
+                  <span class="ml-2">{{ statusCheckResult.total_cost }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-if="statusCheckError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              {{ statusCheckError }}
             </div>
           </div>
         </div>

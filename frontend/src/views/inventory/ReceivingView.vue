@@ -2,10 +2,11 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
-import { receivingApi } from '@/services/api'
+import { receivingApi, expensesApi } from '@/services/api'
 import {
   PlusIcon, EyeIcon, MagnifyingGlassIcon, XMarkIcon,
-  CheckCircleIcon, XCircleIcon, ArrowUpIcon, ArrowDownIcon
+  CheckCircleIcon, XCircleIcon, ArrowUpIcon, ArrowDownIcon,
+  DocumentTextIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -23,6 +24,9 @@ const cancelReason = ref('')
 const showCancelInput = ref(false)
 const confirming = ref(false)
 const cancelling = ref(false)
+const creatingInvoice = ref(false)
+const invoiceError = ref('')
+const invoiceSuccess = ref('')
 
 const pagination = ref({
   page: 0,
@@ -113,6 +117,21 @@ async function cancelOrder() {
   }
 }
 
+async function createInvoiceFromReceiving(order) {
+  if (!order) return
+  creatingInvoice.value = true
+  invoiceError.value = ''
+  invoiceSuccess.value = ''
+  try {
+    await expensesApi.createFromReceiving(order.id)
+    invoiceSuccess.value = t('inventory.receiving.createInvoiceSuccess')
+  } catch (e) {
+    invoiceError.value = e.response?.data?.message || t('inventory.receiving.createInvoiceError')
+  } finally {
+    creatingInvoice.value = false
+  }
+}
+
 function handleSearch() {
   pagination.value.page = 0
   activeStatus.value = ''
@@ -188,6 +207,10 @@ function canConfirm(order) {
 function canCancel(order) {
   return order?.status !== 'COMPLETED' && order?.status !== 'CANCELLED'
 }
+
+function canCreateInvoice(order) {
+  return order?.status === 'COMPLETED'
+}
 </script>
 
 <template>
@@ -201,6 +224,16 @@ function canCancel(order) {
         <PlusIcon class="h-5 w-5 mr-2" />
         {{ $t('inventory.receiving.newReceiving') }}
       </RouterLink>
+    </div>
+
+    <!-- Messages -->
+    <div v-if="invoiceError" class="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+      <p class="text-sm text-red-600">{{ invoiceError }}</p>
+      <button @click="invoiceError = ''" class="text-red-400 hover:text-red-600"><XMarkIcon class="h-4 w-4" /></button>
+    </div>
+    <div v-if="invoiceSuccess" class="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+      <p class="text-sm text-green-600">{{ invoiceSuccess }}</p>
+      <button @click="invoiceSuccess = ''" class="text-green-400 hover:text-green-600"><XMarkIcon class="h-4 w-4" /></button>
     </div>
 
     <!-- Status Tabs -->
@@ -458,7 +491,16 @@ function canCancel(order) {
               </div>
 
               <!-- Actions -->
-              <div v-if="canConfirm(selectedOrder) || canCancel(selectedOrder)" class="flex justify-end gap-3 border-t pt-4">
+              <div v-if="canConfirm(selectedOrder) || canCancel(selectedOrder) || canCreateInvoice(selectedOrder)" class="flex justify-end gap-3 border-t pt-4">
+                <button
+                  v-if="canCreateInvoice(selectedOrder)"
+                  @click="createInvoiceFromReceiving(selectedOrder)"
+                  :disabled="creatingInvoice"
+                  class="btn bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                >
+                  <DocumentTextIcon class="h-5 w-5 mr-2" />
+                  {{ creatingInvoice ? $t('saving') : $t('inventory.receiving.createInvoice') }}
+                </button>
                 <button
                   v-if="canCancel(selectedOrder) && !showCancelInput"
                   @click="showCancelInput = true"

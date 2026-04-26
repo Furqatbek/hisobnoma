@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { rolesApi } from '@/services/api'
-import { ArrowLeftIcon, ShieldCheckIcon, CheckIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, ShieldCheckIcon, CheckIcon, KeyIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -13,6 +13,8 @@ const router = useRouter()
 const isEdit = computed(() => !!route.params.id)
 const loading = ref(false)
 const saving = ref(false)
+const savingPermissions = ref(false)
+const permissionsSaved = ref(false)
 const errors = ref({})
 const allPermissions = ref([])
 const isSystemRole = ref(false)
@@ -153,6 +155,26 @@ async function saveRole() {
     }
   } finally {
     saving.value = false
+  }
+}
+
+async function savePermissionsOnly() {
+  if (!isEdit.value) return
+  savingPermissions.value = true
+  permissionsSaved.value = false
+  try {
+    await rolesApi.assignPermissions(route.params.id, form.value.permissionCodes)
+    permissionsSaved.value = true
+    setTimeout(() => { permissionsSaved.value = false }, 3000)
+  } catch (error) {
+    console.error('Рухсатларни сақлашда хатолик:', error)
+    if (error.response?.data?.message) {
+      alert(error.response.data.message)
+    } else {
+      alert(t('admin.roleForm.permissionsSaveError'))
+    }
+  } finally {
+    savingPermissions.value = false
   }
 }
 
@@ -313,6 +335,11 @@ onMounted(() => {
           <div class="card-footer flex justify-end space-x-3">
             <button @click="router.back()" class="btn-secondary">
               {{ $t('cancel') }}
+            </button>
+            <button v-if="isEdit" @click="savePermissionsOnly" :disabled="savingPermissions" class="btn-secondary">
+              <KeyIcon class="h-4 w-4 mr-1" />
+              <template v-if="permissionsSaved">{{ $t('admin.roleForm.permissionsSaved') }}</template>
+              <template v-else>{{ savingPermissions ? $t('saving') : $t('admin.roleForm.savePermissions') }}</template>
             </button>
             <button @click="saveRole" :disabled="saving" class="btn-primary">
               {{ saving ? $t('saving') : (isEdit ? $t('admin.roleForm.update') : $t('save')) }}

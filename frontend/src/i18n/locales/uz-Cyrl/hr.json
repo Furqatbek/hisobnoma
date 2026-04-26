@@ -11,7 +11,9 @@
     "position": "Лавозим",
     "hireDate": "Ишга олинган",
     "baseSalary": "Асосий маош",
-    "confirmDelete": "\"{name}\" ходимни ўчирмоқчимисиз?"
+    "confirmDelete": "\"{name}\" ходимни ўчирмоқчимисиз?",
+    "confirmTerminate": "\"{name}\" ходимни ишдан бўшатмоқчимисиз?",
+    "terminate": "Ишдан бўшатиш"
   },
   "employeeForm": {
     "newEmployee": "Янги ходим",
@@ -105,6 +107,9 @@
     "markPaid": "Тўланган деб белгилаш",
     "totalSalary": "Жами иш ҳақи",
     "totalPaid": "Тўланган",
-    "totalPending": "Кутилмоқда"
+    "totalPending": "Кутилмоқда",
+    "byPeriod": "Давр бўйича",
+    "allSalaries": "Барча иш ҳақилар",
+    "salaryDetail": "Иш ҳақи тафсилотлари"
   }
 }

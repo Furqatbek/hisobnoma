@@ -19,6 +19,12 @@ const totalPages = ref(0)
 const currentPage = ref(0)
 const pageSize = 20
 
+// Code lookup
+const codeLookup = ref('')
+const codeLookupResult = ref(null)
+const codeLookupError = ref('')
+const codeLookupLoading = ref(false)
+
 // Modal state
 const showModal = ref(false)
 const editingPromotion = ref(null)
@@ -98,6 +104,32 @@ function switchTab(tab) {
 function handleSearch() {
   activeTab.value = 'ALL'
   fetchPromotions(0)
+}
+
+// Code lookup
+async function lookupByCode() {
+  if (!codeLookup.value.trim()) return
+  codeLookupLoading.value = true
+  codeLookupError.value = ''
+  codeLookupResult.value = null
+  try {
+    const res = await promotionsApi.getByCode(codeLookup.value.trim())
+    codeLookupResult.value = res.data.data || res.data
+  } catch (e) {
+    if (e.response?.status === 404) {
+      codeLookupError.value = t('pos.promotions.codeNotFound')
+    } else {
+      codeLookupError.value = e.response?.data?.message || t('errorOccurred')
+    }
+  } finally {
+    codeLookupLoading.value = false
+  }
+}
+
+function clearCodeLookup() {
+  codeLookup.value = ''
+  codeLookupResult.value = null
+  codeLookupError.value = ''
 }
 
 function openModal(promotion = null) {
@@ -316,18 +348,58 @@ const tabs = computed(() => [
       </nav>
     </div>
 
-    <!-- Search -->
-    <div class="card">
-      <div class="card-body">
-        <div class="relative">
-          <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            v-model="search"
-            @keyup.enter="handleSearch"
-            type="text"
-            :placeholder="$t('pos.promotions.searchPlaceholder')"
-            class="input pl-10"
-          />
+    <!-- Search & Code Lookup -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Search -->
+      <div class="card">
+        <div class="card-body">
+          <label class="text-sm font-medium text-gray-700 mb-2 block">{{ $t('search') }}</label>
+          <div class="relative">
+            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              v-model="search"
+              @keyup.enter="handleSearch"
+              type="text"
+              :placeholder="$t('pos.promotions.searchPlaceholder')"
+              class="input pl-10"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Code Lookup -->
+      <div class="card">
+        <div class="card-body">
+          <label class="text-sm font-medium text-gray-700 mb-2 block">{{ $t('pos.promotions.codeLookup') }}</label>
+          <div class="flex gap-2">
+            <input
+              v-model="codeLookup"
+              @keyup.enter="lookupByCode"
+              type="text"
+              :placeholder="$t('pos.promotions.codeLookupPlaceholder')"
+              class="input flex-1 font-mono"
+            />
+            <button @click="lookupByCode" :disabled="codeLookupLoading" class="btn-primary text-sm">
+              {{ $t('search') }}
+            </button>
+            <button v-if="codeLookupResult || codeLookupError" @click="clearCodeLookup" class="btn-secondary text-sm">
+              {{ $t('clear') }}
+            </button>
+          </div>
+          <div v-if="codeLookupLoading" class="mt-2 text-sm text-gray-500">{{ $t('loading') }}</div>
+          <div v-if="codeLookupError" class="mt-2 text-sm text-red-600">{{ codeLookupError }}</div>
+          <div v-if="codeLookupResult" class="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg text-sm">
+            <p class="font-medium">{{ codeLookupResult.name }}</p>
+            <p class="text-gray-500">
+              {{ $t('code') }}: {{ codeLookupResult.code }}
+              | {{ $t('status') }}: {{ codeLookupResult.active ? $t('active') : $t('inactive') }}
+              | {{ $t('pos.promotions.priority') }}: {{ codeLookupResult.priority }}
+            </p>
+            <div class="mt-1 flex gap-2">
+              <button @click="toggleDetail(codeLookupResult)" class="text-sm text-primary-600 hover:underline">{{ $t('pos.promotions.viewDetails') }}</button>
+              <button @click="openModal(codeLookupResult)" class="text-sm text-primary-600 hover:underline">{{ $t('edit') }}</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

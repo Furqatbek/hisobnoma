@@ -26,6 +26,8 @@ const customerPayments = ref([])
 const loadingInvoices = ref(false)
 const loadingPayments = ref(false)
 const expandedInvoice = ref(null)
+const outstandingAmount = ref(null)
+const loadingOutstanding = ref(false)
 
 async function fetchData() {
   loading.value = true
@@ -92,10 +94,12 @@ async function viewCustomer(customer) {
   unpaidInvoices.value = []
   customerPayments.value = []
   expandedInvoice.value = null
+  outstandingAmount.value = null
   showDetailModal.value = true
 
   loadingInvoices.value = true
   loadingPayments.value = true
+  loadingOutstanding.value = true
   try {
     const res = await arInvoicesApi.getUnpaidByCustomer(customer.customerId)
     unpaidInvoices.value = res.data.data || res.data || []
@@ -112,6 +116,15 @@ async function viewCustomer(customer) {
     console.error('To\'lovlarni yuklashda xatolik:', error)
   } finally {
     loadingPayments.value = false
+  }
+  try {
+    const res = await arInvoicesApi.getOutstandingByCustomer(customer.customerId)
+    const data = res.data.data ?? res.data
+    outstandingAmount.value = typeof data === 'number' ? data : data?.totalOutstanding ?? data?.outstanding ?? data?.amount ?? data
+  } catch (error) {
+    console.error('Outstanding miqdorni yuklashda xatolik:', error)
+  } finally {
+    loadingOutstanding.value = false
   }
 }
 
@@ -729,6 +742,11 @@ function printDebtors() {
             <div class="bg-red-50 rounded-lg p-4">
               <p class="text-sm text-red-600">{{ $t('finance.debtors.totalDebt') }}</p>
               <p class="text-xl font-bold text-red-700">{{ formatCurrency(selectedCustomer.netBalance) }} {{ $t('sum') }}</p>
+            </div>
+            <div class="bg-orange-50 rounded-lg p-4">
+              <p class="text-sm text-orange-600">{{ $t('finance.debtors.outstandingAmount') }}</p>
+              <p v-if="loadingOutstanding" class="text-xl font-bold text-orange-700">...</p>
+              <p v-else class="text-xl font-bold text-orange-700">{{ outstandingAmount !== null ? formatCurrency(outstandingAmount) + ' ' + $t('sum') : '-' }}</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
               <p class="text-sm text-gray-600">{{ $t('finance.debtors.creditLimit') }}</p>

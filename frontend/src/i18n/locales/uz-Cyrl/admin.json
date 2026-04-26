@@ -72,7 +72,11 @@
     "custom": "Махсус",
     "systemRoleCannotDelete": "Тизим роллари ўчириб бўлмайди",
     "confirmDelete": "\"{name}\" ролини ўчирмоқчимисиз?",
-    "deleteError": "Ролни ўчиришда хатолик юз берди"
+    "deleteError": "Ролни ўчиришда хатолик юз берди",
+    "allRoles": "Барча роллар",
+    "systemRoles": "Тизим роллари",
+    "noSystemRoles": "Тизим роллари топилмади",
+    "editPermissions": "Рухсатларни таҳрирлаш"
   },
   "roleForm": {
     "newRole": "Янги рол яратиш",
@@ -97,6 +101,9 @@
     "update": "Янгилаш",
     "loadError": "Ролни юклашда хатолик юз берди",
     "saveError": "Ролни сақлашда хатолик юз берди",
+    "savePermissions": "Рухсатларни сақлаш",
+    "permissionsSaved": "Рухсатлар сақланди",
+    "permissionsSaveError": "Рухсатларни сақлашда хатолик",
     "namePlaceholder": "Кассир",
     "codePlaceholder": "CASHIER",
     "categories": {
@@ -151,7 +158,12 @@
     "activate": "Фаоллаштириш",
     "confirmDelete": "\"{name}\" терминалини ўчирмоқчимисиз?",
     "statusChangeError": "Ҳолатни ўзгартиришда хатолик юз берди",
-    "deleteError": "Терминални ўчиришда хатолик юз берди"
+    "deleteError": "Терминални ўчиришда хатолик юз берди",
+    "codeLookupPlaceholder": "Терминал коди бўйича қидириш...",
+    "lookupCode": "Қидириш",
+    "codeNotFound": "Бу код бўйича терминал топилмади",
+    "codeLookupError": "Кодни қидиришда хатолик",
+    "allLocations": "Барча жойлашувлар"
   },
   "terminalForm": {
     "newTerminal": "Янги терминал қўшиш",
@@ -211,7 +223,8 @@
     "region": "Ҳудуд",
     "totalVillages": "Жами: {count} та маҳалла",
     "confirmDelete": "\"{name}\" маҳаллани ўчиришни хоҳлайсизми?",
-    "deleteError": "Ўчиришда хатолик юз берди"
+    "deleteError": "Ўчиришда хатолик юз берди",
+    "activeOnly": "Фақат фаоллари"
   },
   "villageForm": {
     "newVillage": "Янги маҳалла қўшиш",
@@ -481,7 +494,17 @@
     "selectAllBtn": "Барчасини танлаш",
     "deselectAllBtn": "Бекор қилиш",
     "noCustomersFound": "Мижозлар топилмади",
-    "recipientVariables": "Қабул қилувчилар ўзгарувчилари"
+    "recipientVariables": "Қабул қилувчилар ўзгарувчилари",
+    "statusChecker": "SMS ҳолатини текшириш",
+    "statusCheckerDescription": "Хабар ID ёки телефон рақами орқали SMS етказиб бериш ҳолатини текширинг",
+    "messageId": "Хабар ID",
+    "messageIdPlaceholder": "SMS ID рақамини киритинг",
+    "checkStatus": "Текшириш",
+    "checking": "Текширилмоқда...",
+    "statusCheckError": "SMS ҳолатини текширишда хатолик",
+    "clear": "Тозалаш",
+    "show": "Кўрсатиш",
+    "hide": "Яшириш"
   },
   "auditLogs": {
     "title": "Аудит журнали",
@@ -537,7 +560,10 @@
     "transfer": "Кўчириш",
     "adjustment": "Тузатиш",
     "passwordChange": "Парол ўзгартириш",
-    "permissionChange": "Рухсат ўзгартириш"
+    "permissionChange": "Рухсат ўзгартириш",
+    "allUsers": "Барча фойдаланувчилар",
+    "entityType": "Объект тури",
+    "entityIdPlaceholder": "ID"
   },
   "systemSettings": {
     "title": "Тизим созламалари",
@@ -568,7 +594,15 @@
     "uncategorized": "Категориясиз",
     "confirmDelete": "\"{key}\" созламасини ўчирмоқчимисиз?",
     "saveError": "Созламани сақлашда хатолик",
-    "createSetting": "Яратиш"
+    "createSetting": "Яратиш",
+    "keyLookupPlaceholder": "Калит бўйича қидириш (масалан: app.feature.enabled)",
+    "lookupKey": "Қидириш",
+    "keyNotFound": "Бу калит бўйича созлама топилмади",
+    "keyLookupError": "Калитни қидиришда хатолик",
+    "batchSave": "Барчасини сақлаш",
+    "batchSaved": "Барча ўзгартиришлар сақланди",
+    "batchSaveError": "Оммавий сақлашда хатолик",
+    "batchTrack": "Кейинроқ сақлаш учун белгилаш"
   },
   "tenantSettings": {
     "title": "Ижарачи созламалари",
@@ -589,6 +623,10 @@
     "noSettings": "Созламалар топилмади",
     "uncategorized": "Категориясиз",
     "saveError": "Созламани сақлашда хатолик",
-    "createSetting": "Яратиш"
+    "createSetting": "Яратиш",
+    "batchSave": "Барчасини сақлаш",
+    "batchSaved": "Барча ўзгартиришлар сақланди",
+    "batchSaveError": "Оммавий сақлашда хатолик",
+    "batchTrack": "Кейинроқ сақлаш учун белгилаш"
   }
 }

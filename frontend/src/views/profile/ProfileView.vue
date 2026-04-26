@@ -3,6 +3,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/api'
+import { getRefreshToken, setTokens } from '@/services/tokenStorage'
 import {
   UserCircleIcon,
   KeyIcon,
@@ -17,13 +18,27 @@ import {
   ExclamationTriangleIcon,
   ClockIcon,
   UsersIcon,
-  MapPinIcon
+  MapPinIcon,
+  FingerPrintIcon,
+  ArrowPathIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
 const loading = ref(true)
 const profile = ref(null)
+
+// PIN management
+const showPinSection = ref(false)
+const pinForm = reactive({ pin: '' })
+const pinSaving = ref(false)
+const pinSuccess = ref(false)
+const pinError = ref('')
+
+// Session refresh
+const refreshing = ref(false)
+const refreshSuccess = ref(false)
+const refreshError = ref('')
 
 // Change password
 const showChangePassword = ref(false)
@@ -146,6 +161,51 @@ async function handleChangePassword() {
     passwordErrors.general = response?.message || t('profile.failedToChangePassword')
   } finally {
     changingPassword.value = false
+  }
+}
+
+async function handleSetPin() {
+  pinError.value = ''
+  pinSuccess.value = false
+  if (!pinForm.pin || !/^\d{4}$/.test(pinForm.pin)) {
+    pinError.value = t('profile.pinMustBe4Digits')
+    return
+  }
+  pinSaving.value = true
+  try {
+    await authApi.setPin(pinForm.pin)
+    pinSuccess.value = true
+    pinForm.pin = ''
+    setTimeout(() => {
+      pinSuccess.value = false
+      showPinSection.value = false
+    }, 3000)
+  } catch (error) {
+    pinError.value = error.response?.data?.message || t('profile.pinSetError')
+  } finally {
+    pinSaving.value = false
+  }
+}
+
+async function handleRefreshSession() {
+  refreshing.value = true
+  refreshSuccess.value = false
+  refreshError.value = ''
+  try {
+    const refreshToken = getRefreshToken()
+    if (!refreshToken) {
+      refreshError.value = t('profile.noRefreshToken')
+      return
+    }
+    const response = await authApi.refresh(refreshToken)
+    const data = response.data.data || response.data
+    setTokens(data.accessToken, data.refreshToken)
+    refreshSuccess.value = true
+    setTimeout(() => { refreshSuccess.value = false }, 3000)
+  } catch (error) {
+    refreshError.value = error.response?.data?.message || t('profile.refreshError')
+  } finally {
+    refreshing.value = false
   }
 }
 
@@ -343,6 +403,60 @@ function formatDateShort(date) {
                 <dd class="mt-1 text-sm text-gray-900 font-medium">{{ profile?.maxLocations || '—' }}</dd>
               </div>
             </dl>
+          </div>
+        </div>
+
+        <!-- PIN Management -->
+        <div class="card">
+          <div class="card-header flex items-center justify-between">
+            <h3 class="text-lg font-medium flex items-center">
+              <FingerPrintIcon class="h-5 w-5 mr-2 text-gray-400" />
+              {{ $t('profile.pinManagement') }}
+            </h3>
+            <button
+              v-if="!showPinSection"
+              @click="showPinSection = true"
+              class="btn-secondary text-sm"
+            >
+              {{ $t('profile.setPin') }}
+            </button>
+          </div>
+          <div class="card-body">
+            <div v-if="!showPinSection" class="text-sm text-gray-500">
+              <p>{{ $t('profile.pinDescription') }}</p>
+            </div>
+            <div v-else>
+              <div v-if="pinSuccess" class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
+                <CheckCircleIcon class="h-5 w-5 text-green-600 mr-2" />
+                <p class="text-sm text-green-700">{{ $t('profile.pinSetSuccess') }}</p>
+              </div>
+              <div v-if="pinError" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p class="text-sm text-red-600">{{ pinError }}</p>
+              </div>
+              <form @submit.prevent="handleSetPin" class="space-y-4">
+                <div>
+                  <label class="label">{{ $t('profile.pinCode') }}</label>
+                  <input
+                    v-model="pinForm.pin"
+                    type="password"
+                    maxlength="4"
+                    inputmode="numeric"
+                    pattern="[0-9]{4}"
+                    class="input w-32 text-center text-lg tracking-widest"
+                    :placeholder="$t('profile.pinPlaceholder')"
+                  />
+                  <p class="mt-1 text-xs text-gray-400">{{ $t('profile.pinHint') }}</p>
+                </div>
+                <div class="flex justify-end space-x-3">
+                  <button type="button" @click="showPinSection = false; pinForm.pin = ''; pinError = ''" class="btn-secondary">
+                    {{ $t('cancel') }}
+                  </button>
+                  <button type="submit" :disabled="pinSaving" class="btn-primary">
+                    {{ pinSaving ? $t('saving') : $t('profile.setPin') }}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
 
@@ -551,6 +665,33 @@ function formatDateShort(date) {
               <div class="text-sm text-gray-500">{{ $t('profile.accountCreated') }}</div>
               <div class="text-sm font-medium">{{ formatDate(profile?.createdAt) }}</div>
             </div>
+          </div>
+        </div>
+
+        <!-- Refresh Session -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="text-lg font-medium flex items-center">
+              <ArrowPathIcon class="h-5 w-5 mr-2 text-gray-400" />
+              {{ $t('profile.session') }}
+            </h3>
+          </div>
+          <div class="card-body space-y-3">
+            <p class="text-sm text-gray-500">{{ $t('profile.refreshSessionDescription') }}</p>
+            <div v-if="refreshSuccess" class="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p class="text-sm text-green-700">{{ $t('profile.sessionRefreshed') }}</p>
+            </div>
+            <div v-if="refreshError" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p class="text-sm text-red-600">{{ refreshError }}</p>
+            </div>
+            <button
+              @click="handleRefreshSession"
+              :disabled="refreshing"
+              class="btn-secondary w-full justify-center"
+            >
+              <ArrowPathIcon :class="['h-4 w-4 mr-2', { 'animate-spin': refreshing }]" />
+              {{ refreshing ? $t('profile.refreshing') : $t('profile.refreshSession') }}
+            </button>
           </div>
         </div>
       </div>

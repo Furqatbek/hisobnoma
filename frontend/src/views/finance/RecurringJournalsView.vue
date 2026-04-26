@@ -89,22 +89,20 @@ function handleSearch() {
   fetchJournals(0)
 }
 
-function openModal(journal = null) {
+async function openModal(journal = null) {
   editingJournal.value = journal
   if (journal) {
-    form.name = journal.name || ''
-    form.description = journal.description || ''
-    form.frequency = journal.frequency || 'MONTHLY'
-    form.nextRunDate = journal.nextRunDate || ''
-    form.lines = journal.lines && journal.lines.length
-      ? journal.lines.map(l => ({
-          accountId: l.accountId || l.account?.id || '',
-          debit: l.debit || 0,
-          credit: l.credit || 0,
-          description: l.description || ''
-        }))
-      : [createEmptyLine()]
-    form.active = journal.active !== false
+    // Set from list data first, then fetch fresh data
+    applyJournalToForm(journal)
+    showModal.value = true
+    try {
+      const res = await recurringJournalsApi.getById(journal.id)
+      const freshData = res.data.data || res.data
+      editingJournal.value = freshData
+      applyJournalToForm(freshData)
+    } catch (e) {
+      console.error('Failed to fetch journal details:', e)
+    }
   } else {
     form.name = ''
     form.description = ''
@@ -112,8 +110,24 @@ function openModal(journal = null) {
     form.nextRunDate = ''
     form.lines = [createEmptyLine()]
     form.active = true
+    showModal.value = true
   }
-  showModal.value = true
+}
+
+function applyJournalToForm(journal) {
+  form.name = journal.name || ''
+  form.description = journal.description || ''
+  form.frequency = journal.frequency || 'MONTHLY'
+  form.nextRunDate = journal.nextRunDate || ''
+  form.lines = journal.lines && journal.lines.length
+    ? journal.lines.map(l => ({
+        accountId: l.accountId || l.account?.id || '',
+        debit: l.debit || 0,
+        credit: l.credit || 0,
+        description: l.description || ''
+      }))
+    : [createEmptyLine()]
+  form.active = journal.active !== false
 }
 
 function addLine() {

@@ -18,25 +18,41 @@ const searchQuery = ref('')
 const currentPage = ref(0)
 const totalPages = ref(0)
 const totalElements = ref(0)
+const activeOnly = ref(false)
 
 async function fetchVillages(page = 0) {
   loading.value = true
   try {
-    const params = { page, size: 20 }
-    const response = searchQuery.value.trim()
-      ? await deliveryVillagesApi.getAll({ ...params, search: searchQuery.value })
-      : await deliveryVillagesApi.getAll(params)
+    let response
+    if (activeOnly.value) {
+      response = await deliveryVillagesApi.getActive()
+      const data = response.data.data || response.data
+      villages.value = Array.isArray(data) ? data : data.content || []
+      currentPage.value = 0
+      totalPages.value = 1
+      totalElements.value = villages.value.length
+    } else {
+      const params = { page, size: 20 }
+      response = searchQuery.value.trim()
+        ? await deliveryVillagesApi.getAll({ ...params, search: searchQuery.value })
+        : await deliveryVillagesApi.getAll(params)
 
-    const data = response.data
-    villages.value = data.content || []
-    currentPage.value = data.page?.number || 0
-    totalPages.value = data.page?.totalPages || 0
-    totalElements.value = data.page?.totalElements || 0
+      const data = response.data
+      villages.value = data.content || []
+      currentPage.value = data.page?.number || 0
+      totalPages.value = data.page?.totalPages || 0
+      totalElements.value = data.page?.totalElements || 0
+    }
   } catch (error) {
     console.error('Failed to fetch villages:', error)
   } finally {
     loading.value = false
   }
+}
+
+function toggleActiveOnly() {
+  activeOnly.value = !activeOnly.value
+  fetchVillages(0)
 }
 
 async function deleteVillage(village) {
@@ -71,10 +87,10 @@ onMounted(() => fetchVillages())
       </router-link>
     </div>
 
-    <!-- Search -->
+    <!-- Search & Active Filter -->
     <div class="card mb-6">
-      <div class="card-body">
-        <div class="relative">
+      <div class="card-body flex flex-col sm:flex-row gap-4 items-center">
+        <div class="relative flex-1">
           <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             v-model="searchQuery"
@@ -82,8 +98,18 @@ onMounted(() => fetchVillages())
             type="text"
             :placeholder="$t('admin.villages.searchPlaceholder')"
             class="input pl-10"
+            :disabled="activeOnly"
           />
         </div>
+        <label class="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+          <input
+            v-model="activeOnly"
+            type="checkbox"
+            class="h-4 w-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+            @change="toggleActiveOnly"
+          />
+          <span class="text-sm font-medium text-gray-700">{{ $t('admin.villages.activeOnly') }}</span>
+        </label>
       </div>
     </div>
 

@@ -44,6 +44,10 @@ const loadingAging = ref(false)
 // Vendor payment total
 const vendorPaymentTotal = ref(null)
 
+// Unpaid invoices summary
+const unpaidSummary = ref(null)
+const loadingUnpaid = ref(false)
+
 // Pagination
 const invoicePage = ref(0)
 const invoiceTotalPages = ref(0)
@@ -103,13 +107,14 @@ async function loadSupplierData() {
   loadingDetail.value = true
 
   try {
-    const [balanceRes, invoiceRes, paymentRes, poRes, statementRes, vendorTotalRes] = await Promise.all([
+    const [balanceRes, invoiceRes, paymentRes, poRes, statementRes, vendorTotalRes, unpaidRes] = await Promise.all([
       expensesApi.getVendorBalance(selectedSupplierId.value).catch(() => null),
       expensesApi.getByVendor(selectedSupplierId.value, { page: 0, size: 10, sort: 'invoiceDate,desc' }).catch(() => null),
       apPaymentsApi.getByVendor(selectedSupplierId.value, { page: 0, size: 10, sort: 'createdAt,desc' }).catch(() => null),
       purchaseOrdersApi.getByVendor(selectedSupplierId.value, { page: 0, size: 10, sort: 'createdAt,desc' }).catch(() => null),
       apReportsApi.getVendorStatement(selectedSupplierId.value).catch(() => null),
-      apPaymentsApi.getVendorTotal(selectedSupplierId.value).catch(() => null)
+      apPaymentsApi.getVendorTotal(selectedSupplierId.value).catch(() => null),
+      expensesApi.getUnpaidByVendor(selectedSupplierId.value).catch(() => null)
     ])
 
     if (balanceRes) {
@@ -144,6 +149,16 @@ async function loadSupplierData() {
     if (vendorTotalRes) {
       const vtData = vendorTotalRes.data.data ?? vendorTotalRes.data
       vendorPaymentTotal.value = typeof vtData === 'number' ? vtData : vtData?.total ?? vtData?.totalAmount ?? null
+    }
+
+    if (unpaidRes) {
+      const uData = unpaidRes.data.data || unpaidRes.data
+      const unpaidList = Array.isArray(uData) ? uData : uData.content || uData || []
+      const count = unpaidList.length
+      const total = unpaidList.reduce((sum, inv) => sum + (inv.balanceDue || inv.totalAmount || 0), 0)
+      unpaidSummary.value = { count, total }
+    } else {
+      unpaidSummary.value = null
     }
   } catch (e) {
     console.error('Failed to load supplier data:', e)
@@ -394,7 +409,7 @@ onMounted(async () => {
             </div>
 
             <!-- Summary cards -->
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+            <div class="grid grid-cols-2 sm:grid-cols-6 gap-4 mb-6">
               <div class="card">
                 <div class="card-body py-3 px-4">
                   <p class="text-xs text-gray-500">{{ t('supplierHistory.totalInvoiced') }}</p>
@@ -427,6 +442,18 @@ onMounted(async () => {
                   <p class="text-lg font-bold text-gray-900 mt-1">
                     {{ stats.paymentTermsDays > 0 ? stats.paymentTermsDays + ' ' + t('supplierHistory.days') : stats.paymentTerms }}
                   </p>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-body py-3 px-4">
+                  <p class="text-xs text-gray-500">{{ t('supplierHistory.unpaidInvoices') }}</p>
+                  <p v-if="unpaidSummary" class="text-lg font-bold text-orange-600 mt-1">
+                    {{ unpaidSummary.count }} {{ t('supplierHistory.pcs') }}
+                  </p>
+                  <p v-if="unpaidSummary" class="text-xs text-orange-500">
+                    {{ formatCurrency(unpaidSummary.total) }} {{ t('sum') }}
+                  </p>
+                  <p v-else class="text-lg font-bold text-gray-400 mt-1">-</p>
                 </div>
               </div>
             </div>

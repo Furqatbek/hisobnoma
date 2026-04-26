@@ -17,6 +17,9 @@ const { t } = useI18n()
 const roles = ref([])
 const loading = ref(true)
 const search = ref('')
+const activeTab = ref('all')
+const systemRoles = ref([])
+const systemRolesLoading = ref(false)
 
 const pagination = ref({
   page: 0,
@@ -65,6 +68,26 @@ async function deleteRole(role) {
   }
 }
 
+async function fetchSystemRoles() {
+  systemRolesLoading.value = true
+  try {
+    const response = await rolesApi.getSystemRoles()
+    const data = response.data.data || response.data
+    systemRoles.value = data.content || data || []
+  } catch (error) {
+    console.error('Tizim rollarini yuklashda xatolik:', error)
+  } finally {
+    systemRolesLoading.value = false
+  }
+}
+
+function switchTab(tab) {
+  activeTab.value = tab
+  if (tab === 'system' && systemRoles.value.length === 0) {
+    fetchSystemRoles()
+  }
+}
+
 onMounted(fetchRoles)
 
 function handleSearch() {
@@ -91,6 +114,83 @@ function formatDate(date) {
       </RouterLink>
     </div>
 
+    <!-- Tabs -->
+    <div class="border-b border-gray-200">
+      <nav class="flex gap-1 overflow-x-auto pb-px">
+        <button
+          @click="switchTab('all')"
+          :class="['px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors whitespace-nowrap',
+            activeTab === 'all'
+              ? 'border-primary-500 text-primary-600 bg-primary-50/50'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50']"
+        >
+          {{ $t('admin.roles.allRoles') }}
+        </button>
+        <button
+          @click="switchTab('system')"
+          :class="['px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors whitespace-nowrap',
+            activeTab === 'system'
+              ? 'border-primary-500 text-primary-600 bg-primary-50/50'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50']"
+        >
+          <LockClosedIcon class="h-4 w-4 inline mr-1" />
+          {{ $t('admin.roles.systemRoles') }}
+        </button>
+      </nav>
+    </div>
+
+    <!-- System Roles Tab -->
+    <template v-if="activeTab === 'system'">
+      <div class="card">
+        <div v-if="systemRolesLoading" class="flex items-center justify-center h-64">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+        <div v-else-if="systemRoles.length === 0" class="text-center py-12">
+          <ShieldCheckIcon class="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <p class="text-gray-500">{{ $t('admin.roles.noSystemRoles') }}</p>
+        </div>
+        <div v-else class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>{{ $t('admin.roles.roleName') }}</th>
+                <th>{{ $t('code') }}</th>
+                <th>{{ $t('description') }}</th>
+                <th>{{ $t('admin.roles.permissions') }}</th>
+                <th class="text-right">{{ $t('actions') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr v-for="role in systemRoles" :key="role.id">
+                <td>
+                  <div class="flex items-center">
+                    <LockClosedIcon class="h-5 w-5 text-amber-500 mr-2" />
+                    <span class="font-medium">{{ role.name }}</span>
+                  </div>
+                </td>
+                <td class="font-mono text-sm text-gray-500">{{ role.code }}</td>
+                <td class="text-sm text-gray-500 max-w-xs truncate">{{ role.description || '-' }}</td>
+                <td>
+                  <span class="badge badge-info">{{ role.permissions?.length || 0 }} {{ $t('admin.roles.permissionCount') }}</span>
+                </td>
+                <td class="text-right">
+                  <RouterLink
+                    :to="`/admin/roles/${role.id}/edit`"
+                    class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
+                    :title="$t('admin.roles.editPermissions')"
+                  >
+                    <PencilSquareIcon class="h-5 w-5" />
+                  </RouterLink>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </template>
+
+    <!-- All Roles Tab -->
+    <template v-if="activeTab === 'all'">
     <!-- Search -->
     <div class="card">
       <div class="card-body flex flex-col sm:flex-row gap-4">
@@ -210,5 +310,6 @@ function formatDate(date) {
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>

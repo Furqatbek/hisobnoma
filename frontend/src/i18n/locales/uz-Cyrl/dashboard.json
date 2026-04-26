@@ -24,5 +24,14 @@
   "newSale": "Янги сотув",
   "addProduct": "Маҳсулот қўшиш",
   "addCustomer": "Мижоз қўшиш",
-  "purchaseOrder": "Харид буюртмаси"
+  "purchaseOrder": "Харид буюртмаси",
+  "salesChart": {
+    "title": "Сотув графиги",
+    "daily": "Кунлик",
+    "weekly": "Ҳафталик",
+    "monthly": "Ойлик",
+    "noData": "Сотув маълумотлари мавжуд эмас",
+    "period": "Давр",
+    "amount": "Сумма"
+  }
 }

@@ -32,5 +32,7 @@
   "position": "Лавозим",
   "hireDate": "Ишга қабул",
   "currentSalaryRate": "Жорий ставка",
-  "onLeave": "Таътилда"
+  "onLeave": "Таътилда",
+  "undeductedTotal": "Ушланмаган аванслар жами",
+  "undeductedAmount": "Ушланмаган сумма"
 }
