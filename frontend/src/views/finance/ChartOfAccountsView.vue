@@ -6,7 +6,7 @@ import {
   PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon,
   MagnifyingGlassIcon, ChevronRightIcon, ChevronDownIcon,
   ArrowPathIcon, ArrowUpTrayIcon, SparklesIcon,
-  CheckCircleIcon, XCircleIcon
+  CheckCircleIcon, XCircleIcon, FunnelIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -32,6 +32,14 @@ const importResult = ref(null)
 const generating = ref(false)
 
 const accountTypes = ['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE']
+
+// Quick filters
+const quickFilter = ref('')
+
+// Code lookup
+const codeLookup = ref('')
+const codeLookupResult = ref(null)
+const codeLookupError = ref('')
 
 function createEmptyForm() {
   return {
@@ -60,6 +68,14 @@ async function fetchAccounts() {
       const data = res.data.data || res.data
       allAccounts.value = data.content || data || []
       rootAccounts.value = allAccounts.value
+    } else if (quickFilter.value === 'ACTIVE') {
+      const res = await accountsApi.getActive()
+      allAccounts.value = res.data.data || res.data || []
+      rootAccounts.value = buildTree(allAccounts.value)
+    } else if (quickFilter.value === 'POSTABLE') {
+      const res = await accountsApi.getPostable()
+      allAccounts.value = res.data.data || res.data || []
+      rootAccounts.value = buildTree(allAccounts.value)
     } else if (activeType.value) {
       const res = await accountsApi.getByType(activeType.value)
       allAccounts.value = res.data.data || res.data || []
@@ -93,11 +109,25 @@ async function toggleExpand(account) {
     expandedIds.value.add(id)
     if (!childrenCache.value[id]) {
       try {
-        const res = await accountsApi.getChildren(id)
-        childrenCache.value[id] = res.data.data || res.data || []
+        // Try getTree first for full subtree, fall back to getChildren
+        const res = await accountsApi.getTree(id)
+        const treeData = res.data.data || res.data
+        if (treeData && treeData.childAccounts) {
+          childrenCache.value[id] = treeData.childAccounts
+        } else if (Array.isArray(treeData)) {
+          childrenCache.value[id] = treeData
+        } else {
+          const childRes = await accountsApi.getChildren(id)
+          childrenCache.value[id] = childRes.data.data || childRes.data || []
+        }
       } catch (e) {
-        console.error('Failed to load children:', e)
-        childrenCache.value[id] = []
+        try {
+          const childRes = await accountsApi.getChildren(id)
+          childrenCache.value[id] = childRes.data.data || childRes.data || []
+        } catch (e2) {
+          console.error('Failed to load children:', e2)
+          childrenCache.value[id] = []
+        }
       }
     }
   }
@@ -111,9 +141,23 @@ function hasChildren(account) {
   return account.childAccounts?.length > 0 || allAccounts.value.some(a => a.parentAccountId === account.id)
 }
 
+function applyQuickFilter(filter) {
+  if (quickFilter.value === filter) {
+    quickFilter.value = ''
+  } else {
+    quickFilter.value = filter
+  }
+  activeType.value = ''
+  search.value = ''
+  expandedIds.value.clear()
+  childrenCache.value = {}
+  fetchAccounts()
+}
+
 function filterByType(type) {
   activeType.value = type
   search.value = ''
+  quickFilter.value = ''
   expandedIds.value.clear()
   childrenCache.value = {}
   fetchAccounts()
@@ -121,9 +165,27 @@ function filterByType(type) {
 
 function handleSearch() {
   activeType.value = ''
+  quickFilter.value = ''
   expandedIds.value.clear()
   childrenCache.value = {}
   fetchAccounts()
+}
+
+async function lookupByCode() {
+  if (!codeLookup.value.trim()) return
+  codeLookupError.value = ''
+  codeLookupResult.value = null
+  try {
+    const res = await accountsApi.getByCode(codeLookup.value.trim())
+    const data = res.data.data || res.data
+    if (data) {
+      codeLookupResult.value = data
+    } else {
+      codeLookupError.value = t('finance.accounts.codeNotFound')
+    }
+  } catch (e) {
+    codeLookupError.value = e.response?.data?.message || t('finance.accounts.codeNotFound')
+  }
 }
 
 function openCreateModal(parentAccount) {
@@ -137,26 +199,48 @@ function openCreateModal(parentAccount) {
   showModal.value = true
 }
 
-function openEditModal(account) {
+async function openEditModal(account) {
   editMode.value = true
-  modalForm.value = {
-    id: account.id,
-    code: account.code,
-    name: account.name,
-    accountType: account.accountType,
-    description: account.description || '',
-    parentAccountId: account.parentAccountId,
-    controlAccount: account.controlAccount || false,
-    allowsDirectPosting: account.allowsDirectPosting ?? true,
-    openingBalance: account.openingBalance,
-    currency: account.currency || 'UZS',
-    taxCode: account.taxCode || '',
-    bankAccountNumber: account.bankAccountNumber || '',
-    bankName: account.bankName || '',
-    sortOrder: account.sortOrder || 0,
-    notes: account.notes || ''
-  }
   modalErrors.value = {}
+  try {
+    const res = await accountsApi.getById(account.id)
+    const freshData = res.data.data || res.data
+    modalForm.value = {
+      id: freshData.id,
+      code: freshData.code,
+      name: freshData.name,
+      accountType: freshData.accountType,
+      description: freshData.description || '',
+      parentAccountId: freshData.parentAccountId,
+      controlAccount: freshData.controlAccount || false,
+      allowsDirectPosting: freshData.allowsDirectPosting ?? true,
+      openingBalance: freshData.openingBalance,
+      currency: freshData.currency || 'UZS',
+      taxCode: freshData.taxCode || '',
+      bankAccountNumber: freshData.bankAccountNumber || '',
+      bankName: freshData.bankName || '',
+      sortOrder: freshData.sortOrder || 0,
+      notes: freshData.notes || ''
+    }
+  } catch (e) {
+    modalForm.value = {
+      id: account.id,
+      code: account.code,
+      name: account.name,
+      accountType: account.accountType,
+      description: account.description || '',
+      parentAccountId: account.parentAccountId,
+      controlAccount: account.controlAccount || false,
+      allowsDirectPosting: account.allowsDirectPosting ?? true,
+      openingBalance: account.openingBalance,
+      currency: account.currency || 'UZS',
+      taxCode: account.taxCode || '',
+      bankAccountNumber: account.bankAccountNumber || '',
+      bankName: account.bankName || '',
+      sortOrder: account.sortOrder || 0,
+      notes: account.notes || ''
+    }
+  }
   showModal.value = true
 }
 
@@ -325,6 +409,80 @@ const parentOptions = computed(() => {
           <input v-model="search" type="text" :placeholder="$t('finance.accounts.searchPlaceholder')" class="input pl-10" @keyup.enter="handleSearch" />
         </div>
         <button @click="handleSearch" class="btn-primary btn-sm">{{ $t('search') }}</button>
+      </div>
+    </div>
+
+    <!-- Quick Filters -->
+    <div class="flex flex-wrap gap-2">
+      <button
+        @click="applyQuickFilter('ACTIVE')"
+        :class="[
+          'inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors',
+          quickFilter === 'ACTIVE'
+            ? 'bg-green-50 border-green-300 text-green-700'
+            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+        ]"
+      >
+        <FunnelIcon class="h-4 w-4 mr-1.5" />
+        {{ $t('finance.accounts.filterActive') }}
+      </button>
+      <button
+        @click="applyQuickFilter('POSTABLE')"
+        :class="[
+          'inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors',
+          quickFilter === 'POSTABLE'
+            ? 'bg-blue-50 border-blue-300 text-blue-700'
+            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+        ]"
+      >
+        <FunnelIcon class="h-4 w-4 mr-1.5" />
+        {{ $t('finance.accounts.filterPostable') }}
+      </button>
+    </div>
+
+    <!-- Code Lookup -->
+    <div class="card">
+      <div class="card-body">
+        <div class="flex gap-2 items-end">
+          <div class="flex-1 max-w-sm">
+            <label class="label">{{ $t('finance.accounts.codeLookup') }}</label>
+            <input
+              v-model="codeLookup"
+              @keyup.enter="lookupByCode"
+              type="text"
+              :placeholder="$t('finance.accounts.codeLookupPlaceholder')"
+              class="input font-mono"
+            />
+          </div>
+          <button @click="lookupByCode" class="btn-secondary">
+            {{ $t('finance.accounts.lookup') }}
+          </button>
+        </div>
+        <!-- Code Lookup Result -->
+        <div v-if="codeLookupResult" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+          <div>
+            <span class="font-mono font-medium text-sm">{{ codeLookupResult.code }}</span>
+            <span class="mx-2 text-gray-400">--</span>
+            <span class="text-sm font-medium">{{ codeLookupResult.name }}</span>
+            <span :class="['ml-2 text-xs px-2 py-0.5 rounded-full font-medium', typeClass(codeLookupResult.accountType)]">
+              {{ $t(`finance.accounts.type.${codeLookupResult.accountType}`) }}
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button @click="openEditModal(codeLookupResult)" class="text-primary-600 hover:text-primary-800 text-sm font-medium">
+              {{ $t('edit') }}
+            </button>
+            <button @click="codeLookupResult = null" class="text-gray-400 hover:text-gray-600">
+              <XMarkIcon class="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <div v-if="codeLookupError" class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+          <p class="text-sm text-red-600">{{ codeLookupError }}</p>
+          <button @click="codeLookupError = ''" class="text-red-400 hover:text-red-600">
+            <XMarkIcon class="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
 
