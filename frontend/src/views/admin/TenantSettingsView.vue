@@ -325,8 +325,11 @@ const valueTypes = ['STRING', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'JSON', 'ENUM', '
                       @keyup.escape="cancelInlineEdit"
                     />
                   </template>
-                  <button @click="saveInlineEdit(setting)" class="p-1 text-green-600 hover:bg-green-50 rounded">
+                  <button @click="saveInlineEdit(setting)" class="p-1 text-green-600 hover:bg-green-50 rounded" :title="$t('save')">
                     <CheckIcon class="h-5 w-5" />
+                  </button>
+                  <button @click="trackModification(setting.settingKey, editingValue); cancelInlineEdit()" class="p-1 text-primary-500 hover:bg-primary-50 rounded" :title="$t('admin.tenantSettings.batchTrack')">
+                    <ArrowPathIcon class="h-5 w-5" />
                   </button>
                   <button @click="cancelInlineEdit" class="p-1 text-gray-400 hover:bg-gray-100 rounded">
                     <XMarkIcon class="h-5 w-5" />

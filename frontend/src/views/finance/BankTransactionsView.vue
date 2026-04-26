@@ -844,6 +844,97 @@ const mainTabs = computed(() => [
           </div>
         </div>
       </div>
+
+      <!-- Unreconciled Transactions Tool -->
+      <div class="card">
+        <div class="card-body">
+          <div class="flex items-center mb-4">
+            <ListBulletIcon class="h-5 w-5 text-gray-500 mr-2" />
+            <h3 class="text-lg font-medium text-gray-900">{{ $t('finance.bankReconciliations.unreconciledTitle') }}</h3>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="label">{{ $t('finance.bankReconciliations.bankAccount') }}</label>
+              <select v-model="unreconciledAccountId" class="input">
+                <option value="">{{ $t('finance.bankReconciliations.selectAccount') }}</option>
+                <option v-for="acc in bankAccounts" :key="acc.id" :value="acc.id">
+                  {{ acc.accountName }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label class="label">{{ $t('finance.bankReconciliations.endDate') }}</label>
+              <input v-model="unreconciledEndDate" type="date" class="input" />
+            </div>
+            <div class="flex items-end">
+              <button @click="fetchUnreconciled" class="btn-primary w-full" :disabled="unreconciledLoading || !unreconciledAccountId || !unreconciledEndDate">
+                <MagnifyingGlassIcon class="h-5 w-5 mr-2" />
+                {{ $t('finance.bankReconciliations.showUnreconciled') }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Unreconciled list -->
+          <div v-if="unreconciledLoading" class="flex items-center justify-center h-24 mt-4">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          </div>
+
+          <div v-else-if="showUnreconciledPanel && unreconciledTxs.length === 0" class="mt-4 text-center py-6 bg-green-50 rounded-lg">
+            <p class="text-green-600 text-sm font-medium">{{ $t('finance.bankReconciliations.allReconciled') }}</p>
+          </div>
+
+          <div v-else-if="showUnreconciledPanel && unreconciledTxs.length > 0" class="mt-4">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-sm text-gray-500">{{ unreconciledTxs.length }} {{ $t('finance.bankReconciliations.unreconciledCount') }}</p>
+              <button
+                v-if="selectedTxIds.length > 0"
+                @click="reconcileSelectedTransactions"
+                :disabled="reconcilingSelected"
+                class="btn-primary text-sm"
+              >
+                <CheckBadgeIcon class="h-4 w-4 mr-1" />
+                {{ $t('finance.bankReconciliations.reconcileSelected') }} ({{ selectedTxIds.length }})
+              </button>
+            </div>
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th class="w-10">
+                      <input type="checkbox" class="h-4 w-4 rounded border-gray-300"
+                        :checked="selectedTxIds.length === unreconciledTxs.length && unreconciledTxs.length > 0"
+                        @change="selectedTxIds = $event.target.checked ? unreconciledTxs.map(t => t.id) : []" />
+                    </th>
+                    <th>{{ $t('finance.bankTransactions.date') }}</th>
+                    <th>{{ $t('finance.bankTransactions.description') }}</th>
+                    <th>{{ $t('finance.bankTransactions.type') }}</th>
+                    <th class="text-right">{{ $t('finance.bankTransactions.amount') }}</th>
+                    <th>{{ $t('status') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr v-for="utx in unreconciledTxs" :key="utx.id" class="hover:bg-gray-50">
+                    <td>
+                      <input type="checkbox" class="h-4 w-4 rounded border-gray-300"
+                        :checked="selectedTxIds.includes(utx.id)"
+                        @change="toggleTxSelection(utx.id)" />
+                    </td>
+                    <td class="text-sm">{{ utx.transactionDate }}</td>
+                    <td class="text-sm">{{ utx.description || '-' }}</td>
+                    <td><span class="badge badge-info text-xs">{{ utx.transactionType }}</span></td>
+                    <td class="text-right">
+                      <span class="font-semibold text-sm" :class="utx.amount >= 0 ? 'text-green-600' : 'text-red-600'">
+                        {{ formatCurrency(utx.amount) }}
+                      </span>
+                    </td>
+                    <td><span :class="['badge text-xs', getStatusClass(utx.status)]">{{ utx.status }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </template>
 
     <!-- ═══════════════════════════════════════════════════════════ -->

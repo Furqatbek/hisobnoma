@@ -1,11 +1,11 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { couponsApi } from '@/services/api'
+import { couponsApi, promotionsApi } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   XMarkIcon, TicketIcon, ArrowPathIcon, ChevronDownIcon,
-  ChevronUpIcon, NoSymbolIcon, BoltIcon
+  ChevronUpIcon, NoSymbolIcon, BoltIcon, FunnelIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -53,6 +53,14 @@ const generateForm = reactive({
 const showDeleteConfirm = ref(false)
 const deletingCoupon = ref(null)
 
+// Promotion filter
+const promotionsList = ref([])
+const selectedPromotionFilter = ref('')
+
+// Coupon detail (getById)
+const couponDetail = ref(null)
+const couponDetailLoading = ref(false)
+
 // Redemption history
 const expandedCouponId = ref(null)
 const redemptions = ref([])
@@ -87,7 +95,48 @@ async function fetchCoupons(page = 0) {
   }
 }
 
-onMounted(() => fetchCoupons(0))
+async function fetchPromotionsList() {
+  try {
+    const res = await promotionsApi.getAll({ size: 100 })
+    const data = res.data.data || res.data
+    promotionsList.value = data.content || (Array.isArray(data) ? data : [])
+  } catch (e) {
+    promotionsList.value = []
+  }
+}
+
+async function filterByPromotion() {
+  if (!selectedPromotionFilter.value) {
+    fetchCoupons(0)
+    return
+  }
+  loading.value = true
+  error.value = ''
+  try {
+    const res = await couponsApi.getByPromotion(selectedPromotionFilter.value, { page: 0, size: pageSize, sort: 'id,desc' })
+    const data = res.data.data || res.data
+    if (Array.isArray(data)) {
+      coupons.value = data
+      totalPages.value = 1
+      currentPage.value = 0
+    } else {
+      coupons.value = data.content || []
+      totalPages.value = data.page?.totalPages || data.totalPages || 1
+      currentPage.value = data.page?.number ?? data.number ?? 0
+    }
+  } catch (e) {
+    if (e.response?.status !== 403) {
+      error.value = e.response?.data?.message || t('failedToLoad')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchCoupons(0)
+  fetchPromotionsList()
+})
 
 function switchTab(tab) {
   activeTab.value = tab
@@ -234,19 +283,27 @@ async function toggleRedemptions(coupon) {
   if (expandedCouponId.value === coupon.id) {
     expandedCouponId.value = null
     redemptions.value = []
+    couponDetail.value = null
     return
   }
   expandedCouponId.value = coupon.id
   loadingRedemptions.value = true
+  couponDetailLoading.value = true
+  couponDetail.value = null
   try {
-    const res = await couponsApi.getRedemptions(coupon.id)
-    const data = res.data.data || res.data
+    const [detailRes, redemptionsRes] = await Promise.all([
+      couponsApi.getById(coupon.id),
+      couponsApi.getRedemptions(coupon.id)
+    ])
+    couponDetail.value = detailRes.data.data || detailRes.data
+    const data = redemptionsRes.data.data || redemptionsRes.data
     redemptions.value = Array.isArray(data) ? data : data.content || []
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')
     redemptions.value = []
   } finally {
     loadingRedemptions.value = false
+    couponDetailLoading.value = false
   }
 }
 
@@ -364,10 +421,10 @@ const tabs = computed(() =>
       </nav>
     </div>
 
-    <!-- Search -->
+    <!-- Search & Promotion Filter -->
     <div class="card">
-      <div class="card-body">
-        <div class="relative">
+      <div class="card-body flex flex-col sm:flex-row gap-4">
+        <div class="flex-1 relative">
           <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             v-model="search"
@@ -376,6 +433,19 @@ const tabs = computed(() =>
             :placeholder="$t('pos.coupons.searchPlaceholder')"
             class="input pl-10"
           />
+        </div>
+        <div class="flex items-center gap-2">
+          <FunnelIcon class="h-5 w-5 text-gray-400" />
+          <select
+            v-model="selectedPromotionFilter"
+            @change="filterByPromotion"
+            class="input w-auto"
+          >
+            <option value="">{{ $t('pos.coupons.allPromotions') }}</option>
+            <option v-for="promo in promotionsList" :key="promo.id" :value="promo.id">
+              {{ promo.name || promo.code }}
+            </option>
+          </select>
         </div>
       </div>
     </div>

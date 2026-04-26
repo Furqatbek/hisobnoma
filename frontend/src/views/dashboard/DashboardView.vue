@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { dashboardApi } from '@/services/api'
+import { useI18n } from 'vue-i18n'
 import {
   CurrencyDollarIcon,
   ShoppingCartIcon,
@@ -8,8 +9,11 @@ import {
   UsersIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  ChartBarIcon
 } from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
 
 const loading = ref(true)
 const stats = ref({
@@ -38,6 +42,7 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  loadSalesChart('daily')
 })
 
 function formatCurrency(value) {
@@ -49,6 +54,50 @@ function formatCurrency(value) {
 
 function formatNumber(value) {
   return new Intl.NumberFormat('en-US').format(value || 0)
+}
+
+// Sales chart
+const salesChartPeriod = ref('daily')
+const salesChartData = ref([])
+const salesChartLoading = ref(false)
+const salesChartPeriods = [
+  { key: 'daily', label: () => t('dashboard.salesChart.daily') },
+  { key: 'weekly', label: () => t('dashboard.salesChart.weekly') },
+  { key: 'monthly', label: () => t('dashboard.salesChart.monthly') }
+]
+
+async function loadSalesChart(period) {
+  salesChartPeriod.value = period
+  salesChartLoading.value = true
+  try {
+    const response = await dashboardApi.getSalesChart(period)
+    const data = response.data.data || response.data
+    salesChartData.value = Array.isArray(data) ? data : (data.items || data.chart || [])
+  } catch (error) {
+    console.error('Failed to load sales chart:', error)
+    salesChartData.value = []
+  } finally {
+    salesChartLoading.value = false
+  }
+}
+
+function getMaxChartValue() {
+  if (salesChartData.value.length === 0) return 1
+  return Math.max(...salesChartData.value.map(d => d.total || d.amount || d.value || 0), 1)
+}
+
+function getChartBarHeight(item) {
+  const val = item.total || item.amount || item.value || 0
+  const max = getMaxChartValue()
+  return Math.max((val / max) * 100, 2) + '%'
+}
+
+function getChartItemValue(item) {
+  return item.total || item.amount || item.value || 0
+}
+
+function getChartItemLabel(item) {
+  return item.label || item.date || item.period || ''
 }
 </script>
 
@@ -227,6 +276,77 @@ function formatNumber(value) {
               <CubeIcon class="h-8 w-8 text-blue-400" />
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Sales Chart -->
+      <div class="card">
+        <div class="card-header flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <ChartBarIcon class="h-5 w-5 text-gray-500" />
+            <h3 class="text-lg font-medium text-gray-900">{{ $t('dashboard.salesChart.title') }}</h3>
+          </div>
+          <div class="flex gap-1">
+            <button
+              v-for="p in salesChartPeriods"
+              :key="p.key"
+              @click="loadSalesChart(p.key)"
+              :class="[
+                'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+                salesChartPeriod === p.key
+                  ? 'bg-primary-100 text-primary-700'
+                  : 'text-gray-500 hover:bg-gray-100'
+              ]"
+            >
+              {{ p.label() }}
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div v-if="salesChartLoading" class="flex items-center justify-center h-48">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          </div>
+          <div v-else-if="salesChartData.length === 0" class="text-center py-12 text-gray-400 text-sm">
+            {{ $t('dashboard.salesChart.noData') }}
+          </div>
+          <template v-else>
+            <!-- Bar chart visualization -->
+            <div class="flex items-end gap-1 h-48 mb-4">
+              <div
+                v-for="(item, idx) in salesChartData"
+                :key="idx"
+                class="flex-1 flex flex-col items-center justify-end h-full"
+              >
+                <div class="text-[10px] text-gray-500 mb-1 truncate max-w-full">
+                  {{ formatCurrency(getChartItemValue(item)) }}
+                </div>
+                <div
+                  class="w-full bg-primary-500 rounded-t-sm min-h-[2px] transition-all duration-300"
+                  :style="{ height: getChartBarHeight(item) }"
+                ></div>
+                <div class="text-[10px] text-gray-400 mt-1 truncate max-w-full text-center">
+                  {{ getChartItemLabel(item) }}
+                </div>
+              </div>
+            </div>
+            <!-- Data table -->
+            <div class="table-container mt-4">
+              <table class="table text-sm">
+                <thead>
+                  <tr>
+                    <th>{{ $t('dashboard.salesChart.period') }}</th>
+                    <th class="text-right">{{ $t('dashboard.salesChart.amount') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(item, idx) in salesChartData" :key="idx">
+                    <td>{{ getChartItemLabel(item) }}</td>
+                    <td class="text-right font-medium">{{ formatCurrency(getChartItemValue(item)) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
         </div>
       </div>
 
