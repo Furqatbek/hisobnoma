@@ -506,6 +506,7 @@ function getDifferenceClass(value) {
               </div>
             </div>
           </div>
+          </template>
         </div>
       </div>
     </div>

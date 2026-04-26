@@ -3,17 +3,23 @@ import { ref, computed, onMounted } from 'vue'
 import { tenantSettingsApi } from '@/services/api'
 import {
   PlusIcon, PencilSquareIcon, XMarkIcon,
-  EyeSlashIcon, CheckIcon
+  EyeSlashIcon, CheckIcon, ArrowPathIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
 const allSettings = ref([])
+const settingsMap = ref({})
 const categories = ref([])
 const activeCategory = ref('')
 const loading = ref(true)
 const saving = ref(false)
+
+// Batch update
+const modifiedSettings = ref(new Map())
+const batchSaving = ref(false)
+const batchSuccess = ref(false)
 
 const showModal = ref(false)
 const editMode = ref(false)
@@ -38,12 +44,14 @@ function createEmptyForm() {
 async function fetchAll() {
   loading.value = true
   try {
-    const [settingsRes, catsRes] = await Promise.all([
+    const [settingsRes, catsRes, mapRes] = await Promise.all([
       tenantSettingsApi.getAll(),
-      tenantSettingsApi.getCategories()
+      tenantSettingsApi.getCategories(),
+      tenantSettingsApi.getMap()
     ])
     allSettings.value = settingsRes.data.data || settingsRes.data || []
     categories.value = catsRes.data.data || catsRes.data || []
+    settingsMap.value = mapRes.data.data || mapRes.data || {}
     if (!activeCategory.value && categories.value.length > 0) {
       activeCategory.value = categories.value[0]
     }
@@ -51,6 +59,51 @@ async function fetchAll() {
     console.error('Failed to fetch tenant settings:', error)
   } finally {
     loading.value = false
+  }
+}
+
+async function fetchByCategory(category) {
+  if (!category) {
+    await fetchAll()
+    return
+  }
+  loading.value = true
+  try {
+    const response = await tenantSettingsApi.getByCategory(category)
+    const data = response.data.data || response.data || []
+    allSettings.value = allSettings.value.filter(s => s.category !== category).concat(data)
+    activeCategory.value = category
+  } catch (error) {
+    console.error('Failed to fetch category settings:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+function trackModification(settingKey, newValue) {
+  modifiedSettings.value.set(settingKey, newValue)
+  batchSuccess.value = false
+}
+
+async function batchSaveAll() {
+  if (modifiedSettings.value.size === 0) return
+  batchSaving.value = true
+  batchSuccess.value = false
+  try {
+    const settings = {}
+    modifiedSettings.value.forEach((value, key) => {
+      settings[key] = value
+    })
+    await tenantSettingsApi.batchUpdate(settings)
+    modifiedSettings.value.clear()
+    batchSuccess.value = true
+    await fetchAll()
+    setTimeout(() => { batchSuccess.value = false }, 3000)
+  } catch (error) {
+    console.error('Batch update failed:', error)
+    alert(error.response?.data?.message || t('admin.tenantSettings.batchSaveError'))
+  } finally {
+    batchSaving.value = false
   }
 }
 
@@ -119,6 +172,7 @@ async function saveInlineEdit(setting) {
   try {
     await tenantSettingsApi.updateValue(setting.settingKey, editingValue.value)
     editingKey.value = null
+    modifiedSettings.value.delete(setting.settingKey)
     fetchAll()
   } catch (error) {
     console.error('Failed to update value:', error)
@@ -163,10 +217,18 @@ const valueTypes = ['STRING', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'JSON', 'ENUM', '
         <h1 class="text-2xl font-bold text-gray-900">{{ $t('admin.tenantSettings.title') }}</h1>
         <p class="mt-1 text-sm text-gray-500">{{ $t('admin.tenantSettings.subtitle') }}</p>
       </div>
-      <button @click="openCreateModal" class="btn btn-primary">
-        <PlusIcon class="h-5 w-5 mr-2" />
-        {{ $t('admin.tenantSettings.addSetting') }}
-      </button>
+      <div class="flex items-center gap-2">
+        <button v-if="modifiedSettings.size > 0 || batchSuccess" @click="batchSaveAll" :disabled="batchSaving || modifiedSettings.size === 0" class="btn btn-primary">
+          <span v-if="batchSaving" class="animate-spin inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+          <ArrowPathIcon v-else class="h-5 w-5 mr-2" />
+          <template v-if="batchSuccess">{{ $t('admin.tenantSettings.batchSaved') }}</template>
+          <template v-else>{{ $t('admin.tenantSettings.batchSave') }} ({{ modifiedSettings.size }})</template>
+        </button>
+        <button @click="openCreateModal" class="btn btn-primary">
+          <PlusIcon class="h-5 w-5 mr-2" />
+          {{ $t('admin.tenantSettings.addSetting') }}
+        </button>
+      </div>
     </div>
 
     <!-- Category Tabs -->
@@ -174,7 +236,7 @@ const valueTypes = ['STRING', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'JSON', 'ENUM', '
       <nav class="flex gap-1 overflow-x-auto pb-px">
         <button
           v-for="cat in categories" :key="cat"
-          @click="activeCategory = cat"
+          @click="fetchByCategory(cat)"
           :class="['px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors whitespace-nowrap',
             activeCategory === cat
               ? 'border-primary-500 text-primary-600 bg-primary-50/50'

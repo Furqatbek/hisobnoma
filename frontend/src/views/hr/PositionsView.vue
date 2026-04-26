@@ -40,10 +40,17 @@ function openCreate() {
   showModal.value = true
 }
 
-function openEdit(pos) {
+async function openEdit(pos) {
   editingId.value = pos.id
   Object.assign(form, pos)
   showModal.value = true
+  try {
+    const response = await positionsApi.getById(pos.id)
+    const freshData = response.data.data || response.data
+    Object.assign(form, freshData)
+  } catch (error) {
+    console.error('Failed to fetch position details:', error)
+  }
 }
 
 async function handleSave() {

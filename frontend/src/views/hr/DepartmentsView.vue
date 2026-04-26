@@ -36,10 +36,17 @@ function openCreate() {
   showModal.value = true
 }
 
-function openEdit(dept) {
+async function openEdit(dept) {
   editingId.value = dept.id
   Object.assign(form, dept)
   showModal.value = true
+  try {
+    const response = await departmentsApi.getById(dept.id)
+    const freshData = response.data.data || response.data
+    Object.assign(form, freshData)
+  } catch (error) {
+    console.error('Failed to fetch department details:', error)
+  }
 }
 
 async function handleSave() {
