@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { suppliersApi, expensesApi, apPaymentsApi, purchaseOrdersApi } from '@/services/api'
+import { suppliersApi, expensesApi, apPaymentsApi, purchaseOrdersApi, apReportsApi } from '@/services/api'
 import {
   MagnifyingGlassIcon,
   BuildingStorefrontIcon,
@@ -35,6 +35,11 @@ const invoices = ref([])
 const payments = ref([])
 const purchaseOrders = ref([])
 const loadingDetail = ref(false)
+
+// AP Reports data
+const vendorStatement = ref(null)
+const agingSummary = ref(null)
+const loadingAging = ref(false)
 
 // Pagination
 const invoicePage = ref(0)
@@ -95,11 +100,12 @@ async function loadSupplierData() {
   loadingDetail.value = true
 
   try {
-    const [balanceRes, invoiceRes, paymentRes, poRes] = await Promise.all([
+    const [balanceRes, invoiceRes, paymentRes, poRes, statementRes] = await Promise.all([
       expensesApi.getVendorBalance(selectedSupplierId.value).catch(() => null),
       expensesApi.getByVendor(selectedSupplierId.value, { page: 0, size: 10, sort: 'invoiceDate,desc' }).catch(() => null),
       apPaymentsApi.getByVendor(selectedSupplierId.value, { page: 0, size: 10, sort: 'createdAt,desc' }).catch(() => null),
-      purchaseOrdersApi.getByVendor(selectedSupplierId.value, { page: 0, size: 10, sort: 'createdAt,desc' }).catch(() => null)
+      purchaseOrdersApi.getByVendor(selectedSupplierId.value, { page: 0, size: 10, sort: 'createdAt,desc' }).catch(() => null),
+      apReportsApi.getVendorStatement(selectedSupplierId.value).catch(() => null)
     ])
 
     if (balanceRes) {
@@ -125,6 +131,10 @@ async function loadSupplierData() {
       purchaseOrders.value = poData.content || poData || []
       poTotalPages.value = poData.totalPages || 0
       poPage.value = 0
+    }
+
+    if (statementRes) {
+      vendorStatement.value = statementRes.data.data || statementRes.data
     }
   } catch (e) {
     console.error('Failed to load supplier data:', e)
@@ -217,6 +227,27 @@ function getPOStatusClass(status) {
     'CLOSED': 'badge-success'
   }
   return classes[status] || 'badge-info'
+}
+
+async function loadAgingSummary() {
+  loadingAging.value = true
+  try {
+    const res = await apReportsApi.getAging()
+    agingSummary.value = res.data.data || res.data
+  } catch (e) {
+    console.error('Failed to load aging summary:', e)
+  } finally {
+    loadingAging.value = false
+  }
+}
+
+async function loadVendorBalance() {
+  try {
+    const res = await apReportsApi.getVendorBalance()
+    return res.data.data || res.data
+  } catch (e) {
+    return null
+  }
 }
 
 onMounted(async () => {
@@ -389,7 +420,7 @@ onMounted(async () => {
             <div class="border-b border-gray-200 mb-4">
               <nav class="flex -mb-px space-x-6">
                 <button
-                  v-for="tab in ['overview', 'invoices', 'payments', 'purchaseOrders']"
+                  v-for="tab in ['overview', 'invoices', 'payments', 'purchaseOrders', 'aging']"
                   :key="tab"
                   @click="activeTab = tab"
                   :class="[
@@ -787,6 +818,110 @@ onMounted(async () => {
                       {{ t('next') }}
                     </button>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ==================== AGING TAB ==================== -->
+            <div v-if="activeTab === 'aging'" class="space-y-6">
+              <!-- Vendor Statement -->
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="text-sm font-semibold text-gray-900">{{ t('supplierHistory.vendorStatement') }}</h3>
+                </div>
+                <div class="card-body">
+                  <div v-if="!vendorStatement" class="py-8 text-center text-sm text-gray-400">
+                    {{ t('supplierHistory.noStatement') }}
+                  </div>
+                  <template v-else>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                      <div>
+                        <p class="text-xs text-gray-500">{{ t('supplierHistory.totalInvoiced') }}</p>
+                        <p class="text-lg font-bold text-gray-900">{{ formatCurrency(vendorStatement.totalInvoiced || vendorStatement.totalAmount) }}</p>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500">{{ t('supplierHistory.totalPaid') }}</p>
+                        <p class="text-lg font-bold text-green-600">{{ formatCurrency(vendorStatement.totalPaid) }}</p>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500">{{ t('supplierHistory.currentDebt') }}</p>
+                        <p class="text-lg font-bold text-red-600">{{ formatCurrency(vendorStatement.balance || vendorStatement.outstandingBalance) }}</p>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500">{{ t('supplierHistory.overdueAmount') }}</p>
+                        <p class="text-lg font-bold text-orange-600">{{ formatCurrency(vendorStatement.overdueAmount) }}</p>
+                      </div>
+                    </div>
+                    <!-- Aging brackets -->
+                    <div v-if="vendorStatement.agingBrackets || vendorStatement.aging" class="mt-4">
+                      <h4 class="text-sm font-medium text-gray-700 mb-2">{{ t('supplierHistory.agingBreakdown') }}</h4>
+                      <table class="table w-full">
+                        <thead>
+                          <tr>
+                            <th class="text-left">{{ t('supplierHistory.period') }}</th>
+                            <th class="text-right">{{ t('amount') }}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(amount, bracket) in (vendorStatement.agingBrackets || vendorStatement.aging)" :key="bracket">
+                            <td class="text-sm">{{ bracket }}</td>
+                            <td class="text-right text-sm font-medium" :class="amount > 0 ? 'text-red-600' : 'text-gray-500'">
+                              {{ formatCurrency(amount) }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Global AP Aging Summary -->
+              <div class="card">
+                <div class="card-header flex items-center justify-between">
+                  <h3 class="text-sm font-semibold text-gray-900">{{ t('supplierHistory.apAgingSummary') }}</h3>
+                  <button @click="loadAgingSummary" class="btn-secondary text-sm" :disabled="loadingAging">
+                    {{ loadingAging ? '...' : t('supplierHistory.loadAging') }}
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div v-if="!agingSummary" class="py-8 text-center text-sm text-gray-400">
+                    {{ t('supplierHistory.clickToLoadAging') }}
+                  </div>
+                  <template v-else>
+                    <div v-if="Array.isArray(agingSummary)" class="table-container">
+                      <table class="table w-full">
+                        <thead>
+                          <tr>
+                            <th class="text-left">{{ t('supplierHistory.vendor') }}</th>
+                            <th class="text-right">{{ t('supplierHistory.current') }}</th>
+                            <th class="text-right">1-30</th>
+                            <th class="text-right">31-60</th>
+                            <th class="text-right">61-90</th>
+                            <th class="text-right">90+</th>
+                            <th class="text-right">{{ t('total') }}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="row in agingSummary" :key="row.vendorId || row.vendorName">
+                            <td class="text-sm font-medium">{{ row.vendorName }}</td>
+                            <td class="text-right text-sm">{{ formatCurrency(row.current) }}</td>
+                            <td class="text-right text-sm">{{ formatCurrency(row.days1to30) }}</td>
+                            <td class="text-right text-sm">{{ formatCurrency(row.days31to60) }}</td>
+                            <td class="text-right text-sm">{{ formatCurrency(row.days61to90) }}</td>
+                            <td class="text-right text-sm text-red-600 font-medium">{{ formatCurrency(row.over90) }}</td>
+                            <td class="text-right text-sm font-bold">{{ formatCurrency(row.total) }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      <div v-for="(value, key) in agingSummary" :key="key">
+                        <p class="text-xs text-gray-500">{{ key }}</p>
+                        <p class="text-lg font-bold" :class="value > 0 ? 'text-red-600' : 'text-gray-900'">{{ formatCurrency(value) }}</p>
+                      </div>
+                    </div>
+                  </template>
                 </div>
               </div>
             </div>

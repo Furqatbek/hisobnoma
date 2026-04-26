@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { expensesApi, expenseRecordsApi, suppliersApi, journalEntriesApi } from '@/services/api'
+import { expensesApi, expenseRecordsApi, suppliersApi, journalEntriesApi, apReportsApi } from '@/services/api'
 import {
   PlusIcon,
   EyeIcon,
@@ -67,6 +67,11 @@ const salaryPagination = ref({
   totalElements: 0
 })
 const salaryTotal = ref(0)
+
+// AP Aging
+const apAging = ref(null)
+const vendorBalances = ref(null)
+const agingLoading = ref(false)
 
 // Detail modal
 const selectedEntry = ref(null)
@@ -219,6 +224,22 @@ async function showEntryDetail(entry) {
 
 function closeDetail() {
   selectedEntry.value = null
+}
+
+async function fetchApAging() {
+  agingLoading.value = true
+  try {
+    const [agingRes, balanceRes] = await Promise.all([
+      apReportsApi.getAging().catch(() => null),
+      apReportsApi.getVendorBalance().catch(() => null)
+    ])
+    if (agingRes) apAging.value = agingRes.data.data || agingRes.data
+    if (balanceRes) vendorBalances.value = balanceRes.data.data || balanceRes.data
+  } catch (e) {
+    console.error('AP aging load failed:', e)
+  } finally {
+    agingLoading.value = false
+  }
 }
 
 onMounted(() => {
@@ -397,6 +418,18 @@ function isOverdue(expense) {
         >
           <UserGroupIcon class="h-5 w-5 inline mr-2" />
           {{ $t('finance.expenses.salaryTab') }} ({{ salaryPagination.totalElements }})
+        </button>
+        <button
+          @click="switchTab('apAging'); if (!apAging) fetchApAging()"
+          :class="[
+            'py-4 px-1 border-b-2 font-medium text-sm',
+            activeTab === 'apAging'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ]"
+        >
+          <ExclamationTriangleIcon class="h-5 w-5 inline mr-2" />
+          {{ $t('finance.expenses.apAgingTab') }}
         </button>
       </nav>
     </div>
@@ -741,6 +774,101 @@ function isOverdue(expense) {
             >
               {{ $t('next') }}
             </button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- AP Aging Tab -->
+    <template v-if="activeTab === 'apAging'">
+      <div v-if="agingLoading" class="py-12 text-center text-gray-500">{{ $t('loading') }}...</div>
+      <div v-else class="space-y-6">
+        <!-- AP Aging Report -->
+        <div class="card">
+          <div class="card-header flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">{{ $t('finance.expenses.apAgingReport') }}</h3>
+            <button @click="fetchApAging" class="btn-secondary text-sm">{{ $t('refresh') }}</button>
+          </div>
+          <div class="card-body">
+            <div v-if="!apAging" class="py-8 text-center text-sm text-gray-400">
+              {{ $t('finance.expenses.noAgingData') }}
+            </div>
+            <template v-else>
+              <div v-if="Array.isArray(apAging)" class="table-container">
+                <table class="table w-full">
+                  <thead>
+                    <tr>
+                      <th class="text-left">{{ $t('finance.expenses.vendor') }}</th>
+                      <th class="text-right">{{ $t('finance.expenses.agingCurrent') }}</th>
+                      <th class="text-right">1-30</th>
+                      <th class="text-right">31-60</th>
+                      <th class="text-right">61-90</th>
+                      <th class="text-right">90+</th>
+                      <th class="text-right">{{ $t('total') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="row in apAging" :key="row.vendorId || row.vendorName">
+                      <td class="text-sm font-medium">{{ row.vendorName }}</td>
+                      <td class="text-right text-sm">{{ formatCurrency(row.current) }}</td>
+                      <td class="text-right text-sm">{{ formatCurrency(row.days1to30) }}</td>
+                      <td class="text-right text-sm">{{ formatCurrency(row.days31to60) }}</td>
+                      <td class="text-right text-sm">{{ formatCurrency(row.days61to90) }}</td>
+                      <td class="text-right text-sm text-red-600 font-medium">{{ formatCurrency(row.over90) }}</td>
+                      <td class="text-right text-sm font-bold">{{ formatCurrency(row.total) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div v-for="(value, key) in apAging" :key="key">
+                  <p class="text-xs text-gray-500">{{ key }}</p>
+                  <p class="text-lg font-bold" :class="value > 0 ? 'text-red-600' : 'text-gray-900'">{{ formatCurrency(value) }}</p>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Vendor Balances -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="text-lg font-semibold text-gray-900">{{ $t('finance.expenses.vendorBalances') }}</h3>
+          </div>
+          <div class="card-body">
+            <div v-if="!vendorBalances" class="py-8 text-center text-sm text-gray-400">
+              {{ $t('finance.expenses.noVendorBalances') }}
+            </div>
+            <template v-else>
+              <div v-if="Array.isArray(vendorBalances)" class="table-container">
+                <table class="table w-full">
+                  <thead>
+                    <tr>
+                      <th class="text-left">{{ $t('finance.expenses.vendor') }}</th>
+                      <th class="text-right">{{ $t('finance.expenses.totalInvoiced') }}</th>
+                      <th class="text-right">{{ $t('finance.expenses.totalPaid') }}</th>
+                      <th class="text-right">{{ $t('finance.expenses.balance') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="vendor in vendorBalances" :key="vendor.vendorId || vendor.vendorName">
+                      <td class="text-sm font-medium">{{ vendor.vendorName || vendor.name }}</td>
+                      <td class="text-right text-sm">{{ formatCurrency(vendor.totalInvoiced || vendor.invoiceTotal) }}</td>
+                      <td class="text-right text-sm text-green-600">{{ formatCurrency(vendor.totalPaid || vendor.paymentTotal) }}</td>
+                      <td class="text-right text-sm font-bold" :class="(vendor.balance || vendor.outstandingBalance) > 0 ? 'text-red-600' : 'text-gray-900'">
+                        {{ formatCurrency(vendor.balance || vendor.outstandingBalance) }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div v-for="(value, key) in vendorBalances" :key="key">
+                  <p class="text-xs text-gray-500">{{ key }}</p>
+                  <p class="text-lg font-bold">{{ typeof value === 'number' ? formatCurrency(value) : value }}</p>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>

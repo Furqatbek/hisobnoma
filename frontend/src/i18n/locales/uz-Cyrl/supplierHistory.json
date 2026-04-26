@@ -15,7 +15,8 @@
     "overview": "Умумий",
     "invoices": "Фактуралар",
     "payments": "Тўловлар",
-    "purchaseOrders": "Буюртмалар"
+    "purchaseOrders": "Буюртмалар",
+    "aging": "Қарз эскириши"
   },
   "recentInvoices": "Охирги фактуралар",
   "recentPayments": "Охирги тўловлар",
@@ -42,5 +43,15 @@
   "subtotal": "Оралиқ жами",
   "daysLate": " кун кечиккан",
   "product": "Маҳсулот",
-  "poRef": "Буюртма рақами"
+  "poRef": "Буюртма рақами",
+  "vendorStatement": "Таъминотчи баланси",
+  "noStatement": "Баланс маълумотлари мавжуд эмас",
+  "overdueAmount": "Муддати ўтган сумма",
+  "agingBreakdown": "Эскириш тақсимоти",
+  "period": "Давр",
+  "apAgingSummary": "Умумий кредиторлик қарзи эскириши",
+  "loadAging": "Юклаш",
+  "clickToLoadAging": "Эскириш маълумотларини юклаш учун \"Юклаш\" тугмасини босинг",
+  "vendor": "Таъминотчи",
+  "current": "Жорий"
 }

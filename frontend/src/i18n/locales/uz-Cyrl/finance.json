@@ -98,7 +98,17 @@
     "fullText": "Тўлиқ матн",
     "fullTextPlaceholder": "Харажат тафсилоти...",
     "deleteRecord": "Ўчириш",
-    "confirmDelete": "Бу харажатни ўчиришни тасдиқлайсизми?"
+    "confirmDelete": "Бу харажатни ўчиришни тасдиқлайсизми?",
+    "apAgingTab": "Қарз эскириши",
+    "apAgingReport": "Кредиторлик қарзи эскириш ҳисоботи",
+    "noAgingData": "Эскириш маълумотлари мавжуд эмас",
+    "vendor": "Етказиб берувчи",
+    "agingCurrent": "Жорий",
+    "vendorBalances": "Етказиб берувчи балансалари",
+    "noVendorBalances": "Етказиб берувчи балансалари мавжуд эмас",
+    "totalInvoiced": "Жами ҳисоб-фактура",
+    "totalPaid": "Жами тўланган",
+    "balance": "Баланс"
   },
   "expenseForm": {
     "newExpense": "Янги харажат",

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { productsApi, customersApi, posApi, terminalsApi, shiftsApi, deliveryRegionsApi, deliveryVillagesApi } from '@/services/api'
+import { productsApi, customersApi, posApi, terminalsApi, shiftsApi, deliveryRegionsApi, deliveryVillagesApi, pricingApi } from '@/services/api'
 import { ScaleIcon } from '@heroicons/vue/24/outline'
 import {
   MagnifyingGlassIcon,
@@ -97,6 +97,13 @@ const transactionDiscount = reactive({
   value: 0,
   reason: ''
 })
+
+// Coupon state
+const couponCode = ref('')
+const couponValid = ref(null)
+const couponDiscount = ref(null)
+const couponError = ref('')
+const couponValidating = ref(false)
 
 const showNewCustomerModal = ref(false)
 const newCustomer = reactive({
@@ -256,7 +263,7 @@ async function addToCart(product) {
   }
 }
 
-function addToCartWithUom(product, selectedUom) {
+async function addToCartWithUom(product, selectedUom) {
   showUomModal.value = false
 
   const uomKey = selectedUom ? `${product.id}_uom_${selectedUom.id}` : `${product.id}`
@@ -266,14 +273,22 @@ function addToCartWithUom(product, selectedUom) {
   if (existingItem) {
     existingItem.quantity++
   } else {
+    let price = selectedUom ? selectedUom.effectiveSellingPrice : product.sellingPrice
+
+    if (cart.customerId) {
+      const customerPrice = await fetchProductPrice(product.id)
+      if (customerPrice?.price != null) {
+        price = customerPrice.price
+      }
+    }
+
     cart.items.push({
       _uomKey: uomKey,
       productId: product.id,
       name: product.name,
       sku: product.sku,
-      price: selectedUom ? selectedUom.effectiveSellingPrice : product.sellingPrice,
+      price,
       quantity: 1,
-      // Alternate UOM info (null = base UOM)
       productUomId: selectedUom?.id || null,
       uomCode: selectedUom?.uomCode || null,
       uomName: selectedUom?.uomName || null,
@@ -449,6 +464,74 @@ function clearTransactionDiscount() {
   transactionDiscount.reason = ''
 }
 
+// Coupon functions
+async function validateCoupon() {
+  if (!couponCode.value.trim()) return
+  couponValidating.value = true
+  couponError.value = ''
+  couponValid.value = null
+  couponDiscount.value = null
+  try {
+    const res = await pricingApi.validateCoupon(couponCode.value.trim(), cart.customerId)
+    const data = res.data.data || res.data
+    couponValid.value = data.valid !== false
+    if (!couponValid.value) {
+      couponError.value = data.message || t('pos.couponInvalid')
+    }
+  } catch (error) {
+    couponValid.value = false
+    couponError.value = error.response?.data?.message || t('pos.couponInvalid')
+  } finally {
+    couponValidating.value = false
+  }
+}
+
+async function applyCoupon() {
+  if (!couponValid.value || !couponCode.value.trim()) return
+  try {
+    const res = await pricingApi.applyCoupon({
+      couponCode: couponCode.value.trim(),
+      customerId: cart.customerId,
+      orderTotal: total.value,
+      items: cart.items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.price
+      }))
+    })
+    const data = res.data.data || res.data
+    couponDiscount.value = data
+    if (data.discountAmount > 0) {
+      transactionDiscount.type = 'amount'
+      transactionDiscount.value = data.discountAmount
+      transactionDiscount.reason = t('pos.couponApplied') + ': ' + couponCode.value
+    }
+  } catch (error) {
+    couponError.value = error.response?.data?.message || t('pos.couponApplyFailed')
+  }
+}
+
+function clearCoupon() {
+  couponCode.value = ''
+  couponValid.value = null
+  couponDiscount.value = null
+  couponError.value = ''
+  if (transactionDiscount.reason?.startsWith(t('pos.couponApplied'))) {
+    clearTransactionDiscount()
+  }
+}
+
+// Fetch customer-specific price for a product
+async function fetchProductPrice(productId) {
+  if (!cart.customerId) return null
+  try {
+    const res = await pricingApi.getProductPrice(productId, { customerId: cart.customerId })
+    return res.data.data || res.data
+  } catch {
+    return null
+  }
+}
+
 function openPayment() {
   if (cart.items.length === 0) return
   payments.value = []
@@ -590,6 +673,20 @@ async function processPayment() {
     // Complete transaction
     await posApi.completeTransaction(transactionId)
 
+    // Record coupon redemption if a coupon was applied
+    if (couponDiscount.value && couponCode.value) {
+      try {
+        await pricingApi.recordCouponRedemption(
+          couponCode.value,
+          cart.customerId,
+          transactionId,
+          couponDiscount.value.discountAmount || transactionDiscountAmount.value
+        )
+      } catch (e) {
+        console.error('Failed to record coupon redemption:', e)
+      }
+    }
+
     // Check before clearing
     const hasDebtPayment = payments.value.some(p => p.method === 'CREDIT')
 
@@ -600,6 +697,7 @@ async function processPayment() {
     clearDeliveryAddress()
     payments.value = []
     clearTransactionDiscount()
+    clearCoupon()
     showPaymentModal.value = false
 
     alert(hasDebtPayment ? t('pos.saleCompletedWithDebt') : t('pos.saleComplete'))
@@ -1219,6 +1317,47 @@ onMounted(() => {
                 {{ formatCurrency(remainingAmount) }}
               </p>
             </div>
+          </div>
+
+          <!-- Coupon Section -->
+          <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+            <p class="text-sm font-medium text-gray-700 mb-2">{{ $t('pos.couponCode') }}</p>
+            <div class="flex gap-2">
+              <input
+                v-model="couponCode"
+                type="text"
+                :placeholder="$t('pos.couponPlaceholder')"
+                class="input flex-1 text-sm"
+                :disabled="couponDiscount !== null"
+              />
+              <button
+                v-if="!couponDiscount"
+                @click="validateCoupon"
+                :disabled="!couponCode.trim() || couponValidating"
+                class="btn-secondary text-sm whitespace-nowrap"
+              >
+                {{ couponValidating ? '...' : $t('pos.validateCoupon') }}
+              </button>
+              <button
+                v-if="couponValid && !couponDiscount"
+                @click="applyCoupon"
+                class="btn-primary text-sm whitespace-nowrap"
+              >
+                {{ $t('pos.applyCouponBtn') }}
+              </button>
+              <button
+                v-if="couponDiscount"
+                @click="clearCoupon"
+                class="text-red-500 hover:text-red-700"
+              >
+                <XMarkIcon class="h-5 w-5" />
+              </button>
+            </div>
+            <p v-if="couponError" class="text-xs text-red-500 mt-1">{{ couponError }}</p>
+            <p v-if="couponValid === true && !couponDiscount" class="text-xs text-green-600 mt-1">{{ $t('pos.couponValidMsg') }}</p>
+            <p v-if="couponDiscount" class="text-xs text-green-600 mt-1">
+              {{ $t('pos.couponApplied') }}: -{{ formatCurrency(couponDiscount.discountAmount || transactionDiscountAmount) }} {{ $t('sum') }}
+            </p>
           </div>
 
           <!-- Added Payments (Split) -->
