@@ -10,6 +10,11 @@
   "totalPurchases": "Жами харидлар",
   "lastPurchase": "Охирги харид",
   "confirmDelete": "\"{name}\" мижозини ўчирмоқчимисиз?",
+  "filterAll": "Барчаси",
+  "creditHold": "Кредит тўхтатилган",
+  "overCreditLimit": "Лимитдан ошган",
+  "creditInfo": "Кредит маълумоти",
+  "totalRecords": "та ёзув",
   "form": {
     "newCustomer": "Янги мижоз",
     "editCustomer": "Мижозни таҳрирлаш",

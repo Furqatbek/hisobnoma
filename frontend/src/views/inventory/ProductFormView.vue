@@ -3,7 +3,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { productsApi, categoriesApi, brandsApi, uomApi, suppliersApi } from '@/services/api'
-import { ArrowLeftIcon, PhotoIcon, TrashIcon, StarIcon, PlusIcon, PencilIcon, XMarkIcon, ScaleIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, PhotoIcon, TrashIcon, StarIcon, PlusIcon, PencilIcon, XMarkIcon, ScaleIcon, SparklesIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/vue/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/vue/24/solid'
 
 const { t } = useI18n()
@@ -295,6 +295,143 @@ const availableAltUoms = computed(() => {
   return uoms.value.filter(u => !linkedIds.has(u.id))
 })
 
+// ==================== SKU / Barcode Generators ====================
+const skuValidation = ref(null)
+const barcodeValidation = ref(null)
+
+async function generateSku() {
+  try {
+    const res = await productsApi.generateSku()
+    form.sku = res.data.sku
+    skuValidation.value = null
+  } catch (error) {
+    console.error('Failed to generate SKU:', error)
+  }
+}
+
+async function generateSkuFromName() {
+  if (!form.name?.trim()) return
+  try {
+    const res = await productsApi.generateSkuFromName(form.name)
+    form.sku = res.data.sku
+    skuValidation.value = null
+  } catch (error) {
+    console.error('Failed to generate SKU from name:', error)
+  }
+}
+
+async function validateSku() {
+  if (!form.sku?.trim()) { skuValidation.value = null; return }
+  try {
+    const res = await productsApi.validateSku(form.sku)
+    skuValidation.value = res.data
+  } catch (error) {
+    console.error('Failed to validate SKU:', error)
+  }
+}
+
+async function generateBarcode() {
+  try {
+    const res = await productsApi.generateBarcode()
+    form.barcode = res.data.barcode
+    barcodeValidation.value = null
+  } catch (error) {
+    console.error('Failed to generate barcode:', error)
+  }
+}
+
+async function generateEan13() {
+  try {
+    const res = await productsApi.generateEan13('860')
+    form.barcode = res.data.barcode
+    barcodeValidation.value = null
+  } catch (error) {
+    console.error('Failed to generate EAN-13:', error)
+  }
+}
+
+async function validateBarcode() {
+  if (!form.barcode?.trim()) { barcodeValidation.value = null; return }
+  try {
+    const res = await productsApi.validateBarcode(form.barcode)
+    barcodeValidation.value = res.data
+  } catch (error) {
+    console.error('Failed to validate barcode:', error)
+  }
+}
+
+// ==================== Variant Management ====================
+const productVariants = ref([])
+const showVariantModal = ref(false)
+const editingVariant = ref(null)
+const savingVariant = ref(false)
+const variantForm = reactive({
+  name: '',
+  sku: '',
+  barcode: '',
+  costPrice: null,
+  sellingPrice: null,
+  active: true
+})
+
+async function loadVariants() {
+  if (!isEdit.value) return
+  try {
+    const res = await productsApi.getVariants(route.params.id)
+    productVariants.value = res.data || []
+  } catch (error) {
+    console.error('Failed to load variants:', error)
+  }
+}
+
+function openAddVariantModal() {
+  editingVariant.value = null
+  Object.assign(variantForm, { name: '', sku: '', barcode: '', costPrice: null, sellingPrice: null, active: true })
+  showVariantModal.value = true
+}
+
+function openEditVariantModal(v) {
+  editingVariant.value = v
+  Object.assign(variantForm, {
+    name: v.name || '',
+    sku: v.sku || '',
+    barcode: v.barcode || '',
+    costPrice: v.costPrice,
+    sellingPrice: v.sellingPrice,
+    active: v.active
+  })
+  showVariantModal.value = true
+}
+
+async function handleSaveVariant() {
+  if (!variantForm.name?.trim()) return
+  savingVariant.value = true
+  try {
+    if (editingVariant.value) {
+      await productsApi.updateVariant(route.params.id, editingVariant.value.id, variantForm)
+    } else {
+      await productsApi.addVariant(route.params.id, variantForm)
+    }
+    showVariantModal.value = false
+    await loadVariants()
+  } catch (error) {
+    console.error('Failed to save variant:', error)
+    alert(error.response?.data?.message || t('failedToSave'))
+  } finally {
+    savingVariant.value = false
+  }
+}
+
+async function handleDeleteVariant(v) {
+  if (!confirm(t('inventory.productForm.confirmDeleteVariant', { name: v.name }))) return
+  try {
+    await productsApi.deleteVariant(route.params.id, v.id)
+    await loadVariants()
+  } catch (error) {
+    console.error('Failed to delete variant:', error)
+  }
+}
+
 function formatCurrency(value) {
   if (value == null) return '-'
   return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value)
@@ -326,7 +463,7 @@ onMounted(async () => {
       form.categoryId = productData.category?.id || productData.categoryId
       form.brandId = productData.brand?.id || productData.brandId
       form.baseUomId = productData.baseUom?.id || productData.baseUomId
-      await Promise.all([loadImages(), loadProductVendors(), loadProductAltUoms()])
+      await Promise.all([loadImages(), loadProductVendors(), loadProductAltUoms(), loadVariants()])
     }
   } catch (error) {
     console.error('Failed to load data:', error)
@@ -406,13 +543,50 @@ async function handleSubmit() {
         <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label class="label">{{ $t('inventory.products.sku') }} *</label>
-            <input v-model="form.sku" type="text" :class="[errors.sku ? 'input-error' : 'input']" />
+            <div class="flex gap-2">
+              <div class="flex-1 relative">
+                <input v-model="form.sku" @blur="validateSku" type="text" :class="[errors.sku ? 'input-error' : 'input']" />
+                <div v-if="skuValidation" class="absolute right-2 top-1/2 -translate-y-1/2">
+                  <CheckCircleIcon v-if="skuValidation.available" class="h-5 w-5 text-green-500" />
+                  <XCircleIcon v-else class="h-5 w-5 text-red-500" />
+                </div>
+              </div>
+              <button type="button" @click="generateSku" class="btn-secondary text-xs px-2" :title="$t('inventory.productForm.generateSku')">
+                <SparklesIcon class="h-4 w-4" />
+              </button>
+              <button v-if="form.name" type="button" @click="generateSkuFromName" class="btn-secondary text-xs px-2" :title="$t('inventory.productForm.generateFromName')">
+                SKU
+              </button>
+            </div>
             <p v-if="errors.sku" class="mt-1 text-sm text-red-600">{{ errors.sku }}</p>
+            <p v-if="skuValidation && !skuValidation.available" class="mt-1 text-xs text-red-500">
+              {{ skuValidation.exists ? $t('inventory.productForm.skuExists') : $t('inventory.productForm.skuInvalid') }}
+            </p>
           </div>
 
           <div>
             <label class="label">{{ $t('inventory.productForm.barcode') }}</label>
-            <input v-model="form.barcode" type="text" class="input" />
+            <div class="flex gap-2">
+              <div class="flex-1 relative">
+                <input v-model="form.barcode" @blur="validateBarcode" type="text" class="input" />
+                <div v-if="barcodeValidation" class="absolute right-2 top-1/2 -translate-y-1/2">
+                  <CheckCircleIcon v-if="barcodeValidation.available" class="h-5 w-5 text-green-500" />
+                  <XCircleIcon v-else class="h-5 w-5 text-red-500" />
+                </div>
+              </div>
+              <button type="button" @click="generateBarcode" class="btn-secondary text-xs px-2" :title="$t('inventory.productForm.generateBarcode')">
+                <SparklesIcon class="h-4 w-4" />
+              </button>
+              <button type="button" @click="generateEan13" class="btn-secondary text-xs px-2" :title="$t('inventory.productForm.generateEan13')">
+                EAN
+              </button>
+            </div>
+            <p v-if="barcodeValidation && !barcodeValidation.available" class="mt-1 text-xs text-red-500">
+              {{ barcodeValidation.exists ? $t('inventory.productForm.barcodeExists') : $t('inventory.productForm.barcodeInvalid') }}
+            </p>
+            <p v-if="barcodeValidation?.type" class="mt-1 text-xs text-gray-500">
+              {{ $t('inventory.productForm.barcodeType') }}: {{ barcodeValidation.type }}
+            </p>
           </div>
 
           <div class="md:col-span-2">
@@ -750,6 +924,71 @@ async function handleSubmit() {
         </div>
       </div>
 
+      <!-- Variants -->
+      <div class="card">
+        <div class="card-header flex items-center justify-between">
+          <h3 class="text-lg font-medium">{{ $t('inventory.productForm.variants') }}</h3>
+          <button
+            v-if="isEdit"
+            type="button"
+            @click="openAddVariantModal"
+            class="btn-primary text-sm flex items-center gap-1"
+          >
+            <PlusIcon class="h-4 w-4" />
+            {{ $t('inventory.productForm.addVariant') }}
+          </button>
+        </div>
+        <div class="card-body">
+          <div v-if="isEdit">
+            <div v-if="productVariants.length === 0" class="text-center py-6 text-gray-500 text-sm">
+              {{ $t('inventory.productForm.noVariants') }}
+            </div>
+            <div v-else class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>{{ $t('name') }}</th>
+                    <th>{{ $t('inventory.products.sku') }}</th>
+                    <th>{{ $t('inventory.productForm.barcode') }}</th>
+                    <th class="text-right">{{ $t('inventory.productForm.costPrice') }}</th>
+                    <th class="text-right">{{ $t('inventory.productForm.sellingPrice') }}</th>
+                    <th class="text-center">{{ $t('status') }}</th>
+                    <th class="text-right">{{ $t('actions') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr v-for="v in productVariants" :key="v.id">
+                    <td class="font-medium">{{ v.name }}</td>
+                    <td class="font-mono text-sm text-gray-500">{{ v.sku || '-' }}</td>
+                    <td class="text-sm text-gray-500">{{ v.barcode || '-' }}</td>
+                    <td class="text-right text-sm">{{ v.costPrice != null ? formatCurrency(v.costPrice) : '-' }}</td>
+                    <td class="text-right text-sm">{{ v.sellingPrice != null ? formatCurrency(v.sellingPrice) : '-' }}</td>
+                    <td class="text-center">
+                      <span :class="['badge text-xs', v.active ? 'badge-info' : 'badge-danger']">
+                        {{ v.active ? $t('active') : $t('inactive') }}
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <div class="flex items-center justify-end gap-1">
+                        <button type="button" @click="openEditVariantModal(v)" class="p-1.5 text-gray-400 hover:text-primary-600 rounded hover:bg-gray-100">
+                          <PencilIcon class="h-4 w-4" />
+                        </button>
+                        <button type="button" @click="handleDeleteVariant(v)" class="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-gray-100">
+                          <TrashIcon class="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div v-else class="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+            <span class="text-sm text-gray-500">{{ $t('inventory.productForm.variantsAfterCreate') }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Inventory -->
       <div class="card">
         <div class="card-header">
@@ -898,6 +1137,69 @@ async function handleSubmit() {
             class="btn-primary"
           >
             {{ savingVendor ? $t('saving') : $t('save') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variant Modal -->
+    <div
+      v-if="showVariantModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click.self="showVariantModal = false"
+    >
+      <div class="bg-white rounded-xl shadow-xl max-w-lg w-full">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">
+            {{ editingVariant ? $t('inventory.productForm.editVariant') : $t('inventory.productForm.addVariant') }}
+          </h3>
+          <button @click="showVariantModal = false" class="p-1 text-gray-400 hover:text-gray-600 rounded">
+            <XMarkIcon class="h-5 w-5" />
+          </button>
+        </div>
+
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="label">{{ $t('name') }} *</label>
+            <input v-model="variantForm.name" type="text" class="input" :placeholder="$t('inventory.productForm.variantNamePlaceholder')" />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="label">{{ $t('inventory.products.sku') }}</label>
+              <input v-model="variantForm.sku" type="text" class="input" />
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.productForm.barcode') }}</label>
+              <input v-model="variantForm.barcode" type="text" class="input" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="label">{{ $t('inventory.productForm.costPrice') }}</label>
+              <input v-model.number="variantForm.costPrice" type="number" step="0.01" min="0" class="input" />
+            </div>
+            <div>
+              <label class="label">{{ $t('inventory.productForm.sellingPrice') }}</label>
+              <input v-model.number="variantForm.sellingPrice" type="number" step="0.01" min="0" class="input" />
+            </div>
+          </div>
+          <label class="flex items-center">
+            <input v-model="variantForm.active" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
+            <span class="ml-2 text-sm text-gray-700">{{ $t('active') }}</span>
+          </label>
+        </div>
+
+        <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
+          <button type="button" @click="showVariantModal = false" class="btn-secondary">
+            {{ $t('cancel') }}
+          </button>
+          <button
+            type="button"
+            @click="handleSaveVariant"
+            :disabled="savingVariant || !variantForm.name?.trim()"
+            class="btn-primary"
+          >
+            {{ savingVariant ? $t('saving') : $t('save') }}
           </button>
         </div>
       </div>

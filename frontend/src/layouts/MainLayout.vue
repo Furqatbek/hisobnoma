@@ -104,7 +104,8 @@ const navigation = computed(() => [
       { name: t('nav.payments'), href: '/finance/payments', icon: BanknotesIcon },
       { name: t('nav.arInvoices'), href: '/finance/invoices', icon: DocumentTextIcon },
       { name: t('nav.expenses'), href: '/finance/expenses', icon: CurrencyDollarIcon },
-      { name: t('nav.chartOfAccounts'), href: '/finance/accounts', icon: ClipboardDocumentListIcon }
+      { name: t('nav.chartOfAccounts'), href: '/finance/accounts', icon: ClipboardDocumentListIcon },
+      { name: t('nav.journalEntries'), href: '/finance/journal-entries', icon: DocumentTextIcon }
     ]
   },
   {

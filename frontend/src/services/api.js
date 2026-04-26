@@ -129,7 +129,37 @@ export const productsApi = {
   getActiveUoms: (id) => api.get(`/inventory/products/${id}/uoms/active`),
   addUom: (id, data) => api.post(`/inventory/products/${id}/uoms`, data),
   updateUom: (id, uomId, data) => api.put(`/inventory/products/${id}/uoms/${uomId}`, data),
-  removeUom: (id, uomId) => api.delete(`/inventory/products/${id}/uoms/${uomId}`)
+  removeUom: (id, uomId) => api.delete(`/inventory/products/${id}/uoms/${uomId}`),
+  getBySku: (sku) => api.get(`/inventory/products/sku/${sku}`),
+  getByCategory: (categoryId, params) => api.get(`/inventory/products/category/${categoryId}`, { params }),
+  getByBrand: (brandId, params) => api.get(`/inventory/products/brand/${brandId}`, { params }),
+  getCount: () => api.get('/inventory/products/count'),
+  generateSku: (prefix) => api.get('/inventory/products/generate-sku', { params: { prefix: prefix || undefined } }),
+  generateSkuFromName: (name) => api.get('/inventory/products/generate-sku-from-name', { params: { name } }),
+  validateSku: (sku) => api.get(`/inventory/products/validate-sku/${sku}`),
+  generateBarcode: (prefix) => api.get('/inventory/products/generate-barcode', { params: { prefix: prefix || undefined } }),
+  generateEan13: (countryCode, companyCode) => api.get('/inventory/products/generate-ean13', { params: { countryCode, companyCode: companyCode || undefined } }),
+  validateBarcode: (barcode) => api.get(`/inventory/products/validate-barcode/${barcode}`),
+  getVariants: (id) => api.get(`/inventory/products/${id}/variants`),
+  addVariant: (id, data) => api.post(`/inventory/products/${id}/variants`, data),
+  updateVariant: (id, variantId, data) => api.put(`/inventory/products/${id}/variants/${variantId}`, data),
+  deleteVariant: (id, variantId) => api.delete(`/inventory/products/${id}/variants/${variantId}`),
+  importProducts: (file, format) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/inventory/products/import', formData, {
+      params: { format: format || 'csv' },
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  getImportTemplate: (format) => api.get('/inventory/products/import/template', {
+    params: { format: format || 'csv' },
+    responseType: 'blob'
+  }),
+  exportProducts: (params) => api.get('/inventory/products/export', {
+    params,
+    responseType: 'blob'
+  })
 }
 
 // Categories API - Backend: /api/v1/inventory/categories
@@ -238,14 +268,20 @@ export const posApi = {
 // Customers API - Backend: /api/v1/finance/customers
 export const customersApi = {
   getAll: (params) => api.get('/finance/customers', { params }),
+  getActive: () => api.get('/finance/customers/active'),
   getById: (id) => api.get(`/finance/customers/${id}`),
+  getByCode: (code) => api.get(`/finance/customers/code/${code}`),
   create: (data) => api.post('/finance/customers', data),
   update: (id, data) => api.put(`/finance/customers/${id}`, data),
   delete: (id) => api.delete(`/finance/customers/${id}`),
   getNextCode: () => api.get('/finance/customers/next-code'),
   search: (query) => api.get('/finance/customers/search', { params: { query } }),
+  activate: (id) => api.patch(`/finance/customers/${id}/activate`),
   setCreditHold: (id, hold) => api.patch(`/finance/customers/${id}/credit-hold`, null, { params: { hold } }),
-  updateCreditLimit: (id, creditLimit) => api.patch(`/finance/customers/${id}/credit-limit`, null, { params: { creditLimit } })
+  updateCreditLimit: (id, creditLimit) => api.patch(`/finance/customers/${id}/credit-limit`, null, { params: { creditLimit } }),
+  getCreditHold: () => api.get('/finance/customers/credit-hold'),
+  getOverCreditLimit: () => api.get('/finance/customers/over-credit-limit'),
+  canInvoice: (id, amount) => api.get(`/finance/customers/${id}/can-invoice`, { params: { amount } })
 }
 
 // AR Reports API - Backend: /api/v1/finance/ar-reports
@@ -289,10 +325,21 @@ export const arPaymentsApi = {
 // Suppliers/Vendors API - Backend: /api/v1/inventory/vendors
 export const suppliersApi = {
   getAll: (params) => api.get('/inventory/vendors', { params }),
+  getActive: () => api.get('/inventory/vendors/active'),
+  getPreferred: () => api.get('/inventory/vendors/preferred'),
   getById: (id) => api.get(`/inventory/vendors/${id}`),
+  getByCode: (code) => api.get(`/inventory/vendors/code/${code}`),
+  search: (q, params) => api.get('/inventory/vendors/search', { params: { q, ...params } }),
   create: (data) => api.post('/inventory/vendors', data),
   update: (id, data) => api.put(`/inventory/vendors/${id}`, data),
-  delete: (id) => api.delete(`/inventory/vendors/${id}`)
+  delete: (id) => api.delete(`/inventory/vendors/${id}`),
+  activate: (id) => api.put(`/inventory/vendors/${id}/activate`),
+  getContacts: (vendorId) => api.get(`/inventory/vendors/${vendorId}/contacts`),
+  getPrimaryContact: (vendorId) => api.get(`/inventory/vendors/${vendorId}/contacts/primary`),
+  createContact: (vendorId, data) => api.post(`/inventory/vendors/${vendorId}/contacts`, data),
+  updateContact: (id, data) => api.put(`/inventory/vendors/contacts/${id}`, data),
+  deleteContact: (id) => api.delete(`/inventory/vendors/contacts/${id}`),
+  setPrimaryContact: (id) => api.put(`/inventory/vendors/contacts/${id}/set-primary`)
 }
 
 // Purchase Orders API - Backend: /api/v1/inventory/purchase-orders
@@ -472,7 +519,11 @@ export const journalEntriesApi = {
   getBySource: (source, params) => api.get(`/finance/journal-entries/source/${source}`, { params }),
   getByStatus: (status, params) => api.get(`/finance/journal-entries/status/${status}`, { params }),
   getByDateRange: (startDate, endDate) => api.get('/finance/journal-entries/date-range', { params: { startDate, endDate } }),
-  search: (q, params) => api.get('/finance/journal-entries/search', { params: { q, ...params } })
+  search: (q, params) => api.get('/finance/journal-entries/search', { params: { q, ...params } }),
+  create: (data) => api.post('/finance/journal-entries', data),
+  post: (id) => api.post(`/finance/journal-entries/${id}/post`),
+  reverse: (id, reversalDate) => api.post(`/finance/journal-entries/${id}/reverse`, null, { params: { reversalDate } }),
+  delete: (id) => api.delete(`/finance/journal-entries/${id}`)
 }
 
 // Expense Records API - Backend: /api/v1/web/expenses

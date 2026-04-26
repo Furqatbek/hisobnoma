@@ -82,6 +82,26 @@
     "companyName": "Компания номи",
     "nameRequired": "Номи киритилиши шарт",
     "codeRequired": "Коди киритилиши шарт",
-    "contact": "Алоқа"
+    "contact": "Алоқа",
+    "filterAll": "Барчаси",
+    "preferred": "Танланган",
+    "contacts": "Контактлар",
+    "manageContacts": "Контактлар",
+    "contactsTitle": "{name} — контактлар",
+    "addContact": "Контакт қўшиш",
+    "newContact": "Янги контакт",
+    "editContact": "Контактни таҳрирлаш",
+    "primaryContact": "Асосий",
+    "setPrimary": "Асосий қилиш",
+    "noContacts": "Контактлар йўқ",
+    "confirmDeleteContact": "\"{name}\" контактини ўчирмоқчимисиз?",
+    "jobTitle": "Лавозим",
+    "contactType": "Контакт тури",
+    "contactTypes": {
+      "GENERAL": "Умумий",
+      "BILLING": "Ҳисоб-китоб",
+      "ORDERING": "Буюртма",
+      "SUPPORT": "Қўллаб-қувватлаш"
+    }
   }
 }

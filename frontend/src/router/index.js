@@ -286,6 +286,11 @@ const routes = [
             path: 'accounts',
             name: 'chart-of-accounts',
             component: () => import('@/views/finance/ChartOfAccountsView.vue')
+          },
+          {
+            path: 'journal-entries',
+            name: 'journal-entries',
+            component: () => import('@/views/finance/JournalEntriesView.vue')
           }
         ]
       },

@@ -290,5 +290,53 @@
       "REVENUE": "Даромад",
       "EXPENSE": "Харажат"
     }
+  },
+  "journalEntries": {
+    "title": "Бухгалтерия ёзувлари",
+    "subtitle": "Бош журнал ёзувларини бошқариш",
+    "newEntry": "Янги ёзув",
+    "all": "Барчаси",
+    "searchPlaceholder": "Тавсиф ёки рақам бўйича қидириш...",
+    "noEntries": "Ёзувлар топилмади",
+    "entryNumber": "Ёзув №",
+    "date": "Сана",
+    "source": "Манба",
+    "totalAmount": "Жами сумма",
+    "totalRecords": "та ёзув",
+    "reference": "Ҳавола",
+    "entryDetail": "Ёзув тафсилотлари",
+    "account": "Ҳисобварақ",
+    "debit": "Дебет",
+    "credit": "Кредит",
+    "lines": "Қаторлар",
+    "addLine": "Қатор қўшиш",
+    "selectAccount": "Ҳисобварақ танланг",
+    "descriptionPlaceholder": "Ёзув тавсифи...",
+    "createEntry": "Ёзув яратиш",
+    "createError": "Ёзувни яратишда хатолик",
+    "post": "Ўтказиш",
+    "confirmPost": "Бу ёзувни ўтказмоқчимисиз? Ўтказилгандан кейин ўзгартириш мумкин бўлмайди.",
+    "postError": "Ўтказишда хатолик",
+    "reverse": "Тескари ёзув",
+    "reverseTitle": "Тескари ёзув яратиш",
+    "reversalDate": "Тескари ёзув санаси",
+    "confirmReverse": "Тескари ёзув яратиш",
+    "reverseError": "Тескари ёзувда хатолик",
+    "confirmDelete": "Бу ёзувни ўчирмоқчимисиз?",
+    "deleteError": "Ўчиришда хатолик",
+    "notBalanced": "Дебет ва кредит тенг бўлиши керак (фарқ: {diff})",
+    "status": {
+      "DRAFT": "Қоралама",
+      "POSTED": "Ўтказилган",
+      "REVERSED": "Тескари"
+    },
+    "sources": {
+      "MANUAL": "Қўлда",
+      "AR_INVOICE": "Кирим фактура",
+      "AR_PAYMENT": "Кирим тўлов",
+      "AP_INVOICE": "Чиқим фактура",
+      "AP_PAYMENT": "Чиқим тўлов",
+      "PAYROLL": "Иш ҳақи"
+    }
   }
 }

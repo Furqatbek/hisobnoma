@@ -1,28 +1,61 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { customersApi } from '@/services/api'
-import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/vue/24/outline'
+import {
+  PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
+  PhoneIcon, EnvelopeIcon, ExclamationTriangleIcon, NoSymbolIcon
+} from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 
 const customers = ref([])
 const loading = ref(true)
 const search = ref('')
+const activeFilter = ref('all')
 const pagination = ref({ page: 0, size: 20, totalPages: 0, totalElements: 0 })
+
+const creditHoldCustomers = ref([])
+const overCreditCustomers = ref([])
+const creditHoldCount = ref(0)
+const overCreditCount = ref(0)
+
+const filters = computed(() => [
+  { key: 'all', label: t('customers.filterAll') },
+  { key: 'active', label: t('active') },
+  { key: 'creditHold', label: t('customers.creditHold'), count: creditHoldCount.value },
+  { key: 'overCredit', label: t('customers.overCreditLimit'), count: overCreditCount.value }
+])
 
 async function fetchCustomers() {
   loading.value = true
   try {
-    const response = await customersApi.getAll({
-      page: pagination.value.page,
-      size: pagination.value.size,
-      search: search.value || undefined
-    })
-    customers.value = response.data.content || []
-    pagination.value.totalPages = response.data.page?.totalPages || 0
-    pagination.value.totalElements = response.data.page?.totalElements || 0
+    if (activeFilter.value === 'creditHold') {
+      const res = await customersApi.getCreditHold()
+      customers.value = res.data || []
+      pagination.value.totalElements = customers.value.length
+      pagination.value.totalPages = 1
+    } else if (activeFilter.value === 'overCredit') {
+      const res = await customersApi.getOverCreditLimit()
+      customers.value = res.data || []
+      pagination.value.totalElements = customers.value.length
+      pagination.value.totalPages = 1
+    } else if (activeFilter.value === 'active') {
+      const res = await customersApi.getActive()
+      customers.value = res.data || []
+      pagination.value.totalElements = customers.value.length
+      pagination.value.totalPages = 1
+    } else {
+      const response = await customersApi.getAll({
+        page: pagination.value.page,
+        size: pagination.value.size,
+        search: search.value || undefined
+      })
+      customers.value = response.data.content || []
+      pagination.value.totalPages = response.data.page?.totalPages || 0
+      pagination.value.totalElements = response.data.page?.totalElements || 0
+    }
   } catch (error) {
     console.error('Failed to fetch customers:', error)
   } finally {
@@ -30,13 +63,46 @@ async function fetchCustomers() {
   }
 }
 
-onMounted(fetchCustomers)
+async function loadCreditCounts() {
+  try {
+    const [holdRes, overRes] = await Promise.all([
+      customersApi.getCreditHold(),
+      customersApi.getOverCreditLimit()
+    ])
+    creditHoldCount.value = (holdRes.data || []).length
+    overCreditCount.value = (overRes.data || []).length
+  } catch (error) {
+    console.error('Failed to load credit counts:', error)
+  }
+}
+
+onMounted(() => {
+  fetchCustomers()
+  loadCreditCounts()
+})
+
+function switchFilter(key) {
+  activeFilter.value = key
+  pagination.value.page = 0
+  fetchCustomers()
+}
+
+async function toggleActive(customer) {
+  try {
+    await customersApi.activate(customer.id)
+    fetchCustomers()
+    loadCreditCounts()
+  } catch (error) {
+    console.error('Failed to toggle customer status:', error)
+  }
+}
 
 async function deleteCustomer(customer) {
   if (!confirm(t('customers.confirmDelete'))) return
   try {
     await customersApi.delete(customer.id)
     fetchCustomers()
+    loadCreditCounts()
   } catch (error) {
     console.error('Failed to delete customer:', error)
   }
@@ -60,7 +126,32 @@ function formatCurrency(value) {
       </RouterLink>
     </div>
 
-    <div class="card">
+    <!-- Filter Tabs -->
+    <div class="border-b border-gray-200">
+      <nav class="flex space-x-4 overflow-x-auto">
+        <button
+          v-for="f in filters"
+          :key="f.key"
+          @click="switchFilter(f.key)"
+          :class="[
+            'px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors',
+            activeFilter === f.key
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ]"
+        >
+          {{ f.label }}
+          <span
+            v-if="f.count"
+            class="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+          >
+            {{ f.count }}
+          </span>
+        </button>
+      </nav>
+    </div>
+
+    <div class="card" v-if="activeFilter === 'all'">
       <div class="card-body">
         <div class="relative">
           <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -92,6 +183,7 @@ function formatCurrency(value) {
               <th>{{ $t('pos.transactions.customer') }}</th>
               <th>{{ $t('customers.form.basicInfo') }}</th>
               <th class="text-right">{{ $t('balance') }}</th>
+              <th>{{ $t('customers.creditInfo') }}</th>
               <th>{{ $t('status') }}</th>
               <th class="text-right">{{ $t('actions') }}</th>
             </tr>
@@ -130,9 +222,27 @@ function formatCurrency(value) {
                 </span>
               </td>
               <td>
-                <span :class="['badge', customer.active !== false ? 'badge-success' : 'badge-danger']">
+                <div class="flex flex-col gap-1">
+                  <span v-if="customer.creditHold" class="inline-flex items-center text-xs text-red-600">
+                    <NoSymbolIcon class="h-3.5 w-3.5 mr-1" />
+                    {{ $t('customers.creditHold') }}
+                  </span>
+                  <span v-if="customer.creditLimit" class="text-xs text-gray-500">
+                    {{ $t('customers.form.creditLimit') }}: {{ formatCurrency(customer.creditLimit) }}
+                  </span>
+                  <span v-if="customer.balance > customer.creditLimit && customer.creditLimit > 0" class="inline-flex items-center text-xs text-orange-600">
+                    <ExclamationTriangleIcon class="h-3.5 w-3.5 mr-1" />
+                    {{ $t('customers.overCreditLimit') }}
+                  </span>
+                </div>
+              </td>
+              <td>
+                <button
+                  @click="toggleActive(customer)"
+                  :class="['badge cursor-pointer', customer.active !== false ? 'badge-success' : 'badge-danger']"
+                >
                   {{ customer.active !== false ? $t('active') : $t('inactive') }}
-                </span>
+                </button>
               </td>
               <td class="text-right">
                 <div class="flex items-center justify-end space-x-2">
@@ -147,6 +257,31 @@ function formatCurrency(value) {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="pagination.totalPages > 1 && activeFilter === 'all'" class="px-6 py-4 border-t border-gray-200">
+        <div class="flex items-center justify-between">
+          <p class="text-sm text-gray-500">
+            {{ pagination.totalElements }} {{ $t('customers.totalRecords') }}
+          </p>
+          <div class="flex space-x-2">
+            <button
+              @click="pagination.page--; fetchCustomers()"
+              :disabled="pagination.page === 0"
+              class="btn-secondary px-3 py-1"
+            >
+              {{ $t('previous') }}
+            </button>
+            <button
+              @click="pagination.page++; fetchCustomers()"
+              :disabled="pagination.page >= pagination.totalPages - 1"
+              class="btn-secondary px-3 py-1"
+            >
+              {{ $t('next') }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
