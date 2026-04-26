@@ -696,7 +696,8 @@
     "yearDetails": "Йил тафсилотлари",
     "totalPeriods": "Жами давралар",
     "openPeriodsCount": "Очиқ давралар сони",
-    "closedPeriodsCount": "Ёпиқ давралар сони"
+    "closedPeriodsCount": "Ёпиқ давралар сони",
+    "paginatedView": "Саҳифали кўриниш"
   },
   "recurringJournals": {
     "title": "Такрорий ёзувлар",
