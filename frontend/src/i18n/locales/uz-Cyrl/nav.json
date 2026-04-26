@@ -49,5 +49,15 @@
   "settings": "Созламалар",
   "systemSettings": "Тизим созламалари",
   "tenantSettings": "Ижарачи созламалари",
-  "auditLog": "Аудит журнали"
+  "auditLog": "Аудит журнали",
+  "bankAccounts": "Банк ҳисоблари",
+  "bankTransactions": "Банк транзакциялари",
+  "creditNotes": "Кредит ёзувлари",
+  "currencies": "Валюталар",
+  "taxCodes": "Солиқ кодлари",
+  "fiscalPeriods": "Молиявий давралар",
+  "recurringJournals": "Такрорий ёзувлар",
+  "promotions": "Акциялар",
+  "coupons": "Купонлар",
+  "priceLists": "Нарх рўйхатлари"
 }

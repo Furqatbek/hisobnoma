@@ -145,6 +145,21 @@ const routes = [
         name: 'shifts',
         component: () => import('@/views/pos/ShiftsView.vue')
       },
+      {
+        path: 'pos/promotions',
+        name: 'promotions',
+        component: () => import('@/views/pos/PromotionsView.vue')
+      },
+      {
+        path: 'pos/coupons',
+        name: 'coupons',
+        component: () => import('@/views/pos/CouponsView.vue')
+      },
+      {
+        path: 'pos/price-lists',
+        name: 'price-lists',
+        component: () => import('@/views/pos/PriceListsView.vue')
+      },
       // Customers
       {
         path: 'customers',
@@ -291,6 +306,41 @@ const routes = [
             path: 'journal-entries',
             name: 'journal-entries',
             component: () => import('@/views/finance/JournalEntriesView.vue')
+          },
+          {
+            path: 'bank-accounts',
+            name: 'bank-accounts',
+            component: () => import('@/views/finance/BankAccountsView.vue')
+          },
+          {
+            path: 'bank-transactions',
+            name: 'bank-transactions',
+            component: () => import('@/views/finance/BankTransactionsView.vue')
+          },
+          {
+            path: 'credit-notes',
+            name: 'credit-notes',
+            component: () => import('@/views/finance/CreditNotesView.vue')
+          },
+          {
+            path: 'currencies',
+            name: 'currencies',
+            component: () => import('@/views/finance/CurrenciesView.vue')
+          },
+          {
+            path: 'tax-codes',
+            name: 'tax-codes',
+            component: () => import('@/views/finance/TaxCodesView.vue')
+          },
+          {
+            path: 'fiscal-periods',
+            name: 'fiscal-periods',
+            component: () => import('@/views/finance/FiscalPeriodsView.vue')
+          },
+          {
+            path: 'recurring-journals',
+            name: 'recurring-journals',
+            component: () => import('@/views/finance/RecurringJournalsView.vue')
           }
         ]
       },

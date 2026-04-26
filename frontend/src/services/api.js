@@ -562,11 +562,16 @@ export const apPaymentsApi = {
   getById: (id) => api.get(`/ap/payments/${id}`),
   getByVendor: (vendorId, params) => api.get(`/ap/payments/vendor/${vendorId}`, { params }),
   getByStatus: (status, params) => api.get(`/ap/payments/status/${status}`, { params }),
+  getByDateRange: (startDate, endDate) => api.get('/ap/payments/date-range', { params: { startDate, endDate } }),
+  getUnreconciled: () => api.get('/ap/payments/unreconciled'),
   create: (data) => api.post('/ap/payments', data),
   submit: (id) => api.post(`/ap/payments/${id}/submit`),
   approve: (id) => api.post(`/ap/payments/${id}/approve`),
   process: (id) => api.post(`/ap/payments/${id}/process`),
   void: (id, reason) => api.post(`/ap/payments/${id}/void`, { reason }),
+  reconcile: (id) => api.post(`/ap/payments/${id}/reconcile`),
+  getVendorTotal: (vendorId) => api.get(`/ap/payments/summary/vendor/${vendorId}/total`),
+  getDateRangeTotal: (startDate, endDate) => api.get('/ap/payments/summary/date-range/total', { params: { startDate, endDate } })
 }
 
 // HR Departments API - Backend: /api/v1/hr/departments
@@ -672,4 +677,227 @@ export const deliveryVillagesApi = {
   create: (data) => api.post('/delivery/villages', data),
   update: (id, data) => api.put(`/delivery/villages/${id}`, data),
   delete: (id) => api.delete(`/delivery/villages/${id}`)
+}
+
+// AP Reports API - Backend: /api/v1/ap/reports
+export const apReportsApi = {
+  getAging: () => api.get('/ap/reports/aging'),
+  getVendorBalance: () => api.get('/ap/reports/vendor-balance'),
+  getVendorStatement: (vendorId) => api.get(`/ap/reports/vendor/${vendorId}/statement`)
+}
+
+// Bank Accounts API - Backend: /api/v1/finance/bank-accounts
+export const bankAccountsApi = {
+  getAll: (params) => api.get('/finance/bank-accounts', { params }),
+  getAllList: () => api.get('/finance/bank-accounts/all'),
+  getActive: () => api.get('/finance/bank-accounts/active'),
+  getByType: (type) => api.get(`/finance/bank-accounts/by-type/${type}`),
+  getPaymentAccounts: () => api.get('/finance/bank-accounts/payment-accounts'),
+  getReceiptAccounts: () => api.get('/finance/bank-accounts/receipt-accounts'),
+  getDefault: () => api.get('/finance/bank-accounts/default'),
+  getById: (id) => api.get(`/finance/bank-accounts/${id}`),
+  getByCode: (code) => api.get(`/finance/bank-accounts/code/${code}`),
+  search: (query, params) => api.get('/finance/bank-accounts/search', { params: { query, ...params } }),
+  create: (data) => api.post('/finance/bank-accounts', data),
+  update: (id, data) => api.put(`/finance/bank-accounts/${id}`, data),
+  activate: (id) => api.put(`/finance/bank-accounts/${id}/activate`),
+  deactivate: (id) => api.put(`/finance/bank-accounts/${id}/deactivate`),
+  setDefault: (id) => api.put(`/finance/bank-accounts/${id}/set-default`)
+}
+
+// Bank Transactions API - Backend: /api/v1/finance/bank-transactions
+export const bankTransactionsApi = {
+  getAll: (params) => api.get('/finance/bank-transactions', { params }),
+  getByAccount: (bankAccountId, params) => api.get(`/finance/bank-transactions/by-account/${bankAccountId}`, { params }),
+  getByAccountDateRange: (bankAccountId, startDate, endDate) => api.get(`/finance/bank-transactions/by-account/${bankAccountId}/date-range`, { params: { startDate, endDate } }),
+  getById: (id) => api.get(`/finance/bank-transactions/${id}`),
+  create: (data) => api.post('/finance/bank-transactions', data),
+  transfer: (fromAccountId, toAccountId, amount, transactionDate, description) => api.post('/finance/bank-transactions/transfer', null, { params: { fromAccountId, toAccountId, amount, transactionDate, description: description || undefined } }),
+  clear: (id) => api.put(`/finance/bank-transactions/${id}/clear`),
+  void: (id, reason) => api.put(`/finance/bank-transactions/${id}/void`, null, { params: { reason: reason || undefined } }),
+  getCashFlow: (bankAccountId, startDate, endDate) => api.get(`/finance/bank-transactions/cash-flow/${bankAccountId}`, { params: { startDate, endDate } })
+}
+
+// Bank Reconciliation API - Backend: /api/v1/finance/bank-reconciliations
+export const bankReconciliationsApi = {
+  getAll: (params) => api.get('/finance/bank-reconciliations', { params }),
+  getByAccount: (bankAccountId, params) => api.get(`/finance/bank-reconciliations/by-account/${bankAccountId}`, { params }),
+  getById: (id) => api.get(`/finance/bank-reconciliations/${id}`),
+  getUnreconciled: (bankAccountId, endDate) => api.get(`/finance/bank-reconciliations/unreconciled/${bankAccountId}`, { params: { endDate } }),
+  create: (data) => api.post('/finance/bank-reconciliations', data),
+  start: (id) => api.put(`/finance/bank-reconciliations/${id}/start`),
+  reconcileTransactions: (data) => api.post('/finance/bank-reconciliations/reconcile-transactions', data),
+  complete: (id) => api.put(`/finance/bank-reconciliations/${id}/complete`),
+  cancel: (id, reason) => api.put(`/finance/bank-reconciliations/${id}/cancel`, null, { params: { reason: reason || undefined } })
+}
+
+// Credit Notes API - Backend: /api/v1/finance/credit-notes
+export const creditNotesApi = {
+  getAll: (params) => api.get('/finance/credit-notes', { params }),
+  getByCustomer: (customerId, params) => api.get(`/finance/credit-notes/customer/${customerId}`, { params }),
+  getByStatus: (status, params) => api.get(`/finance/credit-notes/status/${status}`, { params }),
+  getById: (id) => api.get(`/finance/credit-notes/${id}`),
+  getByNumber: (number) => api.get(`/finance/credit-notes/number/${number}`),
+  getAvailableByCustomer: (customerId) => api.get(`/finance/credit-notes/customer/${customerId}/available`),
+  getAvailableCredit: (customerId) => api.get(`/finance/credit-notes/customer/${customerId}/available-credit`),
+  create: (data) => api.post('/finance/credit-notes', data),
+  update: (id, data) => api.put(`/finance/credit-notes/${id}`, data),
+  approve: (id) => api.post(`/finance/credit-notes/${id}/approve`),
+  applyToInvoice: (id, invoiceId, amount) => api.post(`/finance/credit-notes/${id}/apply-to-invoice`, null, { params: { invoiceId, amount } }),
+  cancel: (id, reason) => api.post(`/finance/credit-notes/${id}/cancel`, null, { params: { reason } })
+}
+
+// Currencies API - Backend: /api/v1/finance/currencies
+export const currenciesApi = {
+  getAll: (params) => api.get('/finance/currencies', { params }),
+  getAllList: () => api.get('/finance/currencies/all'),
+  getActive: () => api.get('/finance/currencies/active'),
+  getBase: () => api.get('/finance/currencies/base'),
+  getById: (id) => api.get(`/finance/currencies/${id}`),
+  getByCode: (code) => api.get(`/finance/currencies/code/${code}`),
+  create: (data) => api.post('/finance/currencies', data),
+  update: (id, data) => api.put(`/finance/currencies/${id}`, data),
+  activate: (id) => api.put(`/finance/currencies/${id}/activate`),
+  deactivate: (id) => api.put(`/finance/currencies/${id}/deactivate`),
+  setBase: (id) => api.put(`/finance/currencies/${id}/set-base`)
+}
+
+// Exchange Rates API - Backend: /api/v1/finance/exchange-rates
+export const exchangeRatesApi = {
+  getAll: (params) => api.get('/finance/exchange-rates', { params }),
+  getAllList: () => api.get('/finance/exchange-rates/all'),
+  getCurrent: () => api.get('/finance/exchange-rates/current'),
+  getById: (id) => api.get(`/finance/exchange-rates/${id}`),
+  getEffective: (from, to, date) => api.get('/finance/exchange-rates/effective', { params: { from, to, date } }),
+  getPair: (from, to) => api.get('/finance/exchange-rates/pair', { params: { from, to } }),
+  getByDate: (date) => api.get('/finance/exchange-rates/by-date', { params: { date } }),
+  convert: (amount, from, to, date) => api.get('/finance/exchange-rates/convert', { params: { amount, from, to, date } }),
+  create: (data) => api.post('/finance/exchange-rates', data),
+  update: (id, data) => api.put(`/finance/exchange-rates/${id}`, data),
+  activate: (id) => api.put(`/finance/exchange-rates/${id}/activate`),
+  deactivate: (id) => api.put(`/finance/exchange-rates/${id}/deactivate`),
+  delete: (id) => api.delete(`/finance/exchange-rates/${id}`)
+}
+
+// Fiscal Periods API - Backend: /api/v1/finance/fiscal
+export const fiscalApi = {
+  getYears: (params) => api.get('/finance/fiscal/years', { params }),
+  getAllYears: () => api.get('/finance/fiscal/years/all'),
+  getCurrentYear: () => api.get('/finance/fiscal/years/current'),
+  getYearById: (id) => api.get(`/finance/fiscal/years/${id}`),
+  getYearDetails: (id) => api.get(`/finance/fiscal/years/${id}/details`),
+  getYearByDate: (date) => api.get('/finance/fiscal/years/by-date', { params: { date } }),
+  createYear: (data) => api.post('/finance/fiscal/years', data),
+  updateYear: (id, data) => api.put(`/finance/fiscal/years/${id}`, data),
+  setCurrentYear: (id) => api.put(`/finance/fiscal/years/${id}/set-current`),
+  closeYear: (id) => api.post(`/finance/fiscal/years/${id}/close`),
+  getPeriods: (yearId) => api.get(`/finance/fiscal/years/${yearId}/periods`),
+  getPeriodById: (id) => api.get(`/finance/fiscal/periods/${id}`),
+  getPeriodByDate: (date) => api.get('/finance/fiscal/periods/by-date', { params: { date } }),
+  getOpenPeriods: () => api.get('/finance/fiscal/periods/open'),
+  closePeriod: (id) => api.post(`/finance/fiscal/periods/${id}/close`),
+  reopenPeriod: (id, reason) => api.post(`/finance/fiscal/periods/${id}/reopen`, null, { params: { reason } })
+}
+
+// Recurring Journals API - Backend: /api/v1/finance/recurring-journals
+export const recurringJournalsApi = {
+  getAll: (params) => api.get('/finance/recurring-journals', { params }),
+  getById: (id) => api.get(`/finance/recurring-journals/${id}`),
+  create: (data) => api.post('/finance/recurring-journals', data),
+  update: (id, data) => api.put(`/finance/recurring-journals/${id}`, data),
+  delete: (id) => api.delete(`/finance/recurring-journals/${id}`),
+  activate: (id) => api.put(`/finance/recurring-journals/${id}/activate`),
+  deactivate: (id) => api.put(`/finance/recurring-journals/${id}/deactivate`),
+  execute: (id) => api.post(`/finance/recurring-journals/${id}/execute`)
+}
+
+// Tax Codes API - Backend: /api/v1/finance/tax-codes
+export const taxCodesApi = {
+  getAll: (params) => api.get('/finance/tax-codes', { params }),
+  getAllList: () => api.get('/finance/tax-codes/all'),
+  getActive: () => api.get('/finance/tax-codes/active'),
+  getByType: (type) => api.get(`/finance/tax-codes/by-type/${type}`),
+  getSales: () => api.get('/finance/tax-codes/sales'),
+  getPurchases: () => api.get('/finance/tax-codes/purchases'),
+  getById: (id) => api.get(`/finance/tax-codes/${id}`),
+  getByCode: (code) => api.get(`/finance/tax-codes/code/${code}`),
+  search: (query, params) => api.get('/finance/tax-codes/search', { params: { query, ...params } }),
+  create: (data) => api.post('/finance/tax-codes', data),
+  update: (id, data) => api.put(`/finance/tax-codes/${id}`, data),
+  activate: (id) => api.put(`/finance/tax-codes/${id}/activate`),
+  deactivate: (id) => api.put(`/finance/tax-codes/${id}/deactivate`),
+  getRates: (taxCodeId) => api.get(`/finance/tax-codes/${taxCodeId}/rates`),
+  createRate: (data) => api.post('/finance/tax-codes/rates', data),
+  updateRate: (rateId, data) => api.put(`/finance/tax-codes/rates/${rateId}`, data),
+  deleteRate: (rateId) => api.delete(`/finance/tax-codes/rates/${rateId}`),
+  calculate: (data) => api.post('/finance/tax-codes/calculate', data),
+  getVatSummary: (periodStart, periodEnd) => api.get('/finance/tax-codes/reports/vat-summary', { params: { periodStart, periodEnd } }),
+  getSummaryByType: (periodStart, periodEnd) => api.get('/finance/tax-codes/reports/summary-by-type', { params: { periodStart, periodEnd } })
+}
+
+// POS Coupons API - Backend: /api/v1/pos/coupons
+export const couponsApi = {
+  getAll: (params) => api.get('/pos/coupons', { params }),
+  getByPromotion: (promotionId, params) => api.get(`/pos/coupons/promotion/${promotionId}`, { params }),
+  getByStatus: (status, params) => api.get(`/pos/coupons/status/${status}`, { params }),
+  getById: (id) => api.get(`/pos/coupons/${id}`),
+  getByCode: (code) => api.get(`/pos/coupons/code/${code}`),
+  create: (data) => api.post('/pos/coupons', data),
+  generate: (promotionId, count, data) => api.post(`/pos/coupons/generate/${promotionId}`, data, { params: { count } }),
+  update: (id, data) => api.put(`/pos/coupons/${id}`, data),
+  delete: (id) => api.delete(`/pos/coupons/${id}`),
+  activate: (id) => api.post(`/pos/coupons/${id}/activate`),
+  deactivate: (id) => api.post(`/pos/coupons/${id}/deactivate`),
+  cancel: (id) => api.post(`/pos/coupons/${id}/cancel`),
+  getRedemptions: (id) => api.get(`/pos/coupons/${id}/redemptions`),
+  updateExpired: () => api.post('/pos/coupons/update-expired'),
+  updateDepleted: () => api.post('/pos/coupons/update-depleted')
+}
+
+// POS Promotions API - Backend: /api/v1/pos/promotions
+export const promotionsApi = {
+  getAll: (params) => api.get('/pos/promotions', { params }),
+  search: (query, params) => api.get('/pos/promotions/search', { params: { query, ...params } }),
+  getActive: (locationId) => api.get('/pos/promotions/active', { params: { locationId: locationId || undefined } }),
+  getById: (id) => api.get(`/pos/promotions/${id}`),
+  getByCode: (code) => api.get(`/pos/promotions/code/${code}`),
+  create: (data) => api.post('/pos/promotions', data),
+  update: (id, data) => api.put(`/pos/promotions/${id}`, data),
+  delete: (id) => api.delete(`/pos/promotions/${id}`),
+  activate: (id) => api.post(`/pos/promotions/${id}/activate`),
+  deactivate: (id) => api.post(`/pos/promotions/${id}/deactivate`),
+  addCondition: (promotionId, data) => api.post(`/pos/promotions/${promotionId}/conditions`, data),
+  removeCondition: (promotionId, conditionId) => api.delete(`/pos/promotions/${promotionId}/conditions/${conditionId}`),
+  addAction: (promotionId, data) => api.post(`/pos/promotions/${promotionId}/actions`, data),
+  removeAction: (promotionId, actionId) => api.delete(`/pos/promotions/${promotionId}/actions/${actionId}`)
+}
+
+// POS Price Lists API - Backend: /api/v1/pos/price-lists
+export const priceListsApi = {
+  getAll: (params) => api.get('/pos/price-lists', { params }),
+  getActive: () => api.get('/pos/price-lists/active'),
+  getById: (id) => api.get(`/pos/price-lists/${id}`),
+  getByCode: (code) => api.get(`/pos/price-lists/code/${code}`),
+  create: (data) => api.post('/pos/price-lists', data),
+  update: (id, data) => api.put(`/pos/price-lists/${id}`, data),
+  delete: (id) => api.delete(`/pos/price-lists/${id}`),
+  activate: (id) => api.post(`/pos/price-lists/${id}/activate`),
+  deactivate: (id) => api.post(`/pos/price-lists/${id}/deactivate`),
+  getItems: (priceListId, params) => api.get(`/pos/price-lists/${priceListId}/items`, { params }),
+  getItem: (priceListId, itemId) => api.get(`/pos/price-lists/${priceListId}/items/${itemId}`),
+  addItem: (priceListId, data) => api.post(`/pos/price-lists/${priceListId}/items`, data),
+  updateItem: (priceListId, itemId, data) => api.put(`/pos/price-lists/${priceListId}/items/${itemId}`, data),
+  removeItem: (priceListId, itemId) => api.delete(`/pos/price-lists/${priceListId}/items/${itemId}`),
+  getByCustomer: (customerId) => api.get(`/pos/price-lists/customer/${customerId}`),
+  assignCustomer: (priceListId, customerId, priority) => api.post(`/pos/price-lists/${priceListId}/assign-customer/${customerId}`, null, { params: { priority: priority || undefined } }),
+  unassignCustomer: (priceListId, customerId) => api.delete(`/pos/price-lists/${priceListId}/unassign-customer/${customerId}`)
+}
+
+// POS Pricing API - Backend: /api/v1/pos/pricing
+export const pricingApi = {
+  calculate: (data) => api.post('/pos/pricing/calculate', data),
+  getProductPrice: (productId, params) => api.get(`/pos/pricing/product/${productId}`, { params }),
+  applyCoupon: (data) => api.post('/pos/pricing/apply-coupon', data),
+  validateCoupon: (couponCode, customerId) => api.post('/pos/pricing/validate-coupon', null, { params: { couponCode, customerId: customerId || undefined } }),
+  recordCouponRedemption: (couponCode, customerId, orderId, discountApplied) => api.post('/pos/pricing/record-coupon-redemption', null, { params: { couponCode, customerId, orderId, discountApplied } })
 }

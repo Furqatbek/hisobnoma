@@ -73,7 +73,10 @@ const navigation = computed(() => [
     children: [
       { name: t('nav.cashRegister'), href: '/pos', icon: ShoppingCartIcon },
       { name: t('nav.salesHistory'), href: '/pos/transactions', icon: ClockIcon },
-      { name: t('nav.shifts'), href: '/pos/shifts', icon: ClipboardDocumentListIcon }
+      { name: t('nav.shifts'), href: '/pos/shifts', icon: ClipboardDocumentListIcon },
+      { name: t('nav.promotions'), href: '/pos/promotions', icon: TagIcon },
+      { name: t('nav.coupons'), href: '/pos/coupons', icon: TagIcon },
+      { name: t('nav.priceLists'), href: '/pos/price-lists', icon: CurrencyDollarIcon }
     ]
   },
   {
@@ -105,7 +108,14 @@ const navigation = computed(() => [
       { name: t('nav.arInvoices'), href: '/finance/invoices', icon: DocumentTextIcon },
       { name: t('nav.expenses'), href: '/finance/expenses', icon: CurrencyDollarIcon },
       { name: t('nav.chartOfAccounts'), href: '/finance/accounts', icon: ClipboardDocumentListIcon },
-      { name: t('nav.journalEntries'), href: '/finance/journal-entries', icon: DocumentTextIcon }
+      { name: t('nav.journalEntries'), href: '/finance/journal-entries', icon: DocumentTextIcon },
+      { name: t('nav.bankAccounts'), href: '/finance/bank-accounts', icon: BuildingStorefrontIcon },
+      { name: t('nav.bankTransactions'), href: '/finance/bank-transactions', icon: BanknotesIcon },
+      { name: t('nav.creditNotes'), href: '/finance/credit-notes', icon: DocumentTextIcon },
+      { name: t('nav.currencies'), href: '/finance/currencies', icon: CurrencyDollarIcon },
+      { name: t('nav.taxCodes'), href: '/finance/tax-codes', icon: ClipboardDocumentListIcon },
+      { name: t('nav.fiscalPeriods'), href: '/finance/fiscal-periods', icon: ClockIcon },
+      { name: t('nav.recurringJournals'), href: '/finance/recurring-journals', icon: DocumentTextIcon }
     ]
   },
   {

@@ -1,0 +1,530 @@
+<script setup>
+import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { fiscalApi } from '@/services/api'
+import {
+  PlusIcon, PencilIcon, StarIcon, LockClosedIcon, LockOpenIcon,
+  XMarkIcon, ChevronDownIcon, ChevronRightIcon
+} from '@heroicons/vue/24/outline'
+
+const { t } = useI18n()
+
+const years = ref([])
+const currentYearId = ref(null)
+const loading = ref(true)
+const error = ref('')
+const successMsg = ref('')
+
+// Year modal
+const showYearModal = ref(false)
+const editingYear = ref(null)
+const yearForm = reactive({ year: new Date().getFullYear(), name: '', startDate: '', endDate: '' })
+
+// Close year confirmation
+const showCloseYearConfirm = ref(false)
+const closingYear = ref(null)
+
+// Close period confirmation
+const showClosePeriodConfirm = ref(false)
+const closingPeriod = ref(null)
+
+// Reopen period
+const showReopenModal = ref(false)
+const reopeningPeriod = ref(null)
+const reopenReason = ref('')
+
+// Expanded rows: yearId -> periods array
+const expandedYears = ref({})
+const periodsLoading = ref({})
+const periodsData = ref({})
+
+function clearMessages() { error.value = ''; successMsg.value = '' }
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleDateString('uz-UZ')
+}
+
+async function fetchYears() {
+  loading.value = true
+  error.value = ''
+  try {
+    const res = await fiscalApi.getAllYears()
+    const data = res.data.data || res.data
+    years.value = Array.isArray(data) ? data : (data.content || [])
+  } catch (e) {
+    if (e.response?.status !== 403) error.value = e.response?.data?.message || t('failedToLoad')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function fetchCurrentYear() {
+  try {
+    const res = await fiscalApi.getCurrentYear()
+    const data = res.data.data || res.data
+    currentYearId.value = data?.id || null
+  } catch {
+    currentYearId.value = null
+  }
+}
+
+function openYearModal(y = null) {
+  editingYear.value = y
+  if (y) {
+    yearForm.year = y.year
+    yearForm.name = y.name || ''
+    yearForm.startDate = y.startDate?.substring(0, 10) || ''
+    yearForm.endDate = y.endDate?.substring(0, 10) || ''
+  } else {
+    yearForm.year = new Date().getFullYear()
+    yearForm.name = ''
+    yearForm.startDate = ''
+    yearForm.endDate = ''
+  }
+  showYearModal.value = true
+}
+
+async function saveYear() {
+  if (!yearForm.year || !yearForm.name?.trim() || !yearForm.startDate || !yearForm.endDate) return
+  clearMessages()
+  try {
+    if (editingYear.value) {
+      await fiscalApi.updateYear(editingYear.value.id, { ...yearForm })
+      successMsg.value = t('finance.fiscal.updateYearSuccess')
+    } else {
+      await fiscalApi.createYear({ ...yearForm })
+      successMsg.value = t('finance.fiscal.createYearSuccess')
+    }
+    showYearModal.value = false
+    fetchYears()
+  } catch (e) {
+    error.value = e.response?.data?.message || t('errorOccurred')
+  }
+}
+
+async function handleSetCurrentYear(y) {
+  clearMessages()
+  try {
+    await fiscalApi.setCurrentYear(y.id)
+    currentYearId.value = y.id
+    successMsg.value = t('finance.fiscal.setCurrentSuccess', { name: y.name })
+    fetchYears()
+  } catch (e) {
+    error.value = e.response?.data?.message || t('errorOccurred')
+  }
+}
+
+function confirmCloseYear(y) {
+  closingYear.value = y
+  showCloseYearConfirm.value = true
+}
+
+async function doCloseYear() {
+  if (!closingYear.value) return
+  clearMessages()
+  try {
+    await fiscalApi.closeYear(closingYear.value.id)
+    successMsg.value = t('finance.fiscal.closeYearSuccess', { name: closingYear.value.name })
+    showCloseYearConfirm.value = false
+    closingYear.value = null
+    fetchYears()
+  } catch (e) {
+    error.value = e.response?.data?.message || t('errorOccurred')
+    showCloseYearConfirm.value = false
+  }
+}
+
+async function toggleExpand(y) {
+  const id = y.id
+  if (expandedYears.value[id]) {
+    delete expandedYears.value[id]
+    return
+  }
+  expandedYears.value[id] = true
+  periodsLoading.value[id] = true
+  try {
+    const res = await fiscalApi.getPeriods(id)
+    const data = res.data.data || res.data
+    periodsData.value[id] = Array.isArray(data) ? data : (data.content || [])
+  } catch (e) {
+    error.value = e.response?.data?.message || t('failedToLoad')
+    delete expandedYears.value[id]
+  } finally {
+    periodsLoading.value[id] = false
+  }
+}
+
+function confirmClosePeriod(period) {
+  closingPeriod.value = period
+  showClosePeriodConfirm.value = true
+}
+
+async function doClosePeriod() {
+  if (!closingPeriod.value) return
+  clearMessages()
+  try {
+    await fiscalApi.closePeriod(closingPeriod.value.id)
+    successMsg.value = t('finance.fiscal.closePeriodSuccess', { name: closingPeriod.value.name })
+    showClosePeriodConfirm.value = false
+    // Refresh periods for the parent year
+    const yearId = closingPeriod.value.fiscalYearId
+    closingPeriod.value = null
+    if (yearId && expandedYears.value[yearId]) {
+      periodsLoading.value[yearId] = true
+      try {
+        const res = await fiscalApi.getPeriods(yearId)
+        const data = res.data.data || res.data
+        periodsData.value[yearId] = Array.isArray(data) ? data : (data.content || [])
+      } finally {
+        periodsLoading.value[yearId] = false
+      }
+    }
+  } catch (e) {
+    error.value = e.response?.data?.message || t('errorOccurred')
+    showClosePeriodConfirm.value = false
+  }
+}
+
+function openReopenModal(period) {
+  reopeningPeriod.value = period
+  reopenReason.value = ''
+  showReopenModal.value = true
+}
+
+async function doReopenPeriod() {
+  if (!reopeningPeriod.value || !reopenReason.value.trim()) return
+  clearMessages()
+  try {
+    await fiscalApi.reopenPeriod(reopeningPeriod.value.id, reopenReason.value.trim())
+    successMsg.value = t('finance.fiscal.reopenPeriodSuccess', { name: reopeningPeriod.value.name })
+    showReopenModal.value = false
+    const yearId = reopeningPeriod.value.fiscalYearId
+    reopeningPeriod.value = null
+    reopenReason.value = ''
+    if (yearId && expandedYears.value[yearId]) {
+      periodsLoading.value[yearId] = true
+      try {
+        const res = await fiscalApi.getPeriods(yearId)
+        const data = res.data.data || res.data
+        periodsData.value[yearId] = Array.isArray(data) ? data : (data.content || [])
+      } finally {
+        periodsLoading.value[yearId] = false
+      }
+    }
+  } catch (e) {
+    error.value = e.response?.data?.message || t('errorOccurred')
+    showReopenModal.value = false
+  }
+}
+
+onMounted(() => {
+  fetchYears()
+  fetchCurrentYear()
+})
+</script>
+
+<template>
+  <div class="space-y-6">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">{{ $t('finance.fiscal.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('finance.fiscal.subtitle') }}</p>
+      </div>
+      <button @click="openYearModal()" class="btn-primary">
+        <PlusIcon class="h-5 w-5 mr-2" />
+        {{ $t('finance.fiscal.addYear') }}
+      </button>
+    </div>
+
+    <!-- Messages -->
+    <div v-if="error" class="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+      <p class="text-sm text-red-600">{{ error }}</p>
+      <button @click="error = ''" class="text-red-400 hover:text-red-600"><XMarkIcon class="h-4 w-4" /></button>
+    </div>
+    <div v-if="successMsg" class="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+      <p class="text-sm text-green-600">{{ successMsg }}</p>
+      <button @click="successMsg = ''" class="text-green-400 hover:text-green-600"><XMarkIcon class="h-4 w-4" /></button>
+    </div>
+
+    <!-- Fiscal Years Table -->
+    <div class="card">
+      <div v-if="loading" class="flex items-center justify-center h-64">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+
+      <div v-else-if="years.length === 0" class="text-center py-12">
+        <p class="text-gray-500">{{ $t('finance.fiscal.noYears') }}</p>
+      </div>
+
+      <div v-else class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="w-10"></th>
+              <th>{{ $t('finance.fiscal.year') }}</th>
+              <th>{{ $t('finance.fiscal.name') }}</th>
+              <th>{{ $t('finance.fiscal.startDate') }}</th>
+              <th>{{ $t('finance.fiscal.endDate') }}</th>
+              <th>{{ $t('finance.fiscal.current') }}</th>
+              <th>{{ $t('status') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <template v-for="y in years" :key="y.id">
+              <!-- Year row -->
+              <tr :class="currentYearId === y.id ? 'bg-primary-50' : ''">
+                <td>
+                  <button
+                    @click="toggleExpand(y)"
+                    class="p-1 text-gray-400 hover:text-gray-600 rounded"
+                  >
+                    <ChevronDownIcon v-if="expandedYears[y.id]" class="h-4 w-4" />
+                    <ChevronRightIcon v-else class="h-4 w-4" />
+                  </button>
+                </td>
+                <td class="font-mono font-medium text-sm">{{ y.year }}</td>
+                <td class="text-sm">{{ y.name }}</td>
+                <td class="text-sm text-gray-500">{{ formatDate(y.startDate) }}</td>
+                <td class="text-sm text-gray-500">{{ formatDate(y.endDate) }}</td>
+                <td>
+                  <span v-if="currentYearId === y.id" class="badge badge-warning text-xs">
+                    <StarIcon class="h-3 w-3 inline mr-1" />{{ $t('finance.fiscal.currentBadge') }}
+                  </span>
+                </td>
+                <td>
+                  <span :class="['badge text-xs', y.status === 'OPEN' ? 'badge-success' : 'badge-danger']">
+                    {{ y.status === 'OPEN' ? $t('finance.fiscal.statusOpen') : $t('finance.fiscal.statusClosed') }}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <div class="flex items-center justify-end space-x-1">
+                    <button
+                      v-if="currentYearId !== y.id && y.status === 'OPEN'"
+                      @click="handleSetCurrentYear(y)"
+                      class="p-2 text-gray-400 hover:text-yellow-500 rounded-lg hover:bg-gray-100"
+                      :title="$t('finance.fiscal.setCurrent')"
+                    >
+                      <StarIcon class="h-5 w-5" />
+                    </button>
+                    <button
+                      v-if="y.status === 'OPEN'"
+                      @click="openYearModal(y)"
+                      class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100"
+                      :title="$t('edit')"
+                    >
+                      <PencilIcon class="h-5 w-5" />
+                    </button>
+                    <button
+                      v-if="y.status === 'OPEN'"
+                      @click="confirmCloseYear(y)"
+                      class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100"
+                      :title="$t('finance.fiscal.closeYear')"
+                    >
+                      <LockClosedIcon class="h-5 w-5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Expanded periods -->
+              <tr v-if="expandedYears[y.id]" :key="'periods-' + y.id">
+                <td colspan="8" class="p-0">
+                  <div class="bg-gray-50 px-6 py-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-3">
+                      {{ $t('finance.fiscal.periodsFor', { name: y.name }) }}
+                    </h4>
+
+                    <div v-if="periodsLoading[y.id]" class="flex items-center justify-center py-8">
+                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    </div>
+
+                    <div v-else-if="!periodsData[y.id] || periodsData[y.id].length === 0" class="text-center py-6">
+                      <p class="text-sm text-gray-400">{{ $t('finance.fiscal.noPeriods') }}</p>
+                    </div>
+
+                    <div v-else class="table-container rounded-lg border border-gray-200">
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th>{{ $t('finance.fiscal.periodNumber') }}</th>
+                            <th>{{ $t('finance.fiscal.periodName') }}</th>
+                            <th>{{ $t('finance.fiscal.startDate') }}</th>
+                            <th>{{ $t('finance.fiscal.endDate') }}</th>
+                            <th>{{ $t('status') }}</th>
+                            <th class="text-right">{{ $t('actions') }}</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                          <tr v-for="p in periodsData[y.id]" :key="p.id">
+                            <td class="font-mono text-sm">{{ p.periodNumber }}</td>
+                            <td class="text-sm">{{ p.name }}</td>
+                            <td class="text-sm text-gray-500">{{ formatDate(p.startDate) }}</td>
+                            <td class="text-sm text-gray-500">{{ formatDate(p.endDate) }}</td>
+                            <td>
+                              <span :class="['badge text-xs', p.status === 'OPEN' ? 'badge-success' : 'badge-danger']">
+                                {{ p.status === 'OPEN' ? $t('finance.fiscal.statusOpen') : $t('finance.fiscal.statusClosed') }}
+                              </span>
+                            </td>
+                            <td class="text-right">
+                              <div class="flex items-center justify-end space-x-1">
+                                <button
+                                  v-if="p.status === 'OPEN'"
+                                  @click="confirmClosePeriod(p)"
+                                  class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100"
+                                  :title="$t('finance.fiscal.closePeriod')"
+                                >
+                                  <LockClosedIcon class="h-5 w-5" />
+                                </button>
+                                <button
+                                  v-if="p.status === 'CLOSED'"
+                                  @click="openReopenModal(p)"
+                                  class="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-gray-100"
+                                  :title="$t('finance.fiscal.reopenPeriod')"
+                                >
+                                  <LockOpenIcon class="h-5 w-5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== CREATE/EDIT YEAR MODAL ========== -->
+    <Teleport to="body">
+      <div v-if="showYearModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showYearModal = false"></div>
+          <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-medium text-gray-900">
+                {{ editingYear ? $t('finance.fiscal.editYear') : $t('finance.fiscal.newYear') }}
+              </h3>
+              <button @click="showYearModal = false" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+                <XMarkIcon class="h-5 w-5" />
+              </button>
+            </div>
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="label">{{ $t('finance.fiscal.year') }} <span class="text-red-500">*</span></label>
+                  <input v-model.number="yearForm.year" type="number" min="2000" max="2100" class="input font-mono" />
+                </div>
+                <div>
+                  <label class="label">{{ $t('finance.fiscal.name') }} <span class="text-red-500">*</span></label>
+                  <input v-model="yearForm.name" type="text" class="input" />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="label">{{ $t('finance.fiscal.startDate') }} <span class="text-red-500">*</span></label>
+                  <input v-model="yearForm.startDate" type="date" class="input" />
+                </div>
+                <div>
+                  <label class="label">{{ $t('finance.fiscal.endDate') }} <span class="text-red-500">*</span></label>
+                  <input v-model="yearForm.endDate" type="date" class="input" />
+                </div>
+              </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+              <button @click="showYearModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
+              <button @click="saveYear" class="btn-primary">{{ $t('save') }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- ========== CLOSE YEAR CONFIRMATION ========== -->
+    <Teleport to="body">
+      <div v-if="showCloseYearConfirm" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showCloseYearConfirm = false"></div>
+          <div class="relative bg-white rounded-lg max-w-sm w-full p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-2">{{ $t('finance.fiscal.confirmCloseYearTitle') }}</h3>
+            <p class="text-sm text-gray-500 mb-6">
+              {{ $t('finance.fiscal.confirmCloseYear', { name: closingYear?.name }) }}
+            </p>
+            <div class="flex justify-end space-x-3">
+              <button @click="showCloseYearConfirm = false" class="btn-secondary">{{ $t('cancel') }}</button>
+              <button @click="doCloseYear" class="btn-danger">
+                <LockClosedIcon class="h-4 w-4 mr-2" />
+                {{ $t('finance.fiscal.closeYear') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- ========== CLOSE PERIOD CONFIRMATION ========== -->
+    <Teleport to="body">
+      <div v-if="showClosePeriodConfirm" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showClosePeriodConfirm = false"></div>
+          <div class="relative bg-white rounded-lg max-w-sm w-full p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-2">{{ $t('finance.fiscal.confirmClosePeriodTitle') }}</h3>
+            <p class="text-sm text-gray-500 mb-6">
+              {{ $t('finance.fiscal.confirmClosePeriod', { name: closingPeriod?.name }) }}
+            </p>
+            <div class="flex justify-end space-x-3">
+              <button @click="showClosePeriodConfirm = false" class="btn-secondary">{{ $t('cancel') }}</button>
+              <button @click="doClosePeriod" class="btn-danger">
+                <LockClosedIcon class="h-4 w-4 mr-2" />
+                {{ $t('finance.fiscal.closePeriod') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- ========== REOPEN PERIOD MODAL ========== -->
+    <Teleport to="body">
+      <div v-if="showReopenModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showReopenModal = false"></div>
+          <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-medium text-gray-900">
+                {{ $t('finance.fiscal.reopenPeriod') }}
+              </h3>
+              <button @click="showReopenModal = false" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+                <XMarkIcon class="h-5 w-5" />
+              </button>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">
+              {{ $t('finance.fiscal.reopenPeriodDesc', { name: reopeningPeriod?.name }) }}
+            </p>
+            <div>
+              <label class="label">{{ $t('finance.fiscal.reopenReason') }} <span class="text-red-500">*</span></label>
+              <textarea
+                v-model="reopenReason"
+                rows="3"
+                class="input"
+                :placeholder="$t('finance.fiscal.reopenReasonPlaceholder')"
+              ></textarea>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+              <button @click="showReopenModal = false" class="btn-secondary">{{ $t('cancel') }}</button>
+              <button @click="doReopenPeriod" :disabled="!reopenReason.trim()" class="btn-primary">
+                <LockOpenIcon class="h-4 w-4 mr-2" />
+                {{ $t('finance.fiscal.reopenPeriod') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+  </div>
+</template>
