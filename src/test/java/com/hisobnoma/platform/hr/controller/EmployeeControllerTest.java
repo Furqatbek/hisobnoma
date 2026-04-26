@@ -158,6 +158,7 @@ class EmployeeControllerTest {
     @WithMockUser(authorities = "HR_EMPLOYEE_WRITE")
     void update_withWritePermission_returns200() throws Exception {
         CreateEmployeeRequest request = new CreateEmployeeRequest();
+        request.setEmployeeCode("EMP-001");
         request.setFirstName("Updated");
         request.setLastName("Name");
         request.setHireDate(LocalDate.now());

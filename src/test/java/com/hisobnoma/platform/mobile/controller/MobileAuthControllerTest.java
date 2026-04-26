@@ -88,7 +88,11 @@ class MobileAuthControllerTest {
     @Test
     @WithMockUser
     void registerDevice_authenticated_returns200() throws Exception {
-        RegisterDeviceRequest request = new RegisterDeviceRequest();
+        RegisterDeviceRequest request = RegisterDeviceRequest.builder()
+                .deviceId("device-123")
+                .fcmToken("fcm-token-abc")
+                .platform(com.hisobnoma.platform.mobile.entity.DeviceToken.Platform.ANDROID)
+                .build();
         DeviceTokenDTO dto = DeviceTokenDTO.builder().deviceId("device-123").build();
         when(deviceTokenService.registerDevice(any())).thenReturn(dto);
 

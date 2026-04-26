@@ -50,6 +50,8 @@ class SmsControllerTest {
     @WithMockUser(authorities = "SMS_SEND")
     void sendSms_authenticated_returns200() throws Exception {
         SmsSendRequest request = new SmsSendRequest();
+        request.setPhone("+998901234567");
+        request.setTemplateId(1L);
         when(templateService.resolveTemplate(any(), any())).thenReturn("Hello");
         when(smsService.sendSms(any(), any(), any())).thenReturn(Map.of("status", "sent"));
 
@@ -82,6 +84,10 @@ class SmsControllerTest {
     @WithMockUser(authorities = "SMS_SEND")
     void sendBulkSms_authenticated_returns200() throws Exception {
         SmsBulkSendRequest request = new SmsBulkSendRequest();
+        request.setTemplateId(1L);
+        SmsBulkSendRequest.Recipient recipient = new SmsBulkSendRequest.Recipient();
+        recipient.setPhone("+998901234567");
+        request.setRecipients(List.of(recipient));
         when(smsService.sendBulk(any(), any(), any())).thenReturn(Map.of("status", "sent"));
 
         mockMvc.perform(post("/api/v1/sms/send-bulk")
@@ -162,6 +168,9 @@ class SmsControllerTest {
     @WithMockUser(authorities = "SMS_TEMPLATES_MANAGE")
     void createTemplate_authenticated_returns200() throws Exception {
         SmsTemplateRequest request = new SmsTemplateRequest();
+        request.setCode("NEW_TEMPLATE");
+        request.setName("New Template");
+        request.setTemplate("Hello {name}");
         SmsTemplateDto dto = SmsTemplateDto.builder().id(1L).code("NEW").name("New").template("Hello").active(true).variables(List.of()).build();
         when(templateService.createTemplate(any())).thenReturn(dto);
 
@@ -194,6 +203,9 @@ class SmsControllerTest {
     @WithMockUser(authorities = "SMS_TEMPLATES_MANAGE")
     void updateTemplate_authenticated_returns200() throws Exception {
         SmsTemplateRequest request = new SmsTemplateRequest();
+        request.setCode("UPD_TEMPLATE");
+        request.setName("Updated Template");
+        request.setTemplate("Hi {name}");
         SmsTemplateDto dto = SmsTemplateDto.builder().id(1L).code("UPD").name("Updated").template("Hi").active(true).variables(List.of()).build();
         when(templateService.updateTemplate(any(), any())).thenReturn(dto);
 

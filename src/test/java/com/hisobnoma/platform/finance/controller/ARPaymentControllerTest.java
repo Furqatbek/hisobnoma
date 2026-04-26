@@ -71,7 +71,7 @@ class ARPaymentControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content[0].paymentNumber").value("REC-000001"));
     }
 
     @Test
@@ -97,8 +97,7 @@ class ARPaymentControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.paymentNumber").value("REC-000001"));
+                .andExpect(jsonPath("$.paymentNumber").value("REC-000001"));
     }
 
     @Test
@@ -111,8 +110,7 @@ class ARPaymentControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/number/REC-000001"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.paymentNumber").value("REC-000001"));
+                .andExpect(jsonPath("$.paymentNumber").value("REC-000001"));
     }
 
     @Test
@@ -126,7 +124,7 @@ class ARPaymentControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/customer/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content[0].paymentNumber").value("REC-000001"));
     }
 
     @Test
@@ -140,7 +138,7 @@ class ARPaymentControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/status/PENDING"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content[0].paymentNumber").value("REC-000001"));
     }
 
     @Test
@@ -155,7 +153,7 @@ class ARPaymentControllerTest {
                         .param("startDate", "2025-01-01")
                         .param("endDate", "2025-03-31"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$[0].paymentNumber").value("REC-000001"));
     }
 
     @Test
@@ -183,8 +181,7 @@ class ARPaymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.paymentNumber").value("REC-000001"));
+                .andExpect(jsonPath("$.paymentNumber").value("REC-000001"));
     }
 
     @Test
@@ -198,7 +195,7 @@ class ARPaymentControllerTest {
         // When/Then
         mockMvc.perform(post(BASE_URL + "/1/complete"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
     }
 
     @Test
@@ -227,7 +224,7 @@ class ARPaymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
     }
 
     @Test
@@ -247,7 +244,7 @@ class ARPaymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(allocRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.paymentNumber").value("REC-000001"));
     }
 
     @Test
@@ -260,7 +257,7 @@ class ARPaymentControllerTest {
         // When/Then
         mockMvc.perform(delete(BASE_URL + "/1/allocations/10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.paymentNumber").value("REC-000001"));
     }
 
     @Test
@@ -275,7 +272,7 @@ class ARPaymentControllerTest {
         mockMvc.perform(post(BASE_URL + "/1/cancel")
                         .param("reason", "Duplicate"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
 
     @Test
@@ -290,7 +287,7 @@ class ARPaymentControllerTest {
         mockMvc.perform(post(BASE_URL + "/1/deposit")
                         .param("bankReference", "DEP-001"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.deposited").value(true));
     }
 
     @Test
@@ -303,7 +300,7 @@ class ARPaymentControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/undeposited"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$[0].paymentNumber").value("REC-000001"));
     }
 
     @Test
@@ -316,8 +313,7 @@ class ARPaymentControllerTest {
         mockMvc.perform(get(BASE_URL + "/total-by-date-range")
                         .param("startDate", "2025-01-01")
                         .param("endDate", "2025-03-31"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(status().isOk());
     }
 
     @Test

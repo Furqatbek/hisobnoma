@@ -98,7 +98,7 @@ class DeliveryRegionMapperTest {
         // Ignored fields
         assertNull(entity.getId());
         assertNull(entity.getTenantId());
-        assertNull(entity.getVillages());
+        assertTrue(entity.getVillages() == null || entity.getVillages().isEmpty());
     }
 
     @Test

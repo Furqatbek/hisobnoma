@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.pos.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hisobnoma.platform.auth.security.UserPrincipal;
 import com.hisobnoma.platform.pos.dto.CreateTerminalRequest;
 import com.hisobnoma.platform.pos.dto.POSTerminalDto;
 import com.hisobnoma.platform.pos.service.POSTerminalService;
@@ -11,16 +12,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -38,15 +44,25 @@ class POSTerminalControllerTest {
     @MockBean
     private POSTerminalService terminalService;
 
+    private RequestPostProcessor userWithPermission(String... permissions) {
+        UserPrincipal principal = new UserPrincipal(
+                1L, "admin", "pw", 1L, true, true,
+                Arrays.stream(permissions)
+                        .map(SimpleGrantedAuthority::new)
+                        .toList());
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities());
+        return authentication(auth);
+    }
+
     // ==================== GET /api/v1/pos/terminals ====================
 
     @Test
-    @WithMockUser(authorities = "POS_TERMINAL_READ")
     void getAll_authenticated_returns200() throws Exception {
         POSTerminalDto dto = POSTerminalDto.builder().id(1L).name("Terminal-1").terminalCode("T-001").build();
         when(terminalService.findAll(any())).thenReturn(new PageImpl<>(List.of(dto)));
 
-        mockMvc.perform(get("/api/v1/pos/terminals"))
+        mockMvc.perform(get("/api/v1/pos/terminals").with(userWithPermission("POS_TERMINAL_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -57,21 +73,19 @@ class POSTerminalControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void getAll_noPermission_returns403() throws Exception {
-        mockMvc.perform(get("/api/v1/pos/terminals"))
+        mockMvc.perform(get("/api/v1/pos/terminals").with(userWithPermission("SOME_OTHER_PERMISSION")))
                 .andExpect(status().isForbidden());
     }
 
     // ==================== GET /api/v1/pos/terminals/{id} ====================
 
     @Test
-    @WithMockUser(authorities = "POS_TERMINAL_READ")
     void getById_authenticated_returns200() throws Exception {
         POSTerminalDto dto = POSTerminalDto.builder().id(1L).name("Terminal-1").terminalCode("T-001").build();
         when(terminalService.findById(1L)).thenReturn(dto);
 
-        mockMvc.perform(get("/api/v1/pos/terminals/1"))
+        mockMvc.perform(get("/api/v1/pos/terminals/1").with(userWithPermission("POS_TERMINAL_READ")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.terminalCode").value("T-001"));
     }
@@ -83,21 +97,19 @@ class POSTerminalControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void getById_noPermission_returns403() throws Exception {
-        mockMvc.perform(get("/api/v1/pos/terminals/1"))
+        mockMvc.perform(get("/api/v1/pos/terminals/1").with(userWithPermission("SOME_OTHER_PERMISSION")))
                 .andExpect(status().isForbidden());
     }
 
     // ==================== GET /api/v1/pos/terminals/code/{code} ====================
 
     @Test
-    @WithMockUser(authorities = "POS_TERMINAL_READ")
     void getByCode_authenticated_returns200() throws Exception {
         POSTerminalDto dto = POSTerminalDto.builder().id(1L).name("Terminal-1").terminalCode("T-001").build();
         when(terminalService.findByCode("T-001")).thenReturn(dto);
 
-        mockMvc.perform(get("/api/v1/pos/terminals/code/T-001"))
+        mockMvc.perform(get("/api/v1/pos/terminals/code/T-001").with(userWithPermission("POS_TERMINAL_READ")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.terminalCode").value("T-001"));
     }
@@ -111,11 +123,10 @@ class POSTerminalControllerTest {
     // ==================== GET /api/v1/pos/terminals/location/{locationId} ====================
 
     @Test
-    @WithMockUser(authorities = "POS_TERMINAL_READ")
     void getByLocation_authenticated_returns200() throws Exception {
         when(terminalService.findByLocation(1L)).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/v1/pos/terminals/location/1"))
+        mockMvc.perform(get("/api/v1/pos/terminals/location/1").with(userWithPermission("POS_TERMINAL_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -128,11 +139,10 @@ class POSTerminalControllerTest {
     // ==================== GET /api/v1/pos/terminals/active ====================
 
     @Test
-    @WithMockUser(authorities = "POS_TERMINAL_READ")
     void getActiveTerminals_authenticated_returns200() throws Exception {
         when(terminalService.findActiveTerminals()).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/v1/pos/terminals/active"))
+        mockMvc.perform(get("/api/v1/pos/terminals/active").with(userWithPermission("POS_TERMINAL_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -145,13 +155,13 @@ class POSTerminalControllerTest {
     // ==================== POST /api/v1/pos/terminals ====================
 
     @Test
-    @WithMockUser(authorities = "POS_TERMINAL_CREATE")
     void create_authenticated_returns201() throws Exception {
         CreateTerminalRequest request = new CreateTerminalRequest();
         POSTerminalDto dto = POSTerminalDto.builder().id(1L).name("Terminal-1").terminalCode("T-001").build();
         when(terminalService.create(any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/pos/terminals")
+                        .with(userWithPermission("POS_TERMINAL_CREATE"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -167,9 +177,9 @@ class POSTerminalControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void create_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/pos/terminals")
+                        .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
@@ -178,13 +188,13 @@ class POSTerminalControllerTest {
     // ==================== PUT /api/v1/pos/terminals/{id} ====================
 
     @Test
-    @WithMockUser(authorities = "POS_TERMINAL_UPDATE")
     void update_authenticated_returns200() throws Exception {
         CreateTerminalRequest request = new CreateTerminalRequest();
         POSTerminalDto dto = POSTerminalDto.builder().id(1L).name("Updated").terminalCode("T-001").build();
         when(terminalService.update(any(), any())).thenReturn(dto);
 
         mockMvc.perform(put("/api/v1/pos/terminals/1")
+                        .with(userWithPermission("POS_TERMINAL_UPDATE"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -200,9 +210,9 @@ class POSTerminalControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void update_noPermission_returns403() throws Exception {
         mockMvc.perform(put("/api/v1/pos/terminals/1")
+                        .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
@@ -211,11 +221,10 @@ class POSTerminalControllerTest {
     // ==================== PUT /api/v1/pos/terminals/{id}/activate ====================
 
     @Test
-    @WithMockUser(authorities = "POS_TERMINAL_UPDATE")
     void activate_authenticated_returns200() throws Exception {
         doNothing().when(terminalService).activate(1L);
 
-        mockMvc.perform(put("/api/v1/pos/terminals/1/activate"))
+        mockMvc.perform(put("/api/v1/pos/terminals/1/activate").with(userWithPermission("POS_TERMINAL_UPDATE")))
                 .andExpect(status().isOk());
     }
 
@@ -228,11 +237,10 @@ class POSTerminalControllerTest {
     // ==================== PUT /api/v1/pos/terminals/{id}/deactivate ====================
 
     @Test
-    @WithMockUser(authorities = "POS_TERMINAL_UPDATE")
     void deactivate_authenticated_returns200() throws Exception {
         doNothing().when(terminalService).deactivate(1L);
 
-        mockMvc.perform(put("/api/v1/pos/terminals/1/deactivate"))
+        mockMvc.perform(put("/api/v1/pos/terminals/1/deactivate").with(userWithPermission("POS_TERMINAL_UPDATE")))
                 .andExpect(status().isOk());
     }
 
@@ -245,11 +253,10 @@ class POSTerminalControllerTest {
     // ==================== DELETE /api/v1/pos/terminals/{id} ====================
 
     @Test
-    @WithMockUser(authorities = "POS_TERMINAL_DELETE")
     void delete_authenticated_returns200() throws Exception {
         doNothing().when(terminalService).delete(1L);
 
-        mockMvc.perform(delete("/api/v1/pos/terminals/1"))
+        mockMvc.perform(delete("/api/v1/pos/terminals/1").with(userWithPermission("POS_TERMINAL_DELETE")))
                 .andExpect(status().isOk());
     }
 
@@ -260,9 +267,8 @@ class POSTerminalControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void delete_noPermission_returns403() throws Exception {
-        mockMvc.perform(delete("/api/v1/pos/terminals/1"))
+        mockMvc.perform(delete("/api/v1/pos/terminals/1").with(userWithPermission("SOME_OTHER_PERMISSION")))
                 .andExpect(status().isForbidden());
     }
 }

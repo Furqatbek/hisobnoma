@@ -69,7 +69,7 @@ class CustomerControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content[0].code").value("CUST-000001"));
     }
 
     @Test
@@ -95,9 +95,8 @@ class CustomerControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.code").value("CUST-000001"))
-                .andExpect(jsonPath("$.data.name").value("Test Customer"));
+                .andExpect(jsonPath("$.code").value("CUST-000001"))
+                .andExpect(jsonPath("$.name").value("Test Customer"));
     }
 
     @Test
@@ -110,8 +109,7 @@ class CustomerControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/code/CUST-000001"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.code").value("CUST-000001"));
+                .andExpect(jsonPath("$.code").value("CUST-000001"));
     }
 
     @Test
@@ -124,7 +122,7 @@ class CustomerControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/active"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$[0].code").value("CUST-000001"));
     }
 
     @Test
@@ -139,7 +137,7 @@ class CustomerControllerTest {
         mockMvc.perform(get(BASE_URL + "/search")
                         .param("query", "Test"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content[0].code").value("CUST-000001"));
     }
 
     @Test
@@ -150,8 +148,7 @@ class CustomerControllerTest {
 
         // When/Then
         mockMvc.perform(get(BASE_URL + "/next-code"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -174,8 +171,7 @@ class CustomerControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.code").value("CUST-000001"));
+                .andExpect(jsonPath("$.code").value("CUST-000001"));
     }
 
     @Test
@@ -197,7 +193,7 @@ class CustomerControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.name").value("Updated Customer"));
     }
 
     @Test
@@ -222,7 +218,7 @@ class CustomerControllerTest {
         // When/Then
         mockMvc.perform(patch(BASE_URL + "/1/activate"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.active").value(true));
     }
 
     @Test
@@ -237,7 +233,7 @@ class CustomerControllerTest {
         mockMvc.perform(patch(BASE_URL + "/1/credit-hold")
                         .param("hold", "true"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.creditHold").value(true));
     }
 
     @Test
@@ -252,7 +248,7 @@ class CustomerControllerTest {
         mockMvc.perform(patch(BASE_URL + "/1/credit-limit")
                         .param("creditLimit", "100000.00"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.code").value("CUST-000001"));
     }
 
     @Test
@@ -266,7 +262,7 @@ class CustomerControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/credit-hold"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$[0].creditHold").value(true));
     }
 
     @Test
@@ -279,7 +275,7 @@ class CustomerControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/over-credit-limit"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$[0].code").value("CUST-000001"));
     }
 
     @Test
@@ -291,8 +287,7 @@ class CustomerControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/1/can-invoice")
                         .param("amount", "5000.00"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(status().isOk());
     }
 
     @Test

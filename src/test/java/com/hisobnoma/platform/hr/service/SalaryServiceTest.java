@@ -310,8 +310,6 @@ class SalaryServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(salaryRecordRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(salaryRecord));
         when(salaryRecordRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(advanceRepository.sumGivenByEmployeeAndPeriod(TENANT_ID, 1L, 2024, 1))
-                .thenReturn(BigDecimal.ZERO);
 
         SalaryRecordDto result = salaryService.cancel(1L);
 

@@ -8,6 +8,7 @@ import com.hisobnoma.platform.finance.entity.TaxType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +22,8 @@ class TaxCodeMapperTest {
     @BeforeEach
     void setUp() {
         taxCodeMapper = Mappers.getMapper(TaxCodeMapper.class);
+        TaxRateMapper taxRateMapper = Mappers.getMapper(TaxRateMapper.class);
+        ReflectionTestUtils.setField(taxCodeMapper, "taxRateMapper", taxRateMapper);
     }
 
     @Test

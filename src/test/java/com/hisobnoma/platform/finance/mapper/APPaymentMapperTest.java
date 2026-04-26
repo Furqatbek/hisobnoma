@@ -6,6 +6,7 @@ import com.hisobnoma.platform.finance.entity.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -22,6 +23,8 @@ class APPaymentMapperTest {
     @BeforeEach
     void setUp() {
         mapper = Mappers.getMapper(APPaymentMapper.class);
+        APPaymentAllocationMapper allocationMapper = Mappers.getMapper(APPaymentAllocationMapper.class);
+        ReflectionTestUtils.setField(mapper, "aPPaymentAllocationMapper", allocationMapper);
     }
 
     // ========== toDto ==========

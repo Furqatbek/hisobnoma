@@ -10,6 +10,7 @@ import com.hisobnoma.platform.finance.entity.APInvoiceStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,6 +28,7 @@ class APInvoiceMapperTest {
     void setUp() {
         mapper = Mappers.getMapper(APInvoiceMapper.class);
         lineMapper = Mappers.getMapper(APInvoiceLineMapper.class);
+        ReflectionTestUtils.setField(mapper, "aPInvoiceLineMapper", lineMapper);
     }
 
     // ========== toDto ==========

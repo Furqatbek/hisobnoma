@@ -461,7 +461,7 @@ class PurchaseOrderServiceTest {
         when(purchaseOrderRepository.findByIdWithLinesAndTenantId(1L, TENANT_ID))
                 .thenReturn(Optional.of(purchaseOrder));
         when(receivingService.createReceivingOrder(any(CreateReceivingRequest.class))).thenReturn(roDto);
-        doNothing().when(receivingService).confirmReceiving(anyLong());
+        when(receivingService.confirmReceiving(anyLong())).thenReturn(roDto);
 
         // For the final getPurchaseOrder call
         when(purchaseOrderMapper.toDto(purchaseOrder)).thenReturn(purchaseOrderDto);

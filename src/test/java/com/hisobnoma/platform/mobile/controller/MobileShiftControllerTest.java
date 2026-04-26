@@ -88,7 +88,10 @@ class MobileShiftControllerTest {
     @Test
     @WithMockUser(authorities = "POS_SHIFT_OPEN")
     void openShift_authenticated_returns201() throws Exception {
-        OpenShiftRequest request = new OpenShiftRequest();
+        OpenShiftRequest request = OpenShiftRequest.builder()
+                .terminalId(1L)
+                .openingCash(new java.math.BigDecimal("100000"))
+                .build();
         ShiftDto dto = ShiftDto.builder().id(1L).build();
         when(shiftService.openShift(any())).thenReturn(dto);
 
@@ -120,7 +123,9 @@ class MobileShiftControllerTest {
     @Test
     @WithMockUser(authorities = "POS_SHIFT_CLOSE")
     void closeShift_authenticated_returns200() throws Exception {
-        CloseShiftRequest request = new CloseShiftRequest();
+        CloseShiftRequest request = CloseShiftRequest.builder()
+                .closingCash(new java.math.BigDecimal("150000"))
+                .build();
         ShiftDto dto = ShiftDto.builder().id(1L).build();
         when(shiftService.closeShift(any(), any())).thenReturn(dto);
 
@@ -152,8 +157,10 @@ class MobileShiftControllerTest {
     @Test
     @WithMockUser(authorities = "POS_SHIFT_CASH_OPERATION")
     void cashOperation_authenticated_returns200() throws Exception {
-        CashOperationRequest request = new CashOperationRequest();
-        request.setOperationType(CashOperationRequest.OperationType.CASH_IN);
+        CashOperationRequest request = CashOperationRequest.builder()
+                .operationType(CashOperationRequest.OperationType.CASH_IN)
+                .amount(new java.math.BigDecimal("50000"))
+                .build();
         ShiftDto dto = ShiftDto.builder().id(1L).build();
         when(shiftService.cashOperation(any(), any())).thenReturn(dto);
 

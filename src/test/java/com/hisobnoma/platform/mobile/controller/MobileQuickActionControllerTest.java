@@ -68,7 +68,11 @@ class MobileQuickActionControllerTest {
     @Test
     @WithMockUser(authorities = "MOBILE_QUICK_COUNT")
     void quickStockCount_authenticated_returns200() throws Exception {
-        QuickStockCountRequest request = new QuickStockCountRequest();
+        QuickStockCountRequest request = QuickStockCountRequest.builder()
+                .productId(1L)
+                .locationId(1L)
+                .countedQuantity(new java.math.BigDecimal("10"))
+                .build();
         when(quickActionService.performQuickStockCount(any())).thenReturn(Map.of("status", "counted"));
 
         mockMvc.perform(post("/api/v1/mobile/inventory/quick-count")
@@ -99,7 +103,14 @@ class MobileQuickActionControllerTest {
     @Test
     @WithMockUser(authorities = "MOBILE_QUICK_SALE")
     void quickSale_authenticated_returns200() throws Exception {
-        QuickSaleRequest request = new QuickSaleRequest();
+        QuickSaleRequest request = QuickSaleRequest.builder()
+                .terminalId(1L)
+                .paymentType("CASH")
+                .items(List.of(QuickSaleRequest.QuickSaleItem.builder()
+                        .productId(1L)
+                        .quantity(new java.math.BigDecimal("1"))
+                        .build()))
+                .build();
         POSTransactionDto dto = POSTransactionDto.builder().id(1L).transactionNumber("QS-001").build();
         when(quickActionService.performQuickSale(any())).thenReturn(dto);
 

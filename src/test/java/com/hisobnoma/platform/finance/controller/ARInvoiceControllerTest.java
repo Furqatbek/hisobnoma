@@ -71,7 +71,7 @@ class ARInvoiceControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content[0].invoiceNumber").value("INV-000001"));
     }
 
     @Test
@@ -97,8 +97,7 @@ class ARInvoiceControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.invoiceNumber").value("INV-000001"));
+                .andExpect(jsonPath("$.invoiceNumber").value("INV-000001"));
     }
 
     @Test
@@ -111,8 +110,7 @@ class ARInvoiceControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/number/INV-000001"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.invoiceNumber").value("INV-000001"));
+                .andExpect(jsonPath("$.invoiceNumber").value("INV-000001"));
     }
 
     @Test
@@ -126,7 +124,7 @@ class ARInvoiceControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/customer/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content[0].invoiceNumber").value("INV-000001"));
     }
 
     @Test
@@ -140,7 +138,7 @@ class ARInvoiceControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/status/DRAFT"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content[0].invoiceNumber").value("INV-000001"));
     }
 
     @Test
@@ -153,7 +151,7 @@ class ARInvoiceControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/customer/1/unpaid"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$[0].invoiceNumber").value("INV-000001"));
     }
 
     @Test
@@ -166,7 +164,7 @@ class ARInvoiceControllerTest {
         // When/Then
         mockMvc.perform(get(BASE_URL + "/overdue"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$[0].invoiceNumber").value("INV-000001"));
     }
 
     @Test
@@ -195,8 +193,7 @@ class ARInvoiceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.invoiceNumber").value("INV-000001"));
+                .andExpect(jsonPath("$.invoiceNumber").value("INV-000001"));
     }
 
     @Test
@@ -225,7 +222,7 @@ class ARInvoiceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.invoiceNumber").value("INV-000001"));
     }
 
     @Test
@@ -239,7 +236,7 @@ class ARInvoiceControllerTest {
         // When/Then
         mockMvc.perform(post(BASE_URL + "/1/post"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("PENDING"));
     }
 
     @Test
@@ -253,7 +250,7 @@ class ARInvoiceControllerTest {
         // When/Then
         mockMvc.perform(post(BASE_URL + "/1/send"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SENT"));
     }
 
     @Test
@@ -268,7 +265,7 @@ class ARInvoiceControllerTest {
         mockMvc.perform(post(BASE_URL + "/1/cancel")
                         .param("reason", "No longer needed"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
 
     @Test
@@ -279,8 +276,7 @@ class ARInvoiceControllerTest {
 
         // When/Then
         mockMvc.perform(get(BASE_URL + "/customer/1/outstanding"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(status().isOk());
     }
 
     @Test

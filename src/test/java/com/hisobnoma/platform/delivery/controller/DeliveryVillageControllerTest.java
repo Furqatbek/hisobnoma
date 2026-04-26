@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.delivery.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hisobnoma.platform.auth.security.UserPrincipal;
 import com.hisobnoma.platform.delivery.dto.DeliveryVillageDTO;
 import com.hisobnoma.platform.delivery.service.DeliveryVillageService;
 import org.junit.jupiter.api.Test;
@@ -10,15 +11,20 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -36,15 +42,25 @@ class DeliveryVillageControllerTest {
     @MockBean
     private DeliveryVillageService villageService;
 
+    private RequestPostProcessor userWithPermission(String... permissions) {
+        UserPrincipal principal = new UserPrincipal(
+                1L, "admin", "pw", 1L, true, true,
+                Arrays.stream(permissions)
+                        .map(SimpleGrantedAuthority::new)
+                        .toList());
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities());
+        return authentication(auth);
+    }
+
     // ==================== GET /api/v1/delivery/villages ====================
 
     @Test
-    @WithMockUser(authorities = "DELIVERY_VILLAGE_READ")
     void getAll_authenticated_returns200() throws Exception {
         DeliveryVillageDTO dto = DeliveryVillageDTO.builder().id(1L).name("Village-1").build();
         when(villageService.findAll(any())).thenReturn(new PageImpl<>(List.of(dto)));
 
-        mockMvc.perform(get("/api/v1/delivery/villages"))
+        mockMvc.perform(get("/api/v1/delivery/villages").with(userWithPermission("DELIVERY_VILLAGE_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -55,20 +71,18 @@ class DeliveryVillageControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void getAll_noPermission_returns403() throws Exception {
-        mockMvc.perform(get("/api/v1/delivery/villages"))
+        mockMvc.perform(get("/api/v1/delivery/villages").with(userWithPermission("SOME_OTHER_PERMISSION")))
                 .andExpect(status().isForbidden());
     }
 
     // ==================== GET /api/v1/delivery/villages/active ====================
 
     @Test
-    @WithMockUser(authorities = "DELIVERY_VILLAGE_READ")
     void getActive_authenticated_returns200() throws Exception {
         when(villageService.findActive()).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/v1/delivery/villages/active"))
+        mockMvc.perform(get("/api/v1/delivery/villages/active").with(userWithPermission("DELIVERY_VILLAGE_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -81,11 +95,10 @@ class DeliveryVillageControllerTest {
     // ==================== GET /api/v1/delivery/villages/region/{regionId} ====================
 
     @Test
-    @WithMockUser(authorities = "DELIVERY_VILLAGE_READ")
     void getByRegion_authenticated_returns200() throws Exception {
         when(villageService.findByRegion(1L)).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/v1/delivery/villages/region/1"))
+        mockMvc.perform(get("/api/v1/delivery/villages/region/1").with(userWithPermission("DELIVERY_VILLAGE_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -96,21 +109,19 @@ class DeliveryVillageControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void getByRegion_noPermission_returns403() throws Exception {
-        mockMvc.perform(get("/api/v1/delivery/villages/region/1"))
+        mockMvc.perform(get("/api/v1/delivery/villages/region/1").with(userWithPermission("SOME_OTHER_PERMISSION")))
                 .andExpect(status().isForbidden());
     }
 
     // ==================== GET /api/v1/delivery/villages/{id} ====================
 
     @Test
-    @WithMockUser(authorities = "DELIVERY_VILLAGE_READ")
     void getById_authenticated_returns200() throws Exception {
         DeliveryVillageDTO dto = DeliveryVillageDTO.builder().id(1L).name("Village-1").build();
         when(villageService.findById(1L)).thenReturn(dto);
 
-        mockMvc.perform(get("/api/v1/delivery/villages/1"))
+        mockMvc.perform(get("/api/v1/delivery/villages/1").with(userWithPermission("DELIVERY_VILLAGE_READ")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("Village-1"));
     }
@@ -122,21 +133,20 @@ class DeliveryVillageControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void getById_noPermission_returns403() throws Exception {
-        mockMvc.perform(get("/api/v1/delivery/villages/1"))
+        mockMvc.perform(get("/api/v1/delivery/villages/1").with(userWithPermission("SOME_OTHER_PERMISSION")))
                 .andExpect(status().isForbidden());
     }
 
     // ==================== POST /api/v1/delivery/villages ====================
 
     @Test
-    @WithMockUser(authorities = "DELIVERY_VILLAGE_CREATE")
     void create_authenticated_returns201() throws Exception {
         DeliveryVillageDTO dto = DeliveryVillageDTO.builder().id(1L).name("Village-1").build();
         when(villageService.create(any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/delivery/villages")
+                        .with(userWithPermission("DELIVERY_VILLAGE_CREATE"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
@@ -152,9 +162,9 @@ class DeliveryVillageControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void create_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/delivery/villages")
+                        .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
@@ -163,12 +173,12 @@ class DeliveryVillageControllerTest {
     // ==================== PUT /api/v1/delivery/villages/{id} ====================
 
     @Test
-    @WithMockUser(authorities = "DELIVERY_VILLAGE_UPDATE")
     void update_authenticated_returns200() throws Exception {
         DeliveryVillageDTO dto = DeliveryVillageDTO.builder().id(1L).name("Updated Village").build();
         when(villageService.update(any(), any())).thenReturn(dto);
 
         mockMvc.perform(put("/api/v1/delivery/villages/1")
+                        .with(userWithPermission("DELIVERY_VILLAGE_UPDATE"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
@@ -184,9 +194,9 @@ class DeliveryVillageControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void update_noPermission_returns403() throws Exception {
         mockMvc.perform(put("/api/v1/delivery/villages/1")
+                        .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
@@ -195,11 +205,10 @@ class DeliveryVillageControllerTest {
     // ==================== DELETE /api/v1/delivery/villages/{id} ====================
 
     @Test
-    @WithMockUser(authorities = "DELIVERY_VILLAGE_DELETE")
     void delete_authenticated_returns200() throws Exception {
         doNothing().when(villageService).delete(1L);
 
-        mockMvc.perform(delete("/api/v1/delivery/villages/1"))
+        mockMvc.perform(delete("/api/v1/delivery/villages/1").with(userWithPermission("DELIVERY_VILLAGE_DELETE")))
                 .andExpect(status().isOk());
     }
 
@@ -210,9 +219,8 @@ class DeliveryVillageControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void delete_noPermission_returns403() throws Exception {
-        mockMvc.perform(delete("/api/v1/delivery/villages/1"))
+        mockMvc.perform(delete("/api/v1/delivery/villages/1").with(userWithPermission("SOME_OTHER_PERMISSION")))
                 .andExpect(status().isForbidden());
     }
 }

@@ -279,7 +279,6 @@ class ProductServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(skuGeneratorService.generateSkuFromName("New Product")).thenReturn("NEW-SKU");
         when(productMapper.toEntity(request)).thenReturn(Product.builder().id(1L).build());
-        when(uomRepository.findById(1L)).thenReturn(Optional.of(uom));
         when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
 
         // When/Then
@@ -299,7 +298,6 @@ class ProductServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(skuGeneratorService.generateSkuFromName("New Product")).thenReturn("NEW-SKU");
         when(productMapper.toEntity(request)).thenReturn(Product.builder().id(1L).build());
-        when(uomRepository.findById(1L)).thenReturn(Optional.of(uom));
         when(brandRepository.findById(999L)).thenReturn(Optional.empty());
 
         // When/Then

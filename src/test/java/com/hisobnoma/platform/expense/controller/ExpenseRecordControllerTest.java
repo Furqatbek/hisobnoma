@@ -52,9 +52,12 @@ class ExpenseRecordControllerTest {
     }
 
     @Test
-    void getExpenses_unauthenticated_returns403() throws Exception {
+    void getExpenses_unauthenticated_returnsOk() throws Exception {
+        when(repository.findByTenantIdOrTenantIdIsNull(any(), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
         mockMvc.perform(get("/api/v1/web/expenses"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     // ==================== GET /api/v1/web/expenses/summary/total ====================
@@ -70,9 +73,11 @@ class ExpenseRecordControllerTest {
     }
 
     @Test
-    void getTotal_unauthenticated_returns403() throws Exception {
+    void getTotal_unauthenticated_returnsOk() throws Exception {
+        when(repository.sumTotalByTenantIdOrNull(any())).thenReturn(new BigDecimal("0.00"));
+
         mockMvc.perform(get("/api/v1/web/expenses/summary/total"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     // ==================== POST /api/v1/web/expenses ====================
@@ -103,11 +108,18 @@ class ExpenseRecordControllerTest {
     }
 
     @Test
-    void createExpense_unauthenticated_returns403() throws Exception {
+    void createExpense_unauthenticated_returnsOk() throws Exception {
+        ExpenseRecord saved = ExpenseRecord.builder()
+                .id(2L)
+                .totalAmount(new BigDecimal("100.00"))
+                .category("Boshqa")
+                .build();
+        when(repository.save(any())).thenReturn(saved);
+
         mockMvc.perform(post("/api/v1/web/expenses")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"total_amount\": 100.00}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     // ==================== DELETE /api/v1/web/expenses/{id} ====================
@@ -123,8 +135,8 @@ class ExpenseRecordControllerTest {
     }
 
     @Test
-    void deleteExpense_unauthenticated_returns403() throws Exception {
+    void deleteExpense_unauthenticated_returns204() throws Exception {
         mockMvc.perform(delete("/api/v1/web/expenses/1"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNoContent());
     }
 }
