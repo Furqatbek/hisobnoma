@@ -29,7 +29,12 @@
     "importBtn": "Импорт қилиш",
     "downloadTemplate": "Шаблонни юклаб олиш",
     "importSuccess": "Яратилди: {created}, Янгиланди: {updated}, Хатолик: {failed}",
-    "importError": "Импорт қилишда хатолик юз берди"
+    "importError": "Импорт қилишда хатолик юз берди",
+    "skuLookup": "SKU бўйича қидириш",
+    "skuLookupPlaceholder": "SKU кодини киритинг...",
+    "skuLookupBtn": "SKU қидириш",
+    "skuFound": "Маҳсулот топилди",
+    "skuNotFound": "Бу SKU бўйича маҳсулот топилмади"
   },
   "productForm": {
     "newProduct": "Янги маҳсулот",
@@ -133,7 +138,10 @@
     "nameRequired": "Номи киритилиши шарт",
     "codeRequired": "Коди киритилиши шарт",
     "confirmDelete": "\"{name}\" ни ўчирмоқчимисиз?",
-    "failedToSave": "Сақлашда хатолик"
+    "failedToSave": "Сақлашда хатолик",
+    "searchPlaceholder": "Бренд номи бўйича қидириш...",
+    "activeOnly": "Фақат фаоллар",
+    "showingBrands": "{from} дан {to} гача, жами {total} бренд"
   },
   "categories": {
     "title": "Тоифалар",
@@ -377,6 +385,9 @@
     "confirmCancel": "Бекор қилишни тасдиқлаш",
     "cancelReason": "Бекор қилиш сабаби",
     "cancelReasonPlaceholder": "Бекор қилиш сабабини киритинг...",
+    "poFilterPlaceholder": "Харид буюртмаси рақами бўйича фильтрлаш...",
+    "filterByPo": "ХБ бўйича фильтрлаш",
+    "clearPoFilter": "Фильтрни тозалаш",
     "status": {
       "DRAFT": "Қоралама",
       "PENDING": "Кутилмоқда",

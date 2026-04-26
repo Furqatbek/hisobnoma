@@ -75,6 +75,75 @@ async function fetchAll() {
   }
 }
 
+async function fetchByCategory(category) {
+  if (!category) {
+    await fetchAll()
+    return
+  }
+  loading.value = true
+  try {
+    const response = await systemSettingsApi.getByCategory(category)
+    const data = response.data.data || response.data || []
+    // Replace only the settings for this category in the full list
+    allSettings.value = allSettings.value.filter(s => s.category !== category).concat(data)
+    activeCategory.value = category
+  } catch (error) {
+    console.error('Failed to fetch category settings:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function lookupByKey() {
+  if (!keyLookup.value.trim()) return
+  keyLookupLoading.value = true
+  keyLookupError.value = ''
+  keyLookupResult.value = null
+  try {
+    const response = await systemSettingsApi.getByKey(keyLookup.value.trim())
+    keyLookupResult.value = response.data.data || response.data
+  } catch (error) {
+    keyLookupError.value = error.response?.status === 404
+      ? t('admin.systemSettings.keyNotFound')
+      : (error.response?.data?.message || t('admin.systemSettings.keyLookupError'))
+  } finally {
+    keyLookupLoading.value = false
+  }
+}
+
+function clearKeyLookup() {
+  keyLookup.value = ''
+  keyLookupResult.value = null
+  keyLookupError.value = ''
+}
+
+function trackModification(settingKey, newValue) {
+  modifiedSettings.value.set(settingKey, newValue)
+  batchSuccess.value = false
+}
+
+async function batchSaveAll() {
+  if (modifiedSettings.value.size === 0) return
+  batchSaving.value = true
+  batchSuccess.value = false
+  try {
+    const settings = {}
+    modifiedSettings.value.forEach((value, key) => {
+      settings[key] = value
+    })
+    await systemSettingsApi.batchUpdate(settings)
+    modifiedSettings.value.clear()
+    batchSuccess.value = true
+    await fetchAll()
+    setTimeout(() => { batchSuccess.value = false }, 3000)
+  } catch (error) {
+    console.error('Batch update failed:', error)
+    alert(error.response?.data?.message || t('admin.systemSettings.batchSaveError'))
+  } finally {
+    batchSaving.value = false
+  }
+}
+
 onMounted(fetchAll)
 
 const filteredSettings = computed(() => {
@@ -143,6 +212,7 @@ async function saveInlineEdit(setting) {
   try {
     await systemSettingsApi.updateValue(setting.settingKey, editingValue.value)
     editingKey.value = null
+    modifiedSettings.value.delete(setting.settingKey)
     fetchAll()
   } catch (error) {
     console.error('Failed to update value:', error)
@@ -203,10 +273,60 @@ const valueTypes = ['STRING', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'JSON', 'ENUM', '
         <h1 class="text-2xl font-bold text-gray-900">{{ $t('admin.systemSettings.title') }}</h1>
         <p class="mt-1 text-sm text-gray-500">{{ $t('admin.systemSettings.subtitle') }}</p>
       </div>
-      <button @click="openCreateModal" class="btn btn-primary">
-        <PlusIcon class="h-5 w-5 mr-2" />
-        {{ $t('admin.systemSettings.addSetting') }}
-      </button>
+      <div class="flex items-center gap-2">
+        <button v-if="modifiedSettings.size > 0 || batchSuccess" @click="batchSaveAll" :disabled="batchSaving || modifiedSettings.size === 0" class="btn btn-primary">
+          <span v-if="batchSaving" class="animate-spin inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+          <ArrowPathIcon v-else class="h-5 w-5 mr-2" />
+          <template v-if="batchSuccess">{{ $t('admin.systemSettings.batchSaved') }}</template>
+          <template v-else>{{ $t('admin.systemSettings.batchSave') }} ({{ modifiedSettings.size }})</template>
+        </button>
+        <button @click="openCreateModal" class="btn btn-primary">
+          <PlusIcon class="h-5 w-5 mr-2" />
+          {{ $t('admin.systemSettings.addSetting') }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Key Lookup -->
+    <div class="card">
+      <div class="card-body">
+        <div class="flex items-center gap-3">
+          <div class="flex-1 relative">
+            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              v-model="keyLookup"
+              type="text"
+              :placeholder="$t('admin.systemSettings.keyLookupPlaceholder')"
+              class="input pl-10 font-mono"
+              @keyup.enter="lookupByKey"
+            />
+          </div>
+          <button @click="lookupByKey" :disabled="keyLookupLoading || !keyLookup.trim()" class="btn btn-secondary">
+            {{ keyLookupLoading ? '...' : $t('admin.systemSettings.lookupKey') }}
+          </button>
+          <button v-if="keyLookupResult || keyLookupError" @click="clearKeyLookup" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
+            <XMarkIcon class="h-5 w-5" />
+          </button>
+        </div>
+        <!-- Key Lookup Result -->
+        <div v-if="keyLookupResult" class="mt-3 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+          <div class="flex items-center gap-2 flex-wrap">
+            <code class="text-sm font-semibold text-gray-900 bg-white px-2 py-0.5 rounded">{{ keyLookupResult.settingKey }}</code>
+            <span :class="['text-xs px-1.5 py-0.5 rounded-full', valueTypeClass(keyLookupResult.valueType)]">{{ valueTypeLabel(keyLookupResult.valueType) }}</span>
+            <span v-if="keyLookupResult.category" class="text-xs text-gray-500">{{ keyLookupResult.category }}</span>
+          </div>
+          <p v-if="keyLookupResult.description" class="text-sm text-gray-500 mt-1">{{ keyLookupResult.description }}</p>
+          <div class="mt-2 text-sm font-mono text-gray-700">
+            {{ keyLookupResult.sensitive ? '••••••••' : (keyLookupResult.settingValue ?? keyLookupResult.defaultValue ?? '-') }}
+          </div>
+          <div class="mt-2 flex gap-2">
+            <button @click="openEditModal(keyLookupResult)" class="text-sm text-primary-600 hover:text-primary-800">{{ $t('edit') }}</button>
+          </div>
+        </div>
+        <div v-if="keyLookupError" class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          {{ keyLookupError }}
+        </div>
+      </div>
     </div>
 
     <!-- Category Tabs -->
@@ -214,7 +334,7 @@ const valueTypes = ['STRING', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'JSON', 'ENUM', '
       <nav class="flex gap-1 overflow-x-auto pb-px">
         <button
           v-for="cat in categories" :key="cat"
-          @click="activeCategory = cat"
+          @click="fetchByCategory(cat)"
           :class="['px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors whitespace-nowrap',
             activeCategory === cat
               ? 'border-primary-500 text-primary-600 bg-primary-50/50'
@@ -314,8 +434,11 @@ const valueTypes = ['STRING', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'JSON', 'ENUM', '
                       @keyup.escape="cancelInlineEdit"
                     />
                   </template>
-                  <button @click="saveInlineEdit(setting)" class="p-1 text-green-600 hover:bg-green-50 rounded">
+                  <button @click="saveInlineEdit(setting)" class="p-1 text-green-600 hover:bg-green-50 rounded" :title="$t('save')">
                     <CheckIcon class="h-5 w-5" />
+                  </button>
+                  <button @click="trackModification(setting.settingKey, editingValue); cancelInlineEdit()" class="p-1 text-primary-500 hover:bg-primary-50 rounded" :title="$t('admin.systemSettings.batchTrack')">
+                    <ArrowPathIcon class="h-5 w-5" />
                   </button>
                   <button @click="cancelInlineEdit" class="p-1 text-gray-400 hover:bg-gray-100 rounded">
                     <XMarkIcon class="h-5 w-5" />

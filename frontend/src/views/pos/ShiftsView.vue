@@ -2,16 +2,25 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { shiftsApi } from '@/services/api'
-import { EyeIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { EyeIcon, MagnifyingGlassIcon, XMarkIcon, UserCircleIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 
 const shifts = ref([])
 const loading = ref(true)
+const activeTab = ref('ALL')
+
+// My Current Shift
+const currentShift = ref(null)
+const currentShiftLoading = ref(false)
+
+// Open Shifts
+const openShifts = ref([])
 
 // Modal state
 const showDetailModal = ref(false)
 const selectedShift = ref(null)
+const detailLoading = ref(false)
 
 const pagination = ref({
   page: 0,
@@ -39,9 +48,18 @@ async function fetchShifts() {
   }
 }
 
-function viewShift(shift) {
-  selectedShift.value = shift
+async function viewShift(shift) {
   showDetailModal.value = true
+  selectedShift.value = shift
+  detailLoading.value = true
+  try {
+    const res = await shiftsApi.getById(shift.id)
+    selectedShift.value = res.data.data || res.data
+  } catch (error) {
+    console.error('Смена тафсилотларини юклашда хатолик:', error)
+  } finally {
+    detailLoading.value = false
+  }
 }
 
 function closeModal() {
@@ -49,7 +67,46 @@ function closeModal() {
   selectedShift.value = null
 }
 
-onMounted(fetchShifts)
+async function fetchCurrentShift() {
+  currentShiftLoading.value = true
+  try {
+    const res = await shiftsApi.getCurrentForUser()
+    currentShift.value = res.data.data || res.data
+  } catch (error) {
+    if (error.response?.status !== 404) {
+      console.error('Жорий сменани юклашда хатолик:', error)
+    }
+    currentShift.value = null
+  } finally {
+    currentShiftLoading.value = false
+  }
+}
+
+async function fetchOpenShifts() {
+  try {
+    const res = await shiftsApi.getOpen()
+    const data = res.data.data || res.data
+    openShifts.value = Array.isArray(data) ? data : data.content || []
+  } catch (error) {
+    console.error('Очиқ сменаларни юклашда хатолик:', error)
+    openShifts.value = []
+  }
+}
+
+function switchTab(tab) {
+  activeTab.value = tab
+  if (tab === 'OPEN') {
+    fetchOpenShifts()
+  } else {
+    pagination.value.page = 0
+    fetchShifts()
+  }
+}
+
+onMounted(() => {
+  fetchShifts()
+  fetchCurrentShift()
+})
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ', {
@@ -102,7 +159,108 @@ function getDifferenceClass(value) {
       </div>
     </div>
 
+    <!-- My Current Shift Indicator -->
     <div class="card">
+      <div class="card-body">
+        <div class="flex items-center gap-3">
+          <UserCircleIcon class="h-6 w-6 text-primary-600" />
+          <h3 class="text-sm font-semibold text-gray-900">{{ $t('pos.shifts.myCurrentShift') }}</h3>
+        </div>
+        <div v-if="currentShiftLoading" class="mt-3 flex items-center gap-2">
+          <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+          <span class="text-sm text-gray-500">{{ $t('loading') }}</span>
+        </div>
+        <div v-else-if="currentShift" class="mt-3 flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-4">
+          <div>
+            <p class="font-medium text-green-800">{{ currentShift.shiftNumber }}</p>
+            <p class="text-sm text-green-600">
+              {{ $t('pos.shifts.terminal') }}: {{ currentShift.terminalName || currentShift.terminalCode || '-' }}
+              | {{ $t('pos.shifts.openedAt') }}: {{ formatDateTime(currentShift.openedAt) }}
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="badge badge-success">{{ $t('pos.shifts.open') }}</span>
+            <button @click="viewShift(currentShift)" class="btn-secondary text-xs">{{ $t('details') }}</button>
+          </div>
+        </div>
+        <div v-else class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <p class="text-sm text-gray-500">{{ $t('pos.shifts.noOpenShift') }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs: All / Open Shifts -->
+    <div class="border-b border-gray-200">
+      <nav class="flex space-x-4">
+        <button
+          @click="switchTab('ALL')"
+          :class="[
+            'px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors',
+            activeTab === 'ALL'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ]"
+        >
+          {{ $t('pos.shifts.allShifts') }}
+        </button>
+        <button
+          @click="switchTab('OPEN')"
+          :class="[
+            'px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors',
+            activeTab === 'OPEN'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ]"
+        >
+          {{ $t('pos.shifts.openShifts') }}
+        </button>
+      </nav>
+    </div>
+
+    <!-- Open Shifts List -->
+    <div v-if="activeTab === 'OPEN'" class="card">
+      <div v-if="openShifts.length === 0" class="text-center py-12">
+        <p class="text-gray-500">{{ $t('pos.shifts.noOpenShiftsFound') }}</p>
+      </div>
+      <div v-else class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>{{ $t('pos.shifts.shiftNumber') }}</th>
+              <th>{{ $t('pos.shifts.terminal') }}</th>
+              <th>{{ $t('pos.shifts.openedBy') }}</th>
+              <th>{{ $t('pos.shifts.openedAt') }}</th>
+              <th class="text-right">{{ $t('pos.shifts.openingBalance') }}</th>
+              <th class="text-right">{{ $t('pos.shifts.totalSales') }}</th>
+              <th class="text-center">{{ $t('pos.transactions.title') }}</th>
+              <th class="text-right">{{ $t('actions') }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <tr v-for="shift in openShifts" :key="shift.id">
+              <td class="font-mono text-sm">{{ shift.shiftNumber }}</td>
+              <td>{{ shift.terminalName || shift.terminalCode || '-' }}</td>
+              <td>{{ shift.cashierName || '-' }}</td>
+              <td class="text-sm">{{ formatDateTime(shift.openedAt) }}</td>
+              <td class="text-right">{{ formatCurrency(shift.openingCash) }}</td>
+              <td class="text-right font-medium">{{ formatCurrency(shift.totalSales) }}</td>
+              <td class="text-center">{{ shift.transactionCount || 0 }}</td>
+              <td class="text-right">
+                <button
+                  @click="viewShift(shift)"
+                  class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
+                  :title="$t('details')"
+                >
+                  <EyeIcon class="h-5 w-5" />
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div v-if="activeTab === 'ALL'" class="card">
       <div v-if="loading" class="flex items-center justify-center h-64">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
@@ -208,6 +366,11 @@ function getDifferenceClass(value) {
         <!-- Modal Content -->
         <div class="p-6 overflow-y-auto max-h-[calc(90vh-80px)] space-y-6">
 
+          <div v-if="detailLoading" class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
+          </div>
+
+          <template v-else>
           <!-- Basic Info -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>

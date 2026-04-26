@@ -413,6 +413,16 @@ onMounted(() => { fetchCurrencies(0); fetchActiveCurrencies(); fetchBaseCurrency
 
     <!-- ========== TAB 2: EXCHANGE RATES ========== -->
     <template v-else>
+      <!-- Toolbar: Load All -->
+      <div class="card">
+        <div class="card-body">
+          <button @click="loadAllRates" class="btn-secondary text-sm">
+            <ListBulletIcon class="h-4 w-4 mr-1" />
+            {{ $t('finance.exchangeRates.loadAll') }}
+          </button>
+        </div>
+      </div>
+
       <!-- Filters & Converter -->
       <div class="card">
         <div class="card-body">
@@ -445,6 +455,61 @@ onMounted(() => { fetchCurrencies(0); fetchActiveCurrencies(); fetchBaseCurrency
               <p v-if="conv.result !== null" class="mt-2 text-sm font-semibold text-primary-600">
                 {{ fmtNum(conv.amount) }} {{ conv.from }} = {{ fmtRate(conv.result) }} {{ conv.to }}
               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Effective Rate & Pair Lookup -->
+      <div class="card">
+        <div class="card-body">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Effective Rate Lookup -->
+            <div>
+              <h3 class="text-sm font-medium text-gray-700 mb-2">{{ $t('finance.exchangeRates.effectiveRateLookup') }}</h3>
+              <div class="flex gap-2 items-end flex-wrap">
+                <select v-model="effLookup.from" class="input w-28">
+                  <option value="">{{ $t('finance.exchangeRates.from') }}</option>
+                  <option v-for="c in activeCurrencies" :key="c.code" :value="c.code">{{ c.code }}</option>
+                </select>
+                <select v-model="effLookup.to" class="input w-28">
+                  <option value="">{{ $t('finance.exchangeRates.to') }}</option>
+                  <option v-for="c in activeCurrencies" :key="c.code" :value="c.code">{{ c.code }}</option>
+                </select>
+                <input v-model="effLookup.date" type="date" class="input w-36" />
+                <button @click="lookupEffectiveRate" :disabled="effLookup.loading" class="btn-secondary text-sm">
+                  <MagnifyingGlassIcon class="h-4 w-4 mr-1" />
+                  {{ $t('finance.exchangeRates.lookupEffective') }}
+                </button>
+              </div>
+              <div v-if="effLookup.result !== null" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                <span class="font-mono font-semibold">{{ effLookup.from }} / {{ effLookup.to }}</span>
+                <span class="ml-2">{{ $t('finance.exchangeRates.rate') }}: <strong>{{ fmtRate(effLookup.result.rate ?? effLookup.result) }}</strong></span>
+                <span v-if="effLookup.result.effectiveDate" class="ml-2 text-gray-500">({{ effLookup.result.effectiveDate?.substring(0, 10) }})</span>
+              </div>
+            </div>
+            <!-- Pair Lookup -->
+            <div>
+              <h3 class="text-sm font-medium text-gray-700 mb-2">{{ $t('finance.exchangeRates.pairLookup') }}</h3>
+              <div class="flex gap-2 items-end flex-wrap">
+                <select v-model="pairLookup.from" class="input w-28">
+                  <option value="">{{ $t('finance.exchangeRates.from') }}</option>
+                  <option v-for="c in activeCurrencies" :key="c.code" :value="c.code">{{ c.code }}</option>
+                </select>
+                <select v-model="pairLookup.to" class="input w-28">
+                  <option value="">{{ $t('finance.exchangeRates.to') }}</option>
+                  <option v-for="c in activeCurrencies" :key="c.code" :value="c.code">{{ c.code }}</option>
+                </select>
+                <button @click="lookupPairRate" :disabled="pairLookup.loading" class="btn-secondary text-sm">
+                  <MagnifyingGlassIcon class="h-4 w-4 mr-1" />
+                  {{ $t('finance.exchangeRates.lookupPair') }}
+                </button>
+              </div>
+              <div v-if="pairLookup.result !== null" class="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+                <span class="font-mono font-semibold">{{ pairLookup.from }} / {{ pairLookup.to }}</span>
+                <span class="ml-2">{{ $t('finance.exchangeRates.rate') }}: <strong>{{ fmtRate(pairLookup.result.rate ?? pairLookup.result) }}</strong></span>
+                <span v-if="pairLookup.result.effectiveDate" class="ml-2 text-gray-500">({{ pairLookup.result.effectiveDate?.substring(0, 10) }})</span>
+              </div>
             </div>
           </div>
         </div>
@@ -484,7 +549,7 @@ onMounted(() => { fetchCurrencies(0); fetchActiveCurrencies(); fetchBaseCurrency
                 </td>
                 <td class="text-right">
                   <div class="flex items-center justify-end space-x-1">
-                    <button @click="openRateModal(r)" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100" :title="$t('edit')">
+                    <button @click="openRateModalById(r)" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100" :title="$t('edit')">
                       <PencilIcon class="h-5 w-5" />
                     </button>
                     <button @click="confirmDeleteRate(r)" class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100" :title="$t('delete')">

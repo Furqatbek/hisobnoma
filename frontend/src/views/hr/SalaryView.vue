@@ -263,6 +263,37 @@ onMounted(loadData)
       </div>
     </div>
 
+    <!-- Tabs -->
+    <div class="border-b border-gray-200">
+      <nav class="flex -mb-px space-x-6">
+        <button
+          @click="switchTab('period')"
+          :class="[
+            'py-3 px-1 border-b-2 text-sm font-medium transition-colors',
+            activeTab === 'period'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ]"
+        >
+          {{ $t('hr.salary.byPeriod') }}
+        </button>
+        <button
+          @click="switchTab('all')"
+          :class="[
+            'py-3 px-1 border-b-2 text-sm font-medium transition-colors',
+            activeTab === 'all'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ]"
+        >
+          <ListBulletIcon class="h-4 w-4 inline mr-1" />
+          {{ $t('hr.salary.allSalaries') }}
+        </button>
+      </nav>
+    </div>
+
+    <!-- Period tab content -->
+    <template v-if="activeTab === 'period'">
     <!-- Filter -->
     <div class="card">
       <div class="card-body">
@@ -377,15 +408,19 @@ onMounted(loadData)
                     <span :class="['badge', statusBadge(rec.status)]">{{ statusLabel(rec.status) }}</span>
                   </td>
                   <td>
-                    <div class="flex items-center gap-2" v-if="rec.status === 'PENDING'">
-                      <button @click="handlePay(rec.id)" class="text-green-600 hover:text-green-800" :title="$t('hr.salary.pay')">
-                        <CheckCircleIcon class="h-5 w-5" />
+                    <div class="flex items-center gap-2">
+                      <button @click="viewSalaryDetail(rec.id)" class="text-primary-600 hover:text-primary-800" :title="$t('details')">
+                        <EyeIcon class="h-5 w-5" />
                       </button>
-                      <button @click="handleCancel(rec.id)" class="text-red-600 hover:text-red-800" :title="$t('cancel')">
-                        <XCircleIcon class="h-5 w-5" />
-                      </button>
+                      <template v-if="rec.status === 'PENDING'">
+                        <button @click="handlePay(rec.id)" class="text-green-600 hover:text-green-800" :title="$t('hr.salary.pay')">
+                          <CheckCircleIcon class="h-5 w-5" />
+                        </button>
+                        <button @click="handleCancel(rec.id)" class="text-red-600 hover:text-red-800" :title="$t('cancel')">
+                          <XCircleIcon class="h-5 w-5" />
+                        </button>
+                      </template>
                     </div>
-                    <span v-else class="text-gray-400 text-sm">-</span>
                   </td>
                 </tr>
               </tbody>
@@ -394,6 +429,144 @@ onMounted(loadData)
         </div>
       </div>
     </template>
+    </template>
+
+    <!-- All Salaries tab content -->
+    <template v-if="activeTab === 'all'">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="text-lg font-medium">{{ $t('hr.salary.allSalaries') }}</h3>
+        </div>
+        <div class="card-body">
+          <div v-if="allSalariesLoading" class="flex items-center justify-center h-32">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          </div>
+          <div v-else-if="allSalaries.length === 0" class="text-center py-12 text-gray-500">
+            {{ $t('hr.salary.noRecords') }}
+          </div>
+          <div v-else class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ $t('hr.salary.employee') }}</th>
+                  <th>{{ $t('code') }}</th>
+                  <th>{{ $t('hr.salary.year') }}</th>
+                  <th>{{ $t('hr.salary.month') }}</th>
+                  <th class="text-right">{{ $t('hr.salary.base') }}</th>
+                  <th class="text-right">{{ $t('hr.salary.bonus') }}</th>
+                  <th class="text-right">{{ $t('hr.salary.deduction') }}</th>
+                  <th class="text-right">{{ $t('hr.salary.netSalary') }}</th>
+                  <th>{{ $t('status') }}</th>
+                  <th>{{ $t('actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="rec in allSalaries" :key="rec.id">
+                  <td>{{ rec.employeeName }}</td>
+                  <td class="font-medium">{{ rec.employeeCode }}</td>
+                  <td>{{ rec.periodYear }}</td>
+                  <td>{{ months[rec.periodMonth - 1] }}</td>
+                  <td class="text-right">{{ formatCurrency(rec.baseAmount) }}</td>
+                  <td class="text-right text-green-600">+{{ formatCurrency(rec.bonusAmount) }}</td>
+                  <td class="text-right text-red-600">-{{ formatCurrency(rec.deductionAmount) }}</td>
+                  <td class="text-right font-semibold">{{ formatCurrency(rec.netAmount) }}</td>
+                  <td>
+                    <span :class="['badge', statusBadge(rec.status)]">{{ statusLabel(rec.status) }}</span>
+                  </td>
+                  <td>
+                    <button @click="viewSalaryDetail(rec.id)" class="text-primary-600 hover:text-primary-800" :title="$t('details')">
+                      <EyeIcon class="h-5 w-5" />
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Pagination -->
+          <div v-if="allSalariesTotalPages > 1" class="flex items-center justify-between mt-4 pt-4 border-t">
+            <p class="text-sm text-gray-500">{{ $t('page') }} {{ allSalariesPage + 1 }} / {{ allSalariesTotalPages }}</p>
+            <div class="flex gap-2">
+              <button
+                @click="loadAllSalaries(allSalariesPage - 1)"
+                :disabled="allSalariesPage === 0"
+                class="btn-secondary text-sm"
+              >{{ $t('previous') }}</button>
+              <button
+                @click="loadAllSalaries(allSalariesPage + 1)"
+                :disabled="allSalariesPage >= allSalariesTotalPages - 1"
+                class="btn-secondary text-sm"
+              >{{ $t('next') }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Salary Detail Modal -->
+    <div v-if="showDetailModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+          <h3 class="text-lg font-medium">{{ $t('hr.salary.salaryDetail') }}</h3>
+          <button @click="showDetailModal = false"><XMarkIcon class="h-5 w-5 text-gray-400" /></button>
+        </div>
+        <div class="p-6">
+          <div v-if="loadingDetail" class="flex items-center justify-center h-32">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          </div>
+          <div v-else-if="salaryDetail" class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-gray-500">{{ $t('hr.salary.employee') }}</span>
+              <span class="font-medium">{{ salaryDetail.employeeName }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500">{{ $t('code') }}</span>
+              <span class="font-mono text-sm">{{ salaryDetail.employeeCode }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500">{{ $t('hr.salary.year') }} / {{ $t('hr.salary.month') }}</span>
+              <span>{{ salaryDetail.periodYear }} / {{ months[(salaryDetail.periodMonth || 1) - 1] }}</span>
+            </div>
+            <div class="border-t pt-3 space-y-2">
+              <div class="flex justify-between">
+                <span class="text-gray-500">{{ $t('hr.salary.base') }}</span>
+                <span>{{ formatCurrency(salaryDetail.baseAmount) }}</span>
+              </div>
+              <div class="flex justify-between text-green-600">
+                <span>{{ $t('hr.salary.bonus') }}</span>
+                <span>+{{ formatCurrency(salaryDetail.bonusAmount) }}</span>
+              </div>
+              <div class="flex justify-between text-red-600">
+                <span>{{ $t('hr.salary.deduction') }}</span>
+                <span>-{{ formatCurrency(salaryDetail.deductionAmount) }}</span>
+              </div>
+              <div class="flex justify-between font-semibold border-t pt-2">
+                <span>{{ $t('hr.salary.netSalary') }}</span>
+                <span>{{ formatCurrency(salaryDetail.netAmount) }}</span>
+              </div>
+              <div v-if="salaryDetail.advanceAmount > 0" class="flex justify-between text-blue-600">
+                <span>{{ $t('hr.salary.pay') }}</span>
+                <span>-{{ formatCurrency(salaryDetail.advanceAmount) }}</span>
+              </div>
+              <div v-if="salaryDetail.payAmount != null" class="flex justify-between font-bold border-t pt-2">
+                <span>{{ $t('hr.salary.totalPaid') }}</span>
+                <span>{{ formatCurrency(salaryDetail.payAmount) }}</span>
+              </div>
+            </div>
+            <div class="flex justify-between pt-2">
+              <span class="text-gray-500">{{ $t('status') }}</span>
+              <span :class="['badge', statusBadge(salaryDetail.status)]">{{ statusLabel(salaryDetail.status) }}</span>
+            </div>
+            <div v-if="salaryDetail.notes" class="pt-2">
+              <span class="text-gray-500 text-sm">{{ $t('notes') }}:</span>
+              <p class="text-sm mt-1">{{ salaryDetail.notes }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end px-6 py-4 border-t">
+          <button @click="showDetailModal = false" class="btn-secondary">{{ $t('close') }}</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Salary Modal -->
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

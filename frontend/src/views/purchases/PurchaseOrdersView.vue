@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { purchaseOrdersApi } from '@/services/api'
-import { PlusIcon, EyeIcon, MagnifyingGlassIcon, PrinterIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, EyeIcon, MagnifyingGlassIcon, PrinterIcon, XMarkIcon, PaperAirplaneIcon } from '@heroicons/vue/24/outline'
 import ReceiptTemplate from '@/components/ReceiptTemplate.vue'
 
 const { t } = useI18n()
@@ -25,6 +25,8 @@ const pagination = ref({
   totalElements: 0
 })
 
+const submitting = ref(null)
+
 async function fetchOrders() {
   loading.value = true
   try {
@@ -32,10 +34,12 @@ async function fetchOrders() {
       page: pagination.value.page,
       size: pagination.value.size
     }
-    if (search.value) {
-      params.search = search.value
+    let response
+    if (search.value.trim()) {
+      response = await purchaseOrdersApi.search(search.value.trim(), params)
+    } else {
+      response = await purchaseOrdersApi.getAll(params)
     }
-    const response = await purchaseOrdersApi.getAll(params)
     const data = response.data.data || response.data
     orders.value = data.content || []
     pagination.value.totalPages = data.page?.totalPages || data.totalPages || 0
@@ -44,6 +48,19 @@ async function fetchOrders() {
     console.error('Buyurtmalarni yuklashda xatolik:', error)
   } finally {
     loading.value = false
+  }
+}
+
+async function submitOrder(order) {
+  if (!confirm(t('purchases.orders.confirmSubmit', { number: order.poNumber || `PO-${order.id}` }))) return
+  submitting.value = order.id
+  try {
+    await purchaseOrdersApi.submit(order.id)
+    fetchOrders()
+  } catch (error) {
+    console.error('Failed to submit order:', error)
+  } finally {
+    submitting.value = null
   }
 }
 
@@ -194,6 +211,15 @@ function transformOrderForReceipt(order) {
                 <span :class="['badge', getStatusClass(order.status)]">{{ getStatusLabel(order.status) }}</span>
               </td>
               <td class="text-right space-x-1">
+                <button
+                  v-if="order.status === 'DRAFT'"
+                  @click="submitOrder(order)"
+                  :disabled="submitting === order.id"
+                  class="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-gray-100 inline-flex"
+                  :title="$t('purchases.orders.submitOrder')"
+                >
+                  <PaperAirplaneIcon class="h-5 w-5" />
+                </button>
                 <button
                   @click="viewOrder(order)"
                   class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"

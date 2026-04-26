@@ -35,6 +35,12 @@ const loadingDetail = ref(false)
 // Expanded rows
 const expandedSalary = ref(null)
 
+// Undeducted advance total
+const undeductedTotal = ref(null)
+const undeductedLoading = ref(false)
+const undeductedYear = ref(new Date().getFullYear())
+const undeductedMonth = ref(new Date().getMonth() + 1)
+
 function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ', {
     minimumFractionDigits: 0,
@@ -80,6 +86,7 @@ async function selectEmployee(e) {
   selectedEmployeeId.value = e.id
   employee.value = e
   activeTab.value = 'overview'
+  undeductedTotal.value = null
   await loadEmployeeData()
 }
 
@@ -108,6 +115,28 @@ async function loadEmployeeData() {
     loadingDetail.value = false
   }
 }
+
+async function loadUndeductedTotal() {
+  if (!selectedEmployeeId.value) return
+  undeductedLoading.value = true
+  try {
+    const res = await advancesApi.getUndeductedTotal(selectedEmployeeId.value, undeductedYear.value, undeductedMonth.value)
+    const data = res.data.data != null ? res.data.data : res.data
+    undeductedTotal.value = typeof data === 'number' ? data : (data?.total ?? data?.amount ?? 0)
+  } catch (e) {
+    console.error('Failed to load undeducted total:', e)
+    undeductedTotal.value = null
+  } finally {
+    undeductedLoading.value = false
+  }
+}
+
+const undeductedMonths = computed(() => [
+  t('months.1'), t('months.2'), t('months.3'),
+  t('months.4'), t('months.5'), t('months.6'),
+  t('months.7'), t('months.8'), t('months.9'),
+  t('months.10'), t('months.11'), t('months.12')
+])
 
 // Summary stats
 const stats = computed(() => {
@@ -557,6 +586,33 @@ onMounted(async () => {
 
             <!-- ==================== ADVANCES TAB ==================== -->
             <div v-if="activeTab === 'advances'">
+              <!-- Undeducted advance total -->
+              <div class="card mb-4">
+                <div class="card-body">
+                  <h4 class="text-sm font-semibold text-gray-900 mb-3">{{ t('employeeHistory.undeductedTotal') }}</h4>
+                  <div class="flex items-end gap-3">
+                    <div>
+                      <label class="label text-xs">{{ t('year') }}</label>
+                      <input v-model.number="undeductedYear" type="number" min="2020" max="2030" class="input w-24 text-sm" />
+                    </div>
+                    <div>
+                      <label class="label text-xs">{{ t('month') }}</label>
+                      <select v-model.number="undeductedMonth" class="input w-32 text-sm">
+                        <option v-for="(m, i) in undeductedMonths" :key="i" :value="i + 1">{{ m }}</option>
+                      </select>
+                    </div>
+                    <button @click="loadUndeductedTotal" class="btn-secondary text-sm">{{ t('apply') }}</button>
+                    <div class="ml-4 flex items-center gap-2">
+                      <div v-if="undeductedLoading" class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                      <template v-else-if="undeductedTotal !== null">
+                        <span class="text-sm text-gray-500">{{ t('employeeHistory.undeductedAmount') }}:</span>
+                        <span class="text-lg font-bold text-orange-600">{{ formatCurrency(undeductedTotal) }}</span>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="card">
                 <div class="card-body p-0">
                   <div v-if="advanceRecords.length === 0" class="py-12 text-center text-sm text-gray-400">

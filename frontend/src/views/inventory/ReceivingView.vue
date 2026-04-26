@@ -32,7 +32,6 @@ const pagination = ref({
 })
 
 const poFilter = ref('')
-const poFilterLoading = ref(false)
 
 const statuses = ['', 'DRAFT', 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
 

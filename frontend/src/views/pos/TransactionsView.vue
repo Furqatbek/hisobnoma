@@ -1,8 +1,11 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { posApi } from '@/services/api'
-import { EyeIcon, MagnifyingGlassIcon, PrinterIcon, XMarkIcon, NoSymbolIcon } from '@heroicons/vue/24/outline'
+import { posApi, productsApi } from '@/services/api'
+import {
+  EyeIcon, MagnifyingGlassIcon, PrinterIcon, XMarkIcon, NoSymbolIcon,
+  PlusIcon, TrashIcon, CalendarDaysIcon
+} from '@heroicons/vue/24/outline'
 import ReceiptTemplate from '@/components/ReceiptTemplate.vue'
 
 const { t } = useI18n()
@@ -22,6 +25,23 @@ const receiptRef = ref(null)
 const showVoidModal = ref(false)
 const voidReason = ref('')
 const voidLoading = ref(false)
+
+// Daily Summary
+const dailySummaryDate = ref(new Date().toISOString().split('T')[0])
+const dailySummary = ref(null)
+const dailySummaryLoading = ref(false)
+
+// Add Line Item
+const showAddLineModal = ref(false)
+const addLineLoading = ref(false)
+const lineItemForm = reactive({
+  productId: null,
+  quantity: 1,
+  unitPrice: 0
+})
+
+// Remove Line Item
+const removeLineLoading = ref(false)
 
 const pagination = ref({
   page: 0,
@@ -118,7 +138,65 @@ async function voidTransaction() {
   }
 }
 
-onMounted(fetchTransactions)
+// Daily Summary
+async function fetchDailySummary() {
+  if (!dailySummaryDate.value) return
+  dailySummaryLoading.value = true
+  try {
+    const res = await posApi.getDailySummary(dailySummaryDate.value)
+    dailySummary.value = res.data.data || res.data
+  } catch (error) {
+    console.error('Daily summary error:', error)
+    dailySummary.value = null
+  } finally {
+    dailySummaryLoading.value = false
+  }
+}
+
+// Add Line Item
+function openAddLineModal() {
+  lineItemForm.productId = null
+  lineItemForm.quantity = 1
+  lineItemForm.unitPrice = 0
+  showAddLineModal.value = true
+}
+
+async function addLineItem() {
+  if (!lineItemForm.productId || !selectedTransaction.value) return
+  addLineLoading.value = true
+  try {
+    await posApi.addLineItem(selectedTransaction.value.id, { ...lineItemForm })
+    showAddLineModal.value = false
+    // Refresh transaction details
+    const response = await posApi.getTransaction(selectedTransaction.value.id)
+    selectedTransaction.value = response.data.data || response.data
+  } catch (error) {
+    alert(t('pos.transactions.addLineError') + ': ' + (error.response?.data?.message || error.message))
+  } finally {
+    addLineLoading.value = false
+  }
+}
+
+// Remove Line Item
+async function removeLineItem(itemId) {
+  if (!confirm(t('pos.transactions.confirmRemoveLine'))) return
+  removeLineLoading.value = true
+  try {
+    await posApi.removeLineItem(selectedTransaction.value.id, itemId)
+    // Refresh transaction details
+    const response = await posApi.getTransaction(selectedTransaction.value.id)
+    selectedTransaction.value = response.data.data || response.data
+  } catch (error) {
+    alert(t('pos.transactions.removeLineError') + ': ' + (error.response?.data?.message || error.message))
+  } finally {
+    removeLineLoading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchTransactions()
+  fetchDailySummary()
+})
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ', {
@@ -181,6 +259,50 @@ function handleSearch() {
     <div>
       <h1 class="text-2xl font-bold text-gray-900">{{ $t('pos.transactions.title') }}</h1>
       <p class="mt-1 text-sm text-gray-500">{{ $t('pos.transactions.subtitle') }}</p>
+    </div>
+
+    <!-- Daily Summary -->
+    <div class="card">
+      <div class="card-body">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <CalendarDaysIcon class="h-5 w-5 text-primary-600" />
+            {{ $t('pos.transactions.dailySummary') }}
+          </h3>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="dailySummaryDate"
+              type="date"
+              class="input w-auto"
+              @change="fetchDailySummary"
+            />
+          </div>
+        </div>
+        <div v-if="dailySummaryLoading" class="flex items-center justify-center py-4">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+        <div v-else-if="dailySummary" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="bg-blue-50 rounded-lg p-4 text-center">
+            <label class="text-sm text-blue-700">{{ $t('pos.transactions.totalTransactions') }}</label>
+            <p class="text-2xl font-bold text-blue-800">{{ dailySummary.totalTransactions ?? dailySummary.transactionCount ?? 0 }}</p>
+          </div>
+          <div class="bg-green-50 rounded-lg p-4 text-center">
+            <label class="text-sm text-green-700">{{ $t('pos.transactions.totalSalesAmount') }}</label>
+            <p class="text-2xl font-bold text-green-800">{{ formatCurrency(dailySummary.totalSales ?? dailySummary.totalAmount ?? 0) }}</p>
+          </div>
+          <div class="bg-purple-50 rounded-lg p-4 text-center">
+            <label class="text-sm text-purple-700">{{ $t('pos.transactions.totalPaidAmount') }}</label>
+            <p class="text-2xl font-bold text-purple-800">{{ formatCurrency(dailySummary.totalPaid ?? dailySummary.paidAmount ?? 0) }}</p>
+          </div>
+          <div class="bg-red-50 rounded-lg p-4 text-center">
+            <label class="text-sm text-red-700">{{ $t('pos.transactions.totalVoided') }}</label>
+            <p class="text-2xl font-bold text-red-800">{{ dailySummary.voidedCount ?? dailySummary.totalVoided ?? 0 }}</p>
+          </div>
+        </div>
+        <div v-else class="text-center py-4">
+          <p class="text-sm text-gray-500">{{ $t('pos.transactions.noSummary') }}</p>
+        </div>
+      </div>
     </div>
 
     <!-- Filters -->
@@ -410,7 +532,17 @@ function handleSearch() {
 
               <!-- Items -->
               <div>
-                <h3 class="font-semibold text-gray-900 mb-3">{{ $t('pos.transactions.items') }}</h3>
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="font-semibold text-gray-900">{{ $t('pos.transactions.items') }}</h3>
+                  <button
+                    v-if="selectedTransaction && selectedTransaction.status === 'PENDING'"
+                    @click="openAddLineModal"
+                    class="btn-primary text-xs flex items-center gap-1"
+                  >
+                    <PlusIcon class="h-4 w-4" />
+                    {{ $t('pos.transactions.addLine') }}
+                  </button>
+                </div>
                 <div class="bg-gray-50 rounded-lg overflow-hidden">
                   <table class="w-full">
                     <thead class="bg-gray-100">
@@ -419,6 +551,7 @@ function handleSearch() {
                         <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">{{ $t('quantity') }}</th>
                         <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">{{ $t('price') }}</th>
                         <th class="px-4 py-2 text-right text-sm font-medium text-gray-600">{{ $t('total') }}</th>
+                        <th v-if="selectedTransaction && selectedTransaction.status === 'PENDING'" class="px-4 py-2 text-right text-sm font-medium text-gray-600">{{ $t('actions') }}</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -430,6 +563,16 @@ function handleSearch() {
                         <td class="px-4 py-3 text-right">{{ item.quantity }} <span v-if="item.uomCode" class="text-xs text-gray-500">{{ item.uomCode }}</span></td>
                         <td class="px-4 py-3 text-right">{{ formatCurrency(item.unitPrice) }} {{ $t('sum') }}</td>
                         <td class="px-4 py-3 text-right font-medium">{{ formatCurrency(item.lineTotal) }} {{ $t('sum') }}</td>
+                        <td v-if="selectedTransaction && selectedTransaction.status === 'PENDING'" class="px-4 py-3 text-right">
+                          <button
+                            @click="removeLineItem(item.id)"
+                            :disabled="removeLineLoading"
+                            class="p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100"
+                            :title="$t('pos.transactions.removeLine')"
+                          >
+                            <TrashIcon class="h-4 w-4" />
+                          </button>
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -533,6 +676,52 @@ function handleSearch() {
             class="btn-primary flex-1 !bg-red-600 hover:!bg-red-700 disabled:!bg-red-300"
           >
             {{ voidLoading ? $t('pos.processing') : $t('pos.transactions.voidTransaction') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Line Item Modal -->
+    <div
+      v-if="showAddLineModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4"
+      @click.self="showAddLineModal = false"
+    >
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-gray-900">{{ $t('pos.transactions.addLine') }}</h3>
+          <button @click="showAddLineModal = false" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+            <XMarkIcon class="h-5 w-5" />
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="label">{{ $t('pos.transactions.productId') }} <span class="text-red-500">*</span></label>
+            <input v-model.number="lineItemForm.productId" type="number" class="input" :placeholder="$t('pos.transactions.productIdPlaceholder')" />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="label">{{ $t('quantity') }} <span class="text-red-500">*</span></label>
+              <input v-model.number="lineItemForm.quantity" type="number" min="1" step="1" class="input" />
+            </div>
+            <div>
+              <label class="label">{{ $t('price') }}</label>
+              <input v-model.number="lineItemForm.unitPrice" type="number" min="0" step="100" class="input" />
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 flex space-x-3">
+          <button @click="showAddLineModal = false" class="btn-secondary flex-1">
+            {{ $t('cancel') }}
+          </button>
+          <button
+            @click="addLineItem"
+            :disabled="!lineItemForm.productId || addLineLoading"
+            class="btn-primary flex-1"
+          >
+            {{ addLineLoading ? $t('pos.processing') : $t('add') }}
           </button>
         </div>
       </div>

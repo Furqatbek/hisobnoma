@@ -5,7 +5,8 @@ import { bankTransactionsApi, bankReconciliationsApi, bankAccountsApi } from '@/
 import {
   PlusIcon, CheckIcon, XMarkIcon, NoSymbolIcon,
   ArrowsRightLeftIcon, MagnifyingGlassIcon, BanknotesIcon,
-  ChartBarIcon, PlayIcon, StopIcon, DocumentCheckIcon
+  ChartBarIcon, PlayIcon, StopIcon, DocumentCheckIcon,
+  EyeIcon, ListBulletIcon, CheckBadgeIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -81,7 +82,28 @@ const showCancelReconModal = ref(false)
 const cancellingRecon = ref(null)
 const cancelReconReason = ref('')
 
-// ─── Helpers ────────────────────────────────────────────────────
+// Transaction detail modal
+const showTxDetailModal = ref(false)
+const txDetailData = ref(null)
+const txDetailLoading = ref(false)
+
+// Reconciliation detail modal
+const showReconDetailModal = ref(false)
+const reconDetailData = ref(null)
+const reconDetailLoading = ref(false)
+
+// Unreconciled transactions
+const showUnreconciledPanel = ref(false)
+const unreconciledTxs = ref([])
+const unreconciledLoading = ref(false)
+const unreconciledAccountId = ref('')
+const unreconciledEndDate = ref('')
+
+// Reconcile selected transactions
+const selectedTxIds = ref([])
+const reconcilingSelected = ref(false)
+
+// ─── Helpers ────────────────────���───────────────────────────────
 function formatCurrency(value) {
   return new Intl.NumberFormat('uz-UZ', {
     minimumFractionDigits: 0,
@@ -358,6 +380,83 @@ async function confirmCancelRecon() {
   }
 }
 
+// ─── Transaction detail (getById) ──────────────────────────────
+async function viewTransactionDetail(tx) {
+  showTxDetailModal.value = true
+  txDetailLoading.value = true
+  txDetailData.value = null
+  try {
+    const res = await bankTransactionsApi.getById(tx.id)
+    txDetailData.value = res.data.data || res.data
+  } catch (e) {
+    error.value = e.response?.data?.message || t('failedToLoad')
+    showTxDetailModal.value = false
+  } finally {
+    txDetailLoading.value = false
+  }
+}
+
+// ─── Reconciliation detail (getById) ──────────────────────────
+async function viewReconDetail(recon) {
+  showReconDetailModal.value = true
+  reconDetailLoading.value = true
+  reconDetailData.value = null
+  try {
+    const res = await bankReconciliationsApi.getById(recon.id)
+    reconDetailData.value = res.data.data || res.data
+  } catch (e) {
+    error.value = e.response?.data?.message || t('failedToLoad')
+    showReconDetailModal.value = false
+  } finally {
+    reconDetailLoading.value = false
+  }
+}
+
+// ─── Show unreconciled transactions ───────────────────────────
+async function fetchUnreconciled() {
+  if (!unreconciledAccountId.value || !unreconciledEndDate.value) return
+  unreconciledLoading.value = true
+  unreconciledTxs.value = []
+  selectedTxIds.value = []
+  error.value = ''
+  try {
+    const res = await bankReconciliationsApi.getUnreconciled(unreconciledAccountId.value, unreconciledEndDate.value)
+    const data = res.data.data || res.data
+    unreconciledTxs.value = Array.isArray(data) ? data : data.content || data || []
+    showUnreconciledPanel.value = true
+  } catch (e) {
+    error.value = e.response?.data?.message || t('failedToLoad')
+  } finally {
+    unreconciledLoading.value = false
+  }
+}
+
+function toggleTxSelection(txId) {
+  const idx = selectedTxIds.value.indexOf(txId)
+  if (idx >= 0) selectedTxIds.value.splice(idx, 1)
+  else selectedTxIds.value.push(txId)
+}
+
+async function reconcileSelectedTransactions() {
+  if (selectedTxIds.value.length === 0 || !unreconciledAccountId.value) return
+  reconcilingSelected.value = true
+  error.value = ''
+  try {
+    await bankReconciliationsApi.reconcileTransactions({
+      bankAccountId: unreconciledAccountId.value,
+      transactionIds: selectedTxIds.value
+    })
+    successMsg.value = t('finance.bankReconciliations.reconcileSelectedSuccess')
+    selectedTxIds.value = []
+    await fetchUnreconciled()
+    fetchReconciliations(reconCurrentPage.value)
+  } catch (e) {
+    error.value = e.response?.data?.message || t('errorOccurred')
+  } finally {
+    reconcilingSelected.value = false
+  }
+}
+
 // ─── Tab switch ─────────────────────────────────────────────────
 function switchMainTab(tab) {
   mainTab.value = tab
@@ -525,6 +624,13 @@ const mainTabs = computed(() => [
                 <td class="text-right">
                   <div class="flex items-center justify-end space-x-1">
                     <button
+                      @click="viewTransactionDetail(tx)"
+                      class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100"
+                      :title="$t('finance.bankTransactions.viewDetail')"
+                    >
+                      <EyeIcon class="h-5 w-5" />
+                    </button>
+                    <button
                       v-if="tx.status === 'PENDING'"
                       @click="clearTransaction(tx)"
                       class="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-gray-100"
@@ -683,6 +789,13 @@ const mainTabs = computed(() => [
                 </td>
                 <td class="text-right">
                   <div class="flex items-center justify-end space-x-1">
+                    <button
+                      @click="viewReconDetail(recon)"
+                      class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100"
+                      :title="$t('finance.bankReconciliations.viewDetail')"
+                    >
+                      <EyeIcon class="h-5 w-5" />
+                    </button>
                     <button
                       v-if="recon.status === 'DRAFT'"
                       @click="startReconciliation(recon)"

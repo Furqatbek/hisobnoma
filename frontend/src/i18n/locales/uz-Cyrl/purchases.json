@@ -20,7 +20,9 @@
     "confirmCancel": "Буюртмани бекор қилмоқчимисиз?",
     "failedToApprove": "Тасдиқлашда хатолик",
     "failedToCancel": "Бекор қилишда хатолик",
-    "failedToReceive": "Қабул қилишда хатолик"
+    "failedToReceive": "Қабул қилишда хатолик",
+    "submitOrder": "Юбориш",
+    "confirmSubmit": "{number} буюртмасини юбормоқчимисиз?"
   },
   "orderForm": {
     "newOrder": "Янги харид буюртмаси",
