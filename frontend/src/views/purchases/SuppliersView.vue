@@ -27,6 +27,15 @@ const form = reactive({
   active: true
 })
 
+// Supplier code lookup
+const codeLookup = ref('')
+const codeLookupResult = ref(null)
+const codeLookupError = ref('')
+const codeLookupLoading = ref(false)
+
+// Primary contacts map: vendorId -> contact
+const primaryContacts = ref({})
+
 const filters = computed(() => [
   { key: 'all', label: t('purchases.suppliers.filterAll') },
   { key: 'active', label: t('active') },
@@ -56,11 +65,49 @@ async function fetchSuppliers() {
   }
 }
 
-onMounted(fetchSuppliers)
+async function lookupByCode() {
+  if (!codeLookup.value.trim()) return
+  codeLookupLoading.value = true
+  codeLookupError.value = ''
+  codeLookupResult.value = null
+  try {
+    const res = await suppliersApi.getByCode(codeLookup.value.trim())
+    codeLookupResult.value = res.data.data || res.data
+  } catch (error) {
+    if (error.response?.status === 404) {
+      codeLookupError.value = t('purchases.suppliers.codeNotFound')
+    } else {
+      codeLookupError.value = error.response?.data?.message || t('errorOccurred')
+    }
+  } finally {
+    codeLookupLoading.value = false
+  }
+}
 
-function switchFilter(key) {
+async function loadPrimaryContacts() {
+  for (const supplier of suppliers.value) {
+    if (!supplier.id) continue
+    try {
+      const res = await suppliersApi.getPrimaryContact(supplier.id)
+      const contact = res.data.data || res.data
+      if (contact && contact.name) {
+        primaryContacts.value[supplier.id] = contact
+      }
+    } catch {
+      // No primary contact or error - skip
+    }
+  }
+}
+
+onMounted(async () => {
+  await fetchSuppliers()
+  loadPrimaryContacts()
+})
+
+async function switchFilter(key) {
   activeFilter.value = key
-  fetchSuppliers()
+  await fetchSuppliers()
+  loadPrimaryContacts()
 }
 
 function openModal(supplier = null) {
@@ -243,7 +290,7 @@ async function setPrimary(contact) {
 
     <!-- Search -->
     <div v-if="activeFilter === 'all'" class="card">
-      <div class="card-body">
+      <div class="card-body space-y-3">
         <div class="relative">
           <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
@@ -253,6 +300,32 @@ async function setPrimary(contact) {
             :placeholder="$t('purchases.suppliers.searchPlaceholder')"
             class="input pl-10"
           />
+        </div>
+        <!-- Code lookup -->
+        <div>
+          <label class="label text-xs">{{ $t('purchases.suppliers.codeLookup') }}</label>
+          <div class="flex gap-2">
+            <input
+              v-model="codeLookup"
+              @keyup.enter="lookupByCode"
+              type="text"
+              :placeholder="$t('purchases.suppliers.codeLookupPlaceholder')"
+              class="input flex-1"
+            />
+            <button @click="lookupByCode" :disabled="codeLookupLoading" class="btn-secondary">
+              {{ codeLookupLoading ? $t('searching') : $t('search') }}
+            </button>
+          </div>
+          <div v-if="codeLookupError" class="mt-2 text-sm text-red-600">{{ codeLookupError }}</div>
+          <div v-if="codeLookupResult" class="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium">{{ codeLookupResult.name }}</p>
+                <p class="text-sm text-gray-500">{{ codeLookupResult.code }} &middot; {{ codeLookupResult.phone || '-' }}</p>
+              </div>
+              <button @click="openModal(codeLookupResult)" class="btn-secondary text-sm">{{ $t('edit') }}</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -273,6 +346,7 @@ async function setPrimary(contact) {
               <th>{{ $t('purchases.suppliers.supplierName') }}</th>
               <th>{{ $t('purchases.suppliers.contact') }}</th>
               <th>{{ $t('purchases.suppliers.contactPerson') }}</th>
+              <th>{{ $t('purchases.suppliers.primaryContact') }}</th>
               <th>{{ $t('purchases.suppliers.contacts') }}</th>
               <th>{{ $t('status') }}</th>
               <th class="text-right">{{ $t('actions') }}</th>
@@ -289,6 +363,15 @@ async function setPrimary(contact) {
                 <div class="text-sm text-gray-500">{{ supplier.email || '-' }}</div>
               </td>
               <td>{{ supplier.contactPerson || '-' }}</td>
+              <td>
+                <template v-if="primaryContacts[supplier.id]">
+                  <div class="text-sm font-medium">{{ primaryContacts[supplier.id].name }}</div>
+                  <div v-if="primaryContacts[supplier.id].phone" class="text-xs text-gray-500 flex items-center gap-0.5">
+                    <PhoneIcon class="h-3 w-3" /> {{ primaryContacts[supplier.id].phone }}
+                  </div>
+                </template>
+                <span v-else class="text-gray-400 text-sm">-</span>
+              </td>
               <td>
                 <button
                   @click="openContactsModal(supplier)"

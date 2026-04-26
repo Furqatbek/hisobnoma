@@ -539,6 +539,41 @@ const tabs = computed(() =>
               <!-- Redemption History (expandable row) -->
               <tr v-if="expandedCouponId === coupon.id">
                 <td :colspan="9" class="bg-gray-50 px-8 py-4">
+                  <!-- Coupon Detail (via getById) -->
+                  <div v-if="couponDetailLoading" class="flex items-center justify-center py-4">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                  </div>
+                  <div v-else-if="couponDetail" class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">{{ $t('pos.coupons.couponDetails') }}</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                      <div>
+                        <span class="text-gray-500">{{ $t('pos.coupons.code') }}:</span>
+                        <span class="ml-1 font-mono font-medium">{{ couponDetail.code }}</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-500">{{ $t('pos.coupons.discount') }}:</span>
+                        <span class="ml-1 font-medium">{{ formatDiscount(couponDetail) }}</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-500">{{ $t('pos.coupons.maxUses') }}:</span>
+                        <span class="ml-1">{{ couponDetail.maxUses ?? '-' }}</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-500">{{ $t('pos.coupons.usedCount') }}:</span>
+                        <span class="ml-1">{{ couponDetail.usedCount ?? 0 }}</span>
+                      </div>
+                      <div v-if="couponDetail.promotionName || couponDetail.promotionId">
+                        <span class="text-gray-500">{{ $t('pos.coupons.promotion') }}:</span>
+                        <span class="ml-1">{{ couponDetail.promotionName || couponDetail.promotionId }}</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-500">{{ $t('pos.coupons.expiryDate') }}:</span>
+                        <span class="ml-1">{{ formatDate(couponDetail.expiryDate) }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Redemption History -->
                   <div v-if="loadingRedemptions" class="flex items-center justify-center py-4">
                     <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
                   </div>

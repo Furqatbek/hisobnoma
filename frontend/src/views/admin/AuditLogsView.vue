@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, reactive, watch } from 'vue'
-import { auditLogsApi } from '@/services/api'
+import { auditLogsApi, usersApi } from '@/services/api'
 import {
   MagnifyingGlassIcon, FunnelIcon, ExclamationTriangleIcon,
   ChartBarIcon, UserGroupIcon, ShieldExclamationIcon, CalendarDaysIcon,
@@ -12,13 +12,17 @@ const { t } = useI18n()
 
 const logs = ref([])
 const loading = ref(true)
+const usersList = ref([])
 
 const filters = reactive({
   action: '',
   module: '',
   failedOnly: false,
   startDate: '',
-  endDate: ''
+  endDate: '',
+  userId: '',
+  entityType: '',
+  entityId: ''
 })
 
 const pagination = ref({ page: 0, size: 50, totalPages: 0, totalElements: 0 })
@@ -38,7 +42,11 @@ async function fetchLogs() {
     const pageParams = { page: pagination.value.page, size: pagination.value.size }
     let response
 
-    if (filters.failedOnly) {
+    if (filters.userId) {
+      response = await auditLogsApi.getByUser(filters.userId, pageParams)
+    } else if (filters.entityType && filters.entityId) {
+      response = await auditLogsApi.getByEntity(filters.entityType, filters.entityId, pageParams)
+    } else if (filters.failedOnly) {
       response = await auditLogsApi.getFailed(pageParams)
     } else if (filters.action) {
       response = await auditLogsApi.getByAction(filters.action, pageParams)
@@ -60,6 +68,16 @@ async function fetchLogs() {
     console.error('Failed to fetch audit logs:', error)
   } finally {
     loading.value = false
+  }
+}
+
+async function fetchUsers() {
+  try {
+    const response = await usersApi.getAll({ size: 1000 })
+    const data = response.data.data || response.data
+    usersList.value = data.content || data || []
+  } catch (error) {
+    console.error('Failed to fetch users:', error)
   }
 }
 
@@ -86,6 +104,7 @@ async function fetchStats() {
 onMounted(() => {
   fetchLogs()
   fetchStats()
+  fetchUsers()
 })
 
 function applyFilter() {
@@ -99,6 +118,9 @@ function clearFilters() {
   filters.failedOnly = false
   filters.startDate = ''
   filters.endDate = ''
+  filters.userId = ''
+  filters.entityType = ''
+  filters.entityId = ''
   pagination.value.page = 0
   fetchLogs()
 }
@@ -109,6 +131,9 @@ function filterByAction(action) {
   filters.failedOnly = false
   filters.startDate = ''
   filters.endDate = ''
+  filters.userId = ''
+  filters.entityType = ''
+  filters.entityId = ''
   applyFilter()
 }
 
@@ -118,6 +143,9 @@ function filterByModule(module) {
   filters.failedOnly = false
   filters.startDate = ''
   filters.endDate = ''
+  filters.userId = ''
+  filters.entityType = ''
+  filters.entityId = ''
   applyFilter()
 }
 
@@ -127,6 +155,21 @@ function showFailed() {
   filters.module = ''
   filters.startDate = ''
   filters.endDate = ''
+  filters.userId = ''
+  filters.entityType = ''
+  filters.entityId = ''
+  applyFilter()
+}
+
+function filterByUser(userId) {
+  filters.userId = userId
+  filters.action = ''
+  filters.module = ''
+  filters.failedOnly = false
+  filters.startDate = ''
+  filters.endDate = ''
+  filters.entityType = ''
+  filters.entityId = ''
   applyFilter()
 }
 
@@ -146,7 +189,7 @@ function nextPage() {
 
 watch(statsDays, () => fetchStats())
 
-const hasActiveFilter = () => filters.action || filters.module || filters.failedOnly || (filters.startDate && filters.endDate)
+const hasActiveFilter = () => filters.action || filters.module || filters.failedOnly || (filters.startDate && filters.endDate) || filters.userId || (filters.entityType && filters.entityId)
 
 function formatDate(date) {
   if (!date) return '-'
@@ -338,8 +381,15 @@ function totalActions() {
     <!-- Filters -->
     <div class="card">
       <div class="card-body flex flex-wrap gap-3 items-end">
+        <!-- User filter -->
+        <div class="min-w-[180px]">
+          <select v-model="filters.userId" class="input" @change="if (filters.userId) { filters.action = ''; filters.module = ''; filters.failedOnly = false; filters.entityType = ''; filters.entityId = '' }">
+            <option value="">{{ $t('admin.auditLogs.allUsers') }}</option>
+            <option v-for="u in usersList" :key="u.id" :value="u.id">{{ u.fullName || u.username }}</option>
+          </select>
+        </div>
         <div class="flex-1 min-w-[200px]">
-          <select v-model="filters.action" class="input" @change="filters.module = ''; filters.failedOnly = false">
+          <select v-model="filters.action" class="input" @change="filters.module = ''; filters.failedOnly = false; filters.userId = ''; filters.entityType = ''; filters.entityId = ''">
             <option value="">{{ $t('admin.auditLogs.allActions') }}</option>
             <option value="CREATE">{{ $t('admin.auditLogs.create') }}</option>
             <option value="UPDATE">{{ $t('admin.auditLogs.update') }}</option>
@@ -362,7 +412,7 @@ function totalActions() {
           </select>
         </div>
         <div class="flex-1 min-w-[200px]">
-          <select v-model="filters.module" class="input" @change="filters.action = ''; filters.failedOnly = false">
+          <select v-model="filters.module" class="input" @change="filters.action = ''; filters.failedOnly = false; filters.userId = ''; filters.entityType = ''; filters.entityId = ''">
             <option value="">{{ $t('admin.auditLogs.allModules') }}</option>
             <option value="AUTH">{{ $t('admin.auditLogs.auth') }}</option>
             <option value="INVENTORY">{{ $t('admin.auditLogs.inventory') }}</option>
@@ -385,10 +435,37 @@ function totalActions() {
               v-model="filters.failedOnly"
               type="checkbox"
               class="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
-              @change="if (filters.failedOnly) { filters.action = ''; filters.module = '' }"
+              @change="if (filters.failedOnly) { filters.action = ''; filters.module = ''; filters.userId = ''; filters.entityType = ''; filters.entityId = '' }"
             />
             <span class="text-sm text-red-600 font-medium">{{ $t('admin.auditLogs.failedOnly') }}</span>
           </label>
+        </div>
+        <!-- Entity filter -->
+        <div class="flex items-center gap-2">
+          <select v-model="filters.entityType" class="input w-auto" @change="if (filters.entityType) { filters.action = ''; filters.module = ''; filters.failedOnly = false; filters.userId = '' }">
+            <option value="">{{ $t('admin.auditLogs.entityType') }}</option>
+            <option value="PRODUCT">PRODUCT</option>
+            <option value="CATEGORY">CATEGORY</option>
+            <option value="BRAND">BRAND</option>
+            <option value="CUSTOMER">CUSTOMER</option>
+            <option value="VENDOR">VENDOR</option>
+            <option value="USER">USER</option>
+            <option value="ROLE">ROLE</option>
+            <option value="TERMINAL">TERMINAL</option>
+            <option value="TRANSACTION">TRANSACTION</option>
+            <option value="INVOICE">INVOICE</option>
+            <option value="PAYMENT">PAYMENT</option>
+            <option value="EMPLOYEE">EMPLOYEE</option>
+            <option value="LOCATION">LOCATION</option>
+            <option value="SETTING">SETTING</option>
+          </select>
+          <input
+            v-model="filters.entityId"
+            type="text"
+            :placeholder="$t('admin.auditLogs.entityIdPlaceholder')"
+            class="input w-32"
+            :disabled="!filters.entityType"
+          />
         </div>
         <div class="flex gap-2">
           <button @click="applyFilter" class="btn btn-primary">
@@ -407,6 +484,12 @@ function totalActions() {
           <span v-if="filters.failedOnly" class="badge badge-danger">{{ $t('admin.auditLogs.failedOnly') }}</span>
           <span v-if="filters.action" class="badge badge-info">{{ actionLabel(filters.action) }}</span>
           <span v-if="filters.module" class="badge badge-info">{{ filters.module }}</span>
+          <span v-if="filters.userId" class="badge badge-info">
+            {{ $t('admin.auditLogs.user') }}: {{ usersList.find(u => u.id == filters.userId)?.username || filters.userId }}
+          </span>
+          <span v-if="filters.entityType && filters.entityId" class="badge badge-info">
+            {{ filters.entityType }}:{{ filters.entityId }}
+          </span>
           <span v-if="filters.startDate && filters.endDate" class="badge bg-gray-100 text-gray-700">
             {{ filters.startDate }} — {{ filters.endDate }}
           </span>

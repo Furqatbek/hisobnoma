@@ -1160,5 +1160,105 @@ const mainTabs = computed(() => [
         </div>
       </div>
     </Teleport>
+
+    <!-- Transaction Detail Modal -->
+    <Teleport to="body">
+      <div v-if="showTxDetailModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showTxDetailModal = false"></div>
+          <div class="relative bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-medium text-gray-900">{{ $t('finance.bankTransactions.transactionDetail') }}</h3>
+              <button @click="showTxDetailModal = false" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+                <XMarkIcon class="h-5 w-5" />
+              </button>
+            </div>
+            <div v-if="txDetailLoading" class="flex items-center justify-center h-32">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+            <div v-else-if="txDetailData" class="space-y-4">
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span class="text-gray-500">{{ $t('finance.bankTransactions.bankAccount') }}:</span>
+                  <p class="font-medium">{{ accountName(txDetailData.bankAccountId) }}</p>
+                </div>
+                <div>
+                  <span class="text-gray-500">{{ $t('finance.bankTransactions.date') }}:</span>
+                  <p class="font-medium">{{ txDetailData.transactionDate }}</p>
+                </div>
+                <div>
+                  <span class="text-gray-500">{{ $t('finance.bankTransactions.type') }}:</span>
+                  <p><span class="badge badge-info text-xs">{{ txDetailData.transactionType }}</span></p>
+                </div>
+                <div>
+                  <span class="text-gray-500">{{ $t('finance.bankTransactions.amount') }}:</span>
+                  <p class="font-semibold" :class="txDetailData.amount >= 0 ? 'text-green-600' : 'text-red-600'">{{ formatCurrency(txDetailData.amount) }}</p>
+                </div>
+                <div>
+                  <span class="text-gray-500">{{ $t('status') }}:</span>
+                  <p><span :class="['badge text-xs', getStatusClass(txDetailData.status)]">{{ txDetailData.status }}</span></p>
+                </div>
+                <div v-if="txDetailData.reference">
+                  <span class="text-gray-500">{{ $t('finance.bankTransactions.reference') }}:</span>
+                  <p class="font-medium">{{ txDetailData.reference }}</p>
+                </div>
+              </div>
+              <div v-if="txDetailData.description">
+                <span class="text-sm text-gray-500">{{ $t('finance.bankTransactions.description') }}:</span>
+                <p class="text-sm mt-1">{{ txDetailData.description }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Reconciliation Detail Modal -->
+    <Teleport to="body">
+      <div v-if="showReconDetailModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showReconDetailModal = false"></div>
+          <div class="relative bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-medium text-gray-900">{{ $t('finance.bankReconciliations.reconDetail') }}</h3>
+              <button @click="showReconDetailModal = false" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+                <XMarkIcon class="h-5 w-5" />
+              </button>
+            </div>
+            <div v-if="reconDetailLoading" class="flex items-center justify-center h-32">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+            <div v-else-if="reconDetailData" class="space-y-4">
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span class="text-gray-500">{{ $t('finance.bankReconciliations.bankAccount') }}:</span>
+                  <p class="font-medium">{{ accountName(reconDetailData.bankAccountId) }}</p>
+                </div>
+                <div>
+                  <span class="text-gray-500">{{ $t('finance.bankReconciliations.statementDate') }}:</span>
+                  <p class="font-medium">{{ reconDetailData.statementDate }}</p>
+                </div>
+                <div>
+                  <span class="text-gray-500">{{ $t('finance.bankReconciliations.statementBalance') }}:</span>
+                  <p class="font-semibold">{{ formatCurrency(reconDetailData.statementEndingBalance) }}</p>
+                </div>
+                <div>
+                  <span class="text-gray-500">{{ $t('status') }}:</span>
+                  <p><span :class="['badge text-xs', getReconStatusClass(reconDetailData.status)]">{{ reconDetailData.status }}</span></p>
+                </div>
+                <div v-if="reconDetailData.reconciledBalance !== undefined">
+                  <span class="text-gray-500">{{ $t('finance.bankReconciliations.reconciledBalance') }}:</span>
+                  <p class="font-semibold">{{ formatCurrency(reconDetailData.reconciledBalance) }}</p>
+                </div>
+                <div v-if="reconDetailData.difference !== undefined">
+                  <span class="text-gray-500">{{ $t('finance.bankReconciliations.difference') }}:</span>
+                  <p class="font-semibold" :class="reconDetailData.difference === 0 ? 'text-green-600' : 'text-red-600'">{{ formatCurrency(reconDetailData.difference) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

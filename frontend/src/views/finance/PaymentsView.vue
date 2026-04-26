@@ -23,6 +23,10 @@ const apCurrentPage = ref(0)
 const search = ref('')
 const statusFilter = ref('all')
 
+// Date range filter for AR
+const arDateStart = ref('')
+const arDateEnd = ref('')
+
 // Date range filter for AP
 const apDateStart = ref('')
 const apDateEnd = ref('')
@@ -40,7 +44,9 @@ async function fetchARPayments(page = 0) {
   error.value = ''
   try {
     let res
-    if (statusFilter.value !== 'all') {
+    if (arDateStart.value && arDateEnd.value) {
+      res = await arPaymentsApi.getByDateRange(arDateStart.value, arDateEnd.value)
+    } else if (statusFilter.value !== 'all') {
       res = await arPaymentsApi.getByStatus(statusFilter.value, { page, size: 20, sort: 'createdAt,desc' })
     } else {
       res = await arPaymentsApi.getAll({ page, size: 20, sort: 'createdAt,desc' })
@@ -55,6 +61,28 @@ async function fetchARPayments(page = 0) {
     }
   } finally {
     loading.value = false
+  }
+}
+
+function applyArDateFilter() {
+  statusFilter.value = 'all'
+  fetchARPayments(0)
+}
+
+function clearArDateFilter() {
+  arDateStart.value = ''
+  arDateEnd.value = ''
+  fetchARPayments(0)
+}
+
+async function completeARPayment(payment) {
+  error.value = ''
+  try {
+    await arPaymentsApi.complete(payment.id)
+    successMsg.value = t('finance.payments.completeSuccess')
+    fetchARPayments(arCurrentPage.value)
+  } catch (e) {
+    error.value = e.response?.data?.message || t('errorOccurred')
   }
 }
 
@@ -384,6 +412,31 @@ const statusOptions = computed(() => {
       </div>
     </div>
 
+    <!-- AR Date Range Filter -->
+    <div v-if="activeTab === 'ar'" class="card">
+      <div class="card-body">
+        <div class="flex flex-col sm:flex-row gap-4 items-end">
+          <div>
+            <label class="label">{{ $t('finance.payments.startDate') }}</label>
+            <input v-model="arDateStart" type="date" class="input" />
+          </div>
+          <div>
+            <label class="label">{{ $t('finance.payments.endDate') }}</label>
+            <input v-model="arDateEnd" type="date" class="input" />
+          </div>
+          <div class="flex gap-2">
+            <button @click="applyArDateFilter" class="btn-primary" :disabled="!arDateStart || !arDateEnd">
+              <CalendarDaysIcon class="h-5 w-5 mr-1" />
+              {{ $t('finance.payments.applyDateFilter') }}
+            </button>
+            <button v-if="arDateStart || arDateEnd" @click="clearArDateFilter" class="btn-secondary">
+              {{ $t('finance.payments.clearDateFilter') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- AP Date Range Filter & Unreconciled Toggle -->
     <div v-if="activeTab === 'ap'" class="card">
       <div class="card-body">
@@ -478,13 +531,23 @@ const statusOptions = computed(() => {
                 </span>
               </td>
               <td class="text-right">
-                <button
-                  @click="viewARPayment(payment)"
-                  class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
-                  :title="$t('finance.payments.viewDetails')"
-                >
-                  <EyeIcon class="h-5 w-5" />
-                </button>
+                <div class="flex items-center justify-end space-x-1">
+                  <button
+                    @click="viewARPayment(payment)"
+                    class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 inline-flex"
+                    :title="$t('finance.payments.viewDetails')"
+                  >
+                    <EyeIcon class="h-5 w-5" />
+                  </button>
+                  <button
+                    v-if="payment.status === 'PENDING'"
+                    @click="completeARPayment(payment)"
+                    class="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-gray-100 inline-flex"
+                    :title="$t('finance.payments.completePayment')"
+                  >
+                    <CheckCircleIcon class="h-5 w-5" />
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>

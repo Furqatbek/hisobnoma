@@ -20,6 +20,16 @@ const totalPages = ref(0)
 const currentPage = ref(0)
 const pageSize = 20
 
+// Code lookup
+const codeLookup = ref('')
+const codeLookupResult = ref(null)
+const codeLookupError = ref('')
+const codeLookupLoading = ref(false)
+
+// Customer filter
+const customerFilterId = ref('')
+const customerFilterLoading = ref(false)
+
 // Expanded rows
 const expandedRows = ref({})
 
@@ -109,6 +119,64 @@ function switchTab(tab) {
 
 function handleSearch() {
   activeTab.value = 'ALL'
+  fetchPriceLists(0)
+}
+
+// Code lookup
+async function lookupByCode() {
+  if (!codeLookup.value.trim()) return
+  codeLookupLoading.value = true
+  codeLookupError.value = ''
+  codeLookupResult.value = null
+  try {
+    const res = await priceListsApi.getByCode(codeLookup.value.trim())
+    codeLookupResult.value = res.data.data || res.data
+  } catch (e) {
+    if (e.response?.status === 404) {
+      codeLookupError.value = t('pos.priceLists.codeNotFound')
+    } else {
+      codeLookupError.value = e.response?.data?.message || t('errorOccurred')
+    }
+  } finally {
+    codeLookupLoading.value = false
+  }
+}
+
+function clearCodeLookup() {
+  codeLookup.value = ''
+  codeLookupResult.value = null
+  codeLookupError.value = ''
+}
+
+// Customer filter
+async function filterByCustomer() {
+  if (!customerFilterId.value) {
+    fetchPriceLists(0)
+    return
+  }
+  customerFilterLoading.value = true
+  error.value = ''
+  try {
+    const res = await priceListsApi.getByCustomer(customerFilterId.value)
+    const data = res.data.data || res.data
+    priceLists.value = Array.isArray(data) ? data : data.content || []
+    totalPages.value = 1
+    currentPage.value = 0
+  } catch (e) {
+    if (e.response?.status === 404) {
+      priceLists.value = []
+      totalPages.value = 1
+      currentPage.value = 0
+    } else if (e.response?.status !== 403) {
+      error.value = e.response?.data?.message || t('failedToLoad')
+    }
+  } finally {
+    customerFilterLoading.value = false
+  }
+}
+
+function clearCustomerFilter() {
+  customerFilterId.value = ''
   fetchPriceLists(0)
 }
 
@@ -367,18 +435,73 @@ function formatDate(dateStr) {
       </nav>
     </div>
 
-    <!-- Search -->
-    <div class="card">
-      <div class="card-body">
-        <div class="relative">
-          <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            v-model="search"
-            @keyup.enter="handleSearch"
-            type="text"
-            :placeholder="$t('pos.priceLists.searchPlaceholder')"
-            class="input pl-10"
-          />
+    <!-- Search, Code Lookup & Customer Filter -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Search -->
+      <div class="card">
+        <div class="card-body">
+          <label class="text-sm font-medium text-gray-700 mb-2 block">{{ $t('search') }}</label>
+          <div class="relative">
+            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              v-model="search"
+              @keyup.enter="handleSearch"
+              type="text"
+              :placeholder="$t('pos.priceLists.searchPlaceholder')"
+              class="input pl-10"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Code Lookup -->
+      <div class="card">
+        <div class="card-body">
+          <label class="text-sm font-medium text-gray-700 mb-2 block">{{ $t('pos.priceLists.codeLookup') }}</label>
+          <div class="flex gap-2">
+            <input
+              v-model="codeLookup"
+              @keyup.enter="lookupByCode"
+              type="text"
+              :placeholder="$t('pos.priceLists.codeLookupPlaceholder')"
+              class="input flex-1 font-mono"
+            />
+            <button @click="lookupByCode" :disabled="codeLookupLoading" class="btn-primary text-sm">
+              {{ $t('search') }}
+            </button>
+            <button v-if="codeLookupResult || codeLookupError" @click="clearCodeLookup" class="btn-secondary text-sm">
+              {{ $t('clear') }}
+            </button>
+          </div>
+          <div v-if="codeLookupLoading" class="mt-2 text-sm text-gray-500">{{ $t('loading') }}</div>
+          <div v-if="codeLookupError" class="mt-2 text-sm text-red-600">{{ codeLookupError }}</div>
+          <div v-if="codeLookupResult" class="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg text-sm">
+            <p class="font-medium">{{ codeLookupResult.name }}</p>
+            <p class="text-gray-500">{{ $t('code') }}: {{ codeLookupResult.code }} | {{ $t('status') }}: {{ codeLookupResult.active ? $t('active') : $t('inactive') }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer Filter -->
+      <div class="card">
+        <div class="card-body">
+          <label class="text-sm font-medium text-gray-700 mb-2 block">{{ $t('pos.priceLists.customerFilter') }}</label>
+          <div class="flex gap-2">
+            <input
+              v-model.number="customerFilterId"
+              @keyup.enter="filterByCustomer"
+              type="number"
+              :placeholder="$t('pos.priceLists.customerFilterPlaceholder')"
+              class="input flex-1"
+            />
+            <button @click="filterByCustomer" :disabled="customerFilterLoading" class="btn-primary text-sm">
+              {{ $t('filter') }}
+            </button>
+            <button v-if="customerFilterId" @click="clearCustomerFilter" class="btn-secondary text-sm">
+              {{ $t('clear') }}
+            </button>
+          </div>
+          <div v-if="customerFilterLoading" class="mt-2 text-sm text-gray-500">{{ $t('loading') }}</div>
         </div>
       </div>
     </div>
