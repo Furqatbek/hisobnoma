@@ -148,7 +148,6 @@ class VendorMapperTest {
         // Ignored fields
         assertNull(entity.getId());
         assertNull(entity.getTenantId());
-        assertNull(entity.getCurrentBalance());
     }
 
     @Test

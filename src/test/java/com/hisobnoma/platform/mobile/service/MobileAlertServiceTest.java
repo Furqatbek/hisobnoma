@@ -416,16 +416,16 @@ class MobileAlertServiceTest {
 
     @Test
     void initializeDefaultPreferences_skipsExistingPreferences() {
-        // Given
-        when(preferenceRepository.findByUserIdAndTenantIdAndAlertType(
-                eq(USER_ID), eq(TENANT_ID), eq(MobileAlert.AlertType.LOW_STOCK)))
-                .thenReturn(Optional.of(alertPreference));
-        when(preferenceRepository.findByUserIdAndTenantIdAndAlertType(
+        // Given - LOW_STOCK already exists, all others do not
+        lenient().when(preferenceRepository.findByUserIdAndTenantIdAndAlertType(
                 eq(USER_ID), eq(TENANT_ID), any(MobileAlert.AlertType.class)))
-                .thenReturn(Optional.empty());
-        when(preferenceRepository.findByUserIdAndTenantIdAndAlertType(
-                eq(USER_ID), eq(TENANT_ID), eq(MobileAlert.AlertType.LOW_STOCK)))
-                .thenReturn(Optional.of(alertPreference));
+                .thenAnswer(invocation -> {
+                    MobileAlert.AlertType type = invocation.getArgument(2);
+                    if (type == MobileAlert.AlertType.LOW_STOCK) {
+                        return Optional.of(alertPreference);
+                    }
+                    return Optional.empty();
+                });
 
         // When
         mobileAlertService.initializeDefaultPreferences(USER_ID, TENANT_ID);

@@ -21,7 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -136,7 +136,7 @@ class SmsControllerTest {
     @Test
     @WithMockUser(authorities = "SMS_TEMPLATES_MANAGE")
     void getTemplate_authenticated_returns200() throws Exception {
-        SmsTemplateDto dto = new SmsTemplateDto();
+        SmsTemplateDto dto = SmsTemplateDto.builder().id(1L).code("WELCOME").name("Welcome").template("Hello {name}").active(true).variables(List.of("name")).build();
         when(templateService.getTemplate(1L)).thenReturn(dto);
 
         mockMvc.perform(get("/api/v1/sms/templates/1"))
@@ -162,7 +162,7 @@ class SmsControllerTest {
     @WithMockUser(authorities = "SMS_TEMPLATES_MANAGE")
     void createTemplate_authenticated_returns200() throws Exception {
         SmsTemplateRequest request = new SmsTemplateRequest();
-        SmsTemplateDto dto = new SmsTemplateDto();
+        SmsTemplateDto dto = SmsTemplateDto.builder().id(1L).code("NEW").name("New").template("Hello").active(true).variables(List.of()).build();
         when(templateService.createTemplate(any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/sms/templates")
@@ -194,7 +194,7 @@ class SmsControllerTest {
     @WithMockUser(authorities = "SMS_TEMPLATES_MANAGE")
     void updateTemplate_authenticated_returns200() throws Exception {
         SmsTemplateRequest request = new SmsTemplateRequest();
-        SmsTemplateDto dto = new SmsTemplateDto();
+        SmsTemplateDto dto = SmsTemplateDto.builder().id(1L).code("UPD").name("Updated").template("Hi").active(true).variables(List.of()).build();
         when(templateService.updateTemplate(any(), any())).thenReturn(dto);
 
         mockMvc.perform(put("/api/v1/sms/templates/1")
@@ -240,7 +240,7 @@ class SmsControllerTest {
     @Test
     @WithMockUser(authorities = "SMS_VIEW")
     void getHistory_authenticated_returns200() throws Exception {
-        when(smsService.getHistory(any(Integer.class), any(Integer.class), any())).thenReturn(Map.of());
+        when(smsService.getHistory(anyInt(), anyInt(), any())).thenReturn(Map.of());
 
         mockMvc.perform(get("/api/v1/sms/history"))
                 .andExpect(status().isOk());
@@ -313,7 +313,7 @@ class SmsControllerTest {
     @WithMockUser(authorities = "ADMIN_SETTINGS_MANAGE")
     void saveSettings_authenticated_returns200() throws Exception {
         SmsSettingsRequest request = new SmsSettingsRequest();
-        doNothing().when(smsService).updateSettings(any(), any(), any());
+        doNothing().when(smsService).updateSettings(anyBoolean(), any(), any());
         when(smsService.getBalance()).thenReturn(Map.of("success", true));
         when(smsService.getSettings()).thenReturn(Map.of("enabled", true));
 

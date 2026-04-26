@@ -478,7 +478,13 @@ class StockControllerTest {
     @Test
     @WithMockUser(authorities = "INVENTORY_STOCK_ISSUE")
     void issueStock_valid_returns200() throws Exception {
-        StockIssueRequest request = StockIssueRequest.builder().build();
+        StockIssueRequest request = StockIssueRequest.builder()
+                .locationId(1L)
+                .items(List.of(StockIssueRequest.IssueItem.builder()
+                        .productId(1L)
+                        .quantity(new BigDecimal("5"))
+                        .build()))
+                .build();
 
         StockMovementDto movement = StockMovementDto.builder()
                 .id(1L)
@@ -495,18 +501,34 @@ class StockControllerTest {
 
     @Test
     void issueStock_unauthenticated_returns403() throws Exception {
+        StockIssueRequest request = StockIssueRequest.builder()
+                .locationId(1L)
+                .items(List.of(StockIssueRequest.IssueItem.builder()
+                        .productId(1L)
+                        .quantity(new BigDecimal("5"))
+                        .build()))
+                .build();
+
         mockMvc.perform(post("/api/v1/inventory/stock/issue")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void issueStock_noPermission_returns403() throws Exception {
+        StockIssueRequest request = StockIssueRequest.builder()
+                .locationId(1L)
+                .items(List.of(StockIssueRequest.IssueItem.builder()
+                        .productId(1L)
+                        .quantity(new BigDecimal("5"))
+                        .build()))
+                .build();
+
         mockMvc.perform(post("/api/v1/inventory/stock/issue")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
     }
 
@@ -515,7 +537,14 @@ class StockControllerTest {
     @Test
     @WithMockUser(authorities = "INVENTORY_STOCK_TRANSFER")
     void transferStock_valid_returns200() throws Exception {
-        StockTransferRequest request = StockTransferRequest.builder().build();
+        StockTransferRequest request = StockTransferRequest.builder()
+                .fromLocationId(1L)
+                .toLocationId(2L)
+                .items(List.of(StockTransferRequest.TransferItem.builder()
+                        .productId(1L)
+                        .quantity(new BigDecimal("5"))
+                        .build()))
+                .build();
 
         StockMovementDto movement = StockMovementDto.builder()
                 .id(1L)
@@ -532,18 +561,36 @@ class StockControllerTest {
 
     @Test
     void transferStock_unauthenticated_returns403() throws Exception {
+        StockTransferRequest request = StockTransferRequest.builder()
+                .fromLocationId(1L)
+                .toLocationId(2L)
+                .items(List.of(StockTransferRequest.TransferItem.builder()
+                        .productId(1L)
+                        .quantity(new BigDecimal("5"))
+                        .build()))
+                .build();
+
         mockMvc.perform(post("/api/v1/inventory/stock/transfer")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void transferStock_noPermission_returns403() throws Exception {
+        StockTransferRequest request = StockTransferRequest.builder()
+                .fromLocationId(1L)
+                .toLocationId(2L)
+                .items(List.of(StockTransferRequest.TransferItem.builder()
+                        .productId(1L)
+                        .quantity(new BigDecimal("5"))
+                        .build()))
+                .build();
+
         mockMvc.perform(post("/api/v1/inventory/stock/transfer")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
     }
 
@@ -552,7 +599,14 @@ class StockControllerTest {
     @Test
     @WithMockUser(authorities = "INVENTORY_STOCK_ADJUST")
     void adjustStock_valid_returns200() throws Exception {
-        StockAdjustRequest request = StockAdjustRequest.builder().build();
+        StockAdjustRequest request = StockAdjustRequest.builder()
+                .locationId(1L)
+                .reason("Inventory correction")
+                .items(List.of(StockAdjustRequest.AdjustItem.builder()
+                        .productId(1L)
+                        .adjustmentQuantity(new BigDecimal("-2"))
+                        .build()))
+                .build();
 
         StockMovementDto movement = StockMovementDto.builder()
                 .id(1L)
@@ -569,18 +623,36 @@ class StockControllerTest {
 
     @Test
     void adjustStock_unauthenticated_returns403() throws Exception {
+        StockAdjustRequest request = StockAdjustRequest.builder()
+                .locationId(1L)
+                .reason("Inventory correction")
+                .items(List.of(StockAdjustRequest.AdjustItem.builder()
+                        .productId(1L)
+                        .adjustmentQuantity(new BigDecimal("-2"))
+                        .build()))
+                .build();
+
         mockMvc.perform(post("/api/v1/inventory/stock/adjust")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void adjustStock_noPermission_returns403() throws Exception {
+        StockAdjustRequest request = StockAdjustRequest.builder()
+                .locationId(1L)
+                .reason("Inventory correction")
+                .items(List.of(StockAdjustRequest.AdjustItem.builder()
+                        .productId(1L)
+                        .adjustmentQuantity(new BigDecimal("-2"))
+                        .build()))
+                .build();
+
         mockMvc.perform(post("/api/v1/inventory/stock/adjust")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
     }
 }

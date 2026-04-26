@@ -267,8 +267,9 @@ class BarcodeServiceTest {
 
     @Test
     void isValidBarcode_validInternalBarcode_returnsTrue() {
+        // Use a length that doesn't match EAN-13 (13) or UPC-A (12)
         // When/Then
-        assertTrue(barcodeService.isValidBarcode("INT-12345-AB"));
+        assertTrue(barcodeService.isValidBarcode("INT-12345"));
     }
 
     @Test

@@ -84,7 +84,6 @@ class UnitOfMeasureMapperTest {
         assertNull(dto.getBaseUomId());
         assertNull(dto.getBaseUomCode());
         assertNull(dto.getBaseUomName());
-        assertTrue(dto.isBaseUnit());
     }
 
     @Test

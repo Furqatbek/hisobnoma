@@ -95,7 +95,7 @@ class StockMapperTest {
         assertEquals("Pieces", dto.getBaseUomName());
         // Expression-based computed fields
         assertEquals(new BigDecimal("90.0000"), dto.getQuantityAvailable());
-        assertEquals(new BigDecimal("50000.0000"), dto.getStockValue());
+        assertEquals(0, new BigDecimal("50000.0000").compareTo(dto.getStockValue()));
         assertFalse(dto.isBelowReorderPoint());
         assertFalse(dto.isBelowMinimum());
     }
