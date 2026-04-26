@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { employeesApi } from '@/services/api'
-import { PlusIcon, PencilSquareIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, PencilSquareIcon, MagnifyingGlassIcon, NoSymbolIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 
@@ -52,6 +52,26 @@ function statusLabel(status) {
     case 'ON_LEAVE': return t('enums.employeeStatus.ON_LEAVE')
     case 'TERMINATED': return t('enums.employeeStatus.TERMINATED')
     default: return status
+  }
+}
+
+async function handleTerminate(emp) {
+  if (!confirm(t('hr.employees.confirmTerminate', { name: emp.fullName }))) return
+  try {
+    await employeesApi.terminate(emp.id)
+    await loadEmployees()
+  } catch (error) {
+    alert(error.response?.data?.message || t('errorOccurred'))
+  }
+}
+
+async function handleDelete(emp) {
+  if (!confirm(t('hr.employees.confirmDelete', { name: emp.fullName }))) return
+  try {
+    await employeesApi.delete(emp.id)
+    await loadEmployees()
+  } catch (error) {
+    alert(error.response?.data?.message || t('errorOccurred'))
   }
 }
 
@@ -127,9 +147,27 @@ onMounted(loadEmployees)
                   </span>
                 </td>
                 <td>
-                  <RouterLink :to="`/hr/employees/${emp.id}/edit`" class="text-primary-600 hover:text-primary-800">
-                    <PencilSquareIcon class="h-5 w-5" />
-                  </RouterLink>
+                  <div class="flex items-center gap-2">
+                    <RouterLink :to="`/hr/employees/${emp.id}/edit`" class="text-primary-600 hover:text-primary-800" :title="$t('edit')">
+                      <PencilSquareIcon class="h-5 w-5" />
+                    </RouterLink>
+                    <button
+                      v-if="emp.status === 'ACTIVE' || emp.status === 'ON_LEAVE'"
+                      @click="handleTerminate(emp)"
+                      class="text-orange-600 hover:text-orange-800"
+                      :title="$t('hr.employees.terminate')"
+                    >
+                      <NoSymbolIcon class="h-5 w-5" />
+                    </button>
+                    <button
+                      v-if="emp.status === 'TERMINATED'"
+                      @click="handleDelete(emp)"
+                      class="text-red-600 hover:text-red-800"
+                      :title="$t('delete')"
+                    >
+                      <TrashIcon class="h-5 w-5" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>

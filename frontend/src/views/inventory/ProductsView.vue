@@ -26,6 +26,11 @@ const brands = ref([])
 const selectedCategory = ref(null)
 const selectedBrand = ref(null)
 
+const skuLookup = ref('')
+const skuLookupResult = ref(null)
+const skuLookupLoading = ref(false)
+const skuLookupError = ref('')
+
 const showDeleteModal = ref(false)
 const productToDelete = ref(null)
 
@@ -184,6 +189,45 @@ function onFileSelected(event) {
   importFile.value = event.target.files[0] || null
 }
 
+async function lookupBySku() {
+  if (!skuLookup.value.trim()) return
+  skuLookupLoading.value = true
+  skuLookupError.value = ''
+  skuLookupResult.value = null
+  try {
+    const response = await productsApi.getBySku(skuLookup.value.trim())
+    const product = response.data.data || response.data
+    if (product && product.id) {
+      skuLookupResult.value = product
+      // Check if the product is already in the current list and scroll to it
+      const idx = products.value.findIndex(p => p.id === product.id)
+      if (idx >= 0) {
+        // Highlight existing row
+        const row = document.getElementById(`product-row-${product.id}`)
+        if (row) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          row.classList.add('ring-2', 'ring-primary-500', 'bg-primary-50')
+          setTimeout(() => {
+            row.classList.remove('ring-2', 'ring-primary-500', 'bg-primary-50')
+          }, 3000)
+        }
+      }
+    } else {
+      skuLookupError.value = t('inventory.products.skuNotFound')
+    }
+  } catch (error) {
+    skuLookupError.value = t('inventory.products.skuNotFound')
+  } finally {
+    skuLookupLoading.value = false
+  }
+}
+
+function clearSkuLookup() {
+  skuLookup.value = ''
+  skuLookupResult.value = null
+  skuLookupError.value = ''
+}
+
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
@@ -262,6 +306,50 @@ function formatCurrency(value) {
       </div>
     </div>
 
+    <!-- SKU Lookup -->
+    <div class="card">
+      <div class="card-body">
+        <div class="flex flex-col sm:flex-row gap-4 items-start">
+          <div class="flex-1">
+            <label class="label text-sm font-medium text-gray-700 mb-1">{{ $t('inventory.products.skuLookup') }}</label>
+            <div class="flex gap-2">
+              <input
+                v-model="skuLookup"
+                type="text"
+                :placeholder="$t('inventory.products.skuLookupPlaceholder')"
+                class="input"
+                @keyup.enter="lookupBySku"
+              />
+              <button @click="lookupBySku" :disabled="skuLookupLoading || !skuLookup.trim()" class="btn-primary whitespace-nowrap">
+                {{ skuLookupLoading ? $t('searching') : $t('inventory.products.skuLookupBtn') }}
+              </button>
+              <button v-if="skuLookup || skuLookupResult || skuLookupError" @click="clearSkuLookup" class="btn-secondary">
+                {{ $t('inventory.products.clearFilters') }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- SKU Lookup Result -->
+        <div v-if="skuLookupResult" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p class="text-sm font-medium text-green-800">
+            {{ $t('inventory.products.skuFound') }}:
+            <span class="font-bold">{{ skuLookupResult.name }}</span>
+            <span class="font-mono text-xs ml-2">({{ skuLookupResult.sku }})</span>
+          </p>
+          <div class="mt-1 flex gap-4 text-xs text-green-700">
+            <span>{{ $t('price') }}: {{ formatCurrency(skuLookupResult.sellingPrice) }}</span>
+            <span>{{ $t('inventory.products.stockQty') }}: {{ skuLookupResult.stockQuantity || 0 }}</span>
+            <RouterLink :to="`/inventory/products/${skuLookupResult.id}/edit`" class="text-primary-600 hover:underline">
+              {{ $t('inventory.brands.editBrand') }}
+            </RouterLink>
+          </div>
+        </div>
+        <div v-if="skuLookupError" class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p class="text-sm text-red-700">{{ skuLookupError }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Products table -->
     <div class="card">
       <div v-if="loading" class="flex items-center justify-center h-64">
@@ -290,7 +378,7 @@ function formatCurrency(value) {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="product in products" :key="product.id">
+            <tr v-for="product in products" :key="product.id" :id="`product-row-${product.id}`" class="transition-all duration-300">
               <td>
                 <div class="flex items-center">
                   <div class="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-lg flex items-center justify-center">

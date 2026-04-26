@@ -5,7 +5,8 @@ import { useI18n } from 'vue-i18n'
 import { customersApi } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
-  PhoneIcon, EnvelopeIcon, ExclamationTriangleIcon, NoSymbolIcon
+  PhoneIcon, EnvelopeIcon, ExclamationTriangleIcon, NoSymbolIcon,
+  CheckCircleIcon, XCircleIcon, XMarkIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -20,6 +21,29 @@ const creditHoldCustomers = ref([])
 const overCreditCustomers = ref([])
 const creditHoldCount = ref(0)
 const overCreditCount = ref(0)
+
+// Code lookup
+const codeLookup = ref('')
+const codeLookupResult = ref(null)
+const codeLookupError = ref('')
+const codeLookupLoading = ref(false)
+
+// Dedicated search
+const dedicatedSearch = ref('')
+const dedicatedSearchResults = ref([])
+const dedicatedSearchLoading = ref(false)
+
+// Credit limit editing
+const editingCreditLimitId = ref(null)
+const editingCreditLimitValue = ref(0)
+const creditLimitSaving = ref(false)
+
+// Can Invoice check
+const showCanInvoiceModal = ref(false)
+const canInvoiceCustomer = ref(null)
+const canInvoiceAmount = ref(0)
+const canInvoiceResult = ref(null)
+const canInvoiceLoading = ref(false)
 
 const filters = computed(() => [
   { key: 'all', label: t('customers.filterAll') },
@@ -108,6 +132,104 @@ async function deleteCustomer(customer) {
   }
 }
 
+// Code lookup
+async function lookupByCode() {
+  if (!codeLookup.value.trim()) return
+  codeLookupLoading.value = true
+  codeLookupError.value = ''
+  codeLookupResult.value = null
+  try {
+    const res = await customersApi.getByCode(codeLookup.value.trim())
+    codeLookupResult.value = res.data.data || res.data
+  } catch (e) {
+    if (e.response?.status === 404) {
+      codeLookupError.value = t('customers.codeNotFound')
+    } else {
+      codeLookupError.value = e.response?.data?.message || t('errorOccurred')
+    }
+  } finally {
+    codeLookupLoading.value = false
+  }
+}
+
+function clearCodeLookup() {
+  codeLookup.value = ''
+  codeLookupResult.value = null
+  codeLookupError.value = ''
+}
+
+// Dedicated search
+async function runDedicatedSearch() {
+  if (!dedicatedSearch.value.trim()) {
+    dedicatedSearchResults.value = []
+    return
+  }
+  dedicatedSearchLoading.value = true
+  try {
+    const res = await customersApi.search(dedicatedSearch.value.trim())
+    const data = res.data.data || res.data
+    dedicatedSearchResults.value = data.content || data || []
+  } catch (e) {
+    console.error('Search error:', e)
+    dedicatedSearchResults.value = []
+  } finally {
+    dedicatedSearchLoading.value = false
+  }
+}
+
+// Inline credit limit editing
+function startEditCreditLimit(customer) {
+  editingCreditLimitId.value = customer.id
+  editingCreditLimitValue.value = customer.creditLimit || 0
+}
+
+function cancelEditCreditLimit() {
+  editingCreditLimitId.value = null
+  editingCreditLimitValue.value = 0
+}
+
+async function saveCreditLimit(customerId) {
+  creditLimitSaving.value = true
+  try {
+    await customersApi.updateCreditLimit(customerId, editingCreditLimitValue.value)
+    editingCreditLimitId.value = null
+    fetchCustomers()
+    loadCreditCounts()
+  } catch (e) {
+    console.error('Failed to update credit limit:', e)
+  } finally {
+    creditLimitSaving.value = false
+  }
+}
+
+// Can Invoice check
+function openCanInvoiceModal(customer) {
+  canInvoiceCustomer.value = customer
+  canInvoiceAmount.value = 0
+  canInvoiceResult.value = null
+  showCanInvoiceModal.value = true
+}
+
+async function checkCanInvoice() {
+  if (!canInvoiceAmount.value || canInvoiceAmount.value <= 0) return
+  canInvoiceLoading.value = true
+  canInvoiceResult.value = null
+  try {
+    const res = await customersApi.canInvoice(canInvoiceCustomer.value.id, canInvoiceAmount.value)
+    canInvoiceResult.value = res.data.data ?? res.data
+  } catch (e) {
+    canInvoiceResult.value = false
+  } finally {
+    canInvoiceLoading.value = false
+  }
+}
+
+function closeCanInvoiceModal() {
+  showCanInvoiceModal.value = false
+  canInvoiceCustomer.value = null
+  canInvoiceResult.value = null
+}
+
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0)
 }
@@ -149,6 +271,80 @@ function formatCurrency(value) {
           </span>
         </button>
       </nav>
+    </div>
+
+    <!-- Code Lookup & Dedicated Search -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Code Lookup -->
+      <div class="card">
+        <div class="card-body">
+          <label class="text-sm font-medium text-gray-700 mb-2 block">{{ $t('customers.codeLookup') }}</label>
+          <div class="flex gap-2">
+            <input
+              v-model="codeLookup"
+              @keyup.enter="lookupByCode"
+              type="text"
+              :placeholder="$t('customers.codeLookupPlaceholder')"
+              class="input flex-1 font-mono"
+            />
+            <button @click="lookupByCode" :disabled="codeLookupLoading" class="btn-primary">
+              {{ $t('search') }}
+            </button>
+            <button v-if="codeLookupResult || codeLookupError" @click="clearCodeLookup" class="btn-secondary">
+              {{ $t('clear') }}
+            </button>
+          </div>
+          <div v-if="codeLookupLoading" class="mt-2 text-sm text-gray-500">{{ $t('loading') }}</div>
+          <div v-if="codeLookupError" class="mt-2 text-sm text-red-600">{{ codeLookupError }}</div>
+          <div v-if="codeLookupResult" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p class="font-medium">{{ codeLookupResult.name }}</p>
+            <p class="text-sm text-gray-500">{{ $t('code') }}: {{ codeLookupResult.code }} | {{ $t('phone') }}: {{ codeLookupResult.phone || '-' }}</p>
+            <div class="mt-2 flex gap-2">
+              <RouterLink :to="`/customers/${codeLookupResult.id}/edit`" class="text-sm text-primary-600 hover:underline">{{ $t('edit') }}</RouterLink>
+              <button @click="openCanInvoiceModal(codeLookupResult)" class="text-sm text-primary-600 hover:underline">{{ $t('customers.checkInvoiceability') }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dedicated Search -->
+      <div class="card">
+        <div class="card-body">
+          <label class="text-sm font-medium text-gray-700 mb-2 block">{{ $t('customers.dedicatedSearch') }}</label>
+          <div class="flex gap-2">
+            <div class="relative flex-1">
+              <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                v-model="dedicatedSearch"
+                @keyup.enter="runDedicatedSearch"
+                type="text"
+                :placeholder="$t('customers.dedicatedSearchPlaceholder')"
+                class="input pl-10"
+              />
+            </div>
+            <button @click="runDedicatedSearch" :disabled="dedicatedSearchLoading" class="btn-primary">
+              {{ $t('search') }}
+            </button>
+          </div>
+          <div v-if="dedicatedSearchLoading" class="mt-2 text-sm text-gray-500">{{ $t('loading') }}</div>
+          <div v-if="dedicatedSearchResults.length > 0" class="mt-3 space-y-2 max-h-48 overflow-y-auto">
+            <div v-for="c in dedicatedSearchResults" :key="c.id" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+              <div>
+                <p class="text-sm font-medium">{{ c.name }}</p>
+                <p class="text-xs text-gray-500">{{ c.code }} | {{ c.phone || '-' }}</p>
+              </div>
+              <div class="flex gap-1">
+                <RouterLink :to="`/customers/${c.id}/edit`" class="p-1 text-gray-400 hover:text-primary-600 rounded">
+                  <PencilIcon class="h-4 w-4" />
+                </RouterLink>
+                <button @click="openCanInvoiceModal(c)" class="p-1 text-gray-400 hover:text-primary-600 rounded" :title="$t('customers.checkInvoiceability')">
+                  <CheckCircleIcon class="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card" v-if="activeFilter === 'all'">
@@ -227,8 +423,27 @@ function formatCurrency(value) {
                     <NoSymbolIcon class="h-3.5 w-3.5 mr-1" />
                     {{ $t('customers.creditHold') }}
                   </span>
-                  <span v-if="customer.creditLimit" class="text-xs text-gray-500">
-                    {{ $t('customers.form.creditLimit') }}: {{ formatCurrency(customer.creditLimit) }}
+                  <!-- Inline credit limit editing -->
+                  <div v-if="editingCreditLimitId === customer.id" class="flex items-center gap-1">
+                    <input
+                      v-model.number="editingCreditLimitValue"
+                      type="number"
+                      min="0"
+                      step="1000"
+                      class="input text-xs w-28 py-0.5 px-1"
+                      @keyup.enter="saveCreditLimit(customer.id)"
+                      @keyup.escape="cancelEditCreditLimit"
+                    />
+                    <button @click="saveCreditLimit(customer.id)" :disabled="creditLimitSaving" class="p-0.5 text-green-600 hover:text-green-800">
+                      <CheckCircleIcon class="h-4 w-4" />
+                    </button>
+                    <button @click="cancelEditCreditLimit" class="p-0.5 text-gray-400 hover:text-gray-600">
+                      <XCircleIcon class="h-4 w-4" />
+                    </button>
+                  </div>
+                  <span v-else class="text-xs text-gray-500 cursor-pointer hover:text-primary-600" @click="startEditCreditLimit(customer)">
+                    {{ $t('customers.form.creditLimit') }}: {{ customer.creditLimit ? formatCurrency(customer.creditLimit) : $t('customers.form.unlimited') }}
+                    <PencilIcon class="h-3 w-3 inline ml-0.5" />
                   </span>
                   <span v-if="customer.balance > customer.creditLimit && customer.creditLimit > 0" class="inline-flex items-center text-xs text-orange-600">
                     <ExclamationTriangleIcon class="h-3.5 w-3.5 mr-1" />
@@ -246,6 +461,9 @@ function formatCurrency(value) {
               </td>
               <td class="text-right">
                 <div class="flex items-center justify-end space-x-2">
+                  <button @click="openCanInvoiceModal(customer)" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100" :title="$t('customers.checkInvoiceability')">
+                    <CheckCircleIcon class="h-5 w-5" />
+                  </button>
                   <RouterLink :to="`/customers/${customer.id}/edit`" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100">
                     <PencilIcon class="h-5 w-5" />
                   </RouterLink>
@@ -280,6 +498,47 @@ function formatCurrency(value) {
             >
               {{ $t('next') }}
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Can Invoice Modal -->
+    <div
+      v-if="showCanInvoiceModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click.self="closeCanInvoiceModal"
+    >
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-gray-900">{{ $t('customers.checkInvoiceability') }}</h3>
+          <button @click="closeCanInvoiceModal" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+            <XMarkIcon class="h-5 w-5" />
+          </button>
+        </div>
+        <p class="text-sm text-gray-500 mb-4">{{ canInvoiceCustomer?.name }} ({{ canInvoiceCustomer?.code }})</p>
+        <div class="mb-4">
+          <label class="label">{{ $t('customers.invoiceAmount') }} *</label>
+          <input
+            v-model.number="canInvoiceAmount"
+            type="number"
+            min="0"
+            step="1000"
+            class="input"
+            :placeholder="$t('customers.invoiceAmountPlaceholder')"
+            @keyup.enter="checkCanInvoice"
+          />
+        </div>
+        <button @click="checkCanInvoice" :disabled="canInvoiceLoading || !canInvoiceAmount" class="btn-primary w-full mb-4">
+          {{ canInvoiceLoading ? $t('loading') : $t('customers.checkBtn') }}
+        </button>
+        <div v-if="canInvoiceResult !== null">
+          <div v-if="canInvoiceResult === true || canInvoiceResult === 'true'" class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <CheckCircleIcon class="h-6 w-6 text-green-600" />
+            <span class="text-sm font-medium text-green-800">{{ $t('customers.canInvoiceYes') }}</span>
+          </div>
+          <div v-else class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <XCircleIcon class="h-6 w-6 text-red-600" />
+            <span class="text-sm font-medium text-red-800">{{ $t('customers.canInvoiceNo') }}</span>
           </div>
         </div>
       </div>

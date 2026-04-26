@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { salaryApi, advancesApi, employeesApi } from '@/services/api'
-import { PlusIcon, CheckCircleIcon, XCircleIcon, XMarkIcon, BanknotesIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, CheckCircleIcon, XCircleIcon, XMarkIcon, BanknotesIcon, EyeIcon, ListBulletIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 
@@ -12,6 +12,18 @@ const loading = ref(true)
 const showModal = ref(false)
 const showAdvanceModal = ref(false)
 const saving = ref(false)
+
+// All Salaries tab
+const activeTab = ref('period')
+const allSalaries = ref([])
+const allSalariesLoading = ref(false)
+const allSalariesPage = ref(0)
+const allSalariesTotalPages = ref(0)
+
+// Salary detail modal
+const showDetailModal = ref(false)
+const salaryDetail = ref(null)
+const loadingDetail = ref(false)
 
 const now = new Date()
 const filterYear = ref(now.getFullYear())
@@ -184,6 +196,50 @@ async function handleCancelAdvance(id) {
     await loadData()
   } catch (error) {
     alert(error.response?.data?.message || t('noData'))
+  }
+}
+
+async function loadAllSalaries(page = 0) {
+  allSalariesLoading.value = true
+  try {
+    const response = await salaryApi.getAll({ page, size: 50 })
+    const data = response.data.data || response.data
+    if (Array.isArray(data)) {
+      allSalaries.value = data
+      allSalariesTotalPages.value = 1
+      allSalariesPage.value = 0
+    } else {
+      allSalaries.value = data.content || []
+      allSalariesTotalPages.value = data.page?.totalPages || data.totalPages || 1
+      allSalariesPage.value = data.page?.number ?? data.number ?? 0
+    }
+  } catch (error) {
+    console.error('Failed to load all salaries:', error)
+  } finally {
+    allSalariesLoading.value = false
+  }
+}
+
+async function viewSalaryDetail(id) {
+  loadingDetail.value = true
+  showDetailModal.value = true
+  salaryDetail.value = null
+  try {
+    const response = await salaryApi.getById(id)
+    salaryDetail.value = response.data.data || response.data
+  } catch (error) {
+    console.error('Failed to load salary detail:', error)
+    alert(error.response?.data?.message || t('errorOccurred'))
+    showDetailModal.value = false
+  } finally {
+    loadingDetail.value = false
+  }
+}
+
+function switchTab(tab) {
+  activeTab.value = tab
+  if (tab === 'all' && allSalaries.value.length === 0) {
+    loadAllSalaries(0)
   }
 }
 

@@ -3,7 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { systemSettingsApi } from '@/services/api'
 import {
   PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon,
-  EyeSlashIcon, LockClosedIcon, CheckIcon
+  EyeSlashIcon, LockClosedIcon, CheckIcon, MagnifyingGlassIcon,
+  ArrowPathIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -20,6 +21,17 @@ const showModal = ref(false)
 const editMode = ref(false)
 const modalForm = ref(createEmptyForm())
 const modalErrors = ref({})
+
+// Key lookup
+const keyLookup = ref('')
+const keyLookupLoading = ref(false)
+const keyLookupResult = ref(null)
+const keyLookupError = ref('')
+
+// Batch update
+const modifiedSettings = ref(new Map())
+const batchSaving = ref(false)
+const batchSuccess = ref(false)
 
 // Inline edit
 const editingKey = ref(null)

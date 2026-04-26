@@ -31,6 +31,9 @@ const pagination = ref({
   totalElements: 0
 })
 
+const poFilter = ref('')
+const poFilterLoading = ref(false)
+
 const statuses = ['', 'DRAFT', 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
 
 async function fetchOrders() {
@@ -39,7 +42,9 @@ async function fetchOrders() {
     const params = { page: pagination.value.page, size: pagination.value.size }
     let response
 
-    if (search.value.trim()) {
+    if (poFilter.value.trim()) {
+      response = await receivingApi.getByPurchaseOrder(poFilter.value.trim(), params)
+    } else if (search.value.trim()) {
       response = await receivingApi.search(search.value, params)
     } else if (activeStatus.value) {
       response = await receivingApi.getByStatus(activeStatus.value, params)
@@ -112,12 +117,27 @@ async function cancelOrder() {
 function handleSearch() {
   pagination.value.page = 0
   activeStatus.value = ''
+  poFilter.value = ''
+  fetchOrders()
+}
+
+function handlePoFilter() {
+  pagination.value.page = 0
+  activeStatus.value = ''
+  search.value = ''
+  fetchOrders()
+}
+
+function clearPoFilter() {
+  poFilter.value = ''
+  pagination.value.page = 0
   fetchOrders()
 }
 
 function filterByStatus(status) {
   activeStatus.value = status
   search.value = ''
+  poFilter.value = ''
   pagination.value.page = 0
   fetchOrders()
 }
@@ -200,20 +220,39 @@ function canCancel(order) {
       </nav>
     </div>
 
-    <!-- Search -->
+    <!-- Search & PO Filter -->
     <div class="card">
-      <div class="card-body flex flex-col sm:flex-row gap-4">
-        <div class="flex-1 relative">
-          <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            v-model="search"
-            type="text"
-            :placeholder="$t('inventory.receiving.searchPlaceholder')"
-            class="input pl-10"
-            @keyup.enter="handleSearch"
-          />
+      <div class="card-body space-y-4">
+        <div class="flex flex-col sm:flex-row gap-4">
+          <div class="flex-1 relative">
+            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              v-model="search"
+              type="text"
+              :placeholder="$t('inventory.receiving.searchPlaceholder')"
+              class="input pl-10"
+              @keyup.enter="handleSearch"
+            />
+          </div>
+          <button @click="handleSearch" class="btn-primary">{{ $t('search') }}</button>
         </div>
-        <button @click="handleSearch" class="btn-primary">{{ $t('search') }}</button>
+        <div class="flex flex-col sm:flex-row gap-4">
+          <div class="flex-1 relative">
+            <input
+              v-model="poFilter"
+              type="text"
+              :placeholder="$t('inventory.receiving.poFilterPlaceholder')"
+              class="input"
+              @keyup.enter="handlePoFilter"
+            />
+          </div>
+          <button @click="handlePoFilter" :disabled="!poFilter.trim()" class="btn-secondary">
+            {{ $t('inventory.receiving.filterByPo') }}
+          </button>
+          <button v-if="poFilter" @click="clearPoFilter" class="btn-secondary">
+            {{ $t('inventory.receiving.clearPoFilter') }}
+          </button>
+        </div>
       </div>
     </div>
 

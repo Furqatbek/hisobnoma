@@ -3,7 +3,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { currenciesApi, exchangeRatesApi } from '@/services/api'
 import {
-  PlusIcon, PencilIcon, TrashIcon, StarIcon, XMarkIcon, ArrowsRightLeftIcon
+  PlusIcon, PencilIcon, TrashIcon, StarIcon, XMarkIcon, ArrowsRightLeftIcon,
+  ListBulletIcon, MagnifyingGlassIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -35,8 +36,22 @@ const deletingRate = ref(null)
 const filterDate = ref('')
 const showCurrent = ref(false)
 
+// --- Base currency ---
+const baseCurrency = ref(null)
+
+// --- Code lookup ---
+const codeLookupInput = ref('')
+const codeLookupResult = ref(null)
+const codeLookupError = ref('')
+
 // --- Converter ---
 const conv = reactive({ amount: 1, from: '', to: '', date: '', result: null, loading: false })
+
+// --- Effective rate lookup ---
+const effLookup = reactive({ from: '', to: '', date: '', result: null, loading: false })
+
+// --- Pair lookup ---
+const pairLookup = reactive({ from: '', to: '', result: null, loading: false })
 
 const pageSize = 20
 
@@ -94,6 +109,49 @@ async function setBaseCurrency(c) {
   clearMessages()
   try { await currenciesApi.setBase(c.id); successMsg.value = t('finance.currencies.baseSuccess', { code: c.code }); fetchCurrencies(currPage.value) }
   catch (e) { error.value = e.response?.data?.message || t('errorOccurred') }
+}
+
+// ---- Load All Currencies (bypass pagination) ----
+async function loadAllCurrencies() {
+  loading.value = true; error.value = ''
+  try {
+    const res = await currenciesApi.getAllList()
+    const data = res.data.data || res.data
+    currencies.value = Array.isArray(data) ? data : data.content || data || []
+    currTotalPages.value = 1; currPage.value = 0
+    successMsg.value = t('finance.currencies.allLoaded')
+  } catch (e) { error.value = e.response?.data?.message || t('failedToLoad') }
+  finally { loading.value = false }
+}
+
+// ---- Fetch Base Currency ----
+async function fetchBaseCurrency() {
+  try {
+    const res = await currenciesApi.getBase()
+    baseCurrency.value = res.data.data || res.data
+  } catch { baseCurrency.value = null }
+}
+
+// ---- Fetch by ID for edit (fresh data) ----
+async function openCurrModalById(c) {
+  clearMessages()
+  try {
+    const res = await currenciesApi.getById(c.id)
+    const fresh = res.data.data || res.data
+    openCurrModal(fresh)
+  } catch (e) { error.value = e.response?.data?.message || t('failedToLoad'); openCurrModal(c) }
+}
+
+// ---- Code lookup ----
+async function lookupByCode() {
+  if (!codeLookupInput.value?.trim()) return
+  codeLookupError.value = ''; codeLookupResult.value = null; clearMessages()
+  try {
+    const res = await currenciesApi.getByCode(codeLookupInput.value.trim())
+    codeLookupResult.value = res.data.data || res.data
+  } catch (e) {
+    codeLookupError.value = t('finance.currencies.codeNotFound')
+  }
 }
 
 // ---- Exchange Rates CRUD ----
@@ -161,6 +219,51 @@ async function convertCurrency() {
   finally { conv.loading = false }
 }
 
+// ---- Load All Exchange Rates (bypass pagination) ----
+async function loadAllRates() {
+  loading.value = true; error.value = ''
+  try {
+    const res = await exchangeRatesApi.getAllList()
+    const data = res.data.data || res.data
+    rates.value = Array.isArray(data) ? data : data.content || data || []
+    rateTotalPages.value = 1; ratePage.value = 0
+    successMsg.value = t('finance.exchangeRates.allLoaded')
+  } catch (e) { error.value = e.response?.data?.message || t('failedToLoad') }
+  finally { loading.value = false }
+}
+
+// ---- Fetch rate by ID for edit (fresh data) ----
+async function openRateModalById(r) {
+  clearMessages()
+  try {
+    const res = await exchangeRatesApi.getById(r.id)
+    const fresh = res.data.data || res.data
+    openRateModal(fresh)
+  } catch (e) { error.value = e.response?.data?.message || t('failedToLoad'); openRateModal(r) }
+}
+
+// ---- Effective Rate lookup ----
+async function lookupEffectiveRate() {
+  if (!effLookup.from || !effLookup.to || !effLookup.date) return
+  effLookup.loading = true; effLookup.result = null; clearMessages()
+  try {
+    const res = await exchangeRatesApi.getEffective(effLookup.from, effLookup.to, effLookup.date)
+    effLookup.result = res.data.data ?? res.data
+  } catch (e) { error.value = e.response?.data?.message || t('finance.exchangeRates.effectiveNotFound') }
+  finally { effLookup.loading = false }
+}
+
+// ---- Pair lookup ----
+async function lookupPairRate() {
+  if (!pairLookup.from || !pairLookup.to) return
+  pairLookup.loading = true; pairLookup.result = null; clearMessages()
+  try {
+    const res = await exchangeRatesApi.getPair(pairLookup.from, pairLookup.to)
+    pairLookup.result = res.data.data ?? res.data
+  } catch (e) { error.value = e.response?.data?.message || t('finance.exchangeRates.pairNotFound') }
+  finally { pairLookup.loading = false }
+}
+
 function switchTab(tab) {
   activeTab.value = tab; clearMessages()
   if (tab === 'currencies') fetchCurrencies(0)
@@ -173,7 +276,7 @@ function showCurrentRates() { showCurrent.value = true; filterDate.value = ''; f
 function fmtNum(v, dec = 2) { return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(Number(v) || 0) }
 function fmtRate(v) { return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(Number(v) || 0) }
 
-onMounted(() => { fetchCurrencies(0); fetchActiveCurrencies() })
+onMounted(() => { fetchCurrencies(0); fetchActiveCurrencies(); fetchBaseCurrency() })
 </script>
 
 <template>
@@ -212,6 +315,44 @@ onMounted(() => { fetchCurrencies(0); fetchActiveCurrencies() })
 
     <!-- ========== TAB 1: CURRENCIES ========== -->
     <template v-if="activeTab === 'currencies'">
+      <!-- Base Currency Highlight -->
+      <div v-if="baseCurrency" class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-3">
+        <StarIcon class="h-5 w-5 text-yellow-500" />
+        <span class="text-sm font-medium text-yellow-800">{{ $t('finance.currencies.baseCurrencyLabel') }}:</span>
+        <code class="font-mono font-semibold text-yellow-900">{{ baseCurrency.code }}</code>
+        <span class="text-sm text-yellow-700">— {{ baseCurrency.name }}</span>
+        <span v-if="baseCurrency.symbol" class="text-sm text-yellow-600">({{ baseCurrency.symbol }})</span>
+      </div>
+
+      <!-- Toolbar: Load All + Code Lookup -->
+      <div class="card">
+        <div class="card-body">
+          <div class="flex flex-col sm:flex-row gap-4">
+            <button @click="loadAllCurrencies" class="btn-secondary text-sm">
+              <ListBulletIcon class="h-4 w-4 mr-1" />
+              {{ $t('finance.currencies.loadAll') }}
+            </button>
+            <div class="flex gap-2 flex-1">
+              <input v-model="codeLookupInput" type="text" class="input font-mono flex-1" maxlength="3" :placeholder="$t('finance.currencies.codeLookupPlaceholder')" @keyup.enter="lookupByCode" />
+              <button @click="lookupByCode" class="btn-secondary text-sm">
+                <MagnifyingGlassIcon class="h-4 w-4 mr-1" />
+                {{ $t('finance.currencies.codeLookup') }}
+              </button>
+            </div>
+          </div>
+          <!-- Code lookup result -->
+          <div v-if="codeLookupResult" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+            <span class="font-mono font-semibold">{{ codeLookupResult.code }}</span> — {{ codeLookupResult.name }}
+            <span v-if="codeLookupResult.symbol" class="ml-2 text-gray-500">({{ codeLookupResult.symbol }})</span>
+            <span :class="['ml-2 badge text-xs', codeLookupResult.active ? 'badge-success' : 'badge-danger']">
+              {{ codeLookupResult.active ? $t('active') : $t('inactive') }}
+            </span>
+            <span v-if="codeLookupResult.baseCurrency" class="ml-2 badge badge-warning text-xs"><StarIcon class="h-3 w-3 inline mr-1" />{{ $t('finance.currencies.baseBadge') }}</span>
+          </div>
+          <div v-if="codeLookupError" class="mt-3 text-sm text-red-600">{{ codeLookupError }}</div>
+        </div>
+      </div>
+
       <div class="card">
         <div v-if="loading" class="flex items-center justify-center h-64">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
@@ -251,7 +392,7 @@ onMounted(() => { fetchCurrencies(0); fetchActiveCurrencies() })
                     <button v-if="!c.baseCurrency" @click="setBaseCurrency(c)" class="p-2 text-gray-400 hover:text-yellow-500 rounded-lg hover:bg-gray-100" :title="$t('finance.currencies.setBase')">
                       <StarIcon class="h-5 w-5" />
                     </button>
-                    <button @click="openCurrModal(c)" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100" :title="$t('edit')">
+                    <button @click="openCurrModalById(c)" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100" :title="$t('edit')">
                       <PencilIcon class="h-5 w-5" />
                     </button>
                   </div>
