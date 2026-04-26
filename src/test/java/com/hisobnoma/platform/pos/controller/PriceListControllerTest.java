@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.pos.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hisobnoma.platform.auth.security.UserPrincipal;
 import com.hisobnoma.platform.pos.dto.*;
 import com.hisobnoma.platform.pos.service.PriceListService;
 import org.junit.jupiter.api.Test;
@@ -10,16 +11,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -37,15 +43,25 @@ class PriceListControllerTest {
     @MockBean
     private PriceListService priceListService;
 
+    private RequestPostProcessor userWithPermission(String... permissions) {
+        UserPrincipal principal = new UserPrincipal(
+                1L, "admin", "pw", 1L, true, true,
+                Arrays.stream(permissions)
+                        .map(SimpleGrantedAuthority::new)
+                        .toList());
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities());
+        return authentication(auth);
+    }
+
     // ==================== GET /api/v1/pos/price-lists ====================
 
     @Test
-    @WithMockUser(authorities = "POS_PRICELIST_READ")
     void getAllPriceLists_authenticated_returns200() throws Exception {
         PriceListDto dto = PriceListDto.builder().id(1L).code("PL-001").name("Default").build();
         when(priceListService.findAllPriceLists(any())).thenReturn(new PageImpl<>(List.of(dto)));
 
-        mockMvc.perform(get("/api/v1/pos/price-lists"))
+        mockMvc.perform(get("/api/v1/pos/price-lists").with(userWithPermission("POS_PRICELIST_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -56,20 +72,18 @@ class PriceListControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void getAllPriceLists_noPermission_returns403() throws Exception {
-        mockMvc.perform(get("/api/v1/pos/price-lists"))
+        mockMvc.perform(get("/api/v1/pos/price-lists").with(userWithPermission("SOME_OTHER_PERMISSION")))
                 .andExpect(status().isForbidden());
     }
 
     // ==================== GET /api/v1/pos/price-lists/active ====================
 
     @Test
-    @WithMockUser(authorities = "POS_PRICELIST_READ")
     void getActivePriceLists_authenticated_returns200() throws Exception {
         when(priceListService.findActivePriceLists()).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/v1/pos/price-lists/active"))
+        mockMvc.perform(get("/api/v1/pos/price-lists/active").with(userWithPermission("POS_PRICELIST_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -82,12 +96,11 @@ class PriceListControllerTest {
     // ==================== GET /api/v1/pos/price-lists/{id} ====================
 
     @Test
-    @WithMockUser(authorities = "POS_PRICELIST_READ")
     void getPriceListById_authenticated_returns200() throws Exception {
         PriceListDto dto = PriceListDto.builder().id(1L).code("PL-001").name("Default").build();
         when(priceListService.findPriceListById(1L)).thenReturn(dto);
 
-        mockMvc.perform(get("/api/v1/pos/price-lists/1"))
+        mockMvc.perform(get("/api/v1/pos/price-lists/1").with(userWithPermission("POS_PRICELIST_READ")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("PL-001"));
     }
@@ -99,21 +112,19 @@ class PriceListControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void getPriceListById_noPermission_returns403() throws Exception {
-        mockMvc.perform(get("/api/v1/pos/price-lists/1"))
+        mockMvc.perform(get("/api/v1/pos/price-lists/1").with(userWithPermission("SOME_OTHER_PERMISSION")))
                 .andExpect(status().isForbidden());
     }
 
     // ==================== GET /api/v1/pos/price-lists/code/{code} ====================
 
     @Test
-    @WithMockUser(authorities = "POS_PRICELIST_READ")
     void getPriceListByCode_authenticated_returns200() throws Exception {
         PriceListDto dto = PriceListDto.builder().id(1L).code("PL-001").name("Default").build();
         when(priceListService.findPriceListByCode("PL-001")).thenReturn(dto);
 
-        mockMvc.perform(get("/api/v1/pos/price-lists/code/PL-001"))
+        mockMvc.perform(get("/api/v1/pos/price-lists/code/PL-001").with(userWithPermission("POS_PRICELIST_READ")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("PL-001"));
     }
@@ -127,13 +138,13 @@ class PriceListControllerTest {
     // ==================== POST /api/v1/pos/price-lists ====================
 
     @Test
-    @WithMockUser(authorities = "POS_PRICELIST_CREATE")
     void createPriceList_authenticated_returns201() throws Exception {
         CreatePriceListRequest request = new CreatePriceListRequest();
         PriceListDto dto = PriceListDto.builder().id(1L).code("PL-001").name("Default").build();
         when(priceListService.createPriceList(any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/pos/price-lists")
+                        .with(userWithPermission("POS_PRICELIST_CREATE"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -149,9 +160,9 @@ class PriceListControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void createPriceList_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/pos/price-lists")
+                        .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
@@ -160,13 +171,13 @@ class PriceListControllerTest {
     // ==================== PUT /api/v1/pos/price-lists/{id} ====================
 
     @Test
-    @WithMockUser(authorities = "POS_PRICELIST_UPDATE")
     void updatePriceList_authenticated_returns200() throws Exception {
         CreatePriceListRequest request = new CreatePriceListRequest();
         PriceListDto dto = PriceListDto.builder().id(1L).code("PL-001").name("Updated").build();
         when(priceListService.updatePriceList(any(), any())).thenReturn(dto);
 
         mockMvc.perform(put("/api/v1/pos/price-lists/1")
+                        .with(userWithPermission("POS_PRICELIST_UPDATE"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
@@ -181,9 +192,9 @@ class PriceListControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void updatePriceList_noPermission_returns403() throws Exception {
         mockMvc.perform(put("/api/v1/pos/price-lists/1")
+                        .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
@@ -192,11 +203,10 @@ class PriceListControllerTest {
     // ==================== DELETE /api/v1/pos/price-lists/{id} ====================
 
     @Test
-    @WithMockUser(authorities = "POS_PRICELIST_DELETE")
     void deletePriceList_authenticated_returns204() throws Exception {
         doNothing().when(priceListService).deletePriceList(1L);
 
-        mockMvc.perform(delete("/api/v1/pos/price-lists/1"))
+        mockMvc.perform(delete("/api/v1/pos/price-lists/1").with(userWithPermission("POS_PRICELIST_DELETE")))
                 .andExpect(status().isNoContent());
     }
 
@@ -207,21 +217,19 @@ class PriceListControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void deletePriceList_noPermission_returns403() throws Exception {
-        mockMvc.perform(delete("/api/v1/pos/price-lists/1"))
+        mockMvc.perform(delete("/api/v1/pos/price-lists/1").with(userWithPermission("SOME_OTHER_PERMISSION")))
                 .andExpect(status().isForbidden());
     }
 
     // ==================== POST /api/v1/pos/price-lists/{id}/activate ====================
 
     @Test
-    @WithMockUser(authorities = "POS_PRICELIST_UPDATE")
     void activatePriceList_authenticated_returns200() throws Exception {
         PriceListDto dto = PriceListDto.builder().id(1L).code("PL-001").build();
         when(priceListService.activatePriceList(1L)).thenReturn(dto);
 
-        mockMvc.perform(post("/api/v1/pos/price-lists/1/activate"))
+        mockMvc.perform(post("/api/v1/pos/price-lists/1/activate").with(userWithPermission("POS_PRICELIST_UPDATE")))
                 .andExpect(status().isOk());
     }
 
@@ -234,13 +242,13 @@ class PriceListControllerTest {
     // ==================== POST /api/v1/pos/price-lists/{priceListId}/items ====================
 
     @Test
-    @WithMockUser(authorities = "POS_PRICELIST_ITEMS_MANAGE")
     void addPriceListItem_authenticated_returns201() throws Exception {
         CreatePriceListItemRequest request = new CreatePriceListItemRequest();
         PriceListItemDto dto = PriceListItemDto.builder().id(1L).build();
         when(priceListService.addPriceListItem(any(), any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/pos/price-lists/1/items")
+                        .with(userWithPermission("POS_PRICELIST_ITEMS_MANAGE"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
@@ -255,9 +263,9 @@ class PriceListControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void addPriceListItem_noPermission_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/pos/price-lists/1/items")
+                        .with(userWithPermission("SOME_OTHER_PERMISSION"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
@@ -266,11 +274,10 @@ class PriceListControllerTest {
     // ==================== DELETE /api/v1/pos/price-lists/{priceListId}/items/{itemId} ====================
 
     @Test
-    @WithMockUser(authorities = "POS_PRICELIST_ITEMS_MANAGE")
     void removePriceListItem_authenticated_returns204() throws Exception {
         doNothing().when(priceListService).removePriceListItem(1L, 2L);
 
-        mockMvc.perform(delete("/api/v1/pos/price-lists/1/items/2"))
+        mockMvc.perform(delete("/api/v1/pos/price-lists/1/items/2").with(userWithPermission("POS_PRICELIST_ITEMS_MANAGE")))
                 .andExpect(status().isNoContent());
     }
 
@@ -283,11 +290,10 @@ class PriceListControllerTest {
     // ==================== POST /api/v1/pos/price-lists/{priceListId}/assign-customer/{customerId} ====================
 
     @Test
-    @WithMockUser(authorities = "POS_PRICELIST_ASSIGN")
     void assignPriceListToCustomer_authenticated_returns200() throws Exception {
         doNothing().when(priceListService).assignPriceListToCustomer(eq(1L), eq(2L), any());
 
-        mockMvc.perform(post("/api/v1/pos/price-lists/1/assign-customer/2"))
+        mockMvc.perform(post("/api/v1/pos/price-lists/1/assign-customer/2").with(userWithPermission("POS_PRICELIST_ASSIGN")))
                 .andExpect(status().isOk());
     }
 
@@ -298,9 +304,8 @@ class PriceListControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
     void assignPriceListToCustomer_noPermission_returns403() throws Exception {
-        mockMvc.perform(post("/api/v1/pos/price-lists/1/assign-customer/2"))
+        mockMvc.perform(post("/api/v1/pos/price-lists/1/assign-customer/2").with(userWithPermission("SOME_OTHER_PERMISSION")))
                 .andExpect(status().isForbidden());
     }
 }
