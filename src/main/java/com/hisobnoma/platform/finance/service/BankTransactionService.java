@@ -142,7 +142,7 @@ public class BankTransactionService {
             throw new BusinessException("Cannot transfer between inactive accounts");
         }
 
-        // Create outgoing transaction
+        // Create and save outgoing transaction first to reserve its transaction number
         BankTransaction outgoing = BankTransaction.builder()
                 .bankAccount(fromAccount)
                 .transactionNumber(generateTransactionNumber(tenantId))
@@ -156,10 +156,12 @@ public class BankTransactionService {
                 .exchangeRate(BigDecimal.ONE)
                 .baseAmount(amount)
                 .transferToAccount(toAccount)
+                .runningBalance(fromAccount.getCurrentBalance().subtract(amount))
                 .tenantId(tenantId)
                 .build();
+        outgoing = bankTransactionRepository.saveAndFlush(outgoing);
 
-        // Create incoming transaction
+        // Create incoming transaction after outgoing is persisted
         BankTransaction incoming = BankTransaction.builder()
                 .bankAccount(toAccount)
                 .transactionNumber(generateTransactionNumber(tenantId))
@@ -172,14 +174,9 @@ public class BankTransactionService {
                 .currency(toAccount.getCurrency())
                 .exchangeRate(BigDecimal.ONE)
                 .baseAmount(amount)
+                .runningBalance(toAccount.getCurrentBalance().add(amount))
                 .tenantId(tenantId)
                 .build();
-
-        // Update running balances
-        outgoing.setRunningBalance(fromAccount.getCurrentBalance().subtract(amount));
-        incoming.setRunningBalance(toAccount.getCurrentBalance().add(amount));
-
-        bankTransactionRepository.save(outgoing);
         bankTransactionRepository.save(incoming);
 
         // Update account balances
