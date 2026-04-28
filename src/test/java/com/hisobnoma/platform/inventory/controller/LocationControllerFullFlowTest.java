@@ -217,7 +217,7 @@ class LocationControllerFullFlowTest {
         mockMvc.perform(get(BASE_URL + "/default").with(viewAuth()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("WH-001"))
-                .andExpect(jsonPath("$.isDefault").value(true));
+                .andExpect(jsonPath("$.default").value(true));
     }
 
     // ---- GET /{id} ----
@@ -231,7 +231,7 @@ class LocationControllerFullFlowTest {
                 .andExpect(jsonPath("$.name").value("Main Warehouse"))
                 .andExpect(jsonPath("$.locationType").value("WAREHOUSE"))
                 .andExpect(jsonPath("$.active").value(true))
-                .andExpect(jsonPath("$.isDefault").value(true))
+                .andExpect(jsonPath("$.default").value(true))
                 .andExpect(jsonPath("$.level").value(0))
                 .andExpect(jsonPath("$.fullPath").value("Main Warehouse"));
     }

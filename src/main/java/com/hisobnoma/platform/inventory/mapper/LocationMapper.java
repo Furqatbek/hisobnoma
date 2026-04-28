@@ -15,6 +15,7 @@ public interface LocationMapper {
     @Mapping(target = "fullPath", expression = "java(location.getFullPath())")
     @Mapping(target = "level", expression = "java(location.getLevel())")
     @Mapping(target = "children", ignore = true)
+    @Mapping(target = "isDefault", source = "default")
     LocationDto toDto(Location location);
 
     List<LocationDto> toDtoList(List<Location> locations);

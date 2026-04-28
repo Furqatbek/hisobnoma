@@ -100,7 +100,7 @@ class ProductControllerFullFlowTest {
                 .tenantId(tenant.getId()).build());
 
         product1 = productRepository.saveAndFlush(Product.builder()
-                .sku("SKU-001").barcode("123456").name("Test Product")
+                .sku("SKU-001").barcode("12345678").name("Test Product")
                 .category(category).brand(brand).baseUom(uom)
                 .sellingPrice(new BigDecimal("50000")).costPrice(new BigDecimal("30000"))
                 .active(true)
@@ -182,7 +182,7 @@ class ProductControllerFullFlowTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(product1.getId()))
                 .andExpect(jsonPath("$.sku").value("SKU-001"))
-                .andExpect(jsonPath("$.barcode").value("123456"))
+                .andExpect(jsonPath("$.barcode").value("12345678"))
                 .andExpect(jsonPath("$.name").value("Test Product"))
                 .andExpect(jsonPath("$.categoryId").value(category.getId()))
                 .andExpect(jsonPath("$.categoryName").value("Electronics"))
@@ -217,11 +217,11 @@ class ProductControllerFullFlowTest {
     // 6. GET /barcode/{barcode}
     @Test
     void getProductByBarcode_returnsProduct() throws Exception {
-        mockMvc.perform(get(BASE_URL + "/barcode/123456").with(readAuth()))
+        mockMvc.perform(get(BASE_URL + "/barcode/12345678").with(readAuth()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(product1.getId()))
                 .andExpect(jsonPath("$.sku").value("SKU-001"))
-                .andExpect(jsonPath("$.barcode").value("123456"))
+                .andExpect(jsonPath("$.barcode").value("12345678"))
                 .andExpect(jsonPath("$.name").value("Test Product"));
     }
 
@@ -391,7 +391,7 @@ class ProductControllerFullFlowTest {
     // 19. GET /validate-barcode/{barcode}
     @Test
     void validateBarcode_returnsValidation() throws Exception {
-        mockMvc.perform(get(BASE_URL + "/validate-barcode/123456").with(readAuth()))
+        mockMvc.perform(get(BASE_URL + "/validate-barcode/12345678").with(readAuth()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.valid").value(true))
                 .andExpect(jsonPath("$.exists").value(true))
@@ -550,7 +550,7 @@ class ProductControllerFullFlowTest {
         mockMvc.perform(get(BASE_URL + "/sku/SKU-001").with(noPermAuth()))
                 .andExpect(status().isForbidden());
 
-        mockMvc.perform(get(BASE_URL + "/barcode/123456").with(noPermAuth()))
+        mockMvc.perform(get(BASE_URL + "/barcode/12345678").with(noPermAuth()))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(get(BASE_URL + "/search").param("q", "Test").with(noPermAuth()))
@@ -568,7 +568,7 @@ class ProductControllerFullFlowTest {
         mockMvc.perform(get(BASE_URL + "/validate-sku/SKU-001").with(noPermAuth()))
                 .andExpect(status().isForbidden());
 
-        mockMvc.perform(get(BASE_URL + "/validate-barcode/123456").with(noPermAuth()))
+        mockMvc.perform(get(BASE_URL + "/validate-barcode/12345678").with(noPermAuth()))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(get(BASE_URL + "/" + product1.getId() + "/variants").with(noPermAuth()))

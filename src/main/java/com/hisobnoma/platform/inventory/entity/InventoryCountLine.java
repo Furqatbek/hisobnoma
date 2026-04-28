@@ -139,7 +139,7 @@ public class InventoryCountLine extends TenantAwareEntity {
     }
 
     public BigDecimal getVariancePercentage() {
-        if (systemQuantity == null || systemQuantity.compareTo(BigDecimal.ZERO) == 0) {
+        if (varianceQuantity == null || systemQuantity == null || systemQuantity.compareTo(BigDecimal.ZERO) == 0) {
             return null;
         }
         return varianceQuantity
