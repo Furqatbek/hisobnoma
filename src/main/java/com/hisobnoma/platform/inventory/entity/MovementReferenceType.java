@@ -50,6 +50,11 @@ public enum MovementReferenceType {
     TRANSFER_ORDER,
 
     /**
+     * From a POS return
+     */
+    POS_RETURN,
+
+    /**
      * From a sales return
      */
     SALES_RETURN,
