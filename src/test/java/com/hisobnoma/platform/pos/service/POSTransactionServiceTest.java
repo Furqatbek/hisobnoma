@@ -292,6 +292,7 @@ class POSTransactionServiceTest {
         when(transactionRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(transaction));
         when(productRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(product));
         when(lineRepository.findMaxLineNumberByTransactionId(1L)).thenReturn(null);
+        when(lineRepository.save(any(POSTransactionLine.class))).thenAnswer(inv -> inv.getArgument(0));
         when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(transactionMapper.toDto(any())).thenReturn(
                 POSTransactionDto.builder().id(1L).build());
