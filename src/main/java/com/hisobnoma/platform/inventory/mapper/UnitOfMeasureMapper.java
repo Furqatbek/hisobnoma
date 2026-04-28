@@ -13,6 +13,7 @@ public interface UnitOfMeasureMapper {
     @Mapping(target = "baseUomId", source = "baseUom.id")
     @Mapping(target = "baseUomCode", source = "baseUom.code")
     @Mapping(target = "baseUomName", source = "baseUom.name")
+    @Mapping(target = "isBaseUnit", source = "baseUnit")
     UnitOfMeasureDto toDto(UnitOfMeasure uom);
 
     List<UnitOfMeasureDto> toDtoList(List<UnitOfMeasure> uoms);
