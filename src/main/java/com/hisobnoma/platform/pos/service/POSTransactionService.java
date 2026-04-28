@@ -257,6 +257,7 @@ public class POSTransactionService {
                         .build();
 
                 line.calculateLineTotal();
+                line = lineRepository.save(line);
                 transaction.addLine(line);
 
                 // Reserve stock in BASE UOM to prevent overselling
@@ -357,6 +358,7 @@ public class POSTransactionService {
                 .build();
 
         line.calculateLineTotal();
+        line = lineRepository.save(line);
         transaction.addLine(line);
         transaction = transactionRepository.save(transaction);
 
