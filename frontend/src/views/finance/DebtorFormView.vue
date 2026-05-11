@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { arInvoicesApi, customersApi, productsApi } from '@/services/api'
-import { ArrowLeftIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon, Bars3Icon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 
@@ -227,6 +227,52 @@ function addManualLine() {
 
 function removeLine(index) {
   form.lines.splice(index, 1)
+}
+
+function insertLineAt(index) {
+  form.lines.splice(index, 0, {
+    productId: null,
+    productSku: '',
+    productName: '',
+    description: '',
+    quantity: 1,
+    unitPrice: 0,
+    unitOfMeasure: 'dona'
+  })
+}
+
+// Drag and drop reorder
+const dragIndex = ref(null)
+const dropIndex = ref(null)
+
+function onDragStart(index) {
+  dragIndex.value = index
+}
+
+function onDragOver(e, index) {
+  e.preventDefault()
+  dropIndex.value = index
+}
+
+function onDragLeave() {
+  dropIndex.value = null
+}
+
+function onDrop(index) {
+  if (dragIndex.value === null || dragIndex.value === index) {
+    dragIndex.value = null
+    dropIndex.value = null
+    return
+  }
+  const item = form.lines.splice(dragIndex.value, 1)[0]
+  form.lines.splice(index > dragIndex.value ? index - 1 : index, 0, item)
+  dragIndex.value = null
+  dropIndex.value = null
+}
+
+function onDragEnd() {
+  dragIndex.value = null
+  dropIndex.value = null
 }
 
 function lineTotal(line) {
@@ -480,64 +526,105 @@ async function handleSubmit() {
             <table class="w-full text-sm">
               <thead>
                 <tr class="bg-gray-50 text-gray-600">
-                  <th class="px-3 py-2 text-left font-medium w-8">№</th>
+                  <th class="px-1 py-2 w-8"></th>
+                  <th class="px-2 py-2 text-left font-medium w-8">№</th>
                   <th class="px-3 py-2 text-left font-medium">{{ $t('product') }} / {{ $t('description') }}</th>
                   <th class="px-3 py-2 text-center font-medium w-24">{{ $t('quantity') }}</th>
                   <th class="px-3 py-2 text-right font-medium w-36">{{ $t('price') }}</th>
                   <th class="px-3 py-2 text-right font-medium w-36">{{ $t('total') }}</th>
-                  <th class="px-3 py-2 w-12"></th>
+                  <th class="px-3 py-2 w-20"></th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="(line, index) in form.lines" :key="index">
-                  <td class="px-3 py-2 text-gray-500">{{ index + 1 }}</td>
-                  <td class="px-3 py-2">
-                    <input
-                      v-model="line.description"
-                      type="text"
-                      :placeholder="line.productName || $t('description')"
-                      :class="[errors[`line_${index}_desc`] ? 'input-error text-sm' : 'input text-sm']"
-                    />
-                    <p v-if="line.productSku" class="text-xs text-gray-400 mt-1">{{ line.productSku }}</p>
-                    <p v-if="errors[`line_${index}_desc`]" class="text-xs text-red-600 mt-1">{{ errors[`line_${index}_desc`] }}</p>
-                  </td>
-                  <td class="px-3 py-2">
-                    <input
-                      v-model="line.quantity"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      :class="[errors[`line_${index}_qty`] ? 'input-error text-sm text-center' : 'input text-sm text-center']"
-                    />
-                    <p v-if="errors[`line_${index}_qty`]" class="text-xs text-red-600 mt-1">{{ errors[`line_${index}_qty`] }}</p>
-                  </td>
-                  <td class="px-3 py-2">
-                    <input
-                      v-model="line.unitPrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      :class="[errors[`line_${index}_price`] ? 'input-error text-sm text-right' : 'input text-sm text-right']"
-                    />
-                    <p v-if="errors[`line_${index}_price`]" class="text-xs text-red-600 mt-1">{{ errors[`line_${index}_price`] }}</p>
-                  </td>
-                  <td class="px-3 py-2 text-right font-medium">
-                    {{ formatCurrency(lineTotal(line)) }} {{ $t('sum') }}
-                  </td>
-                  <td class="px-3 py-2 text-center">
-                    <button
-                      type="button"
-                      @click="removeLine(index)"
-                      class="p-1 text-gray-400 hover:text-red-500 rounded"
-                    >
-                      <TrashIcon class="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
+              <tbody>
+                <template v-for="(line, index) in form.lines" :key="index">
+                  <!-- Drop zone before this row -->
+                  <tr
+                    v-if="dragIndex !== null && dragIndex !== index && dragIndex !== index - 1"
+                    @dragover.prevent="onDragOver($event, index)"
+                    @dragleave="onDragLeave"
+                    @drop="onDrop(index)"
+                  >
+                    <td colspan="7" class="p-0">
+                      <div
+                        class="h-1 transition-all"
+                        :class="dropIndex === index ? 'bg-primary-400 h-1.5' : 'bg-transparent'"
+                      ></div>
+                    </td>
+                  </tr>
+                  <!-- Line row -->
+                  <tr
+                    :class="[
+                      dragIndex === index ? 'opacity-40 bg-gray-100' : '',
+                      'border-b border-gray-100'
+                    ]"
+                    :draggable="true"
+                    @dragstart="onDragStart(index)"
+                    @dragend="onDragEnd"
+                    @dragover.prevent="onDragOver($event, index)"
+                    @drop="onDrop(index)"
+                  >
+                    <td class="px-1 py-2 text-center cursor-grab active:cursor-grabbing">
+                      <Bars3Icon class="h-4 w-4 text-gray-300 hover:text-gray-500 mx-auto" />
+                    </td>
+                    <td class="px-2 py-2 text-gray-500">{{ index + 1 }}</td>
+                    <td class="px-3 py-2">
+                      <input
+                        v-model="line.description"
+                        type="text"
+                        :placeholder="line.productName || $t('description')"
+                        :class="[errors[`line_${index}_desc`] ? 'input-error text-sm' : 'input text-sm']"
+                      />
+                      <p v-if="line.productSku" class="text-xs text-gray-400 mt-1">{{ line.productSku }}</p>
+                      <p v-if="errors[`line_${index}_desc`]" class="text-xs text-red-600 mt-1">{{ errors[`line_${index}_desc`] }}</p>
+                    </td>
+                    <td class="px-3 py-2">
+                      <input
+                        v-model="line.quantity"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        :class="[errors[`line_${index}_qty`] ? 'input-error text-sm text-center' : 'input text-sm text-center']"
+                      />
+                      <p v-if="errors[`line_${index}_qty`]" class="text-xs text-red-600 mt-1">{{ errors[`line_${index}_qty`] }}</p>
+                    </td>
+                    <td class="px-3 py-2">
+                      <input
+                        v-model="line.unitPrice"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        :class="[errors[`line_${index}_price`] ? 'input-error text-sm text-right' : 'input text-sm text-right']"
+                      />
+                      <p v-if="errors[`line_${index}_price`]" class="text-xs text-red-600 mt-1">{{ errors[`line_${index}_price`] }}</p>
+                    </td>
+                    <td class="px-3 py-2 text-right font-medium">
+                      {{ formatCurrency(lineTotal(line)) }} {{ $t('sum') }}
+                    </td>
+                    <td class="px-3 py-2">
+                      <div class="flex items-center gap-0.5 justify-center">
+                        <button
+                          type="button"
+                          @click="insertLineAt(index + 1)"
+                          class="p-1 text-gray-300 hover:text-primary-600 hover:bg-primary-50 rounded"
+                          :title="$t('add')"
+                        >
+                          <PlusIcon class="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          @click="removeLine(index)"
+                          class="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded"
+                        >
+                          <TrashIcon class="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
               </tbody>
               <tfoot>
                 <tr class="bg-gray-50 font-semibold">
-                  <td colspan="4" class="px-3 py-3 text-right">{{ $t('total') }}:</td>
+                  <td colspan="5" class="px-3 py-3 text-right">{{ $t('total') }}:</td>
                   <td class="px-3 py-3 text-right text-lg text-red-600">{{ formatCurrency(totalAmount) }} {{ $t('sum') }}</td>
                   <td></td>
                 </tr>

@@ -187,8 +187,8 @@ public class ARInvoiceService {
         ARInvoice invoice = arInvoiceRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("AR Invoice not found with id: " + id));
 
-        if (invoice.getStatus() != ARInvoiceStatus.DRAFT) {
-            throw new BusinessException("Only draft invoices can be updated");
+        if (invoice.getStatus() != ARInvoiceStatus.DRAFT && invoice.getStatus() != ARInvoiceStatus.PENDING) {
+            throw new BusinessException("Only draft or pending invoices can be updated");
         }
 
         arInvoiceMapper.updateEntity(request, invoice);
