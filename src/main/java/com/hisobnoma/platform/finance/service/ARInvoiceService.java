@@ -195,10 +195,9 @@ public class ARInvoiceService {
 
         // Recalculate totals if lines are updated
         if (request.getLines() != null) {
-            // Delete existing lines
-            arInvoiceLineRepository.deleteByArInvoiceId(id);
+            // Clear existing lines (don't replace the collection reference — orphanRemoval requires it)
+            invoice.getLines().clear();
 
-            List<ARInvoiceLine> lines = new ArrayList<>();
             BigDecimal totalAmount = BigDecimal.ZERO;
             int lineNumber = 1;
 
@@ -222,11 +221,10 @@ public class ARInvoiceService {
                 lineAmount = lineAmount.add(line.getTaxAmount());
                 line.setLineTotal(lineAmount);
 
-                lines.add(line);
+                invoice.getLines().add(line);
                 totalAmount = totalAmount.add(lineAmount);
             }
 
-            invoice.setLines(lines);
             invoice.setTotalAmount(totalAmount);
             invoice.setBalanceDue(totalAmount.subtract(invoice.getPaidAmount()));
         }
