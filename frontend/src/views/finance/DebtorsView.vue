@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { arReportsApi, arInvoicesApi, arPaymentsApi } from '@/services/api'
 import { useReceiptStore } from '@/stores/receipt'
-import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon, PlusIcon, BanknotesIcon, PencilIcon } from '@heroicons/vue/24/outline'
+import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon, PlusIcon, BanknotesIcon, PencilIcon, CheckIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -28,6 +28,55 @@ const loadingPayments = ref(false)
 const expandedInvoice = ref(null)
 const outstandingAmount = ref(null)
 const loadingOutstanding = ref(false)
+
+// Selection state for print
+const selectedLines = reactive(new Set())
+
+const selectedCount = computed(() => selectedLines.size)
+
+function isLineSelected(lineId) {
+  return selectedLines.has(lineId)
+}
+
+function toggleLineSelection(lineId) {
+  if (selectedLines.has(lineId)) {
+    selectedLines.delete(lineId)
+  } else {
+    selectedLines.add(lineId)
+  }
+}
+
+function isInvoiceFullySelected(invoice) {
+  if (!invoice.lines?.length) return false
+  return invoice.lines.every(line => selectedLines.has(line.id))
+}
+
+function isInvoicePartiallySelected(invoice) {
+  if (!invoice.lines?.length) return false
+  const selected = invoice.lines.filter(line => selectedLines.has(line.id)).length
+  return selected > 0 && selected < invoice.lines.length
+}
+
+function toggleInvoiceSelection(invoice) {
+  if (!invoice.lines?.length) return
+  const allSelected = isInvoiceFullySelected(invoice)
+  if (allSelected) {
+    invoice.lines.forEach(line => selectedLines.delete(line.id))
+  } else {
+    invoice.lines.forEach(line => selectedLines.add(line.id))
+    expandedInvoice.value = invoice.id
+  }
+}
+
+function selectAll() {
+  unpaidInvoices.value.forEach(inv => {
+    inv.lines?.forEach(line => selectedLines.add(line.id))
+  })
+}
+
+function deselectAll() {
+  selectedLines.clear()
+}
 
 async function fetchData() {
   loading.value = true
@@ -95,6 +144,7 @@ async function viewCustomer(customer) {
   customerPayments.value = []
   expandedInvoice.value = null
   outstandingAmount.value = null
+  selectedLines.clear()
   showDetailModal.value = true
 
   loadingInvoices.value = true
@@ -139,6 +189,7 @@ function closeModal() {
   unpaidInvoices.value = []
   customerPayments.value = []
   expandedInvoice.value = null
+  selectedLines.clear()
 }
 
 // Payment modal
@@ -410,6 +461,149 @@ function printCustomerDebt() {
           <tr style="font-weight: bold; background: #fef2f2;">
             <td colspan="5" style="padding: 8px 10px; border: 1px solid #d1d5db; color: #dc2626; font-size: 13px;">${t('finance.debtors.remainingBalance')}</td>
             <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right; color: #dc2626; font-size: 13px;">${formatCurrency(totalBalance)} ${t('sum')}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- Footer -->
+      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+        <div style="width: 40%;">
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">${t('invoice.sellerHandedOver')}:</div>
+          <div style="border-bottom: 1px solid #111827; min-height: 30px;"></div>
+        </div>
+        <div style="width: 40%;">
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">${t('invoice.buyerReceived')}:</div>
+          <div style="border-bottom: 1px solid #111827; min-height: 30px;"></div>
+        </div>
+      </div>
+      <div style="margin-top: 24px; text-align: center; font-size: 10px; color: #9ca3af;">
+        ${t('receipt.printedAt')}: ${new Date().toLocaleString('uz-UZ')}
+      </div>
+    </body>
+    </html>
+  `)
+
+  printWindow.document.close()
+  printWindow.focus()
+  setTimeout(() => {
+    printWindow.print()
+    printWindow.close()
+  }, 250)
+}
+
+function printSelectedItems() {
+  if (!selectedCustomer.value || selectedCount.value === 0) return
+
+  const customer = selectedCustomer.value
+  const aging = selectedAging.value
+  const today = new Date().toLocaleDateString('uz-UZ')
+
+  // Collect selected lines grouped by invoice
+  const invoicesWithSelected = unpaidInvoices.value
+    .map(inv => {
+      const selected = (inv.lines || []).filter(line => selectedLines.has(line.id))
+      return selected.length > 0 ? { ...inv, lines: selected } : null
+    })
+    .filter(Boolean)
+
+  if (invoicesWithSelected.length === 0) return
+
+  let invoiceRows = ''
+  let lineCounter = 0
+  invoicesWithSelected.forEach((inv) => {
+    invoiceRows += `
+      <tr style="background: #f3f4f6;">
+        <td colspan="6" style="padding: 8px 10px; border: 1px solid #d1d5db; font-weight: 600;">
+          <span style="color: #111827;">${t('finance.payments.invoice')}: ${inv.invoiceNumber}</span>
+          <span style="margin-left: 16px; color: #6b7280; font-size: 11px;">${t('date')}: ${formatDate(inv.invoiceDate)}</span>
+          <span style="margin-left: 16px; color: #6b7280; font-size: 11px;">${t('finance.debtors.dueDate')}: ${formatDate(inv.dueDate)}</span>
+          ${inv.overdue ? '<span style="margin-left: 16px; color: #dc2626; font-size: 11px; font-weight: 600;">' + inv.daysOverdue + ' ' + t('finance.debtors.overdue') + '</span>' : ''}
+          <span style="float: right; color: #dc2626; font-weight: 700;">${t('balance')}: ${formatCurrency(inv.balanceDue)} ${t('sum')}</span>
+        </td>
+      </tr>`
+
+    inv.lines.forEach((line) => {
+      lineCounter++
+      invoiceRows += `
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: center;">${lineCounter}</td>
+          <td style="padding: 6px 10px; border: 1px solid #d1d5db;">
+            ${line.productName || line.description || ''}
+            ${line.productSku ? '<br><span style="color: #6b7280; font-size: 10px;">' + line.productSku + '</span>' : ''}
+          </td>
+          <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: center;">${line.quantity || ''}${line.unitOfMeasure ? ' ' + line.unitOfMeasure : ''}</td>
+          <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right;">${formatCurrency(line.unitPrice)}</td>
+          <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right;">${line.discountAmount ? formatCurrency(line.discountAmount) : '-'}</td>
+          <td style="padding: 6px 10px; border: 1px solid #d1d5db; text-align: right; font-weight: 500;">${formatCurrency(line.lineTotal)}</td>
+        </tr>`
+    })
+  })
+
+  const selectedTotal = invoicesWithSelected.reduce((s, inv) =>
+    s + inv.lines.reduce((ls, line) => ls + (line.lineTotal || 0), 0), 0)
+
+  const printWindow = window.open('', '_blank', 'width=900,height=700')
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${t('finance.debtors.debtor')}: ${customer.customerName}</title>
+      <style>
+        @page { size: A4 portrait; margin: 12mm 15mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; font-size: 12px; color: #111827; line-height: 1.4; }
+        @media print { body { width: 100%; } }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 8px 10px; background: #111827; color: white; font-weight: 600; font-size: 11px; text-align: left; }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 16px; border-bottom: 3px solid #111827; margin-bottom: 16px;">
+        <div>
+          <div style="font-size: 20px; font-weight: bold;">${brandConfig.value.brandName || ''}</div>
+          ${brandConfig.value.address ? '<div style="color: #6b7280; font-size: 12px;">' + brandConfig.value.address + '</div>' : ''}
+          ${brandConfig.value.phone ? '<div style="color: #6b7280; font-size: 12px;">Tel: ' + brandConfig.value.phone + '</div>' : ''}
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">${t('details')}</div>
+          <div style="color: #6b7280; margin-top: 4px;">${t('date')}: ${today}</div>
+        </div>
+      </div>
+
+      <!-- Customer Info -->
+      <div style="display: flex; justify-content: space-between; margin-bottom: 16px; padding: 12px 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <div>
+          <div style="font-size: 16px; font-weight: bold;">${customer.customerName}</div>
+          ${customer.customerCode ? '<div style="color: #6b7280; font-size: 12px;">' + t('code') + ': ' + customer.customerCode + '</div>' : ''}
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 12px; color: #6b7280;">${t('finance.debtors.totalDebt')}:</div>
+          <div style="font-size: 20px; font-weight: bold; color: #dc2626;">${formatCurrency(customer.netBalance)} ${t('sum')}</div>
+        </div>
+      </div>
+
+      <!-- Selected Items -->
+      <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">${t('finance.debtors.unpaidInvoices')}</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align: center; width: 35px;">&#8470;</th>
+            <th>${t('product')}</th>
+            <th style="text-align: center; width: 80px;">${t('quantity')}</th>
+            <th style="text-align: right; width: 100px;">${t('price')}</th>
+            <th style="text-align: right; width: 80px;">${t('receipt.discount')}</th>
+            <th style="text-align: right; width: 110px;">${t('total')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${invoiceRows}
+        </tbody>
+        <tfoot>
+          <tr style="background: #fef2f2; font-weight: bold;">
+            <td colspan="5" style="padding: 8px 10px; border: 1px solid #d1d5db; color: #dc2626; font-size: 13px;">${t('total')}</td>
+            <td style="padding: 8px 10px; border: 1px solid #d1d5db; text-align: right; color: #dc2626; font-size: 13px;">${formatCurrency(selectedTotal)} ${t('sum')}</td>
           </tr>
         </tfoot>
       </table>
@@ -722,6 +916,15 @@ function printDebtors() {
           </div>
           <div class="flex items-center gap-2">
             <button
+              v-if="selectedCount > 0"
+              @click="printSelectedItems"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg"
+              :title="$t('print')"
+            >
+              <PrinterIcon class="h-4 w-4" />
+              {{ $t('print') }} ({{ selectedCount }})
+            </button>
+            <button
               @click="printCustomerDebt"
               :disabled="loadingInvoices || unpaidInvoices.length === 0"
               class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
@@ -888,7 +1091,24 @@ function printDebtors() {
 
           <!-- Unpaid Invoices -->
           <div>
-            <h3 class="font-semibold text-gray-900 mb-3">{{ $t('finance.debtors.unpaidInvoices') }}</h3>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-gray-900">{{ $t('finance.debtors.unpaidInvoices') }}</h3>
+              <div v-if="unpaidInvoices.length > 0" class="flex items-center gap-2">
+                <span v-if="selectedCount > 0" class="text-xs text-primary-600 font-medium">
+                  {{ selectedCount }} {{ $t('selected') }}
+                </span>
+                <button
+                  v-if="selectedCount === 0"
+                  @click="selectAll"
+                  class="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                >{{ $t('selectAll') }}</button>
+                <button
+                  v-else
+                  @click="deselectAll"
+                  class="text-xs text-gray-500 hover:text-gray-700 font-medium"
+                >{{ $t('deselectAll') }}</button>
+              </div>
+            </div>
 
             <div v-if="loadingInvoices" class="flex items-center justify-center py-8">
               <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -902,7 +1122,8 @@ function printDebtors() {
               <div
                 v-for="invoice in unpaidInvoices"
                 :key="invoice.id"
-                class="border border-gray-200 rounded-lg overflow-hidden"
+                class="border rounded-lg overflow-hidden"
+                :class="isInvoiceFullySelected(invoice) ? 'border-primary-300 bg-primary-50/30' : isInvoicePartiallySelected(invoice) ? 'border-primary-200' : 'border-gray-200'"
               >
                 <!-- Invoice header (clickable) -->
                 <div
@@ -910,6 +1131,15 @@ function printDebtors() {
                   class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <div class="flex items-center gap-3">
+                    <!-- Invoice-level checkbox -->
+                    <button
+                      @click.stop="toggleInvoiceSelection(invoice)"
+                      class="flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
+                      :class="isInvoiceFullySelected(invoice) ? 'bg-primary-600 border-primary-600' : isInvoicePartiallySelected(invoice) ? 'bg-primary-200 border-primary-400' : 'border-gray-300 hover:border-primary-400'"
+                    >
+                      <CheckIcon v-if="isInvoiceFullySelected(invoice)" class="h-3.5 w-3.5 text-white" />
+                      <div v-else-if="isInvoicePartiallySelected(invoice)" class="w-2 h-0.5 bg-primary-600 rounded"></div>
+                    </button>
                     <div>
                       <p class="font-medium text-sm">{{ invoice.invoiceNumber }}</p>
                       <p class="text-xs text-gray-500">{{ formatDate(invoice.invoiceDate) }}</p>
@@ -956,6 +1186,7 @@ function printDebtors() {
                   <table v-if="invoice.lines?.length" class="w-full text-sm">
                     <thead>
                       <tr class="text-xs text-gray-500 border-b border-gray-200">
+                        <th class="w-8 px-2 py-2"></th>
                         <th class="px-4 py-2 text-left font-medium">{{ $t('finance.debtors.products') }}</th>
                         <th class="px-4 py-2 text-right font-medium">{{ $t('quantity') }}</th>
                         <th class="px-4 py-2 text-right font-medium">{{ $t('price') }}</th>
@@ -963,7 +1194,21 @@ function printDebtors() {
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                      <tr v-for="line in invoice.lines" :key="line.id">
+                      <tr
+                        v-for="line in invoice.lines"
+                        :key="line.id"
+                        @click="toggleLineSelection(line.id)"
+                        class="cursor-pointer transition-colors"
+                        :class="isLineSelected(line.id) ? 'bg-primary-50' : 'hover:bg-gray-100'"
+                      >
+                        <td class="px-2 py-2 text-center">
+                          <div
+                            class="w-4 h-4 rounded border-2 flex items-center justify-center mx-auto transition-colors"
+                            :class="isLineSelected(line.id) ? 'bg-primary-600 border-primary-600' : 'border-gray-300'"
+                          >
+                            <CheckIcon v-if="isLineSelected(line.id)" class="h-3 w-3 text-white" />
+                          </div>
+                        </td>
                         <td class="px-4 py-2">
                           <p class="font-medium">{{ line.productName || line.description }}</p>
                           <p v-if="line.productSku" class="text-xs text-gray-400">{{ line.productSku }}</p>
