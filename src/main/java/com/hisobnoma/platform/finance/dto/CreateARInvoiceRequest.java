@@ -44,7 +44,7 @@ public class CreateARInvoiceRequest {
     private BigDecimal taxAmount;
 
     @NotNull(message = "Total amount is required")
-    @DecimalMin(value = "0.01", message = "Total amount must be positive")
+    @DecimalMin(value = "0.0", message = "Total amount must be non-negative")
     private BigDecimal totalAmount;
 
     @Size(max = 3, message = "Currency code cannot exceed 3 characters")

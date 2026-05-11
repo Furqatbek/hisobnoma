@@ -1223,6 +1223,24 @@ function printDebtors() {
                   <div v-else class="px-4 py-3 text-sm text-gray-500">
                     {{ $t('finance.debtors.noProductDetails') }}
                   </div>
+
+                  <!-- Invoice Summary -->
+                  <div class="px-4 py-3 border-t border-gray-200 bg-white">
+                    <div class="grid grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <span class="text-gray-500 text-xs">{{ $t('invoice.grandTotal') }}</span>
+                        <p class="font-semibold">{{ formatCurrency(invoice.totalAmount) }} {{ $t('sum') }}</p>
+                      </div>
+                      <div>
+                        <span class="text-gray-500 text-xs">{{ $t('finance.debtors.paidAmount') }}</span>
+                        <p class="font-semibold text-green-600">{{ formatCurrency(invoice.paidAmount || 0) }} {{ $t('sum') }}</p>
+                      </div>
+                      <div>
+                        <span class="text-gray-500 text-xs">{{ $t('finance.debtors.remainingBalance') }}</span>
+                        <p class="font-bold text-red-600">{{ formatCurrency(invoice.balanceDue) }} {{ $t('sum') }}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
