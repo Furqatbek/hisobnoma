@@ -341,7 +341,7 @@ async function handleSubmit() {
       </div>
 
       <!-- Customer & Date -->
-      <div class="card">
+      <div class="card !overflow-visible">
         <div class="card-header"><h3 class="text-lg font-medium">{{ $t('finance.debtors.basicInfo') }}</h3></div>
         <div class="card-body grid grid-cols-1 md:grid-cols-3 gap-6">
           <!-- Customer search -->
@@ -410,7 +410,7 @@ async function handleSubmit() {
       </div>
 
       <!-- Line Items -->
-      <div class="card">
+      <div class="card !overflow-visible">
         <div class="card-header">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-medium">{{ $t('finance.debtors.products') }}</h3>
