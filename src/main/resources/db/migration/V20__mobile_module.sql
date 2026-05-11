@@ -47,7 +47,7 @@ CREATE TABLE mobile_alerts (
     entity_type VARCHAR(50),
     entity_id BIGINT,
     action_url VARCHAR(500),
-    data JSONB,
+    data TEXT,
     is_read BOOLEAN NOT NULL DEFAULT false,
     read_at TIMESTAMP WITH TIME ZONE,
     expires_at TIMESTAMP WITH TIME ZONE,
