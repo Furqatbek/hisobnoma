@@ -73,6 +73,10 @@ const showCustomerModal = ref(false)
 const editingPriceKey = ref(null)
 const editingPriceValue = ref('')
 
+// Quantity editing state
+const editingQtyKey = ref(null)
+const editingQtyValue = ref('')
+
 // Split payment support - array of payments
 const payments = ref([])
 const currentPayment = reactive({
@@ -313,6 +317,19 @@ function updateQuantity(item, delta) {
   } else {
     item.quantity = newQty
   }
+}
+
+function startEditQty(item) {
+  editingQtyKey.value = item._uomKey
+  editingQtyValue.value = String(item.quantity)
+}
+
+function saveEditQty(item) {
+  const newQty = parseFloat(editingQtyValue.value)
+  if (!isNaN(newQty) && newQty > 0) {
+    item.quantity = Math.round(newQty * 10) / 10
+  }
+  editingQtyKey.value = null
 }
 
 function removeFromCart(item) {
@@ -1186,7 +1203,25 @@ onMounted(() => {
                   >
                     -½
                   </button>
-                  <span class="w-10 text-center font-bold text-sm">{{ item.quantity }}</span>
+                  <input
+                    v-if="editingQtyKey === item._uomKey"
+                    v-model="editingQtyValue"
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    class="w-14 h-8 text-center font-bold text-sm border border-primary-400 rounded-lg outline-none focus:ring-1 focus:ring-primary-500"
+                    @blur="saveEditQty(item)"
+                    @keyup.enter="saveEditQty(item)"
+                    @keyup.escape="editingQtyKey = null"
+                    @focus="$event.target.select()"
+                    ref="qtyInput"
+                    autofocus
+                  />
+                  <span
+                    v-else
+                    @click="startEditQty(item)"
+                    class="w-10 text-center font-bold text-sm cursor-pointer hover:text-primary-600 hover:bg-primary-50 rounded-lg py-1 transition-colors"
+                  >{{ item.quantity }}</span>
                   <button
                     @click="updateQuantity(item, 0.5)"
                     class="h-8 px-1.5 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200 text-xs font-medium text-gray-600"
