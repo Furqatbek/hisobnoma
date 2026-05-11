@@ -232,8 +232,8 @@ public class ARInvoice extends TenantAwareEntity {
         BigDecimal credits = creditApplied != null ? creditApplied : BigDecimal.ZERO;
         this.balanceDue = totalAmount.subtract(payments).subtract(credits);
 
-        // Update status based on balance
-        if (this.balanceDue.compareTo(BigDecimal.ZERO) <= 0) {
+        // Update status based on balance (skip auto-PAID for zero-amount invoices like item lists without prices)
+        if (this.balanceDue.compareTo(BigDecimal.ZERO) <= 0 && this.totalAmount.compareTo(BigDecimal.ZERO) > 0) {
             if (this.status != ARInvoiceStatus.CANCELLED && this.status != ARInvoiceStatus.WRITTEN_OFF) {
                 this.status = ARInvoiceStatus.PAID;
             }
