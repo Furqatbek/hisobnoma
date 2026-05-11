@@ -46,5 +46,6 @@ public class CustomerBalanceReportDto {
         private LocalDate lastInvoiceDate;
         private LocalDate lastPaymentDate;
         private Integer paymentTerms;
+        private int unpaidInvoiceCount;
     }
 }

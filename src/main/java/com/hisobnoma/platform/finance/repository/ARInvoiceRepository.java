@@ -91,6 +91,12 @@ public interface ARInvoiceRepository extends JpaRepository<ARInvoice, Long> {
                                  @Param("date") LocalDate date,
                                  @Param("excludedStatuses") List<ARInvoiceStatus> excludedStatuses);
 
+    @Query("SELECT COUNT(i) FROM ARInvoice i WHERE i.tenantId = :tenantId AND i.customer.id = :customerId " +
+           "AND i.status IN :statuses")
+    long countByCustomerAndStatuses(@Param("tenantId") Long tenantId,
+                                    @Param("customerId") Long customerId,
+                                    @Param("statuses") List<ARInvoiceStatus> statuses);
+
     boolean existsByInvoiceNumberAndTenantId(String invoiceNumber, Long tenantId);
 
     boolean existsByPosTransactionIdAndTenantId(Long posTransactionId, Long tenantId);

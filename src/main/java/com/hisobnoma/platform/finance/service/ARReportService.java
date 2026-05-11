@@ -181,6 +181,10 @@ public class ARReportService {
             LocalDate lastInvoiceDate = arInvoiceRepository.findLatestInvoiceDateByCustomer(tenantId, customer.getId());
             LocalDate lastPaymentDate = null; // Would need to add this query
 
+            // Count unpaid invoices (including zero-amount item lists)
+            long unpaidCount = arInvoiceRepository.countByCustomerAndStatuses(
+                    tenantId, customer.getId(), unpaidStatuses);
+
             CustomerBalanceReportDto.CustomerBalanceDto balance = CustomerBalanceReportDto.CustomerBalanceDto.builder()
                     .customerId(customer.getId())
                     .customerCode(customer.getCode())
@@ -195,6 +199,7 @@ public class ARReportService {
                     .lastInvoiceDate(lastInvoiceDate)
                     .lastPaymentDate(lastPaymentDate)
                     .paymentTerms(customer.getPaymentTermsDays())
+                    .unpaidInvoiceCount((int) unpaidCount)
                     .build();
 
             customerBalances.add(balance);

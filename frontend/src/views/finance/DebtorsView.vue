@@ -99,7 +99,7 @@ onMounted(fetchData)
 const debtors = computed(() => {
   if (!balanceReport.value?.customerBalances) return []
 
-  let list = balanceReport.value.customerBalances.filter(c => c.netBalance > 0)
+  let list = balanceReport.value.customerBalances.filter(c => c.netBalance > 0 || c.unpaidInvoiceCount > 0)
 
   if (typeFilter.value !== 'all') {
     // Match against aging report's customer data or the balance data
