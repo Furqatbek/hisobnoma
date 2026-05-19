@@ -15,6 +15,8 @@ import {
   Bars3Icon,
   XMarkIcon,
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   BuildingStorefrontIcon,
   TagIcon,
   ArchiveBoxIcon,
@@ -42,6 +44,7 @@ const authStore = useAuthStore()
 const route = useRoute()
 
 const sidebarOpen = ref(false)
+const sidebarCollapsed = ref(false)
 const expandedMenus = ref([])
 
 const navigation = computed(() => [
@@ -200,17 +203,18 @@ watchEffect(() => {
     <!-- Sidebar -->
     <aside
       :class="[
-        'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto lg:flex-shrink-0',
+        'fixed inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto lg:flex-shrink-0 flex flex-col',
+        sidebarCollapsed ? 'lg:w-16 w-64' : 'w-64',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       ]"
     >
       <!-- Logo -->
-      <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-        <RouterLink to="/dashboard" class="flex items-center space-x-2">
-          <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+      <div class="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+        <RouterLink to="/dashboard" class="flex items-center space-x-2 overflow-hidden">
+          <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
             <span class="text-white font-bold text-lg">H</span>
           </div>
-          <span class="text-xl font-bold text-gray-900">{{ $t('appName') }}</span>
+          <span v-if="!sidebarCollapsed" class="text-xl font-bold text-gray-900 whitespace-nowrap">{{ $t('appName') }}</span>
         </RouterLink>
         <button
           class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500"
@@ -221,7 +225,7 @@ watchEffect(() => {
       </div>
 
       <!-- Navigation -->
-      <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+      <nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
         <template v-for="item in navigation" :key="item.name">
           <!-- Simple link -->
           <RouterLink
@@ -233,80 +237,98 @@ watchEffect(() => {
                 ? 'bg-primary-50 text-primary-700'
                 : 'text-gray-700 hover:bg-gray-100'
             ]"
+            :title="sidebarCollapsed ? item.name : ''"
           >
             <component
               :is="item.icon"
               :class="[
-                'mr-3 h-5 w-5 flex-shrink-0',
+                'h-5 w-5 flex-shrink-0',
+                sidebarCollapsed ? '' : 'mr-3',
                 item.current ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-500'
               ]"
             />
-            {{ item.name }}
+            <span v-if="!sidebarCollapsed">{{ item.name }}</span>
           </RouterLink>
 
           <!-- Expandable menu -->
           <div v-else>
             <button
-              @click="toggleMenu(item.key)"
+              @click="sidebarCollapsed ? (sidebarCollapsed = false, toggleMenu(item.key)) : toggleMenu(item.key)"
               :class="[
                 'w-full group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors',
                 isChildActive(item.children)
                   ? 'bg-primary-50 text-primary-700'
                   : 'text-gray-700 hover:bg-gray-100'
               ]"
+              :title="sidebarCollapsed ? item.name : ''"
             >
               <div class="flex items-center">
                 <component
                   :is="item.icon"
                   :class="[
-                    'mr-3 h-5 w-5 flex-shrink-0',
+                    'h-5 w-5 flex-shrink-0',
+                    sidebarCollapsed ? '' : 'mr-3',
                     isChildActive(item.children) ? 'text-primary-600' : 'text-gray-400'
                   ]"
                 />
-                {{ item.name }}
+                <span v-if="!sidebarCollapsed">{{ item.name }}</span>
               </div>
               <ChevronDownIcon
+                v-if="!sidebarCollapsed"
                 :class="[
-                  'h-4 w-4 transition-transform',
+                  'h-4 w-4 transition-transform duration-200',
                   isMenuExpanded(item.key) ? 'rotate-180' : ''
                 ]"
               />
             </button>
 
             <div
-              v-show="isMenuExpanded(item.key)"
-              class="mt-1 ml-4 pl-4 border-l border-gray-200 space-y-1"
+              class="overflow-hidden transition-all duration-300 ease-in-out"
+              :style="{ maxHeight: isMenuExpanded(item.key) && !sidebarCollapsed ? (item.children.length * 40 + 8) + 'px' : '0px' }"
             >
-              <RouterLink
-                v-for="child in item.children"
-                :key="child.name"
-                :to="child.href"
-                :class="[
-                  'group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors',
-                  route.path === child.href
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                ]"
-              >
-                <component
-                  :is="child.icon"
+              <div class="mt-1 ml-4 pl-4 border-l border-gray-200 space-y-1">
+                <RouterLink
+                  v-for="child in item.children"
+                  :key="child.name"
+                  :to="child.href"
                   :class="[
-                    'mr-3 h-4 w-4 flex-shrink-0',
-                    route.path === child.href ? 'text-primary-600' : 'text-gray-400'
+                    'group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors',
+                    route.path === child.href
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-gray-600 hover:bg-gray-100'
                   ]"
-                />
-                {{ child.name }}
-              </RouterLink>
+                >
+                  <component
+                    :is="child.icon"
+                    :class="[
+                      'mr-3 h-4 w-4 flex-shrink-0',
+                      route.path === child.href ? 'text-primary-600' : 'text-gray-400'
+                    ]"
+                  />
+                  {{ child.name }}
+                </RouterLink>
+              </div>
             </div>
           </div>
         </template>
       </nav>
 
+      <!-- Collapse button (desktop only) -->
+      <div class="hidden lg:block border-t border-gray-200 p-2">
+        <button
+          @click="sidebarCollapsed = !sidebarCollapsed"
+          class="w-full flex items-center justify-center p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+        >
+          <ChevronLeftIcon v-if="!sidebarCollapsed" class="h-5 w-5" />
+          <ChevronRightIcon v-else class="h-5 w-5" />
+        </button>
+      </div>
+
       <!-- User section -->
-      <div class="border-t border-gray-200 p-4">
-        <div class="flex items-center">
-          <RouterLink to="/profile" class="flex items-center flex-1 min-w-0 hover:opacity-80 transition-opacity">
-            <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+      <div class="border-t border-gray-200 p-3">
+        <div class="flex items-center" :class="sidebarCollapsed ? 'justify-center' : ''">
+          <RouterLink v-if="!sidebarCollapsed" to="/profile" class="flex items-center flex-1 min-w-0 hover:opacity-80 transition-opacity">
+            <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
               <span class="text-primary-700 font-medium text-sm">
                 {{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}
               </span>
@@ -321,6 +343,15 @@ watchEffect(() => {
             </div>
           </RouterLink>
           <button
+            v-if="sidebarCollapsed"
+            @click="authStore.logout()"
+            class="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+            :title="$t('logout')"
+          >
+            <ArrowRightOnRectangleIcon class="h-5 w-5" />
+          </button>
+          <button
+            v-else
             @click="authStore.logout()"
             class="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100"
             :title="$t('logout')"
