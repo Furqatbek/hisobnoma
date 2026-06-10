@@ -703,6 +703,14 @@ export const webOrdersApi = {
   convertToInvoice: (id) => api.post(`/web-orders/${id}/convert-to-invoice`)
 }
 
+// Web Customers API (online shop accounts) - Backend: /api/v1/web-customers
+export const webCustomersApi = {
+  getAll: (params) => api.get('/web-customers', { params }),
+  getById: (id) => api.get(`/web-customers/${id}`),
+  linkCustomer: (id, customerId) => api.post(`/web-customers/${id}/link-customer`, { customerId }),
+  unlinkCustomer: (id) => api.post(`/web-customers/${id}/unlink-customer`)
+}
+
 // AP Reports API - Backend: /api/v1/ap/reports
 export const apReportsApi = {
   getAging: () => api.get('/ap/reports/aging'),

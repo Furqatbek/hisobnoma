@@ -115,6 +115,12 @@ const navigation = computed(() => [
     badge: newOrderCount.value
   },
   {
+    name: t('nav.webCustomers'),
+    href: '/web-customers',
+    icon: UserGroupIcon,
+    current: route.path === '/web-customers'
+  },
+  {
     name: t('nav.customers'),
     icon: UsersIcon,
     key: 'customers',

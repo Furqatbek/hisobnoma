@@ -39,6 +39,7 @@ public class WebOrderService {
     private final SecurityContextHelper securityContextHelper;
     private final CustomerService customerService;
     private final ARInvoiceService arInvoiceService;
+    private final com.hisobnoma.platform.web.repository.WebCustomerRepository webCustomerRepository;
 
     @Transactional(readOnly = true)
     public Page<WebOrderDto> getOrders(WebOrderStatus status, Pageable pageable) {
@@ -100,15 +101,20 @@ public class WebOrderService {
 
         Long customerId = order.getCustomerId();
         if (customerId == null) {
+            // A web customer account linked by staff to an AR customer wins
+            // over creating a brand-new customer record.
+            customerId = findLinkedCustomerId(order);
+        }
+        if (customerId == null) {
             CustomerDto customer = customerService.createCustomer(CreateCustomerRequest.builder()
                     .name(order.getCustomerName())
                     .phone(order.getPhone())
                     .address(buildAddress(order))
                     .build());
             customerId = customer.getId();
-            order.setCustomerId(customerId);
             log.info("Created customer {} from web order {}", customer.getCode(), order.getOrderNumber());
         }
+        order.setCustomerId(customerId);
 
         List<CreateARInvoiceLineRequest> lines = order.getLines().stream()
                 .map(this::toInvoiceLine)
@@ -131,6 +137,16 @@ public class WebOrderService {
     }
 
     // ---- internals ----
+
+    private Long findLinkedCustomerId(WebOrder order) {
+        if (order.getPhoneNormalized() == null || order.getPhoneNormalized().isBlank()) {
+            return null;
+        }
+        return webCustomerRepository
+                .findByTenantIdAndPhone(order.getTenantId(), order.getPhoneNormalized())
+                .map(com.hisobnoma.platform.web.entity.WebCustomer::getCustomerId)
+                .orElse(null);
+    }
 
     private WebOrder getOrderEntity(Long id) {
         Long tenantId = securityContextHelper.getCurrentTenantId();

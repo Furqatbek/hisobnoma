@@ -36,6 +36,7 @@ const stats = ref({
   catalogDraftCount: 0,
   newOnlineOrders: 0,
   onlineOrdersToday: 0,
+  onlineCustomers: 0,
   recentOnlineOrders: []
 })
 
@@ -265,6 +266,8 @@ function getChartItemLabel(item) {
             </div>
             <div class="mt-4 flex items-center text-sm text-gray-500">
               <span>{{ stats.onlineOrdersToday }} {{ $t('dashboard.onlineOrdersToday') }}</span>
+              <span class="mx-2 text-gray-300">|</span>
+              <span>{{ stats.onlineCustomers }} {{ $t('dashboard.onlineCustomers') }}</span>
             </div>
           </div>
         </router-link>

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hisobnoma_shop/api/catalog_api.dart';
 import 'package:hisobnoma_shop/l10n/strings.dart';
+import 'package:hisobnoma_shop/models/auth_store.dart';
 import 'package:hisobnoma_shop/models/cart.dart';
 import 'package:hisobnoma_shop/models/public_category.dart';
 import 'package:hisobnoma_shop/screens/catalog_screen.dart';
+import 'package:hisobnoma_shop/widgets/auth_scope.dart';
 import 'package:hisobnoma_shop/widgets/cart_scope.dart';
 import 'package:hisobnoma_shop/widgets/product_card.dart';
 
@@ -12,9 +14,12 @@ import 'fake_catalog_api.dart';
 
 Future<void> pumpCatalog(WidgetTester tester, CatalogApi api,
     {CartStore? cart}) async {
-  await tester.pumpWidget(CartScope(
-    cart: cart ?? CartStore(),
-    child: MaterialApp(home: CatalogScreen(api: api)),
+  await tester.pumpWidget(AuthScope(
+    auth: AuthStore(),
+    child: CartScope(
+      cart: cart ?? CartStore(),
+      child: MaterialApp(home: CatalogScreen(api: api)),
+    ),
   ));
   await tester.pumpAndSettle();
 }

@@ -171,6 +171,11 @@ const routes = [
         name: 'web-orders',
         component: () => import('@/views/web/WebOrdersView.vue')
       },
+      {
+        path: 'web-customers',
+        name: 'web-customers',
+        component: () => import('@/views/web/WebCustomersView.vue')
+      },
       // Customers
       {
         path: 'customers',

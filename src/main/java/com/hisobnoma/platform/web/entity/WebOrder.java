@@ -42,6 +42,12 @@ public class WebOrder extends TenantAwareEntity {
     @Column(nullable = false, length = 50)
     private String phone;
 
+    /**
+     * Digits-only phone for matching orders to verified web customers.
+     */
+    @Column(name = "phone_normalized", length = 20)
+    private String phoneNormalized;
+
     @Column(name = "delivery_region_id")
     private Long deliveryRegionId;
 

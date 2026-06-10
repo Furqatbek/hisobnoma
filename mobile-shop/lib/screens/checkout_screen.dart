@@ -5,6 +5,7 @@ import '../l10n/strings.dart';
 import '../models/delivery.dart';
 import '../models/order.dart';
 import '../util/format.dart';
+import '../widgets/auth_scope.dart';
 import '../widgets/cart_scope.dart';
 import 'order_success_screen.dart';
 
@@ -34,6 +35,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void initState() {
     super.initState();
     _loadRegions();
+    // Pre-fill contact data for logged-in customers.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final auth = AuthScope.of(context);
+      if (auth.isLoggedIn) {
+        if (_nameController.text.trim().isEmpty &&
+            auth.name != null && auth.name!.isNotEmpty) {
+          _nameController.text = auth.name!;
+        }
+        if (auth.phone != null && auth.phone!.isNotEmpty) {
+          _phoneController.text = '+${auth.phone}';
+        }
+      }
+    });
   }
 
   @override

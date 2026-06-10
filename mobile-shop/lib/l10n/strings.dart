@@ -55,6 +55,22 @@ class S {
   static const orderNotFound = 'Буюртма топилмади. Рақам ва телефонни текширинг.';
   static const orderStatus = 'Ҳолат';
 
+  // Auth / account
+  static const loginTitle = 'Кириш';
+  static const loginHint = 'Телефон рақамингизга SMS код юборамиз';
+  static const sendCode = 'Код юбориш';
+  static const codeSent = 'Код юборилди';
+  static const smsCode = 'SMS код';
+  static const confirmCode = 'Тасдиқлаш';
+  static const nameOptional = 'Исмингиз (ихтиёрий)';
+  static const invalidCode = 'Код нотўғри ёки муддати ўтган';
+  static const myOrders = 'Буюртмаларим';
+  static const logout = 'Чиқиш';
+  static const noOrdersYet = 'Ҳозирча буюртмалар йўқ';
+  static const account = 'Профил';
+  static const resendCode = 'Қайта юбориш';
+  static const changePhone = 'Рақамни ўзгартириш';
+
   static const Map<String, String> orderStatusNames = {
     'NEW': 'Янги',
     'CONFIRMED': 'Тасдиқланган',

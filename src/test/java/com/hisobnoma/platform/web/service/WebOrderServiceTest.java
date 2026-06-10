@@ -10,9 +10,11 @@ import com.hisobnoma.platform.finance.service.ARInvoiceService;
 import com.hisobnoma.platform.finance.service.CustomerService;
 import com.hisobnoma.platform.web.dto.UpdateOrderStatusRequest;
 import com.hisobnoma.platform.web.dto.WebOrderDto;
+import com.hisobnoma.platform.web.entity.WebCustomer;
 import com.hisobnoma.platform.web.entity.WebOrder;
 import com.hisobnoma.platform.web.entity.WebOrderLine;
 import com.hisobnoma.platform.web.entity.WebOrderStatus;
+import com.hisobnoma.platform.web.repository.WebCustomerRepository;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,7 @@ class WebOrderServiceTest {
     @Mock private SecurityContextHelper securityContextHelper;
     @Mock private CustomerService customerService;
     @Mock private ARInvoiceService arInvoiceService;
+    @Mock private WebCustomerRepository webCustomerRepository;
 
     @InjectMocks
     private WebOrderService service;
@@ -177,6 +180,28 @@ class WebOrderServiceTest {
         assertEquals(77L, dto.getCustomerId());
         assertEquals(55L, dto.getArInvoiceId());
         assertEquals("INV-000055", dto.getArInvoiceNumber());
+    }
+
+    @Test
+    void convert_usesCustomerLinkedToWebAccountByPhone() {
+        order.setPhoneNormalized("998901234567");
+        WebCustomer webCustomer = WebCustomer.builder()
+                .phone("998901234567").customerId(99L).tenantId(TENANT_ID).build();
+        when(webCustomerRepository.findByTenantIdAndPhone(TENANT_ID, "998901234567"))
+                .thenReturn(Optional.of(webCustomer));
+        when(arInvoiceService.createInvoice(any(CreateARInvoiceRequest.class)))
+                .thenReturn(ARInvoiceDto.builder().id(57L).invoiceNumber("INV-000057").build());
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        WebOrderDto dto = service.convertToInvoice(1L);
+
+        // No new customer created — the staff-linked AR customer is used
+        verify(customerService, never()).createCustomer(any());
+        ArgumentCaptor<CreateARInvoiceRequest> captor =
+                ArgumentCaptor.forClass(CreateARInvoiceRequest.class);
+        verify(arInvoiceService).createInvoice(captor.capture());
+        assertEquals(99L, captor.getValue().getCustomerId());
+        assertEquals(99L, dto.getCustomerId());
     }
 
     @Test

@@ -22,6 +22,8 @@ lib/
   screens/checkout_screen.dart   name/phone/region/village form
   screens/order_success_screen.dart   order number confirmation
   screens/order_status_screen.dart    lookup by number + phone
+  screens/login_screen.dart      phone + SMS code login
+  screens/my_orders_screen.dart  order history for logged-in customers
   widgets/                       ProductCard, error/empty states
   util/format.dart               UZS price formatting
   l10n/strings.dart              uz-Cyrl strings
@@ -115,4 +117,8 @@ flutter build apk --debug \
 - [ ] Checkout with empty name/short phone shows validation errors
 - [ ] Successful checkout shows order number; order appears in admin "Онлайн буюртмалар" with Telegram ping
 - [ ] Order status lookup works with the order number + phone; wrong phone is rejected
+- [ ] Login: real SMS code arrives; wrong code rejected; 6th code request in a day blocked
+- [ ] "Буюртмаларим" lists only own orders; survives app restart; logout clears it
+- [ ] Checkout pre-fills name/phone for a logged-in customer
+- [ ] Staff link a web customer to a debtor; converting their order uses the linked customer
 - [ ] Looks correct on a small phone (360 px wide) and a tablet

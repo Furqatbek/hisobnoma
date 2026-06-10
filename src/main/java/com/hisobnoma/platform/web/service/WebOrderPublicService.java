@@ -58,6 +58,7 @@ public class WebOrderPublicService {
                 .status(WebOrderStatus.NEW)
                 .customerName(request.getCustomerName().trim())
                 .phone(request.getPhone().trim())
+                .phoneNormalized(normalizePhone(request.getPhone()))
                 .customerNote(request.getNote())
                 .sourceIp(sourceIp)
                 .userAgent(userAgent != null && userAgent.length() > 500

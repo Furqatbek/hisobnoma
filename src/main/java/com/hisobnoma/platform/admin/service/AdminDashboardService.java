@@ -19,6 +19,7 @@ import com.hisobnoma.platform.web.entity.WebCatalogStatus;
 import com.hisobnoma.platform.web.entity.WebOrder;
 import com.hisobnoma.platform.web.entity.WebOrderStatus;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
+import com.hisobnoma.platform.web.repository.WebCustomerRepository;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +52,7 @@ public class AdminDashboardService {
     private final BankAccountRepository bankAccountRepository;
     private final WebCatalogItemRepository webCatalogItemRepository;
     private final WebOrderRepository webOrderRepository;
+    private final WebCustomerRepository webCustomerRepository;
 
     @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
@@ -106,6 +108,7 @@ public class AdminDashboardService {
                 // Online order statistics
                 .newOnlineOrders(getNewOnlineOrderCount(tenantId))
                 .onlineOrdersToday(getOnlineOrdersTodayCount(tenantId, startOfToday))
+                .onlineCustomers(getOnlineCustomerCount(tenantId))
                 .recentOnlineOrders(getRecentOnlineOrders(tenantId))
 
                 // Activity statistics
@@ -306,6 +309,15 @@ public class AdminDashboardService {
             return webOrderRepository.countByTenantIdAndCreatedAtAfter(tenantId, startOfToday);
         } catch (Exception e) {
             log.warn("Failed to get today's online order count: {}", e.getMessage());
+            return 0L;
+        }
+    }
+
+    private Long getOnlineCustomerCount(Long tenantId) {
+        try {
+            return webCustomerRepository.countByTenantId(tenantId);
+        } catch (Exception e) {
+            log.warn("Failed to get online customer count: {}", e.getMessage());
             return 0L;
         }
     }

@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hisobnoma_shop/l10n/strings.dart';
+import 'package:hisobnoma_shop/models/auth_store.dart';
 import 'package:hisobnoma_shop/models/cart.dart';
 import 'package:hisobnoma_shop/models/delivery.dart';
 import 'package:hisobnoma_shop/screens/checkout_screen.dart';
 import 'package:hisobnoma_shop/screens/order_success_screen.dart';
+import 'package:hisobnoma_shop/widgets/auth_scope.dart';
 import 'package:hisobnoma_shop/widgets/cart_scope.dart';
 
 import 'fake_catalog_api.dart';
 
 Future<void> pumpCheckout(WidgetTester tester, FakeCatalogApi api,
     CartStore cart) async {
-  await tester.pumpWidget(CartScope(
-    cart: cart,
-    child: MaterialApp(home: CheckoutScreen(api: api)),
+  await tester.pumpWidget(AuthScope(
+    auth: AuthStore(),
+    child: CartScope(
+      cart: cart,
+      child: MaterialApp(home: CheckoutScreen(api: api)),
+    ),
   ));
   await tester.pumpAndSettle();
 }

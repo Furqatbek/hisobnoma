@@ -191,6 +191,14 @@ within seconds (with Telegram ping) and one click turns it into an AR invoice. ~
 
 ## Phase 4 — Customer accounts (SMS OTP) + hardening
 
+> **Status: ✅ implemented** (migration V56, hashed OTP codes with cooldown/daily-cap/attempt
+> limits via SmsService, web-customer tokens signed with a derived key strictly separated from
+> staff JWTs, /me/orders scoped by verified phone, staff "Онлайн мижозлар" page with AR-customer
+> linking that order conversion respects, dashboard online-customers counter, app login +
+> "Буюртмаларим" screens with checkout pre-fill; backend + Flutter (44) test suites green).
+> Note: app session token is stored in SharedPreferences rather than flutter_secure_storage —
+> it only grants access to the customer's own order history.
+
 **Value delivered:** returning customers log in with phone + SMS code inside the app and see
 their order history; staff can manage online customers; abuse protections are production-grade.
 

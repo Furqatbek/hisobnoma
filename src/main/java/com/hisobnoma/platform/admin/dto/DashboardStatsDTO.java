@@ -52,6 +52,7 @@ public class DashboardStatsDTO {
     // Online order statistics
     private Long newOnlineOrders;
     private Long onlineOrdersToday;
+    private Long onlineCustomers;
     private List<RecentOnlineOrderDTO> recentOnlineOrders;
 
     // Activity statistics

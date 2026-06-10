@@ -3439,3 +3439,31 @@ source IP and user agent; product name/price are snapshotted on each line.
 
 The admin dashboard stats payload now also includes `newOnlineOrders`,
 `onlineOrdersToday` and `recentOnlineOrders` (latest 5).
+
+---
+
+## Web Customer Accounts (SMS OTP) APIs
+
+Phone-based accounts for the shop mobile app. Web-customer tokens are signed with a key
+**derived from** the staff JWT secret, so they can never authenticate against staff endpoints
+(and staff JWTs are equally rejected on `/web/me/**`).
+
+### Public endpoints (mobile app contract)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /web/auth/request-otp | `{ phone }` → sends a 6-digit SMS code. Limits: 60 s cooldown per phone, max 5 codes/day/phone, per-IP rate limit (429). Codes are stored salted+hashed, expire in 5 min |
+| POST | /web/auth/verify | `{ phone, code, name? }` → `{ token, phone, name }`. 5 wrong attempts lock the code (429); then a new code must be requested |
+| GET | /web/me | Bearer token → `{ phone, name }` |
+| GET | /web/me/orders | Bearer token → paged list of the customer's own orders (matched by verified phone) |
+
+### Staff endpoints (authenticated)
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /web-customers | WEB_CUSTOMER_VIEW | Paged list, newest login first. Param: `search` (phone/name) |
+| GET | /web-customers/{id} | WEB_CUSTOMER_VIEW | Account detail incl. order count and linked AR customer |
+| POST | /web-customers/{id}/link-customer | WEB_CUSTOMER_MANAGE | `{ customerId }` — link to an AR customer; conversion of this customer's orders then reuses that debtor record |
+| POST | /web-customers/{id}/unlink-customer | WEB_CUSTOMER_MANAGE | Remove the link |
+
+The admin dashboard stats payload now also includes `onlineCustomers`.

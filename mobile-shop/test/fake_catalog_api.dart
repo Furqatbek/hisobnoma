@@ -22,6 +22,7 @@ class FakeCatalogApi implements CatalogApi {
     this.failProducts = false,
     this.failOrder = false,
     this.orderStatusCode = 400,
+    this.myOrders = const [],
   });
 
   int productCalls = 0;
@@ -86,6 +87,38 @@ class FakeCatalogApi implements CatalogApi {
       totalAmount: 12000,
       currency: 'UZS',
     );
+  }
+
+  // ---- auth ----
+
+  String? requestedOtpPhone;
+  String validCode = '123456';
+  List<PublicOrder> myOrders;
+
+  @override
+  Future<void> requestOtp(String phone) async {
+    requestedOtpPhone = phone;
+  }
+
+  @override
+  Future<AuthSession> verifyOtp(String phone, String code, {String? name}) async {
+    if (code != validCode) {
+      throw ApiException('invalid code', statusCode: 400);
+    }
+    return AuthSession(
+      token: 'fake-token',
+      phone: phone.replaceAll(RegExp(r'[^0-9]'), ''),
+      name: name,
+    );
+  }
+
+  @override
+  Future<PageResult<PublicOrder>> getMyOrders(String token,
+      {int page = 0, int size = 20}) async {
+    if (token != 'fake-token') {
+      throw ApiException('unauthorized', statusCode: 401);
+    }
+    return PageResult(content: myOrders, number: 0, totalPages: 1, last: true);
   }
 }
 

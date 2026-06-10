@@ -16,6 +16,7 @@ import com.hisobnoma.platform.web.entity.WebCatalogStatus;
 import com.hisobnoma.platform.web.entity.WebOrder;
 import com.hisobnoma.platform.web.entity.WebOrderStatus;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
+import com.hisobnoma.platform.web.repository.WebCustomerRepository;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,8 @@ class AdminDashboardServiceTest {
     private WebCatalogItemRepository webCatalogItemRepository;
     @Mock
     private WebOrderRepository webOrderRepository;
+    @Mock
+    private WebCustomerRepository webCustomerRepository;
 
     @InjectMocks
     private AdminDashboardService adminDashboardService;
@@ -139,6 +142,7 @@ class AdminDashboardServiceTest {
                 .tenantId(TENANT_ID).build();
         when(webOrderRepository.findRecentByTenant(eq(TENANT_ID), any()))
                 .thenReturn(List.of(recentOrder));
+        when(webCustomerRepository.countByTenantId(TENANT_ID)).thenReturn(9L);
 
         // When
         DashboardStatsDTO result = adminDashboardService.getDashboardStats();
@@ -155,6 +159,7 @@ class AdminDashboardServiceTest {
         assertEquals(5L, result.getOnlineOrdersToday());
         assertEquals(1, result.getRecentOnlineOrders().size());
         assertEquals("WO-000001", result.getRecentOnlineOrders().get(0).getOrderNumber());
+        assertEquals(9L, result.getOnlineCustomers());
     }
 
     @Test

@@ -41,6 +41,27 @@ abstract class CatalogApi {
   Future<PublicOrder> submitOrder(OrderRequest request);
 
   Future<PublicOrder> getOrderStatus(String orderNumber, String phone);
+
+  Future<void> requestOtp(String phone);
+
+  /// Returns the auth session: {token, phone, name}.
+  Future<AuthSession> verifyOtp(String phone, String code, {String? name});
+
+  Future<PageResult<PublicOrder>> getMyOrders(String token, {int page = 0, int size = 20});
+}
+
+class AuthSession {
+  final String token;
+  final String phone;
+  final String? name;
+
+  const AuthSession({required this.token, required this.phone, this.name});
+
+  factory AuthSession.fromJson(Map<String, dynamic> json) => AuthSession(
+        token: json['token'] as String? ?? '',
+        phone: json['phone'] as String? ?? '',
+        name: json['name'] as String?,
+      );
 }
 
 class HttpCatalogApi implements CatalogApi {
@@ -118,6 +139,42 @@ class HttpCatalogApi implements CatalogApi {
   Future<PublicOrder> getOrderStatus(String orderNumber, String phone) async {
     final json = await _get('/api/v1/web/orders/$orderNumber', {'phone': phone});
     return PublicOrder.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> requestOtp(String phone) async {
+    await _post('/api/v1/web/auth/request-otp', {'phone': phone});
+  }
+
+  @override
+  Future<AuthSession> verifyOtp(String phone, String code, {String? name}) async {
+    final json = await _post('/api/v1/web/auth/verify', {
+      'phone': phone,
+      'code': code,
+      if (name != null && name.isNotEmpty) 'name': name,
+    });
+    return AuthSession.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<PageResult<PublicOrder>> getMyOrders(String token,
+      {int page = 0, int size = 20}) async {
+    final uri = Uri.parse('$_baseUrl/api/v1/web/me/orders')
+        .replace(queryParameters: {'page': '$page', 'size': '$size'});
+    late http.Response response;
+    try {
+      response = await _client
+          .get(uri, headers: {..._headers, 'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 20));
+    } on Exception catch (e) {
+      throw ApiException('Network error: $e');
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException('Request failed', statusCode: response.statusCode);
+    }
+    final json =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    return PageResult.fromJson(json, PublicOrder.fromJson);
   }
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {

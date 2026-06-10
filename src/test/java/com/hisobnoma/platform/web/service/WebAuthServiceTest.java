@@ -1,0 +1,234 @@
+package com.hisobnoma.platform.web.service;
+
+import com.hisobnoma.platform.common.exception.UnauthorizedException;
+import com.hisobnoma.platform.common.exception.ValidationException;
+import com.hisobnoma.platform.sms.service.SmsService;
+import com.hisobnoma.platform.web.dto.WebAuthResponse;
+import com.hisobnoma.platform.web.entity.WebCustomer;
+import com.hisobnoma.platform.web.entity.WebOtpCode;
+import com.hisobnoma.platform.web.exception.TooManyRequestsException;
+import com.hisobnoma.platform.web.repository.WebCustomerRepository;
+import com.hisobnoma.platform.web.repository.WebOrderRepository;
+import com.hisobnoma.platform.web.repository.WebOtpCodeRepository;
+import com.hisobnoma.platform.web.security.WebCustomerTokenService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class WebAuthServiceTest {
+
+    @Mock private WebOtpCodeRepository otpRepository;
+    @Mock private WebCustomerRepository webCustomerRepository;
+    @Mock private WebOrderRepository orderRepository;
+    @Mock private WebCustomerTokenService tokenService;
+    @Mock private CheckoutRateLimiter rateLimiter;
+    @Mock private SmsService smsService;
+
+    @InjectMocks
+    private WebAuthService service;
+
+    private static final Long TENANT_ID = 1L;
+    private static final String PHONE = "998901234567";
+
+    // ---- requestOtp ----
+
+    @Test
+    void requestOtp_savesHashedCodeAndSendsSms() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(otpRepository.findTopByTenantIdAndPhoneOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.empty());
+        when(otpRepository.countByTenantIdAndPhoneAndCreatedAtAfter(eq(TENANT_ID), eq(PHONE), any()))
+                .thenReturn(0L);
+        when(otpRepository.save(any(WebOtpCode.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.requestOtp("+998 90 123-45-67", "1.2.3.4");
+
+        ArgumentCaptor<WebOtpCode> otpCaptor = ArgumentCaptor.forClass(WebOtpCode.class);
+        verify(otpRepository).save(otpCaptor.capture());
+        WebOtpCode saved = otpCaptor.getValue();
+        assertEquals(PHONE, saved.getPhone());
+        assertEquals(64, saved.getCodeHash().length()); // SHA-256 hex, never plaintext
+        assertTrue(saved.getExpiresAt().isAfter(Instant.now()));
+
+        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+        verify(smsService).sendSmsAsync(eq("+" + PHONE), messageCaptor.capture());
+        String code = messageCaptor.getValue().replaceAll("[^0-9]", "");
+        assertEquals(6, code.length());
+        assertEquals(saved.getCodeHash(), WebAuthService.hash(saved.getSalt(), code));
+    }
+
+    @Test
+    void requestOtp_rateLimitedIpGets429() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(false);
+
+        assertThrows(TooManyRequestsException.class,
+                () -> service.requestOtp(PHONE, "1.2.3.4"));
+        verify(otpRepository, never()).save(any());
+    }
+
+    @Test
+    void requestOtp_cooldownBlocksImmediateResend() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        WebOtpCode recent = WebOtpCode.builder()
+                .phone(PHONE).codeHash("h").salt("s")
+                .expiresAt(Instant.now().plus(5, ChronoUnit.MINUTES))
+                .tenantId(TENANT_ID).build();
+        recent.setCreatedAt(Instant.now().minusSeconds(10));
+        when(otpRepository.findTopByTenantIdAndPhoneOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.of(recent));
+
+        assertThrows(TooManyRequestsException.class,
+                () -> service.requestOtp(PHONE, "1.2.3.4"));
+        verify(smsService, never()).sendSmsAsync(any(), any());
+    }
+
+    @Test
+    void requestOtp_dailyCapBlocksSixthCode() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(otpRepository.findTopByTenantIdAndPhoneOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.empty());
+        when(otpRepository.countByTenantIdAndPhoneAndCreatedAtAfter(eq(TENANT_ID), eq(PHONE), any()))
+                .thenReturn(5L);
+
+        assertThrows(TooManyRequestsException.class,
+                () -> service.requestOtp(PHONE, "1.2.3.4"));
+    }
+
+    @Test
+    void requestOtp_smsFailureDoesNotBreakRequest() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(otpRepository.findTopByTenantIdAndPhoneOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.empty());
+        when(otpRepository.countByTenantIdAndPhoneAndCreatedAtAfter(eq(TENANT_ID), eq(PHONE), any()))
+                .thenReturn(0L);
+        when(otpRepository.save(any(WebOtpCode.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("sms down")).when(smsService).sendSmsAsync(any(), any());
+
+        assertDoesNotThrow(() -> service.requestOtp(PHONE, "1.2.3.4"));
+    }
+
+    // ---- verifyOtp ----
+
+    private WebOtpCode validOtp(String code) {
+        return WebOtpCode.builder()
+                .phone(PHONE).salt("abcd")
+                .codeHash(WebAuthService.hash("abcd", code))
+                .expiresAt(Instant.now().plus(5, ChronoUnit.MINUTES))
+                .attempts(0).used(false)
+                .tenantId(TENANT_ID).build();
+    }
+
+    @Test
+    void verifyOtp_correctCodeCreatesCustomerAndIssuesToken() {
+        WebOtpCode otp = validOtp("123456");
+        when(otpRepository.findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.of(otp));
+        when(otpRepository.save(any(WebOtpCode.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(webCustomerRepository.findByTenantIdAndPhone(TENANT_ID, PHONE))
+                .thenReturn(Optional.empty());
+        when(webCustomerRepository.save(any(WebCustomer.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(tokenService.generateToken(any(WebCustomer.class))).thenReturn("the-token");
+
+        WebAuthResponse response = service.verifyOtp("+998901234567", "123456", "Ali");
+
+        assertEquals("the-token", response.getToken());
+        assertEquals(PHONE, response.getPhone());
+        assertEquals("Ali", response.getName());
+        assertTrue(otp.isUsed());
+
+        ArgumentCaptor<WebCustomer> captor = ArgumentCaptor.forClass(WebCustomer.class);
+        verify(webCustomerRepository).save(captor.capture());
+        assertNotNull(captor.getValue().getVerifiedAt());
+        assertNotNull(captor.getValue().getLastLoginAt());
+    }
+
+    @Test
+    void verifyOtp_wrongCodeIncrementsAttempts() {
+        WebOtpCode otp = validOtp("123456");
+        when(otpRepository.findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.of(otp));
+        when(otpRepository.save(any(WebOtpCode.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThrows(ValidationException.class,
+                () -> service.verifyOtp(PHONE, "999999", null));
+        assertEquals(1, otp.getAttempts());
+        verify(tokenService, never()).generateToken(any());
+    }
+
+    @Test
+    void verifyOtp_lockedAfterMaxAttempts() {
+        WebOtpCode otp = validOtp("123456");
+        otp.setAttempts(5);
+        when(otpRepository.findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.of(otp));
+
+        // Even the CORRECT code is rejected once locked
+        assertThrows(TooManyRequestsException.class,
+                () -> service.verifyOtp(PHONE, "123456", null));
+    }
+
+    @Test
+    void verifyOtp_expiredCodeRejected() {
+        WebOtpCode otp = validOtp("123456");
+        otp.setExpiresAt(Instant.now().minusSeconds(1));
+        when(otpRepository.findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.of(otp));
+
+        assertThrows(ValidationException.class,
+                () -> service.verifyOtp(PHONE, "123456", null));
+    }
+
+    @Test
+    void verifyOtp_existingCustomerKeepsNameWhenNoneGiven() {
+        WebOtpCode otp = validOtp("123456");
+        WebCustomer existing = WebCustomer.builder()
+                .phone(PHONE).name("Ali").verifiedAt(Instant.now().minusSeconds(100))
+                .tenantId(TENANT_ID).build();
+        when(otpRepository.findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.of(otp));
+        when(otpRepository.save(any(WebOtpCode.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(webCustomerRepository.findByTenantIdAndPhone(TENANT_ID, PHONE))
+                .thenReturn(Optional.of(existing));
+        when(webCustomerRepository.save(any(WebCustomer.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(tokenService.generateToken(any(WebCustomer.class))).thenReturn("t");
+
+        WebAuthResponse response = service.verifyOtp(PHONE, "123456", null);
+
+        assertEquals("Ali", response.getName());
+    }
+
+    // ---- token-scoped access ----
+
+    @Test
+    void requireCustomer_invalidTokenThrowsUnauthorized() {
+        when(tokenService.parse("bad")).thenReturn(Optional.empty());
+
+        assertThrows(UnauthorizedException.class,
+                () -> service.requireCustomer("Bearer bad"));
+    }
+
+    @Test
+    void requireCustomer_resolvesCustomerFromToken() {
+        WebCustomer customer = WebCustomer.builder().phone(PHONE).tenantId(TENANT_ID).build();
+        customer.setId(42L);
+        when(tokenService.parse("good")).thenReturn(Optional.of(
+                new WebCustomerTokenService.WebCustomerPrincipal(42L, TENANT_ID, PHONE)));
+        when(webCustomerRepository.findByIdAndTenantId(42L, TENANT_ID))
+                .thenReturn(Optional.of(customer));
+
+        assertEquals(42L, service.requireCustomer("Bearer good").getId());
+    }
+}

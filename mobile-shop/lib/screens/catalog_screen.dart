@@ -6,10 +6,13 @@ import '../api/catalog_api.dart';
 import '../l10n/strings.dart';
 import '../models/public_category.dart';
 import '../models/public_product.dart';
+import '../widgets/auth_scope.dart';
 import '../widgets/cart_scope.dart';
 import '../widgets/product_card.dart';
 import '../widgets/status_views.dart';
 import 'cart_screen.dart';
+import 'login_screen.dart';
+import 'my_orders_screen.dart';
 import 'order_status_screen.dart';
 import 'product_detail_screen.dart';
 
@@ -125,11 +128,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = CartScope.of(context);
+    final auth = AuthScope.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(S.catalogTitle),
         actions: [
+          IconButton(
+            icon: Icon(auth.isLoggedIn ? Icons.person : Icons.person_outline),
+            tooltip: auth.isLoggedIn ? S.myOrders : S.loginTitle,
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => auth.isLoggedIn
+                    ? MyOrdersScreen(api: widget.api)
+                    : LoginScreen(api: widget.api))),
+          ),
           IconButton(
             icon: const Icon(Icons.receipt_long_outlined),
             tooltip: S.orderStatusTitle,

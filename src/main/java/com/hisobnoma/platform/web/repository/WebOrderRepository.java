@@ -34,4 +34,12 @@ public interface WebOrderRepository extends JpaRepository<WebOrder, Long> {
 
     @Query("SELECT o FROM WebOrder o WHERE o.tenantId = :tenantId ORDER BY o.createdAt DESC")
     List<WebOrder> findRecentByTenant(@Param("tenantId") Long tenantId, Pageable pageable);
+
+    @Query("SELECT o FROM WebOrder o WHERE o.tenantId = :tenantId AND o.phoneNormalized = :phone " +
+           "ORDER BY o.createdAt DESC")
+    Page<WebOrder> findByTenantAndNormalizedPhone(@Param("tenantId") Long tenantId,
+                                                  @Param("phone") String phone,
+                                                  Pageable pageable);
+
+    long countByTenantIdAndPhoneNormalized(Long tenantId, String phoneNormalized);
 }
