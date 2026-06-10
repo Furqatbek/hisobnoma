@@ -3405,3 +3405,37 @@ stock quantities):
 
 The admin dashboard stats payload (`GET /admin/dashboard/stats`) now includes
 `catalogLiveCount` and `catalogDraftCount`.
+
+---
+
+## Web Orders (Online Shop) APIs
+
+In-app ordering for the customer mobile app. Same conventions as the web catalog:
+public endpoints under `/api/v1/web/**` (anonymous, `X-Tenant-ID` header, additive-only
+changes), staff endpoints authenticated with permissions.
+
+### Public endpoints (mobile app contract)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /web/orders | Checkout. Body: `{ customerName, phone, regionId?, villageId?, note?, lines: [{catalogItemId, quantity}] }`. Max 50 lines, qty 0.001–10000, products must be LIVE. **Prices are always taken server-side** from the catalog. Rate limited per IP+phone (5/min → 429). Returns 201 with `{ orderNumber, status, totalAmount, lines }` |
+| GET | /web/orders/{orderNumber}?phone= | Order status lookup; the phone must match the order (404 otherwise) |
+| GET | /web/delivery/regions | Active delivery regions for the checkout form |
+| GET | /web/delivery/villages?regionId= | Active villages, optionally filtered by region |
+
+Order lifecycle: `NEW → CONFIRMED → DELIVERING → COMPLETED`, cancellable until completed.
+Each new order triggers a Telegram `ORDER_PLACED` broadcast to staff. Orders record
+source IP and user agent; product name/price are snapshotted on each line.
+
+### Staff endpoints (authenticated)
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /web-orders | WEB_ORDER_VIEW | Paged inbox, newest first. Param: `status` |
+| GET | /web-orders/counts/new | WEB_ORDER_VIEW | `{ newOrders }` count for the sidebar badge |
+| GET | /web-orders/{id} | WEB_ORDER_VIEW | Order detail with lines |
+| POST | /web-orders/{id}/status | WEB_ORDER_MANAGE | `{ status, reason? }` — transition validation enforced; `reason` required for CANCELLED |
+| POST | /web-orders/{id}/convert-to-invoice | WEB_ORDER_MANAGE | Creates an AR invoice (debt) from the order; auto-creates an AR customer from name/phone when not linked. Rejected for cancelled or already-converted orders |
+
+The admin dashboard stats payload now also includes `newOnlineOrders`,
+`onlineOrdersToday` and `recentOnlineOrders` (latest 5).

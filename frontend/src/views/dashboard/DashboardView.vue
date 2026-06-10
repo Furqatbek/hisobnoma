@@ -11,7 +11,8 @@ import {
   ArrowTrendingDownIcon,
   ExclamationTriangleIcon,
   ChartBarIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  InboxArrowDownIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -32,7 +33,10 @@ const stats = ref({
   totalReceivables: 0,
   totalPayables: 0,
   catalogLiveCount: 0,
-  catalogDraftCount: 0
+  catalogDraftCount: 0,
+  newOnlineOrders: 0,
+  onlineOrdersToday: 0,
+  recentOnlineOrders: []
 })
 
 onMounted(async () => {
@@ -234,6 +238,75 @@ function getChartItemLabel(item) {
             </div>
           </div>
         </router-link>
+
+        <!-- New online orders -->
+        <router-link
+          to="/web-orders"
+          class="card hover:shadow-md transition-shadow"
+          :class="stats.newOnlineOrders > 0 ? 'ring-2 ring-red-400' : ''"
+        >
+          <div class="card-body">
+            <div class="flex items-center">
+              <div
+                class="flex-shrink-0 p-3 rounded-lg"
+                :class="stats.newOnlineOrders > 0 ? 'bg-red-100' : 'bg-gray-100'"
+              >
+                <InboxArrowDownIcon
+                  class="h-6 w-6"
+                  :class="stats.newOnlineOrders > 0 ? 'text-red-600' : 'text-gray-500'"
+                />
+              </div>
+              <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">{{ $t('dashboard.newOnlineOrders') }}</p>
+                <p class="text-2xl font-semibold" :class="stats.newOnlineOrders > 0 ? 'text-red-600' : 'text-gray-900'">
+                  {{ formatNumber(stats.newOnlineOrders) }}
+                </p>
+              </div>
+            </div>
+            <div class="mt-4 flex items-center text-sm text-gray-500">
+              <span>{{ stats.onlineOrdersToday }} {{ $t('dashboard.onlineOrdersToday') }}</span>
+            </div>
+          </div>
+        </router-link>
+      </div>
+
+      <!-- Recent online orders -->
+      <div v-if="stats.recentOnlineOrders && stats.recentOnlineOrders.length > 0" class="card">
+        <div class="card-body">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold text-gray-900">{{ $t('dashboard.recentOnlineOrders') }}</h3>
+            <router-link to="/web-orders" class="text-sm text-primary-700 hover:underline">
+              {{ $t('dashboard.viewAllOrders') }}
+            </router-link>
+          </div>
+          <div class="divide-y divide-gray-100">
+            <div
+              v-for="order in stats.recentOnlineOrders"
+              :key="order.id"
+              class="py-2 flex items-center justify-between text-sm"
+            >
+              <div class="flex items-center gap-3">
+                <span class="font-medium text-primary-700">{{ order.orderNumber }}</span>
+                <span class="text-gray-700">{{ order.customerName }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-gray-900 font-medium">{{ formatCurrency(order.totalAmount) }}</span>
+                <span
+                  class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
+                  :class="{
+                    'bg-red-100 text-red-800': order.status === 'NEW',
+                    'bg-blue-100 text-blue-800': order.status === 'CONFIRMED',
+                    'bg-yellow-100 text-yellow-800': order.status === 'DELIVERING',
+                    'bg-green-100 text-green-800': order.status === 'COMPLETED',
+                    'bg-gray-100 text-gray-600': order.status === 'CANCELLED'
+                  }"
+                >
+                  {{ $t('webOrders.status' + order.status) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Alerts section -->

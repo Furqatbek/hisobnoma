@@ -694,6 +694,15 @@ export const webCatalogApi = {
   unpublishAll: () => api.post('/web-catalog/unpublish-all')
 }
 
+// Web Orders API (online shop orders) - Backend: /api/v1/web-orders
+export const webOrdersApi = {
+  getAll: (params) => api.get('/web-orders', { params }),
+  getNewCount: () => api.get('/web-orders/counts/new'),
+  getById: (id) => api.get(`/web-orders/${id}`),
+  updateStatus: (id, status, reason) => api.post(`/web-orders/${id}/status`, { status, reason }),
+  convertToInvoice: (id) => api.post(`/web-orders/${id}/convert-to-invoice`)
+}
+
 // AP Reports API - Backend: /api/v1/ap/reports
 export const apReportsApi = {
   getAging: () => api.get('/ap/reports/aging'),

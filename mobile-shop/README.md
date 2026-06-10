@@ -1,8 +1,9 @@
 # Hisobnoma Shop — customer mobile app
 
 Flutter app for the store's customers: browse the curated **live item list** published from the
-Hisobnoma admin (“Веб-каталог” page) and order by phone/Telegram. In-app checkout arrives in
-Phase 3 (see `../docs/WEB_SHOP_PLAN.md`).
+Hisobnoma admin (“Веб-каталог” page), add products to a persistent cart and **order in-app**
+(name + phone + delivery region/village). Orders land in the admin "Онлайн буюртмалар" inbox
+with a Telegram alert. See `../docs/WEB_SHOP_PLAN.md` for the roadmap.
 
 The app talks only to the public catalog API (`/api/v1/web/catalog/**`, anonymous,
 `X-Tenant-ID` header) documented in `../docs/API.md`. No login is required.
@@ -16,7 +17,11 @@ lib/
   api/catalog_api.dart           CatalogApi (abstract) + HttpCatalogApi
   models/                        PublicProduct, PublicCategory, PageResult
   screens/catalog_screen.dart    grid, search, category chips, pagination
-  screens/product_detail_screen.dart  images, price, order buttons
+  screens/product_detail_screen.dart  images, price, add-to-cart
+  screens/cart_screen.dart       cart with quantity steppers
+  screens/checkout_screen.dart   name/phone/region/village form
+  screens/order_success_screen.dart   order number confirmation
+  screens/order_status_screen.dart    lookup by number + phone
   widgets/                       ProductCard, error/empty states
   util/format.dart               UZS price formatting
   l10n/strings.dart              uz-Cyrl strings
@@ -57,9 +62,12 @@ flutter analyze
 flutter test
 ```
 
-Covered: UZS formatting, JSON mapping of all API payloads, HTTP client behaviour
-(tenant header, query params, error handling, UTF-8), and widget tests for the catalog
-screen (grid render, stock badges, empty state, error + retry, search, category filter).
+Covered: UZS formatting, JSON mapping of all API payloads (catalog, orders, delivery),
+HTTP client behaviour (tenant header, query params, checkout POST body, error handling,
+UTF-8), cart store math + persistence, and widget tests for the catalog screen
+(grid render, stock badges, empty state, error + retry, search, category filter) and the
+checkout form (validation, payload building, cart clearing, 429 handling, cascading
+region→village selects).
 
 ## Build a debug APK (for the owner's phone)
 
@@ -103,4 +111,8 @@ flutter build apk --debug \
 - [ ] Product detail shows description and image gallery (swipe between images)
 - [ ] "Қўнғироқ қилиш" opens the dialer with the configured number
 - [ ] "Telegram орқали буюртма" opens the configured Telegram chat
+- [ ] Add to cart from card and detail; badge count updates; cart survives app restart
+- [ ] Checkout with empty name/short phone shows validation errors
+- [ ] Successful checkout shows order number; order appears in admin "Онлайн буюртмалар" with Telegram ping
+- [ ] Order status lookup works with the order number + phone; wrong phone is rejected
 - [ ] Looks correct on a small phone (360 px wide) and a tablet

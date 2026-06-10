@@ -166,6 +166,11 @@ const routes = [
         name: 'web-catalog',
         component: () => import('@/views/web/WebCatalogView.vue')
       },
+      {
+        path: 'web-orders',
+        name: 'web-orders',
+        component: () => import('@/views/web/WebOrdersView.vue')
+      },
       // Customers
       {
         path: 'customers',

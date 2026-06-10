@@ -6,6 +6,7 @@ import '../config/app_config.dart';
 import '../l10n/strings.dart';
 import '../models/public_product.dart';
 import '../util/format.dart';
+import '../widgets/cart_scope.dart';
 import '../widgets/status_views.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -177,8 +178,25 @@ class _ProductDetailBody extends StatelessWidget {
                 Text(product.description!, style: theme.textTheme.bodyMedium),
               ],
               const SizedBox(height: 24),
-              // Until in-app checkout ships (Phase 3), orders go via phone
-              // or Telegram, configured at build time.
+              if (product.inStock)
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      CartScope.of(context).add(product);
+                      ScaffoldMessenger.of(context)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(const SnackBar(
+                          content: Text(S.addedToCart),
+                          duration: Duration(seconds: 1),
+                        ));
+                    },
+                    icon: const Icon(Icons.add_shopping_cart),
+                    label: const Text(S.addToCart),
+                  ),
+                ),
+              if (product.inStock) const SizedBox(height: 8),
+              // Phone/Telegram remain as alternative ordering channels.
               if (AppConfig.shopPhone.isNotEmpty)
                 SizedBox(
                   width: double.infinity,

@@ -49,6 +49,11 @@ public class DashboardStatsDTO {
     private Long catalogLiveCount;
     private Long catalogDraftCount;
 
+    // Online order statistics
+    private Long newOnlineOrders;
+    private Long onlineOrdersToday;
+    private List<RecentOnlineOrderDTO> recentOnlineOrders;
+
     // Activity statistics
     private Long totalAuditLogsToday;
     private Long failedLoginsToday;
@@ -75,6 +80,19 @@ public class DashboardStatsDTO {
         private Long userId;
         private String username;
         private Long activityCount;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RecentOnlineOrderDTO {
+        private Long id;
+        private String orderNumber;
+        private String customerName;
+        private BigDecimal totalAmount;
+        private String status;
+        private String createdAt;
     }
 
     @Data

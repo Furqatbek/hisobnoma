@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, watchEffect } from 'vue'
+import { ref, computed, watchEffect, onMounted, onUnmounted } from 'vue'
 import { RouterView, RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { webOrdersApi } from '@/services/api'
 import {
   HomeIcon,
   CubeIcon,
@@ -48,6 +49,23 @@ const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(false)
 const expandedMenus = ref([])
 
+// New online orders badge (polled every 60s; 403 means no permission - ignore)
+const newOrderCount = ref(0)
+let orderCountTimer = null
+async function refreshNewOrderCount() {
+  try {
+    const response = await webOrdersApi.getNewCount()
+    newOrderCount.value = response.data.data?.newOrders || 0
+  } catch (e) {
+    newOrderCount.value = 0
+  }
+}
+onMounted(() => {
+  refreshNewOrderCount()
+  orderCountTimer = setInterval(refreshNewOrderCount, 60000)
+})
+onUnmounted(() => clearInterval(orderCountTimer))
+
 const navigation = computed(() => [
   {
     name: t('nav.dashboard'),
@@ -88,6 +106,13 @@ const navigation = computed(() => [
     href: '/web-catalog',
     icon: GlobeAltIcon,
     current: route.path === '/web-catalog'
+  },
+  {
+    name: t('nav.webOrders'),
+    href: '/web-orders',
+    icon: InboxArrowDownIcon,
+    current: route.path === '/web-orders',
+    badge: newOrderCount.value
   },
   {
     name: t('nav.customers'),
@@ -255,6 +280,10 @@ watchEffect(() => {
               ]"
             />
             <span v-if="!sidebarCollapsed">{{ item.name }}</span>
+            <span
+              v-if="!sidebarCollapsed && item.badge > 0"
+              class="ml-auto inline-flex items-center justify-center min-w-[20px] px-1.5 py-0.5 text-xs font-bold rounded-full bg-red-500 text-white"
+            >{{ item.badge }}</span>
           </RouterLink>
 
           <!-- Expandable menu -->

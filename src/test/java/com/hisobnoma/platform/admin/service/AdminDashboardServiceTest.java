@@ -13,7 +13,10 @@ import com.hisobnoma.platform.inventory.repository.PurchaseOrderRepository;
 import com.hisobnoma.platform.inventory.repository.StockRepository;
 import com.hisobnoma.platform.pos.repository.POSTransactionRepository;
 import com.hisobnoma.platform.web.entity.WebCatalogStatus;
+import com.hisobnoma.platform.web.entity.WebOrder;
+import com.hisobnoma.platform.web.entity.WebOrderStatus;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
+import com.hisobnoma.platform.web.repository.WebOrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,6 +62,8 @@ class AdminDashboardServiceTest {
     private BankAccountRepository bankAccountRepository;
     @Mock
     private WebCatalogItemRepository webCatalogItemRepository;
+    @Mock
+    private WebOrderRepository webOrderRepository;
 
     @InjectMocks
     private AdminDashboardService adminDashboardService;
@@ -124,6 +129,17 @@ class AdminDashboardServiceTest {
         when(webCatalogItemRepository.countByTenantIdAndStatus(TENANT_ID, WebCatalogStatus.DRAFT))
                 .thenReturn(2L);
 
+        when(webOrderRepository.countByTenantIdAndStatus(TENANT_ID, WebOrderStatus.NEW))
+                .thenReturn(3L);
+        when(webOrderRepository.countByTenantIdAndCreatedAtAfter(eq(TENANT_ID), any(Instant.class)))
+                .thenReturn(5L);
+        WebOrder recentOrder = WebOrder.builder()
+                .orderNumber("WO-000001").status(WebOrderStatus.NEW)
+                .customerName("Ali").totalAmount(new BigDecimal("36000"))
+                .tenantId(TENANT_ID).build();
+        when(webOrderRepository.findRecentByTenant(eq(TENANT_ID), any()))
+                .thenReturn(List.of(recentOrder));
+
         // When
         DashboardStatsDTO result = adminDashboardService.getDashboardStats();
 
@@ -135,6 +151,10 @@ class AdminDashboardServiceTest {
         assertTrue(result.getLowStockProducts() > 0);
         assertEquals(4L, result.getCatalogLiveCount());
         assertEquals(2L, result.getCatalogDraftCount());
+        assertEquals(3L, result.getNewOnlineOrders());
+        assertEquals(5L, result.getOnlineOrdersToday());
+        assertEquals(1, result.getRecentOnlineOrders().size());
+        assertEquals("WO-000001", result.getRecentOnlineOrders().get(0).getOrderNumber());
     }
 
     @Test

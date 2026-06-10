@@ -142,6 +142,12 @@ the minimal answer to “item list for mobile app”.
 
 ## Phase 3 — In-app ordering (checkout → staff inbox → invoice)
 
+> **Status: ✅ implemented** (migration V55, WebOrder backend with rate-limited public
+> checkout + status lookup + public delivery lookups, Telegram ORDER_PLACED alerts,
+> staff inbox page with sidebar NEW badge, dashboard order card + recent-orders widget,
+> convert-to-invoice with customer auto-create; Flutter cart/checkout/success/status
+> screens; backend + Flutter test suites green).
+
 **Value delivered:** customers purchase from the app without visiting the office; staff confirm
 and convert orders into existing flows; the admin dashboard surfaces new orders immediately.
 

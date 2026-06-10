@@ -2,70 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hisobnoma_shop/api/catalog_api.dart';
 import 'package:hisobnoma_shop/l10n/strings.dart';
-import 'package:hisobnoma_shop/models/page_result.dart';
+import 'package:hisobnoma_shop/models/cart.dart';
 import 'package:hisobnoma_shop/models/public_category.dart';
-import 'package:hisobnoma_shop/models/public_product.dart';
 import 'package:hisobnoma_shop/screens/catalog_screen.dart';
+import 'package:hisobnoma_shop/widgets/cart_scope.dart';
 import 'package:hisobnoma_shop/widgets/product_card.dart';
 
-class FakeCatalogApi implements CatalogApi {
-  List<PublicProduct> products;
-  List<PublicCategory> categories;
-  bool failProducts;
+import 'fake_catalog_api.dart';
 
-  FakeCatalogApi({
-    this.products = const [],
-    this.categories = const [],
-    this.failProducts = false,
-  });
-
-  int productCalls = 0;
-
-  @override
-  Future<PageResult<PublicProduct>> getProducts({
-    String? search,
-    int? categoryId,
-    int page = 0,
-    int size = 20,
-  }) async {
-    productCalls++;
-    if (failProducts) throw ApiException('boom');
-    var result = products;
-    if (search != null && search.trim().isNotEmpty) {
-      result = result
-          .where((p) =>
-              p.name.toLowerCase().contains(search.trim().toLowerCase()))
-          .toList();
-    }
-    if (categoryId != null) {
-      result = result.where((p) => p.categoryId == categoryId).toList();
-    }
-    return PageResult(content: result, number: 0, totalPages: 1, last: true);
-  }
-
-  @override
-  Future<PublicProduct> getProduct(int id) async {
-    return products.firstWhere((p) => p.id == id);
-  }
-
-  @override
-  Future<List<PublicCategory>> getCategories() async => categories;
-}
-
-PublicProduct product(int id, String name,
-    {double price = 1000, bool inStock = true, int? categoryId}) {
-  return PublicProduct(
-    id: id,
-    name: name,
-    price: price,
-    currency: 'UZS',
-    inStock: inStock,
-    categoryId: categoryId,
-  );
-}
-
-Future<void> pumpCatalog(WidgetTester tester, CatalogApi api) async {
-  await tester.pumpWidget(MaterialApp(home: CatalogScreen(api: api)));
+Future<void> pumpCatalog(WidgetTester tester, CatalogApi api,
+    {CartStore? cart}) async {
+  await tester.pumpWidget(CartScope(
+    cart: cart ?? CartStore(),
+    child: MaterialApp(home: CatalogScreen(api: api)),
+  ));
   await tester.pumpAndSettle();
 }
 

@@ -6,8 +6,11 @@ import '../api/catalog_api.dart';
 import '../l10n/strings.dart';
 import '../models/public_category.dart';
 import '../models/public_product.dart';
+import '../widgets/cart_scope.dart';
 import '../widgets/product_card.dart';
 import '../widgets/status_views.dart';
+import 'cart_screen.dart';
+import 'order_status_screen.dart';
 import 'product_detail_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -121,8 +124,33 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cart = CartScope.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text(S.catalogTitle)),
+      appBar: AppBar(
+        title: const Text(S.catalogTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.receipt_long_outlined),
+            tooltip: S.orderStatusTitle,
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => OrderStatusScreen(api: widget.api))),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Badge(
+              isLabelVisible: cart.distinctCount > 0,
+              label: Text('${cart.distinctCount}'),
+              child: IconButton(
+                icon: const Icon(Icons.shopping_cart_outlined),
+                tooltip: S.cartTitle,
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => CartScreen(api: widget.api))),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(

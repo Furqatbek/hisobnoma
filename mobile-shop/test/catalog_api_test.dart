@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hisobnoma_shop/api/catalog_api.dart';
+import 'package:hisobnoma_shop/models/order.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -86,6 +87,67 @@ void main() {
         throwsA(isA<ApiException>()
             .having((e) => e.statusCode, 'statusCode', 404)),
       );
+    });
+
+    test('submitOrder posts checkout payload with tenant header', () async {
+      late http.Request captured;
+      final client = MockClient((request) async {
+        captured = request;
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'orderNumber': 'WO-000001',
+              'status': 'NEW',
+              'totalAmount': 24000,
+              'currency': 'UZS',
+            },
+          }),
+          201,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final order = await apiWith(client).submitOrder(OrderRequest(
+        customerName: 'Ali',
+        phone: '+998901234567',
+        lines: const [OrderRequestLine(catalogItemId: 1, quantity: 2)],
+      ));
+
+      expect(captured.method, 'POST');
+      expect(captured.url.path, '/api/v1/web/orders');
+      expect(captured.headers['X-Tenant-ID'], '7');
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect(body['customerName'], 'Ali');
+      expect((body['lines'] as List).single['catalogItemId'], 1);
+      expect(order.orderNumber, 'WO-000001');
+    });
+
+    test('getOrderStatus passes phone as query param', () async {
+      late http.Request captured;
+      final client = MockClient((request) async {
+        captured = request;
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'orderNumber': 'WO-000001',
+              'status': 'DELIVERING',
+              'totalAmount': 24000,
+              'currency': 'UZS',
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final order =
+          await apiWith(client).getOrderStatus('WO-000001', '+998901234567');
+
+      expect(captured.url.path, '/api/v1/web/orders/WO-000001');
+      expect(captured.url.queryParameters['phone'], '+998901234567');
+      expect(order.status, 'DELIVERING');
     });
 
     test('decodes UTF-8 (Cyrillic) payloads correctly', () async {

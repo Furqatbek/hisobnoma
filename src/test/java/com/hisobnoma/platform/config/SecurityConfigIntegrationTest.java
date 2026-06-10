@@ -56,6 +56,19 @@ class SecurityConfigIntegrationTest {
     }
 
     @Test
+    void publicEndpoint_webDeliveryRegions_accessibleWithoutToken() throws Exception {
+        // Checkout in the mobile app needs delivery regions without a login
+        mockMvc.perform(get("/api/v1/web/delivery/regions"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void protectedEndpoint_webOrdersAdmin_noToken_returns403() throws Exception {
+        mockMvc.perform(get("/api/v1/web-orders"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void protectedEndpoint_webCatalogAdmin_noToken_returns403() throws Exception {
         // Staff catalog management is NOT under the public /api/v1/web/** prefix
         mockMvc.perform(get("/api/v1/web-catalog"))

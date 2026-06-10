@@ -4,6 +4,7 @@ import '../config/app_config.dart';
 import '../l10n/strings.dart';
 import '../models/public_product.dart';
 import '../util/format.dart';
+import 'cart_scope.dart';
 
 class ProductCard extends StatelessWidget {
   final PublicProduct product;
@@ -61,7 +62,30 @@ class ProductCard extends StatelessWidget {
                           ?.copyWith(color: theme.colorScheme.primary),
                     ),
                     const SizedBox(height: 4),
-                    _StockBadge(inStock: product.inStock),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _StockBadge(inStock: product.inStock),
+                        if (product.inStock)
+                          InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () {
+                              CartScope.of(context).add(product);
+                              ScaffoldMessenger.of(context)
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(const SnackBar(
+                                  content: Text(S.addedToCart),
+                                  duration: Duration(seconds: 1),
+                                ));
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: Icon(Icons.add_shopping_cart,
+                                  size: 20, color: theme.colorScheme.primary),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),

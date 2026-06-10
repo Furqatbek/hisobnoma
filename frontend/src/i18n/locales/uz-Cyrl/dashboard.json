@@ -36,5 +36,10 @@
   },
   "onlineCatalog": "Онлайн каталог",
   "liveItems": "сотувда",
-  "draftItems": "қоралама"
+  "draftItems": "қоралама",
+  "newOnlineOrders": "Янги онлайн буюртмалар",
+  "onlineOrdersToday": "бугун",
+  "recentOnlineOrders": "Сўнгги онлайн буюртмалар",
+  "noOnlineOrders": "Ҳозирча онлайн буюртмалар йўқ",
+  "viewAllOrders": "Барчасини кўриш"
 }

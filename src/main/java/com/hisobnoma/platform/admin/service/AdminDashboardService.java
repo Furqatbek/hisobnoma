@@ -16,7 +16,10 @@ import com.hisobnoma.platform.inventory.repository.PurchaseOrderRepository;
 import com.hisobnoma.platform.inventory.repository.StockRepository;
 import com.hisobnoma.platform.pos.repository.POSTransactionRepository;
 import com.hisobnoma.platform.web.entity.WebCatalogStatus;
+import com.hisobnoma.platform.web.entity.WebOrder;
+import com.hisobnoma.platform.web.entity.WebOrderStatus;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
+import com.hisobnoma.platform.web.repository.WebOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -47,6 +50,7 @@ public class AdminDashboardService {
     private final APInvoiceRepository apInvoiceRepository;
     private final BankAccountRepository bankAccountRepository;
     private final WebCatalogItemRepository webCatalogItemRepository;
+    private final WebOrderRepository webOrderRepository;
 
     @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
@@ -98,6 +102,11 @@ public class AdminDashboardService {
                 // Web catalog statistics
                 .catalogLiveCount(getCatalogCount(tenantId, WebCatalogStatus.LIVE))
                 .catalogDraftCount(getCatalogCount(tenantId, WebCatalogStatus.DRAFT))
+
+                // Online order statistics
+                .newOnlineOrders(getNewOnlineOrderCount(tenantId))
+                .onlineOrdersToday(getOnlineOrdersTodayCount(tenantId, startOfToday))
+                .recentOnlineOrders(getRecentOnlineOrders(tenantId))
 
                 // Activity statistics
                 .totalAuditLogsToday(getAuditLogCount(tenantId, startOfToday))
@@ -278,6 +287,47 @@ public class AdminDashboardService {
         } catch (Exception e) {
             log.warn("Failed to get web catalog count: {}", e.getMessage());
             return 0L;
+        }
+    }
+
+    // ---- Online order stats ----
+
+    private Long getNewOnlineOrderCount(Long tenantId) {
+        try {
+            return webOrderRepository.countByTenantIdAndStatus(tenantId, WebOrderStatus.NEW);
+        } catch (Exception e) {
+            log.warn("Failed to get new online order count: {}", e.getMessage());
+            return 0L;
+        }
+    }
+
+    private Long getOnlineOrdersTodayCount(Long tenantId, Instant startOfToday) {
+        try {
+            return webOrderRepository.countByTenantIdAndCreatedAtAfter(tenantId, startOfToday);
+        } catch (Exception e) {
+            log.warn("Failed to get today's online order count: {}", e.getMessage());
+            return 0L;
+        }
+    }
+
+    private List<DashboardStatsDTO.RecentOnlineOrderDTO> getRecentOnlineOrders(Long tenantId) {
+        try {
+            List<WebOrder> orders = webOrderRepository.findRecentByTenant(tenantId, PageRequest.of(0, 5));
+            List<DashboardStatsDTO.RecentOnlineOrderDTO> result = new ArrayList<>();
+            for (WebOrder order : orders) {
+                result.add(DashboardStatsDTO.RecentOnlineOrderDTO.builder()
+                        .id(order.getId())
+                        .orderNumber(order.getOrderNumber())
+                        .customerName(order.getCustomerName())
+                        .totalAmount(order.getTotalAmount())
+                        .status(order.getStatus().name())
+                        .createdAt(order.getCreatedAt() != null ? order.getCreatedAt().toString() : null)
+                        .build());
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to get recent online orders: {}", e.getMessage());
+            return new ArrayList<>();
         }
     }
 
