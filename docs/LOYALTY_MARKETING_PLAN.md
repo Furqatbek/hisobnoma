@@ -105,6 +105,9 @@ which promotions reach the web channel.
 ### Tests
 
 - **Repository:** channel filter query, tenant isolation.
+- **POS regression:** existing `PromotionService`/`PricingService` tests must pass
+  unchanged (old `applyPromotions` signature delegates with channel=POS); add cases proving
+  a WEB-only promotion never applies at the POS terminal and `channel=ALL` applies on both.
 - **Service (Mockito):** `WebPricingService` — price-override base price wins; channel
   filtering (POS-only promo invisible to web); anonymous vs known customer conditions;
   empty cart; promotion applied at checkout matches preview; usage incremented on confirm,
@@ -279,33 +282,65 @@ cashback whose every movement is visible in an auditable ledger. (~2–2.5 days)
 
 > **Status: planned — push blocked on a Firebase project**
 
-### Push (FCM) — prerequisite: Firebase project (`google-services.json` + service-account key)
+### Backend — Push (FCM) — prerequisite: Firebase project (`google-services.json` + service-account key)
 
-- Backend: mirror the existing `DeviceToken`/`PushNotificationService` pattern for web
-  customers (`web_device_tokens`, V62); send on order status changes (CONFIRMED/DELIVERING/
-  COMPLETED) and as an optional campaign channel next to SMS (push is free — prefer it,
-  fall back to SMS for customers without the app installed / token expired).
-- App: `firebase_messaging` dependency, token registration after login, notification tap →
-  order status screen.
-- Campaigns UI: channel choice SMS / Push / Push-with-SMS-fallback; preview shows the cost
-  difference.
+| Item | Detail |
+|------|--------|
+| Migration `V62__web_push_referrals.sql` | `web_device_tokens` (tenant_id, web_customer_id, token, platform, created_at, last_seen_at, unique token per tenant); `web_customers ADD COLUMN referral_code VARCHAR(12) UNIQUE, referred_by BIGINT NULL REFERENCES web_customers(id)` |
+| `WebPushService` | mirrors the existing `DeviceToken`/`PushNotificationService` pattern; `register(webCustomerId, token, platform)` (upsert, replaces stale token for the same device); `sendToCustomer(...)` removes tokens FCM reports as invalid; fan-out on order status changes (CONFIRMED/DELIVERING/COMPLETED) — fire-and-forget, never blocks the status update |
+| `POST /api/v1/web/me/device-token` (auth) | register/refresh token; `DELETE` on logout |
+| Campaign channel | `web_campaigns` gains `channel` (SMS / PUSH / PUSH_WITH_SMS_FALLBACK); `WebCampaignService.send()` pushes first, falls back to SMS for recipients without a live token; cost preview = SMS count after fallback split |
 
-### Referrals
+### Backend — Referrals
 
-- `web_customers ADD COLUMN referral_code VARCHAR(12) UNIQUE, referred_by BIGINT NULL` (V62).
-- App: profile shows "Дўстингизни таклиф қилинг" with a share-sheet code/link; login screen
-  accepts an optional referral code.
-- Reward: when the referred customer's **first order completes**, both sides get a loyalty
-  ADJUST (amounts from settings `referral.reward_referrer` / `referral.reward_referred`) —
-  reuses the Phase 4 ledger wholesale, no new money mechanics.
-- Anti-abuse: self-referral blocked (same normalized phone), reward only on first completed
-  order, one referrer per customer, capped rewards per referrer per month (setting).
+| Item | Detail |
+|------|--------|
+| `WebReferralService` | `getOrCreateCode(webCustomerId)` (SecureRandom, unambiguous charset); `applyCode(newCustomerId, code)` at OTP verify time — rejects self-referral (same normalized phone), rejects if `referred_by` already set; `rewardIfFirstCompletion(order)` hooked into the →COMPLETED transition: exactly-once (guarded by ledger ADJUST idempotency per referred customer), writes loyalty ADJUST for both sides from settings `referral.reward_referrer` / `referral.reward_referred`, respects per-referrer monthly cap (setting `referral.monthly_cap`) |
+| `VerifyOtpRequest` | gains optional `referralCode` |
+| Settings (`SystemSetting`) | `referral.enabled` (default false), reward amounts, monthly cap |
+
+### Admin frontend
+
+- Settings page: "Реферал дастури" section — enable toggle, both reward amounts, monthly
+  cap (next to the Phase 4 loyalty section).
+- Campaign form (`WebCampaignsView.vue`): channel selector SMS / Push / Push+SMS-fallback;
+  preview shows push-vs-SMS split and the resulting SMS cost.
+- Web customer card (`WebCustomersView.vue`): referral code, who referred this customer
+  (link), count of successfully referred customers, device-token presence indicator
+  ("push реachable" badge) so staff know which channel will reach them.
+- Web order detail: no change (referral rewards appear in the Phase 4 loyalty ledger).
+- Dashboard: referred-customers counter added to the online-shop stat group.
+
+### Mobile app
+
+- `firebase_messaging` dependency; token registration after login, deletion on logout;
+  notification tap → order status screen (deep link by order number).
+- Profile tab: "Дўстингизни таклиф қилинг" card — referral code with share sheet
+  (`share_plus`), short explainer of both-side rewards.
+- Login screen: optional referral code field on the OTP verify step (pre-filled when the
+  app was opened from a referral link).
 
 ### Tests
 
-- Token lifecycle (register/replace/expire-on-401), notification fan-out on status change,
-  campaign channel fallback logic; referral reward exactly-once on first completion,
-  self-referral rejected, monthly cap.
+- **Repository:** token upsert/unique per tenant; referral code uniqueness; referred-by
+  lookup; tenant isolation.
+- **Service (Mockito):** `WebPushService` — register replaces stale token, invalid-token
+  cleanup on FCM error, status-change fan-out never throws into the order transition;
+  campaign fallback split (token vs no-token recipients) and its cost math;
+  `WebReferralService` — self-referral rejected, second `applyCode` rejected, reward
+  exactly-once on first completion (double-complete safe), no reward on later orders,
+  monthly cap enforced, disabled flag = all no-ops.
+- **Controller (standalone MockMvc):** device-token endpoints require auth (401 anonymous);
+  verify-otp accepts/ignores referral code; campaign channel validation.
+- **Full-flow (`@SpringBootTest`):** customer A gets code → customer B registers with it →
+  B's first order completes → both ledgers show ADJUST rewards → B's second order adds
+  nothing; status change creates push payload (fake FCM client); permissions matrix on new
+  staff endpoints.
+- **Flutter:** referral card rendering + share payload; verify payload includes
+  `referralCode`; notification tap routing (mocked).
+- **Manual checklist:** real push on a physical device for each status change; full referral
+  loop between two phones; campaign with push channel falls back to SMS for a customer
+  without the app.
 
 **Acceptance:** status changes reach the customer's lock screen; a referral measurably
 creates a rewarded second customer. (~2 days once Firebase exists)
