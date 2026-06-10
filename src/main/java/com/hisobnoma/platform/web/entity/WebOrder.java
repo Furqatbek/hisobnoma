@@ -63,6 +63,13 @@ public class WebOrder extends TenantAwareEntity {
     @Column(name = "customer_note", length = 500)
     private String customerNote;
 
+    /**
+     * Delivery fee snapshotted from the region at checkout time.
+     */
+    @Column(name = "delivery_fee", precision = 18, scale = 4, nullable = false)
+    @Builder.Default
+    private BigDecimal deliveryFee = BigDecimal.ZERO;
+
     @Column(name = "total_amount", precision = 18, scale = 4, nullable = false)
     @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
@@ -104,6 +111,7 @@ public class WebOrder extends TenantAwareEntity {
     public void recalculateTotal() {
         this.totalAmount = lines.stream()
                 .map(WebOrderLine::getLineTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .add(deliveryFee != null ? deliveryFee : BigDecimal.ZERO);
     }
 }

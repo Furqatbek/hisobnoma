@@ -8,6 +8,14 @@ import com.hisobnoma.platform.finance.dto.CreateCustomerRequest;
 import com.hisobnoma.platform.finance.dto.CustomerDto;
 import com.hisobnoma.platform.finance.service.ARInvoiceService;
 import com.hisobnoma.platform.finance.service.CustomerService;
+import com.hisobnoma.platform.inventory.entity.Location;
+import com.hisobnoma.platform.inventory.entity.MovementReferenceType;
+import com.hisobnoma.platform.inventory.entity.Product;
+import com.hisobnoma.platform.inventory.entity.Stock;
+import com.hisobnoma.platform.inventory.entity.StockReservation;
+import com.hisobnoma.platform.inventory.repository.StockRepository;
+import com.hisobnoma.platform.inventory.repository.StockReservationRepository;
+import com.hisobnoma.platform.inventory.service.StockService;
 import com.hisobnoma.platform.web.dto.UpdateOrderStatusRequest;
 import com.hisobnoma.platform.web.dto.WebOrderDto;
 import com.hisobnoma.platform.web.entity.WebCustomer;
@@ -25,6 +33,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,6 +48,9 @@ class WebOrderServiceTest {
     @Mock private CustomerService customerService;
     @Mock private ARInvoiceService arInvoiceService;
     @Mock private WebCustomerRepository webCustomerRepository;
+    @Mock private StockRepository stockRepository;
+    @Mock private StockReservationRepository stockReservationRepository;
+    @Mock private StockService stockService;
 
     @InjectMocks
     private WebOrderService service;
@@ -125,6 +137,149 @@ class WebOrderServiceTest {
 
         assertThrows(ValidationException.class,
                 () -> service.updateStatus(1L, statusRequest(WebOrderStatus.CONFIRMED, null)));
+    }
+
+    // ---- stock reservation ----
+
+    private Stock stock(BigDecimal onHand, BigDecimal reserved, Long locationId) {
+        Location location = Location.builder().code("MAIN").name("Asosiy ombor").build();
+        location.setId(locationId);
+        Product product = Product.builder().sku("SKU-10").name("Cola")
+                .sellingPrice(BigDecimal.TEN).build();
+        product.setId(10L);
+        Stock s = Stock.builder()
+                .product(product).location(location)
+                .quantityOnHand(onHand).quantityReserved(reserved)
+                .tenantId(TENANT_ID).build();
+        return s;
+    }
+
+    @Test
+    void confirm_reservesStockAtLocationWithEnoughAvailability() {
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(stockRepository.findByProductIdAndTenantId(10L, TENANT_ID))
+                .thenReturn(List.of(stock(new BigDecimal("100"), BigDecimal.ZERO, 5L)));
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.CONFIRMED, null));
+
+        verify(stockService).reserveStock(eq(10L), eq(5L), eq(new BigDecimal("3")),
+                eq(MovementReferenceType.WEB_ORDER), eq(1L), eq("WO-000001"));
+    }
+
+    @Test
+    void confirm_skipsReservationWhenStockInsufficientButStillConfirms() {
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(stockRepository.findByProductIdAndTenantId(10L, TENANT_ID))
+                .thenReturn(List.of(stock(new BigDecimal("1"), BigDecimal.ZERO, 5L)));
+
+        WebOrderDto dto = service.updateStatus(1L, statusRequest(WebOrderStatus.CONFIRMED, null));
+
+        assertEquals(WebOrderStatus.CONFIRMED, dto.getStatus());
+        verify(stockService, never()).reserveStock(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void confirm_reservationFailureNeverBlocksConfirmation() {
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(stockRepository.findByProductIdAndTenantId(10L, TENANT_ID))
+                .thenThrow(new RuntimeException("db down"));
+
+        WebOrderDto dto = service.updateStatus(1L, statusRequest(WebOrderStatus.CONFIRMED, null));
+
+        assertEquals(WebOrderStatus.CONFIRMED, dto.getStatus());
+    }
+
+    @Test
+    void cancelAfterConfirm_releasesActiveReservations() {
+        order.setStatus(WebOrderStatus.CONFIRMED);
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Stock s = stock(new BigDecimal("100"), new BigDecimal("3"), 5L);
+        StockReservation active = StockReservation.builder()
+                .product(s.getProduct()).location(s.getLocation())
+                .quantity(new BigDecimal("3"))
+                .referenceType(MovementReferenceType.WEB_ORDER).referenceId(1L)
+                .status(StockReservation.ReservationStatus.ACTIVE)
+                .tenantId(TENANT_ID).build();
+        StockReservation cancelled = StockReservation.builder()
+                .product(s.getProduct()).location(s.getLocation())
+                .quantity(BigDecimal.ONE)
+                .referenceType(MovementReferenceType.WEB_ORDER).referenceId(1L)
+                .status(StockReservation.ReservationStatus.CANCELLED)
+                .tenantId(TENANT_ID).build();
+        when(stockReservationRepository.findByReferenceTypeAndReferenceIdAndTenantId(
+                MovementReferenceType.WEB_ORDER, 1L, TENANT_ID))
+                .thenReturn(List.of(active, cancelled));
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.CANCELLED, "Бекор"));
+
+        // Only the ACTIVE reservation is released, exactly once
+        verify(stockService, times(1)).releaseReservation(
+                eq(10L), eq(5L), eq(MovementReferenceType.WEB_ORDER), eq(1L));
+    }
+
+    @Test
+    void completeAfterDelivering_releasesReservations() {
+        order.setStatus(WebOrderStatus.DELIVERING);
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(stockReservationRepository.findByReferenceTypeAndReferenceIdAndTenantId(
+                MovementReferenceType.WEB_ORDER, 1L, TENANT_ID))
+                .thenReturn(List.of());
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.COMPLETED, null));
+
+        verify(stockReservationRepository).findByReferenceTypeAndReferenceIdAndTenantId(
+                MovementReferenceType.WEB_ORDER, 1L, TENANT_ID);
+    }
+
+    @Test
+    void cancelFromNew_neverTouchesReservations() {
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.CANCELLED, "Бекор"));
+
+        verifyNoInteractions(stockReservationRepository);
+        verify(stockService, never()).releaseReservation(any(), any(), any(), any());
+    }
+
+    // ---- delivery fee ----
+
+    @Test
+    void convert_addsDeliveryFeeAsInvoiceLine() {
+        order.setDeliveryFee(new BigDecimal("5000"));
+        order.setTotalAmount(new BigDecimal("41000")); // 36000 lines + 5000 fee
+        order.setCustomerId(88L);
+        when(arInvoiceService.createInvoice(any(CreateARInvoiceRequest.class)))
+                .thenReturn(ARInvoiceDto.builder().id(60L).invoiceNumber("INV-000060").build());
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.convertToInvoice(1L);
+
+        ArgumentCaptor<CreateARInvoiceRequest> captor =
+                ArgumentCaptor.forClass(CreateARInvoiceRequest.class);
+        verify(arInvoiceService).createInvoice(captor.capture());
+        CreateARInvoiceRequest request = captor.getValue();
+        assertEquals(2, request.getLines().size());
+        var feeLine = request.getLines().get(1);
+        assertEquals("Етказиб бериш", feeLine.getProductName());
+        assertEquals(0, new BigDecimal("5000").compareTo(feeLine.getUnitPrice()));
+        assertEquals(0, BigDecimal.ONE.compareTo(feeLine.getQuantity()));
+        assertEquals(0, new BigDecimal("41000").compareTo(request.getTotalAmount()));
+    }
+
+    @Test
+    void convert_zeroFeeAddsNoExtraLine() {
+        order.setCustomerId(88L);
+        when(arInvoiceService.createInvoice(any(CreateARInvoiceRequest.class)))
+                .thenReturn(ARInvoiceDto.builder().id(61L).invoiceNumber("INV-000061").build());
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.convertToInvoice(1L);
+
+        ArgumentCaptor<CreateARInvoiceRequest> captor =
+                ArgumentCaptor.forClass(CreateARInvoiceRequest.class);
+        verify(arInvoiceService).createInvoice(captor.capture());
+        assertEquals(1, captor.getValue().getLines().size());
     }
 
     // ---- convert to invoice ----

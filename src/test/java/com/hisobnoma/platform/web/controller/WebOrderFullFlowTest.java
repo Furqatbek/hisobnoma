@@ -13,9 +13,14 @@ import com.hisobnoma.platform.delivery.repository.DeliveryVillageRepository;
 import com.hisobnoma.platform.finance.entity.ARInvoice;
 import com.hisobnoma.platform.finance.repository.ARInvoiceRepository;
 import com.hisobnoma.platform.finance.repository.CustomerRepository;
+import com.hisobnoma.platform.inventory.entity.Location;
+import com.hisobnoma.platform.inventory.entity.LocationType;
 import com.hisobnoma.platform.inventory.entity.Product;
+import com.hisobnoma.platform.inventory.entity.Stock;
 import com.hisobnoma.platform.inventory.entity.UnitOfMeasure;
+import com.hisobnoma.platform.inventory.repository.LocationRepository;
 import com.hisobnoma.platform.inventory.repository.ProductRepository;
+import com.hisobnoma.platform.inventory.repository.StockRepository;
 import com.hisobnoma.platform.inventory.repository.UnitOfMeasureRepository;
 import com.hisobnoma.platform.web.dto.CheckoutRequest;
 import com.hisobnoma.platform.web.dto.UpdateOrderStatusRequest;
@@ -70,6 +75,8 @@ class WebOrderFullFlowTest {
     @Autowired private DeliveryVillageRepository villageRepository;
     @Autowired private CustomerRepository customerRepository;
     @Autowired private ARInvoiceRepository arInvoiceRepository;
+    @Autowired private LocationRepository locationRepository;
+    @Autowired private StockRepository stockRepository;
 
     private static final String PUBLIC_URL = "/api/v1/web/orders";
     private static final String ADMIN_URL = "/api/v1/web-orders";
@@ -353,6 +360,61 @@ class WebOrderFullFlowTest {
                                         .status(WebOrderStatus.COMPLETED).build())))
                 .andExpect(status().isBadRequest());
     }
+
+    // ---- Phase 5: delivery fee & stock reservation ----
+
+    @Test
+    void checkoutWithFeeRegion_addsDeliveryFeeToTotal() throws Exception {
+        DeliveryRegion feeRegion = regionRepository.saveAndFlush(DeliveryRegion.builder()
+                .name("Самарқанд").active(true).sortOrder(2)
+                .deliveryFee(new BigDecimal("5000.0000"))
+                .tenantId(tenant.getId()).build());
+
+        CheckoutRequest request = checkoutRequest(uniquePhone(), liveItem.getId(), "3");
+        request.setRegionId(feeRegion.getId());
+        request.setVillageId(null);
+
+        mockMvc.perform(post(PUBLIC_URL)
+                        .header(TENANT_HEADER, tenant.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.deliveryFee", closeTo(5000.0, 0.01)))
+                .andExpect(jsonPath("$.data.totalAmount", closeTo(41000.0, 0.01)));
+    }
+
+    @Test
+    void publicRegions_exposeDeliveryFee() throws Exception {
+        region.setDeliveryFee(new BigDecimal("3000.0000"));
+        regionRepository.saveAndFlush(region);
+
+        mockMvc.perform(get("/api/v1/web/delivery/regions")
+                        .header(TENANT_HEADER, tenant.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].deliveryFee", closeTo(3000.0, 0.01)));
+    }
+
+    @Test
+    void convertOrderWithFee_invoiceGetsFeeLineAndMatchingTotal() throws Exception {
+        region.setDeliveryFee(new BigDecimal("5000.0000"));
+        regionRepository.saveAndFlush(region);
+        Long orderId = checkoutAndGetOrderId(uniquePhone());
+
+        mockMvc.perform(post(ADMIN_URL + "/" + orderId + "/convert-to-invoice")
+                        .with(manageAuth()))
+                .andExpect(status().isOk());
+
+        WebOrder order = orderRepository.findByIdAndTenantId(orderId, tenant.getId()).orElseThrow();
+        ARInvoice invoice = arInvoiceRepository.findById(order.getArInvoiceId()).orElseThrow();
+        // 2 x 12000 + 5000 fee = 29000, one product line + one fee line
+        assertEquals(0, new BigDecimal("29000.0000").compareTo(invoice.getTotalAmount()));
+        assertEquals(2, invoice.getLines().size());
+        assertEquals(0, order.getTotalAmount().compareTo(invoice.getTotalAmount()));
+    }
+
+    // NOTE: stock reservation on confirm uses REQUIRES_NEW transactions that
+    // cannot see this test's uncommitted fixtures, so the reserve/release
+    // round-trip is covered by WebOrderServiceTest unit tests instead.
 
     @Test
     void convertToInvoice_createsCustomerAndInvoiceWithMatchingTotals() throws Exception {

@@ -140,6 +140,8 @@ public class WebOrderPublicService {
                     .orElseThrow(() -> new ValidationException("Unknown delivery region: " + request.getRegionId()));
             order.setDeliveryRegionId(region.getId());
             order.setDeliveryRegionName(region.getName());
+            order.setDeliveryFee(region.getDeliveryFee() != null
+                    ? region.getDeliveryFee() : BigDecimal.ZERO);
         }
         if (request.getVillageId() != null) {
             DeliveryVillage village = villageRepository.findByIdAndTenantId(request.getVillageId(), tenantId)
@@ -190,6 +192,7 @@ public class WebOrderPublicService {
         return PublicOrderDto.builder()
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus().name())
+                .deliveryFee(order.getDeliveryFee())
                 .totalAmount(order.getTotalAmount())
                 .currency(order.getCurrency())
                 .createdAt(order.getCreatedAt())
@@ -205,7 +208,11 @@ public class WebOrderPublicService {
     }
 
     private PublicRegionDto toRegionDto(DeliveryRegion region) {
-        return PublicRegionDto.builder().id(region.getId()).name(region.getName()).build();
+        return PublicRegionDto.builder()
+                .id(region.getId())
+                .name(region.getName())
+                .deliveryFee(region.getDeliveryFee())
+                .build();
     }
 
     private PublicVillageDto toVillageDto(DeliveryVillage village) {

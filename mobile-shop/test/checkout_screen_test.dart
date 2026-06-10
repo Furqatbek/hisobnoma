@@ -93,6 +93,29 @@ void main() {
     expect(cart.isEmpty, false); // cart kept so the user can retry
   });
 
+  testWidgets('selecting a region with a fee shows it and updates the total',
+      (tester) async {
+    final api = FakeCatalogApi(
+      regions: const [
+        DeliveryRegion(id: 1, name: 'Тошкент', deliveryFee: 5000),
+      ],
+    );
+    await pumpCheckout(tester, api, cartWith([(1, 'Cola', 12000, 2)]));
+
+    // Before region selection: no fee row, grand total = cart total
+    expect(find.text(S.deliveryFee), findsNothing);
+    expect(find.text('24 000 сўм'), findsWidgets);
+
+    await tester.tap(find.text(S.region));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Тошкент').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text(S.deliveryFee), findsOneWidget);
+    expect(find.text('5 000 сўм'), findsOneWidget);
+    expect(find.text('29 000 сўм'), findsOneWidget); // 24000 + 5000
+  });
+
   testWidgets('region select loads villages for the chosen region',
       (tester) async {
     final api = FakeCatalogApi(

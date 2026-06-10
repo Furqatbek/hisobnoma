@@ -13,4 +13,5 @@ public class PublicRegionDto {
 
     private Long id;
     private String name;
+    private java.math.BigDecimal deliveryFee;
 }

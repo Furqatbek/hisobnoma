@@ -18,6 +18,7 @@ public class DeliveryRegionDTO {
     private String description;
     private boolean active;
     private Integer sortOrder;
+    private java.math.BigDecimal deliveryFee;
     private int villageCount;
     private Instant createdAt;
     private Instant updatedAt;

@@ -209,6 +209,7 @@ public class WebAuthService {
         return PublicOrderDto.builder()
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus().name())
+                .deliveryFee(order.getDeliveryFee())
                 .totalAmount(order.getTotalAmount())
                 .currency(order.getCurrency())
                 .createdAt(order.getCreatedAt())

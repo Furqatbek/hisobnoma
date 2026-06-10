@@ -209,10 +209,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(S.total,
-                    style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    style: TextStyle(fontSize: 15, color: Colors.grey)),
                 Text(formatUzs(cart.total),
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(fontSize: 15)),
+              ],
+            ),
+            if (_selectedRegion != null && _selectedRegion!.deliveryFee > 0) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(S.deliveryFee,
+                      style: TextStyle(fontSize: 15, color: Colors.grey)),
+                  Text(formatUzs(_selectedRegion!.deliveryFee),
+                      style: const TextStyle(fontSize: 15)),
+                ],
+              ),
+            ],
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(S.grandTotal,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text(
+                  formatUzs(cart.total +
+                      (_selectedRegion?.deliveryFee ?? 0)),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             const SizedBox(height: 16),

@@ -77,7 +77,15 @@ void main() {
 
       expect(region.id, 1);
       expect(region.name, 'Тошкент');
+      expect(region.deliveryFee, 0); // default when backend omits it
       expect(village.regionId, 1);
+    });
+
+    test('region maps delivery fee', () {
+      final region = DeliveryRegion.fromJson(
+          {'id': 1, 'name': 'Тошкент', 'deliveryFee': 5000.0});
+
+      expect(region.deliveryFee, 5000.0);
     });
   });
 }

@@ -20,6 +20,7 @@ public class PublicOrderDto {
 
     private String orderNumber;
     private String status;
+    private BigDecimal deliveryFee;
     private BigDecimal totalAmount;
     private String currency;
     private Instant createdAt;

@@ -10,6 +10,12 @@ import com.hisobnoma.platform.finance.dto.ARInvoiceDto;
 import com.hisobnoma.platform.finance.dto.CustomerDto;
 import com.hisobnoma.platform.finance.service.ARInvoiceService;
 import com.hisobnoma.platform.finance.service.CustomerService;
+import com.hisobnoma.platform.inventory.entity.MovementReferenceType;
+import com.hisobnoma.platform.inventory.entity.Stock;
+import com.hisobnoma.platform.inventory.entity.StockReservation;
+import com.hisobnoma.platform.inventory.repository.StockRepository;
+import com.hisobnoma.platform.inventory.repository.StockReservationRepository;
+import com.hisobnoma.platform.inventory.service.StockService;
 import com.hisobnoma.platform.web.dto.UpdateOrderStatusRequest;
 import com.hisobnoma.platform.web.dto.WebOrderDto;
 import com.hisobnoma.platform.web.entity.WebOrder;
@@ -23,7 +29,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -40,6 +48,9 @@ public class WebOrderService {
     private final CustomerService customerService;
     private final ARInvoiceService arInvoiceService;
     private final com.hisobnoma.platform.web.repository.WebCustomerRepository webCustomerRepository;
+    private final StockRepository stockRepository;
+    private final StockReservationRepository stockReservationRepository;
+    private final StockService stockService;
 
     @Transactional(readOnly = true)
     public Page<WebOrderDto> getOrders(WebOrderStatus status, Pageable pageable) {
@@ -78,7 +89,16 @@ public class WebOrderService {
             order.setCancellationReason(request.getReason().trim());
         }
 
+        WebOrderStatus previous = order.getStatus();
         order.setStatus(target);
+
+        if (target == WebOrderStatus.CONFIRMED) {
+            reserveStock(order);
+        } else if (previous != WebOrderStatus.NEW
+                && (target == WebOrderStatus.CANCELLED || target == WebOrderStatus.COMPLETED)) {
+            releaseReservations(order);
+        }
+
         log.info("Web order {} status changed to {}", order.getOrderNumber(), target);
         return toDto(orderRepository.save(order));
     }
@@ -116,9 +136,20 @@ public class WebOrderService {
         }
         order.setCustomerId(customerId);
 
-        List<CreateARInvoiceLineRequest> lines = order.getLines().stream()
+        List<CreateARInvoiceLineRequest> lines = new ArrayList<>(order.getLines().stream()
                 .map(this::toInvoiceLine)
-                .toList();
+                .toList());
+
+        // Delivery fee becomes an explicit invoice line so totals stay equal
+        if (order.getDeliveryFee() != null && order.getDeliveryFee().compareTo(BigDecimal.ZERO) > 0) {
+            lines.add(CreateARInvoiceLineRequest.builder()
+                    .productName("Етказиб бериш")
+                    .description("Етказиб бериш (" + (order.getDeliveryRegionName() != null
+                            ? order.getDeliveryRegionName() : "-") + ")")
+                    .quantity(BigDecimal.ONE)
+                    .unitPrice(order.getDeliveryFee())
+                    .build());
+        }
 
         ARInvoiceDto invoice = arInvoiceService.createInvoice(CreateARInvoiceRequest.builder()
                 .customerId(customerId)
@@ -134,6 +165,64 @@ public class WebOrderService {
         order.setArInvoiceNumber(invoice.getInvoiceNumber());
         log.info("Web order {} converted to invoice {}", order.getOrderNumber(), invoice.getInvoiceNumber());
         return toDto(orderRepository.save(order));
+    }
+
+    // ---- stock reservation ----
+
+    /**
+     * Best-effort reservation: never blocks confirmation. Lines whose product
+     * has no stock rows (untracked/services) or not enough available quantity
+     * are skipped with a warning — staff sees real stock in the inventory module.
+     */
+    private void reserveStock(WebOrder order) {
+        for (WebOrderLine line : order.getLines()) {
+            try {
+                List<Stock> stocks = stockRepository.findByProductIdAndTenantId(
+                        line.getProductId(), order.getTenantId());
+                Stock best = stocks.stream()
+                        .filter(s -> s.getQuantityAvailable().compareTo(line.getQuantity()) >= 0)
+                        .max(java.util.Comparator.comparing(Stock::getQuantityAvailable))
+                        .orElse(null);
+                if (best == null) {
+                    if (!stocks.isEmpty()) {
+                        log.warn("Web order {}: not enough stock to reserve {} x {}",
+                                order.getOrderNumber(), line.getQuantity(), line.getProductName());
+                    }
+                    continue;
+                }
+                stockService.reserveStock(line.getProductId(), best.getLocation().getId(),
+                        line.getQuantity(), MovementReferenceType.WEB_ORDER,
+                        order.getId(), order.getOrderNumber());
+            } catch (Exception e) {
+                log.warn("Web order {}: failed to reserve stock for {}: {}",
+                        order.getOrderNumber(), line.getProductName(), e.getMessage());
+            }
+        }
+    }
+
+    private void releaseReservations(WebOrder order) {
+        List<StockReservation> reservations = new ArrayList<>();
+        try {
+            reservations = stockReservationRepository
+                    .findByReferenceTypeAndReferenceIdAndTenantId(
+                            MovementReferenceType.WEB_ORDER, order.getId(), order.getTenantId());
+        } catch (Exception e) {
+            log.warn("Web order {}: failed to load reservations: {}",
+                    order.getOrderNumber(), e.getMessage());
+        }
+        for (StockReservation reservation : reservations) {
+            if (reservation.getStatus() != StockReservation.ReservationStatus.ACTIVE) {
+                continue;
+            }
+            try {
+                stockService.releaseReservation(
+                        reservation.getProduct().getId(), reservation.getLocation().getId(),
+                        MovementReferenceType.WEB_ORDER, order.getId());
+            } catch (Exception e) {
+                log.warn("Web order {}: failed to release reservation {}: {}",
+                        order.getOrderNumber(), reservation.getId(), e.getMessage());
+            }
+        }
     }
 
     // ---- internals ----
@@ -189,6 +278,7 @@ public class WebOrderService {
                 .deliveryVillageId(order.getDeliveryVillageId())
                 .deliveryVillageName(order.getDeliveryVillageName())
                 .customerNote(order.getCustomerNote())
+                .deliveryFee(order.getDeliveryFee())
                 .totalAmount(order.getTotalAmount())
                 .currency(order.getCurrency())
                 .customerId(order.getCustomerId())

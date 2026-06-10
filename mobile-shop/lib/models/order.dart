@@ -42,6 +42,7 @@ class OrderRequestLine {
 class PublicOrder {
   final String orderNumber;
   final String status;
+  final double deliveryFee;
   final double totalAmount;
   final String currency;
   final List<PublicOrderLine> lines;
@@ -49,6 +50,7 @@ class PublicOrder {
   const PublicOrder({
     required this.orderNumber,
     required this.status,
+    this.deliveryFee = 0,
     required this.totalAmount,
     required this.currency,
     this.lines = const [],
@@ -58,6 +60,7 @@ class PublicOrder {
     return PublicOrder(
       orderNumber: json['orderNumber'] as String? ?? '',
       status: json['status'] as String? ?? '',
+      deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0,
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
       currency: json['currency'] as String? ?? 'UZS',
       lines: (json['lines'] as List<dynamic>?)

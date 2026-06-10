@@ -234,12 +234,28 @@ customers from the admin app; OTP abuse is throttled. ~3–4 dev-days.
 
 ---
 
-## Phase 5 (future, not scheduled)
+## Phase 5 (partially implemented)
 
-Online payment (Payme/Click) with payment-status webhooks; push notifications to customer
-devices on order-status changes (FCM — the `mobile` module's `DeviceToken`/`PushNotificationService`
-pattern can be mirrored for customers); stock reservation on confirm; delivery fee rules per
-region; uz-Latn/ru app locales; Play Store / App Store publication.
+> **Status: ✅ stock reservation + delivery fees implemented** (migration V57).
+>
+> - **Stock reservation on confirm:** confirming an online order reserves each line's
+>   quantity (existing `StockService` reservation system, reference type `WEB_ORDER`,
+>   location with the most availability). Cancelling or completing the order releases the
+>   reservation. Reservation is best-effort — insufficient stock logs a warning but never
+>   blocks confirmation. Actual stock deduction still happens when staff record the sale.
+> - **Delivery fee per region:** staff set a fee on each delivery region (admin region
+>   form); the public regions endpoint exposes it; checkout snapshots it onto the order
+>   and includes it in the total; the app shows the fee and grand total before submitting;
+>   invoice conversion adds an explicit "Етказиб бериш" line so totals stay equal.
+
+### Remaining items — blocked on external prerequisites
+
+| Item | What it needs from the owner before it can be built |
+|---|---|
+| Online payment (Payme/Click) | A merchant account with Payme and/or Click: merchant ID, secret keys, registered webhook URL (HTTPS). The integration is webhook-driven (Payme Merchant API is JSON-RPC; Click uses prepare/complete callbacks) and cannot be safely implemented or tested without real credentials and their sandbox access |
+| Push notifications (FCM) | A Firebase project: `google-services.json` for the app and a service-account key for the backend. Without these files the app build fails, so the dependency must not be added speculatively. Backend side can mirror the existing `DeviceToken`/`PushNotificationService` pattern once the project exists |
+| uz-Latn / ru app locales | A decision to invest: ~80 strings × 2 translations + a locale switcher (the `S` strings class is already the single point of change) |
+| Play Store / App Store publication | Developer accounts ($25 Google one-time / $99 Apple yearly), privacy policy URL, store assets; iOS additionally needs a Mac for building |
 
 ---
 

@@ -180,6 +180,41 @@ class WebOrderPublicServiceTest {
         assertEquals("WO-000009", dto.getOrderNumber());
     }
 
+    @Test
+    void checkout_addsRegionDeliveryFeeToTotal() {
+        com.hisobnoma.platform.delivery.entity.DeliveryRegion region =
+                com.hisobnoma.platform.delivery.entity.DeliveryRegion.builder()
+                        .name("Тошкент").deliveryFee(new BigDecimal("5000"))
+                        .tenantId(TENANT_ID).build();
+        region.setId(3L);
+        when(regionRepository.findByIdAndTenantId(3L, TENANT_ID)).thenReturn(Optional.of(region));
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckoutRequest request = checkoutRequest(new BigDecimal("3"));
+        request.setRegionId(3L);
+
+        PublicOrderDto dto = service.checkout(request, "1.2.3.4", null);
+
+        assertEquals(0, new BigDecimal("5000").compareTo(dto.getDeliveryFee()));
+        assertEquals(0, new BigDecimal("41000").compareTo(dto.getTotalAmount())); // 36000 + 5000
+    }
+
+    @Test
+    void getRegions_includesDeliveryFee() {
+        com.hisobnoma.platform.delivery.entity.DeliveryRegion region =
+                com.hisobnoma.platform.delivery.entity.DeliveryRegion.builder()
+                        .name("Тошкент").deliveryFee(new BigDecimal("7000"))
+                        .tenantId(TENANT_ID).build();
+        region.setId(3L);
+        when(regionRepository.findActiveByTenantId(TENANT_ID)).thenReturn(List.of(region));
+
+        var regions = service.getRegions();
+
+        assertEquals(0, new BigDecimal("7000").compareTo(regions.get(0).getDeliveryFee()));
+    }
+
     // ---- status lookup ----
 
     @Test

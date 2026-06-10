@@ -121,4 +121,6 @@ flutter build apk --debug \
 - [ ] "Буюртмаларим" lists only own orders; survives app restart; logout clears it
 - [ ] Checkout pre-fills name/phone for a logged-in customer
 - [ ] Staff link a web customer to a debtor; converting their order uses the linked customer
+- [ ] Region with a delivery fee: fee row + grand total shown at checkout; server total matches
+- [ ] Confirming an order reserves stock (inventory module shows reserved qty); cancel releases it
 - [ ] Looks correct on a small phone (360 px wide) and a tablet

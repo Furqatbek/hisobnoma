@@ -55,6 +55,9 @@ class S {
   static const orderNotFound = 'Буюртма топилмади. Рақам ва телефонни текширинг.';
   static const orderStatus = 'Ҳолат';
 
+  static const deliveryFee = 'Етказиб бериш';
+  static const grandTotal = 'Жами тўлов';
+
   // Auth / account
   static const loginTitle = 'Кириш';
   static const loginHint = 'Телефон рақамингизга SMS код юборамиз';

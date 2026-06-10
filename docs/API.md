@@ -3467,3 +3467,17 @@ Phone-based accounts for the shop mobile app. Web-customer tokens are signed wit
 | POST | /web-customers/{id}/unlink-customer | WEB_CUSTOMER_MANAGE | Remove the link |
 
 The admin dashboard stats payload now also includes `onlineCustomers`.
+
+---
+
+## Phase 5 additions: delivery fees & stock reservation
+
+- `DeliveryRegion` (staff CRUD at `/delivery/regions`) has a `deliveryFee` field.
+- Public `GET /web/delivery/regions` items include `deliveryFee`.
+- Checkout snapshots the region's fee onto the order (`deliveryFee`) and includes it in
+  `totalAmount`; both appear in checkout/status/my-orders responses and the staff order DTO.
+- Converting an order with a fee to an AR invoice adds an explicit "Етказиб бериш" line,
+  keeping the invoice total equal to the order total.
+- Confirming an order reserves stock for each line (reference type `WEB_ORDER`) at the
+  location with the most availability; cancelling or completing the order releases the
+  reservation. Best-effort: insufficient stock never blocks confirmation.

@@ -20,7 +20,8 @@ const form = reactive({
   code: '',
   description: '',
   active: true,
-  sortOrder: 0
+  sortOrder: 0,
+  deliveryFee: 0
 })
 
 async function fetchRegion() {
@@ -33,7 +34,8 @@ async function fetchRegion() {
       code: region.code || '',
       description: region.description || '',
       active: region.active !== false,
-      sortOrder: region.sortOrder || 0
+      sortOrder: region.sortOrder || 0,
+      deliveryFee: region.deliveryFee || 0
     })
   } catch (error) {
     console.error('Failed to fetch region:', error)
@@ -117,6 +119,12 @@ onMounted(() => {
         <div>
           <label class="label">{{ $t('admin.regionForm.sortOrder') }}</label>
           <input v-model.number="form.sortOrder" type="number" class="input" min="0" />
+        </div>
+
+        <div>
+          <label class="label">{{ $t('admin.regionForm.deliveryFee') }}</label>
+          <input v-model.number="form.deliveryFee" type="number" class="input" min="0" :placeholder="'0'" />
+          <p class="mt-1 text-xs text-gray-500">{{ $t('admin.regionForm.deliveryFeeHint') }}</p>
         </div>
 
         <!-- Active -->

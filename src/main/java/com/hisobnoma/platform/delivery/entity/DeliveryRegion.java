@@ -36,6 +36,22 @@ public class DeliveryRegion extends TenantAwareEntity {
     @Builder.Default
     private Integer sortOrder = 0;
 
+    /**
+     * Delivery fee applied to online shop orders in this region.
+     */
+    @Column(name = "delivery_fee", precision = 18, scale = 4, nullable = false)
+    @Builder.Default
+    private java.math.BigDecimal deliveryFee = java.math.BigDecimal.ZERO;
+
+    @PrePersist
+    @PreUpdate
+    void normalizeDeliveryFee() {
+        // The DTO mapper may set null when the field is omitted by clients
+        if (deliveryFee == null) {
+            deliveryFee = java.math.BigDecimal.ZERO;
+        }
+    }
+
     @OneToMany(mappedBy = "region", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<DeliveryVillage> villages = new ArrayList<>();
