@@ -110,6 +110,11 @@ with correct prices and images; dashboard reflects live/draft counts. ~2–3 dev
 
 ## Phase 2 — Customer mobile app: catalog browsing
 
+> **Status: ✅ implemented** (Flutter app in `mobile-shop/`: catalog grid with search/category
+> chips/pagination, product detail with image gallery and phone/Telegram order buttons,
+> uz-Cyrl strings, error/empty/offline states; 21 unit+widget tests green, analyzer clean;
+> build & release checklist in `mobile-shop/README.md`).
+
 **Value delivered:** customers install the store's app on a phone and see the live item list —
 the minimal answer to “item list for mobile app”.
 
