@@ -42,4 +42,7 @@ public interface WebOrderRepository extends JpaRepository<WebOrder, Long> {
                                                   Pageable pageable);
 
     long countByTenantIdAndPhoneNormalized(Long tenantId, String phoneNormalized);
+
+    @Query("SELECT MAX(o.createdAt) FROM WebOrder o WHERE o.tenantId = :tenantId AND o.phoneNormalized = :phone")
+    Instant findLastOrderDate(@Param("tenantId") Long tenantId, @Param("phone") String phone);
 }

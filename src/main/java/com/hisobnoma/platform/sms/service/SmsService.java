@@ -135,6 +135,19 @@ public class SmsService {
         return smsClient.getBalance();
     }
 
+    /**
+     * Current SMS balance in UZS, or {@code -1} when it can't be retrieved.
+     * Used by campaign preview/send to estimate cost coverage.
+     */
+    public double getBalanceAmount() {
+        return smsClient.getBalanceAmount();
+    }
+
+    /** Cost of a single SMS in UZS. */
+    public double smsCost() {
+        return SMS_COST_UZS;
+    }
+
     public Map<String, Object> getStatus(Long smsId, String requestId) {
         return smsClient.getStatus(smsId, requestId);
     }

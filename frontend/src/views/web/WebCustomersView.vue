@@ -100,6 +100,15 @@ async function unlink(webCustomer) {
   }
 }
 
+async function toggleSmsOptOut(webCustomer) {
+  try {
+    await webCustomersApi.setSmsOptOut(webCustomer.id, !webCustomer.smsOptOut)
+    webCustomer.smsOptOut = !webCustomer.smsOptOut
+  } catch (error) {
+    alert(error.response?.data?.message || t('webCustomers.actionError'))
+  }
+}
+
 onMounted(() => fetchCustomers())
 </script>
 
@@ -139,7 +148,8 @@ onMounted(() => fetchCustomers())
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('webCustomers.phone') }}</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('webCustomers.name') }}</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ $t('webCustomers.orders') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('webCustomers.lastLogin') }}</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('webCustomers.lastOrder') }}</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ $t('webCustomers.sms') }}</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('webCustomers.linkedCustomer') }}</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('actions') }}</th>
             </tr>
@@ -152,7 +162,17 @@ onMounted(() => fetchCustomers())
               <td class="px-4 py-3 text-sm text-gray-700">{{ customer.name || '—' }}</td>
               <td class="px-4 py-3 text-center text-sm">{{ customer.orderCount }}</td>
               <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                {{ formatDate(customer.lastLoginAt) }}
+                {{ formatDate(customer.lastOrderAt) }}
+              </td>
+              <td class="px-4 py-3 text-center">
+                <button
+                  @click="toggleSmsOptOut(customer)"
+                  :class="customer.smsOptOut ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'"
+                  class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
+                  :title="customer.smsOptOut ? $t('webCustomers.smsOptedOut') : $t('webCustomers.smsAllowed')"
+                >
+                  {{ customer.smsOptOut ? $t('webCustomers.smsOff') : $t('webCustomers.smsOn') }}
+                </button>
               </td>
               <td class="px-4 py-3 text-sm">
                 <span v-if="customer.customerId" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">

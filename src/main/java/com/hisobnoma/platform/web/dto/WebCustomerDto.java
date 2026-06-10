@@ -25,4 +25,6 @@ public class WebCustomerDto {
     private String customerCode;
     private String customerName;
     private long orderCount;
+    private Instant lastOrderAt;
+    private boolean smsOptOut;
 }

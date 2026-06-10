@@ -19,6 +19,8 @@ import com.hisobnoma.platform.web.entity.WebCatalogStatus;
 import com.hisobnoma.platform.web.entity.WebOrder;
 import com.hisobnoma.platform.web.entity.WebOrderStatus;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
+import com.hisobnoma.platform.web.entity.WebCampaign;
+import com.hisobnoma.platform.web.repository.WebCampaignRepository;
 import com.hisobnoma.platform.web.repository.WebCustomerRepository;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +55,7 @@ public class AdminDashboardService {
     private final WebCatalogItemRepository webCatalogItemRepository;
     private final WebOrderRepository webOrderRepository;
     private final WebCustomerRepository webCustomerRepository;
+    private final WebCampaignRepository webCampaignRepository;
 
     @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
@@ -110,6 +113,7 @@ public class AdminDashboardService {
                 .onlineOrdersToday(getOnlineOrdersTodayCount(tenantId, startOfToday))
                 .onlineCustomers(getOnlineCustomerCount(tenantId))
                 .recentOnlineOrders(getRecentOnlineOrders(tenantId))
+                .lastCampaign(getLastCampaign(tenantId))
 
                 // Activity statistics
                 .totalAuditLogsToday(getAuditLogCount(tenantId, startOfToday))
@@ -340,6 +344,28 @@ public class AdminDashboardService {
         } catch (Exception e) {
             log.warn("Failed to get recent online orders: {}", e.getMessage());
             return new ArrayList<>();
+        }
+    }
+
+    private DashboardStatsDTO.LastCampaignDTO getLastCampaign(Long tenantId) {
+        try {
+            List<WebCampaign> recent = webCampaignRepository.findRecentByTenant(tenantId, PageRequest.of(0, 1));
+            if (recent.isEmpty()) {
+                return null;
+            }
+            WebCampaign c = recent.get(0);
+            return DashboardStatsDTO.LastCampaignDTO.builder()
+                    .id(c.getId())
+                    .name(c.getName())
+                    .status(c.getStatus().name())
+                    .recipientCount(c.getRecipientCount())
+                    .sentCount(c.getSentCount())
+                    .failedCount(c.getFailedCount())
+                    .sentAt(c.getSentAt() != null ? c.getSentAt().toString() : null)
+                    .build();
+        } catch (Exception e) {
+            log.warn("Failed to get last campaign: {}", e.getMessage());
+            return null;
         }
     }
 

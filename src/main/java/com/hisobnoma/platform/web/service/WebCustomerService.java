@@ -63,6 +63,14 @@ public class WebCustomerService {
         return toDto(webCustomerRepository.save(webCustomer));
     }
 
+    @Transactional
+    public WebCustomerDto setSmsOptOut(Long id, boolean optOut) {
+        WebCustomer webCustomer = getEntity(id);
+        webCustomer.setSmsOptOut(optOut);
+        log.info("Web customer {} SMS opt-out set to {}", id, optOut);
+        return toDto(webCustomerRepository.save(webCustomer));
+    }
+
     private WebCustomer getEntity(Long id) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         return webCustomerRepository.findByIdAndTenantId(id, tenantId)
@@ -90,6 +98,9 @@ public class WebCustomerService {
                 .customerName(customerName)
                 .orderCount(orderRepository.countByTenantIdAndPhoneNormalized(
                         webCustomer.getTenantId(), webCustomer.getPhone()))
+                .lastOrderAt(orderRepository.findLastOrderDate(
+                        webCustomer.getTenantId(), webCustomer.getPhone()))
+                .smsOptOut(webCustomer.isSmsOptOut())
                 .build();
     }
 }

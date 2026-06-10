@@ -38,7 +38,8 @@ import {
   WrenchScrewdriverIcon,
   AdjustmentsHorizontalIcon,
   InboxArrowDownIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  MegaphoneIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -119,6 +120,12 @@ const navigation = computed(() => [
     href: '/web-customers',
     icon: UserGroupIcon,
     current: route.path === '/web-customers'
+  },
+  {
+    name: t('nav.webCampaigns'),
+    href: '/web-campaigns',
+    icon: MegaphoneIcon,
+    current: route.path === '/web-campaigns'
   },
   {
     name: t('nav.customers'),

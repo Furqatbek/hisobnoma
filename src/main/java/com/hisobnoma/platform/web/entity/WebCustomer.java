@@ -42,4 +42,11 @@ public class WebCustomer extends TenantAwareEntity {
      */
     @Column(name = "customer_id")
     private Long customerId;
+
+    /**
+     * Customer withdrew SMS marketing consent — excluded from all campaign segments.
+     */
+    @Column(name = "sms_opt_out", nullable = false)
+    @Builder.Default
+    private boolean smsOptOut = false;
 }

@@ -708,7 +708,19 @@ export const webCustomersApi = {
   getAll: (params) => api.get('/web-customers', { params }),
   getById: (id) => api.get(`/web-customers/${id}`),
   linkCustomer: (id, customerId) => api.post(`/web-customers/${id}/link-customer`, { customerId }),
-  unlinkCustomer: (id) => api.post(`/web-customers/${id}/unlink-customer`)
+  unlinkCustomer: (id) => api.post(`/web-customers/${id}/unlink-customer`),
+  setSmsOptOut: (id, optOut) => api.post(`/web-customers/${id}/sms-opt-out`, { optOut })
+}
+
+// Web Campaigns API (online shop SMS marketing) - Backend: /api/v1/web-campaigns
+export const webCampaignsApi = {
+  getAll: (params) => api.get('/web-campaigns', { params }),
+  getById: (id) => api.get(`/web-campaigns/${id}`),
+  create: (data) => api.post('/web-campaigns', data),
+  update: (id, data) => api.put(`/web-campaigns/${id}`, data),
+  remove: (id) => api.delete(`/web-campaigns/${id}`),
+  preview: (id) => api.post(`/web-campaigns/${id}/preview`),
+  send: (id) => api.post(`/web-campaigns/${id}/send`)
 }
 
 // AP Reports API - Backend: /api/v1/ap/reports

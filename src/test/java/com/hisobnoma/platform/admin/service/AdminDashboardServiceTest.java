@@ -67,6 +67,8 @@ class AdminDashboardServiceTest {
     private WebOrderRepository webOrderRepository;
     @Mock
     private WebCustomerRepository webCustomerRepository;
+    @Mock
+    private com.hisobnoma.platform.web.repository.WebCampaignRepository webCampaignRepository;
 
     @InjectMocks
     private AdminDashboardService adminDashboardService;

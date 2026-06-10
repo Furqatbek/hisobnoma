@@ -206,20 +206,29 @@ from the app, with a clean audit trail.
 
 ## Phase 3 — Customer segments + SMS campaigns
 
-> **Status: planned**
+> **Status: ✅ implemented** (5 segments, mandatory cost preview, async single-blast
+> send, per-recipient personal coupons, opt-out, admin UI + dashboard widget)
 
 Staff pick a customer segment ("hasn't ordered in 30 days"), attach an SMS template and
 optionally a coupon batch, preview cost, send, and see the outcome.
 
-### Backend
+### Backend (as built)
 
 | Item | Detail |
 |------|--------|
-| Migration `V60__web_campaigns.sql` | `web_campaigns` (tenant_id, name, segment_type, segment_params JSONB/varchar, sms_template_id, promotion_id NULL, status DRAFT/SENT/FAILED, recipient_count, sent_count, failed_count, cost_estimate, sent_at, created_by); permissions `WEB_CAMPAIGN_VIEW/MANAGE` seeded to ADMIN/SUPER_ADMIN (V48 pattern) |
-| Segment queries (`WebCustomerRepository` + `WebOrderRepository`) | fixed v1 segment types, each a tested JPQL query: `ALL_CUSTOMERS`, `ORDERED_LAST_N_DAYS(n)`, `NO_ORDER_IN_N_DAYS(n)`, `MIN_TOTAL_SPENT(amount)` (completed orders), `NEVER_ORDERED` (logged in, zero orders). No free-form query builder in v1 |
-| `WebCampaignService` | `previewSegment(type, params)` → count + cost (`count × 200 UZS`) + balance check via `SmsService.getBalance()`; `send(campaignId)` → resolve phones, optionally `CouponService.generateCoupons(promotionId, count, …)` one personal code per recipient as `{coupon}` template variable, call `SmsService.sendBulk()` in batches of 100, persist outcome counts. Sending is `@Async` with status transitions DRAFT→SENDING→SENT/FAILED; a campaign can be sent **once** (no accidental double-blast) |
-| `WebCampaignAdminController` `/api/v1/web-campaigns` | CRUD drafts, `POST /{id}/preview`, `POST /{id}/send` (`@RequiresPermission`) |
-| Opt-out | `web_customers ADD COLUMN sms_opt_out BOOLEAN NOT NULL DEFAULT FALSE` (in V60); segments always exclude opted-out customers; staff can toggle it on the customer card (legal hygiene — Uzbekistan advertising law requires consent withdrawal) |
+| Migration `V60__web_campaigns.sql` | `web_campaigns` (segment_type, segment_param NUMERIC, sms_template_id, promotion_id NULL, status, recipient/sent/failed counts, cost_estimate, failure_reason, sent_at); `web_customers.sms_opt_out`; permissions `WEB_CAMPAIGN_VIEW/MANAGE` → ADMIN/SUPER_ADMIN |
+| `WebCampaign` + `WebCampaignStatus` (DRAFT/SENDING/SENT/FAILED) + `WebSegmentType` enums | single numeric `segmentParam` (days or amount) rather than JSON — v1 has one param |
+| Segment queries (`WebCustomerRepository`) | `segmentAll`, `segmentOrderedSince`, `segmentNoOrderSince`, `segmentNeverOrdered`, `segmentMinSpent` — JPQL over web customers joined to orders by normalized phone; **every query excludes `smsOptOut = true`** |
+| `WebCampaignService` | `preview(id)` → count + `count × 200 UZS` + balance (`SmsService.getBalanceAmount()`, unknown balance treated as sufficient); `send(id)` → resolve segment, reject empty, `{coupon}`-without-promotion guard, **balance block before going async**, generate one single-use coupon per recipient via `CouponService.generateCoupons`, set SENDING, hand off to the dispatcher. Only DRAFT is sendable (no double-blast) |
+| `WebCampaignDispatcher` | separate bean so the `@Async` proxy applies (self-invoked async would run sync); sets `TenantContext` explicitly (not propagated to async threads) for template resolution; `sendBulk` → finalize SENT (any success, failed count recorded) / FAILED (all failed or exception) with a `failureReason` |
+| `WebCampaignAdminController` `/api/v1/web-campaigns` | CRUD drafts, `POST /{id}/preview`, `POST /{id}/send`, all `@RequiresPermission` |
+| Opt-out | `WebCustomer.smsOptOut`; `POST /web-customers/{id}/sms-opt-out`; `WebCustomerDto` gains `smsOptOut` + `lastOrderAt` |
+
+**Context note (gotcha solved):** the service uses `SecurityContextHelper` for the tenant
+but the SMS template/balance helpers read `TenantContext`. To avoid the two diverging in
+tests (where only the principal is set), template lookups go through
+`SmsTemplateRepository` with an explicit tenant; only the async dispatcher relies on
+`TenantContext`, which it sets itself.
 
 ### Admin frontend
 
@@ -236,21 +245,30 @@ optionally a coupon batch, preview cost, send, and see the outcome.
 
 - No app changes (SMS arrives out-of-band). Coupon codes from campaigns work via Phase 2.
 
-### Tests
+### Tests (as built)
 
-- **Repository:** each segment query against seeded customers/orders (boundaries: exactly N
-  days, opted-out excluded, tenant isolation).
-- **Service:** preview math; insufficient balance blocks send; coupon-per-recipient
-  generation count matches; double-send rejected; partial SMS failure → FAILED counts
-  recorded, campaign still finalizes; async status transitions.
-- **Controller:** permission matrix (403 without `WEB_CAMPAIGN_MANAGE`), validation.
-- **Full-flow:** create → preview → send (DevSmsClient) → outcome persisted; opted-out
-  customer never receives.
+- **Repository:** `WebCustomerSegmentTest` — all 5 segments partition seeded
+  customers+orders correctly (recent vs sleeping vs never-ordered vs min-spend),
+  opted-out excluded, tenant isolation; uses a backdated `created_at` to age orders.
+- **Service (Mockito):** `WebCampaignServiceTest` (13) — preview count/cost/balance
+  sufficiency (incl. unknown balance), send transitions to SENDING + dispatch payload,
+  one coupon per recipient injected as `{coupon}`, `{coupon}`-without-promotion rejected,
+  insufficient balance blocks before dispatch, empty segment rejected, non-draft rejected,
+  segment routing, param + POS-channel-promotion validation.
+- **Dispatcher (Mockito):** `WebCampaignDispatcherTest` (4) — all-sent → SENT, partial →
+  SENT with failed count, all-failed → FAILED, exception → FAILED with reason.
+- **Full-flow:** `WebCampaignFullFlowTest` (8) — permission matrix (anonymous 403, view-only
+  403 on create), create starts DRAFT, preview excludes opted-out + computes cost, send →
+  SENDING and second send rejected, empty segment rejected, segment-param validation, list.
 - **Manual checklist:** real campaign to 2 test phones with personal coupons; redeem one via
   the app; opt a customer out and confirm exclusion from the next preview.
 
-**Acceptance:** staff can run a targeted, costed, consent-respecting SMS campaign with
-trackable coupon redemptions, without leaving the admin. (~2 days)
+**Implementation note:** async finalization (SENT/FAILED counts) runs in a separate
+transaction the `@Transactional` full-flow test can't observe — same constraint as stock
+reservation — so it's covered by `WebCampaignDispatcherTest` instead.
+
+**Acceptance: met** — staff can run a targeted, costed, consent-respecting SMS campaign with
+trackable coupon redemptions, without leaving the admin.
 
 ---
 

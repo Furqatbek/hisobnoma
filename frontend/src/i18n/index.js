@@ -19,6 +19,7 @@ import supplierHistory from './locales/uz-Cyrl/supplierHistory.json'
 import webCatalog from './locales/uz-Cyrl/webCatalog.json'
 import webOrders from './locales/uz-Cyrl/webOrders.json'
 import webCustomers from './locales/uz-Cyrl/webCustomers.json'
+import webCampaigns from './locales/uz-Cyrl/webCampaigns.json'
 
 const i18n = createI18n({
   legacy: false,
@@ -45,7 +46,8 @@ const i18n = createI18n({
       supplierHistory,
       webCatalog,
       webOrders,
-      webCustomers
+      webCustomers,
+      webCampaigns
     }
   }
 })

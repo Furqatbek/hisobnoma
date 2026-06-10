@@ -3455,7 +3455,44 @@ customer linked to the phone's web account; unknown phones get only the coupon's
 | POST | /web-orders/{id}/convert-to-invoice | WEB_ORDER_MANAGE | Creates an AR invoice (debt) from the order; auto-creates an AR customer from name/phone when not linked. Rejected for cancelled or already-converted orders |
 
 The admin dashboard stats payload now also includes `newOnlineOrders`,
-`onlineOrdersToday` and `recentOnlineOrders` (latest 5).
+`onlineOrdersToday`, `recentOnlineOrders` (latest 5) and `lastCampaign`
+(the most recent SMS campaign's status + sent/failed counts).
+
+The web order detail/list and the customer's own order history also expose
+`couponCode` and `couponDiscount` (Phase 2). Web customers now carry
+`smsOptOut` and `lastOrderAt`.
+
+---
+
+## Web Campaigns (Online Shop SMS marketing)
+
+Staff-only. Build a campaign against a customer segment + SMS template
+(optionally a promotion for personal coupons), preview the cost, then send once.
+No public/mobile endpoints — SMS arrives out of band; campaign coupon codes work
+through the Phase 2 coupon flow.
+
+### Staff endpoints (authenticated)
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /web-campaigns | WEB_CAMPAIGN_VIEW | Paged list, newest first |
+| GET | /web-campaigns/{id} | WEB_CAMPAIGN_VIEW | Campaign detail |
+| POST | /web-campaigns | WEB_CAMPAIGN_MANAGE | Create draft: `{ name, segmentType, segmentParam?, smsTemplateId, promotionId? }` |
+| PUT | /web-campaigns/{id} | WEB_CAMPAIGN_MANAGE | Update a draft (only DRAFT is editable) |
+| DELETE | /web-campaigns/{id} | WEB_CAMPAIGN_MANAGE | Delete a draft |
+| POST | /web-campaigns/{id}/preview | WEB_CAMPAIGN_MANAGE | `{ recipientCount, estimatedCost, smsBalance, sufficientBalance }` — mandatory before sending |
+| POST | /web-campaigns/{id}/send | WEB_CAMPAIGN_MANAGE | Sends once (DRAFT→SENDING, async); resending a non-draft is rejected (400) |
+
+**Segments** (`segmentType`, all exclude SMS-opted-out customers): `ALL_CUSTOMERS`,
+`ORDERED_LAST_N_DAYS` (param = days), `NO_ORDER_IN_N_DAYS` (param = days, has ordered
+before but not recently), `MIN_TOTAL_SPENT` (param = amount, completed orders),
+`NEVER_ORDERED`.
+
+When a `promotionId` is attached, one personal single-use coupon is generated per
+recipient and injected as the `{coupon}` template variable (`{name}` is always
+available). The promotion must target the online shop (WEB or ALL channel). Cost is
+`recipientCount × 200 UZS`; an insufficient known balance blocks the send. Opt-out is
+toggled via `POST /web-customers/{id}/sms-opt-out { optOut }`.
 
 ---
 

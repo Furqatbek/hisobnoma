@@ -53,4 +53,12 @@ public class WebCustomerAdminController {
     public ResponseEntity<ApiResponse<WebCustomerDto>> unlinkCustomer(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(customerService.unlinkCustomer(id)));
     }
+
+    @PostMapping("/{id}/sms-opt-out")
+    @RequiresPermission("WEB_CUSTOMER_MANAGE")
+    public ResponseEntity<ApiResponse<WebCustomerDto>> setSmsOptOut(
+            @PathVariable Long id, @RequestBody Map<String, Boolean> body) {
+        return ResponseEntity.ok(ApiResponse.success(
+                customerService.setSmsOptOut(id, Boolean.TRUE.equals(body.get("optOut")))));
+    }
 }

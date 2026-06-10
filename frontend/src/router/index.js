@@ -176,6 +176,11 @@ const routes = [
         name: 'web-customers',
         component: () => import('@/views/web/WebCustomersView.vue')
       },
+      {
+        path: 'web-campaigns',
+        name: 'web-campaigns',
+        component: () => import('@/views/web/WebCampaignsView.vue')
+      },
       // Customers
       {
         path: 'customers',

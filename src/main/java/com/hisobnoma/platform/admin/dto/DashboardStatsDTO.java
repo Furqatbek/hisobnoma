@@ -55,6 +55,9 @@ public class DashboardStatsDTO {
     private Long onlineCustomers;
     private List<RecentOnlineOrderDTO> recentOnlineOrders;
 
+    // Last SMS campaign (null if none)
+    private LastCampaignDTO lastCampaign;
+
     // Activity statistics
     private Long totalAuditLogsToday;
     private Long failedLoginsToday;
@@ -94,6 +97,20 @@ public class DashboardStatsDTO {
         private BigDecimal totalAmount;
         private String status;
         private String createdAt;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LastCampaignDTO {
+        private Long id;
+        private String name;
+        private String status;
+        private Integer recipientCount;
+        private Integer sentCount;
+        private Integer failedCount;
+        private String sentAt;
     }
 
     @Data
