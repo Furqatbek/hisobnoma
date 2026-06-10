@@ -45,6 +45,10 @@ public class DashboardStatsDTO {
     private BigDecimal cashBalance;
     private BigDecimal bankBalance;
 
+    // Web catalog statistics
+    private Long catalogLiveCount;
+    private Long catalogDraftCount;
+
     // Activity statistics
     private Long totalAuditLogsToday;
     private Long failedLoginsToday;

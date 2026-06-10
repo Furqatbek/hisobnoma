@@ -679,6 +679,21 @@ export const deliveryVillagesApi = {
   delete: (id) => api.delete(`/delivery/villages/${id}`)
 }
 
+// Web Catalog API (online shop management) - Backend: /api/v1/web-catalog
+export const webCatalogApi = {
+  getAll: (params) => api.get('/web-catalog', { params }),
+  getCounts: () => api.get('/web-catalog/counts'),
+  addProducts: (productIds) => api.post('/web-catalog/items', { productIds }),
+  update: (id, data) => api.put(`/web-catalog/items/${id}`, data),
+  remove: (id) => api.delete(`/web-catalog/items/${id}`),
+  publish: (id) => api.post(`/web-catalog/items/${id}/publish`),
+  unpublish: (id) => api.post(`/web-catalog/items/${id}/unpublish`),
+  moveUp: (id) => api.post(`/web-catalog/items/${id}/move-up`),
+  moveDown: (id) => api.post(`/web-catalog/items/${id}/move-down`),
+  publishAll: () => api.post('/web-catalog/publish-all'),
+  unpublishAll: () => api.post('/web-catalog/unpublish-all')
+}
+
 // AP Reports API - Backend: /api/v1/ap/reports
 export const apReportsApi = {
   getAging: () => api.get('/ap/reports/aging'),

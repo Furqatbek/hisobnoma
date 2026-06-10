@@ -539,9 +539,9 @@ class ARInvoiceServiceTest {
     }
 
     @Test
-    void shouldFailToUpdateNonDraftInvoice() {
-        // Given
-        invoice.setStatus(ARInvoiceStatus.PENDING);
+    void shouldFailToUpdateNonEditableInvoice() {
+        // Given: DRAFT and PENDING invoices are editable; PAID is not
+        invoice.setStatus(ARInvoiceStatus.PAID);
         CreateARInvoiceRequest request = CreateARInvoiceRequest.builder()
                 .customerId(1L)
                 .invoiceDate(LocalDate.now())

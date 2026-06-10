@@ -10,7 +10,8 @@ import {
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
   ExclamationTriangleIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  GlobeAltIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -29,7 +30,9 @@ const stats = ref({
   activeUsers: 0,
   newUsersToday: 0,
   totalReceivables: 0,
-  totalPayables: 0
+  totalPayables: 0,
+  catalogLiveCount: 0,
+  catalogDraftCount: 0
 })
 
 onMounted(async () => {
@@ -209,6 +212,28 @@ function getChartItemLabel(item) {
             </div>
           </div>
         </div>
+
+        <!-- Online catalog -->
+        <router-link to="/web-catalog" class="card hover:shadow-md transition-shadow">
+          <div class="card-body">
+            <div class="flex items-center">
+              <div class="flex-shrink-0 p-3 bg-teal-100 rounded-lg">
+                <GlobeAltIcon class="h-6 w-6 text-teal-600" />
+              </div>
+              <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">{{ $t('dashboard.onlineCatalog') }}</p>
+                <p class="text-2xl font-semibold text-gray-900">
+                  {{ formatNumber(stats.catalogLiveCount) }}
+                </p>
+              </div>
+            </div>
+            <div class="mt-4 flex items-center text-sm">
+              <span class="text-green-600">{{ stats.catalogLiveCount }} {{ $t('dashboard.liveItems') }}</span>
+              <span class="mx-2 text-gray-300">|</span>
+              <span class="text-gray-500">{{ stats.catalogDraftCount }} {{ $t('dashboard.draftItems') }}</span>
+            </div>
+          </div>
+        </router-link>
       </div>
 
       <!-- Alerts section -->

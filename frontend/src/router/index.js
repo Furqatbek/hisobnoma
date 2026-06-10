@@ -160,6 +160,12 @@ const routes = [
         name: 'price-lists',
         component: () => import('@/views/pos/PriceListsView.vue')
       },
+      // Web catalog (online shop)
+      {
+        path: 'web-catalog',
+        name: 'web-catalog',
+        component: () => import('@/views/web/WebCatalogView.vue')
+      },
       // Customers
       {
         path: 'customers',

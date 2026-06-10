@@ -70,6 +70,9 @@ This plan is grounded in the current codebase:
 
 ## Phase 1 — Curated catalog: backend + admin UI
 
+> **Status: ✅ implemented** (migration V54, `web` module backend, admin “Веб-каталог” page,
+> dashboard counters, public catalog API; covered by repository/service/full-flow/security tests).
+
 **Value delivered:** staff can build the item list (draft → live); a public JSON API serves live
 items — the contract the mobile app will be built against.
 

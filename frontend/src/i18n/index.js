@@ -16,6 +16,7 @@ import enums from './locales/uz-Cyrl/enums.json'
 import customerHistory from './locales/uz-Cyrl/customerHistory.json'
 import employeeHistory from './locales/uz-Cyrl/employeeHistory.json'
 import supplierHistory from './locales/uz-Cyrl/supplierHistory.json'
+import webCatalog from './locales/uz-Cyrl/webCatalog.json'
 
 const i18n = createI18n({
   legacy: false,
@@ -39,7 +40,8 @@ const i18n = createI18n({
       enums,
       customerHistory,
       employeeHistory,
-      supplierHistory
+      supplierHistory,
+      webCatalog
     }
   }
 })

@@ -42,6 +42,27 @@ class SecurityConfigIntegrationTest {
     }
 
     @Test
+    void publicEndpoint_webCatalog_accessibleWithoutToken() throws Exception {
+        // /api/v1/web/** is whitelisted for the online shop (mobile app);
+        // the catalog list must be readable anonymously.
+        mockMvc.perform(get("/api/v1/web/catalog/products"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void publicEndpoint_webCatalogCategories_accessibleWithoutToken() throws Exception {
+        mockMvc.perform(get("/api/v1/web/catalog/categories"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void protectedEndpoint_webCatalogAdmin_noToken_returns403() throws Exception {
+        // Staff catalog management is NOT under the public /api/v1/web/** prefix
+        mockMvc.perform(get("/api/v1/web-catalog"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void protectedEndpoint_noToken_returns403() throws Exception {
         // Plan says 401, but SecurityConfig with stateless JWT returns 403 by default
         mockMvc.perform(get("/api/v1/users"))

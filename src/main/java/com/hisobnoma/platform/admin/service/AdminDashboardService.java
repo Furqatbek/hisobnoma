@@ -15,6 +15,8 @@ import com.hisobnoma.platform.inventory.repository.ProductRepository;
 import com.hisobnoma.platform.inventory.repository.PurchaseOrderRepository;
 import com.hisobnoma.platform.inventory.repository.StockRepository;
 import com.hisobnoma.platform.pos.repository.POSTransactionRepository;
+import com.hisobnoma.platform.web.entity.WebCatalogStatus;
+import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -44,6 +46,7 @@ public class AdminDashboardService {
     private final ARInvoiceRepository arInvoiceRepository;
     private final APInvoiceRepository apInvoiceRepository;
     private final BankAccountRepository bankAccountRepository;
+    private final WebCatalogItemRepository webCatalogItemRepository;
 
     @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
@@ -91,6 +94,10 @@ public class AdminDashboardService {
                 .totalPayables(getPayables(tenantId))
                 .cashBalance(getCashBalance(tenantId))
                 .bankBalance(getBankBalance(tenantId))
+
+                // Web catalog statistics
+                .catalogLiveCount(getCatalogCount(tenantId, WebCatalogStatus.LIVE))
+                .catalogDraftCount(getCatalogCount(tenantId, WebCatalogStatus.DRAFT))
 
                 // Activity statistics
                 .totalAuditLogsToday(getAuditLogCount(tenantId, startOfToday))
@@ -260,6 +267,17 @@ public class AdminDashboardService {
         } catch (Exception e) {
             log.error("Failed to get bank balance for tenant {}: {}", tenantId, e.getMessage(), e);
             return BigDecimal.ZERO;
+        }
+    }
+
+    // ---- Web catalog stats ----
+
+    private Long getCatalogCount(Long tenantId, WebCatalogStatus status) {
+        try {
+            return webCatalogItemRepository.countByTenantIdAndStatus(tenantId, status);
+        } catch (Exception e) {
+            log.warn("Failed to get web catalog count: {}", e.getMessage());
+            return 0L;
         }
     }
 

@@ -12,6 +12,8 @@ import com.hisobnoma.platform.inventory.repository.ProductRepository;
 import com.hisobnoma.platform.inventory.repository.PurchaseOrderRepository;
 import com.hisobnoma.platform.inventory.repository.StockRepository;
 import com.hisobnoma.platform.pos.repository.POSTransactionRepository;
+import com.hisobnoma.platform.web.entity.WebCatalogStatus;
+import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,6 +57,8 @@ class AdminDashboardServiceTest {
     private APInvoiceRepository apInvoiceRepository;
     @Mock
     private BankAccountRepository bankAccountRepository;
+    @Mock
+    private WebCatalogItemRepository webCatalogItemRepository;
 
     @InjectMocks
     private AdminDashboardService adminDashboardService;
@@ -115,6 +119,11 @@ class AdminDashboardServiceTest {
         when(auditLogRepository.findByTenantId(eq(TENANT_ID), any()))
                 .thenReturn(new PageImpl<>(Collections.emptyList()));
 
+        when(webCatalogItemRepository.countByTenantIdAndStatus(TENANT_ID, WebCatalogStatus.LIVE))
+                .thenReturn(4L);
+        when(webCatalogItemRepository.countByTenantIdAndStatus(TENANT_ID, WebCatalogStatus.DRAFT))
+                .thenReturn(2L);
+
         // When
         DashboardStatsDTO result = adminDashboardService.getDashboardStats();
 
@@ -124,6 +133,8 @@ class AdminDashboardServiceTest {
         assertTrue(result.getTotalProducts() > 0);
         assertTrue(result.getTotalSalesToday().compareTo(BigDecimal.ZERO) > 0);
         assertTrue(result.getLowStockProducts() > 0);
+        assertEquals(4L, result.getCatalogLiveCount());
+        assertEquals(2L, result.getCatalogDraftCount());
     }
 
     @Test

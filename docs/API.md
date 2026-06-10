@@ -3346,3 +3346,62 @@ Delivery address management for POS. Full documentation: [DELIVERY_MODULE_API.md
 ### POS Integration
 
 POS transactions now accept optional `deliveryRegionId` and `deliveryVillageId` fields. The backend resolves and stores region/village names denormalized on the transaction.
+
+---
+
+## Web Catalog (Online Shop) APIs
+
+The web catalog is the curated **draft/live item list** shown in the store's customer mobile app.
+Staff manage the list through authenticated endpoints; the mobile app reads the live list through
+public (anonymous) endpoints. See `docs/WEB_SHOP_PLAN.md` for the full roadmap.
+
+### Public endpoints (no authentication — mobile app contract)
+
+These live under the whitelisted `/api/v1/web/**` prefix. Tenant is resolved from the optional
+`X-Tenant-ID` header (defaults to `1`). **Backward compatibility rule:** changes to these
+endpoints must be additive only — installed mobile apps cannot be force-updated.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /web/catalog/products | Paged list of LIVE items. Params: `search`, `categoryId`, `page`, `size` |
+| GET | /web/catalog/products/{id} | Single LIVE item detail (404 for draft/hidden items) |
+| GET | /web/catalog/categories | Categories that contain at least one LIVE item |
+
+Public product payload (customer-safe fields only — never cost price, wholesale price or
+stock quantities):
+```json
+{
+  "id": 1,
+  "name": "Cola Bottle",
+  "shortDescription": "0.5L",
+  "description": "…",
+  "price": 12000.0,
+  "currency": "UZS",
+  "categoryId": 3,
+  "categoryName": "Drinks",
+  "brandName": "Coca-Cola",
+  "unitName": "Pieces",
+  "inStock": true,
+  "imageUrl": "/uploads/products/1/main.jpg",
+  "images": ["/uploads/products/1/main.jpg"]
+}
+```
+
+### Staff endpoints (authenticated)
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /web-catalog | WEB_CATALOG_VIEW | Paged admin list (all items, drafts included). Param: `search` |
+| GET | /web-catalog/counts | WEB_CATALOG_VIEW | `{ live, draft, total }` counters |
+| POST | /web-catalog/items | WEB_CATALOG_MANAGE | Add products: `{ "productIds": [1, 2] }`. Existing products are skipped; new items start as DRAFT |
+| PUT | /web-catalog/items/{id} | WEB_CATALOG_MANAGE | Set overrides: `{ "displayName": "…", "priceOverride": 9999.5 }` (null clears) |
+| DELETE | /web-catalog/items/{id} | WEB_CATALOG_MANAGE | Remove item from the catalog |
+| POST | /web-catalog/items/{id}/publish | WEB_CATALOG_MANAGE | Set status LIVE (rejected if product inactive/non-sellable) |
+| POST | /web-catalog/items/{id}/unpublish | WEB_CATALOG_MANAGE | Set status DRAFT |
+| POST | /web-catalog/items/{id}/move-up | WEB_CATALOG_MANAGE | Swap sort order with the item above |
+| POST | /web-catalog/items/{id}/move-down | WEB_CATALOG_MANAGE | Swap sort order with the item below |
+| POST | /web-catalog/publish-all | WEB_CATALOG_MANAGE | Publish all valid drafts; returns count |
+| POST | /web-catalog/unpublish-all | WEB_CATALOG_MANAGE | Hide all live items; returns count |
+
+The admin dashboard stats payload (`GET /admin/dashboard/stats`) now includes
+`catalogLiveCount` and `catalogDraftCount`.
