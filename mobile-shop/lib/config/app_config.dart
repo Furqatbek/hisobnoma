@@ -14,7 +14,7 @@ class AppConfig {
   static const String apiBaseUrl = String.fromEnvironment(
     'SHOP_API_BASE_URL',
     // Android emulator reaches the host machine's localhost via 10.0.2.2.
-    defaultValue: kDebugMode ? 'http://10.0.2.2:8080' : '',
+    defaultValue: kDebugMode ? 'http://localhost:8080' : '',
   );
 
   /// Tenant served by this app build (sent as X-Tenant-ID).
