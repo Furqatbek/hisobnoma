@@ -38,6 +38,7 @@ public interface PromotionMapper {
     @Mapping(target = "coupons", ignore = true)
     @Mapping(target = "active", constant = "true")
     @Mapping(target = "currentUses", constant = "0")
+    @Mapping(target = "channel", source = "channel", defaultValue = "POS")
     Promotion toEntity(CreatePromotionRequest request);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)

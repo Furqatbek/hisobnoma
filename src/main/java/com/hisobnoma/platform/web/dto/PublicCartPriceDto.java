@@ -6,32 +6,31 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.List;
 
 /**
- * Customer-facing view of an order (checkout response and status lookup).
+ * Server-computed cart pricing shown to the customer before checkout.
+ * Exposes only promotion names — never conditions or usage counters.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PublicOrderDto {
+public class PublicCartPriceDto {
 
-    private String orderNumber;
-    private String status;
-    private BigDecimal deliveryFee;
-    private BigDecimal discountTotal;
-    private BigDecimal totalAmount;
-    private String currency;
-    private Instant createdAt;
     private List<Line> lines;
+    private BigDecimal subtotal;
+    private BigDecimal discountTotal;
+    private BigDecimal total;
+    private String currency;
+    private List<String> appliedPromotions;
 
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Line {
+        private Long catalogItemId;
         private String productName;
         private BigDecimal quantity;
         private BigDecimal unitPrice;

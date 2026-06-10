@@ -18,6 +18,7 @@ import com.hisobnoma.platform.web.repository.WebOrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -39,6 +40,7 @@ class WebOrderPublicServiceTest {
     @Mock private DeliveryVillageRepository villageRepository;
     @Mock private CheckoutRateLimiter rateLimiter;
     @Mock private TelegramNotificationService telegramNotificationService;
+    @Mock private WebPricingService pricingService;
 
     @InjectMocks
     private WebOrderPublicService service;
@@ -49,6 +51,15 @@ class WebOrderPublicServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Default: no promotions apply — checkout keeps undiscounted totals
+        lenient().when(pricingService.priceResolved(anyList(), anyLong(), anyString()))
+                .thenAnswer(inv -> {
+                    List<WebPricingService.PricedLine> lines = inv.getArgument(0);
+                    BigDecimal subtotal = lines.stream()
+                            .map(WebPricingService.PricedLine::lineTotal)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    return new WebPricingService.CartPrice(lines, subtotal, BigDecimal.ZERO, List.of());
+                });
         Product product = Product.builder()
                 .sku("SKU-001").name("Cola")
                 .sellingPrice(new BigDecimal("12000"))
@@ -100,6 +111,49 @@ class WebOrderPublicServiceTest {
         PublicOrderDto dto = service.checkout(checkoutRequest(BigDecimal.ONE), "1.2.3.4", null);
 
         assertEquals(0, new BigDecimal("9999").compareTo(dto.getTotalAmount()));
+    }
+
+    @Test
+    void checkout_appliesPromotionDiscountFromEngine() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(pricingService.priceResolved(anyList(), anyLong(), anyString()))
+                .thenAnswer(inv -> {
+                    List<WebPricingService.PricedLine> lines = inv.getArgument(0);
+                    return new WebPricingService.CartPrice(lines, new BigDecimal("36000"),
+                            new BigDecimal("3600"),
+                            List.of(com.hisobnoma.platform.pos.dto.PriceCalculationResult.AppliedPromotion.builder()
+                                    .promotionCode("WEB10").promotionName("10% off")
+                                    .promotionType("PERCENTAGE_OFF")
+                                    .discountAmount(new BigDecimal("3600"))
+                                    .build()));
+                });
+
+        PublicOrderDto dto = service.checkout(checkoutRequest(new BigDecimal("3")), "1.2.3.4", null);
+
+        assertEquals(0, new BigDecimal("3600").compareTo(dto.getDiscountTotal()));
+        assertEquals(0, new BigDecimal("32400").compareTo(dto.getTotalAmount()));
+
+        ArgumentCaptor<WebOrder> captor = ArgumentCaptor.forClass(WebOrder.class);
+        verify(orderRepository).save(captor.capture());
+        assertEquals("WEB10", captor.getValue().getAppliedPromotions());
+        // Line snapshots stay at full price — the discount lives at order level
+        assertEquals(0, new BigDecimal("12000").compareTo(captor.getValue().getLines().get(0).getUnitPrice()));
+    }
+
+    @Test
+    void checkout_promotionEngineFailureNeverBlocksCheckout() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(pricingService.priceResolved(anyList(), anyLong(), anyString()))
+                .thenThrow(new RuntimeException("engine down"));
+
+        PublicOrderDto dto = service.checkout(checkoutRequest(new BigDecimal("3")), "1.2.3.4", null);
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(dto.getDiscountTotal()));
+        assertEquals(0, new BigDecimal("36000").compareTo(dto.getTotalAmount()));
     }
 
     @Test

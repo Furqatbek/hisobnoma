@@ -39,6 +39,9 @@ class WebCatalogServiceTest {
     @Mock
     private SecurityContextHelper securityContextHelper;
 
+    @Mock
+    private WebPromotionBadgeService badgeService;
+
     @InjectMocks
     private WebCatalogService service;
 

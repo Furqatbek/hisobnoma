@@ -51,6 +51,7 @@ class WebOrderServiceTest {
     @Mock private StockRepository stockRepository;
     @Mock private StockReservationRepository stockReservationRepository;
     @Mock private StockService stockService;
+    @Mock private com.hisobnoma.platform.pos.repository.PromotionRepository promotionRepository;
 
     @InjectMocks
     private WebOrderService service;
@@ -87,6 +88,64 @@ class WebOrderServiceTest {
 
     private UpdateOrderStatusRequest statusRequest(WebOrderStatus status, String reason) {
         return UpdateOrderStatusRequest.builder().status(status).reason(reason).build();
+    }
+
+    // ---- promotion usage tracking ----
+
+    @Test
+    void updateStatus_confirmIncrementsPromotionUsage() {
+        order.setAppliedPromotions("WEB10,SUMMER");
+        com.hisobnoma.platform.pos.entity.Promotion promo = com.hisobnoma.platform.pos.entity.Promotion.builder()
+                .code("WEB10").name("10% off")
+                .type(com.hisobnoma.platform.pos.enums.PromotionType.PERCENTAGE_OFF)
+                .currentUses(4).tenantId(TENANT_ID)
+                .build();
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(promotionRepository.findByCodeAndTenantId("WEB10", TENANT_ID)).thenReturn(Optional.of(promo));
+        // The second code no longer exists — must be skipped silently
+        when(promotionRepository.findByCodeAndTenantId("SUMMER", TENANT_ID)).thenReturn(Optional.empty());
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.CONFIRMED, null));
+
+        assertEquals(5, promo.getCurrentUses());
+        verify(promotionRepository).save(promo);
+    }
+
+    @Test
+    void updateStatus_cancelAfterConfirmReleasesPromotionUsage() {
+        order.setStatus(WebOrderStatus.CONFIRMED);
+        order.setAppliedPromotions("WEB10");
+        com.hisobnoma.platform.pos.entity.Promotion promo = com.hisobnoma.platform.pos.entity.Promotion.builder()
+                .code("WEB10").name("10% off")
+                .type(com.hisobnoma.platform.pos.enums.PromotionType.PERCENTAGE_OFF)
+                .currentUses(5).tenantId(TENANT_ID)
+                .build();
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(promotionRepository.findByCodeAndTenantId("WEB10", TENANT_ID)).thenReturn(Optional.of(promo));
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.CANCELLED, "Мижоз бекор қилди"));
+
+        assertEquals(4, promo.getCurrentUses());
+    }
+
+    @Test
+    void updateStatus_completeDoesNotReleasePromotionUsage() {
+        order.setStatus(WebOrderStatus.DELIVERING);
+        order.setAppliedPromotions("WEB10");
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.COMPLETED, null));
+
+        verifyNoInteractions(promotionRepository);
+    }
+
+    @Test
+    void updateStatus_ordersWithoutPromotionsTouchNothing() {
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.CONFIRMED, null));
+
+        verifyNoInteractions(promotionRepository);
     }
 
     // ---- status transitions ----
@@ -265,6 +324,43 @@ class WebOrderServiceTest {
         assertEquals(0, new BigDecimal("5000").compareTo(feeLine.getUnitPrice()));
         assertEquals(0, BigDecimal.ONE.compareTo(feeLine.getQuantity()));
         assertEquals(0, new BigDecimal("41000").compareTo(request.getTotalAmount()));
+    }
+
+    @Test
+    void convert_passesPromotionDiscountAsHeaderDiscount() {
+        order.setCustomerId(88L);
+        order.setDiscountTotal(new BigDecimal("3600"));
+        order.setAppliedPromotions("WEB10");
+        order.recalculateTotal(); // 36000 - 3600 = 32400
+        when(arInvoiceService.createInvoice(any(CreateARInvoiceRequest.class)))
+                .thenReturn(ARInvoiceDto.builder().id(62L).invoiceNumber("INV-000062").build());
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.convertToInvoice(1L);
+
+        ArgumentCaptor<CreateARInvoiceRequest> captor =
+                ArgumentCaptor.forClass(CreateARInvoiceRequest.class);
+        verify(arInvoiceService).createInvoice(captor.capture());
+        CreateARInvoiceRequest request = captor.getValue();
+        // Lines stay at full snapshot price; the discount travels in the header
+        assertEquals(0, new BigDecimal("12000").compareTo(request.getLines().get(0).getUnitPrice()));
+        assertEquals(0, new BigDecimal("3600").compareTo(request.getDiscountAmount()));
+        assertEquals(0, new BigDecimal("32400").compareTo(request.getTotalAmount()));
+    }
+
+    @Test
+    void convert_withoutDiscountSendsNullHeaderDiscount() {
+        order.setCustomerId(88L);
+        when(arInvoiceService.createInvoice(any(CreateARInvoiceRequest.class)))
+                .thenReturn(ARInvoiceDto.builder().id(63L).invoiceNumber("INV-000063").build());
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.convertToInvoice(1L);
+
+        ArgumentCaptor<CreateARInvoiceRequest> captor =
+                ArgumentCaptor.forClass(CreateARInvoiceRequest.class);
+        verify(arInvoiceService).createInvoice(captor.capture());
+        assertNull(captor.getValue().getDiscountAmount());
     }
 
     @Test

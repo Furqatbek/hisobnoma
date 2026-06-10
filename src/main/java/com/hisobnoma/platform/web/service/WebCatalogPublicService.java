@@ -37,6 +37,7 @@ public class WebCatalogPublicService {
 
     private final WebCatalogItemRepository catalogRepository;
     private final StockRepository stockRepository;
+    private final WebPromotionBadgeService badgeService;
 
     @Transactional(readOnly = true)
     public Page<PublicCatalogProductDto> getProducts(String search, Long categoryId, Pageable pageable) {
@@ -119,12 +120,18 @@ public class WebCatalogPublicService {
                 ? p.getPrimaryImageUrl()
                 : (images.isEmpty() ? null : images.get(0));
 
+        WebPromotionBadgeService.Badge badge = badgeService
+                .badgeFor(item.getTenantId(), item.getId(), p.getId(), item.getEffectivePrice())
+                .orElse(null);
+
         return PublicCatalogProductDto.builder()
                 .id(item.getId())
                 .name(item.getEffectiveName())
                 .shortDescription(p.getShortDescription())
                 .description(p.getDescription())
                 .price(item.getEffectivePrice())
+                .salePrice(badge != null ? badge.salePrice() : null)
+                .promotionLabel(badge != null ? badge.label() : null)
                 .currency(CURRENCY)
                 .categoryId(p.getCategory() != null ? p.getCategory().getId() : null)
                 .categoryName(p.getCategory() != null ? p.getCategory().getName() : null)

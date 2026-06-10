@@ -45,6 +45,22 @@ void main() {
       expect(product.inStock, false);
       expect(product.imageUrl, isNull);
       expect(product.images, isEmpty);
+      expect(product.salePrice, isNull);
+      expect(product.promotionLabel, isNull);
+    });
+
+    test('maps promotion sale price and label', () {
+      final product = PublicProduct.fromJson({
+        'id': 3,
+        'name': 'Cola',
+        'price': 12000,
+        'salePrice': 10200.0,
+        'promotionLabel': '-15%',
+        'inStock': true,
+      });
+
+      expect(product.salePrice, 10200.0);
+      expect(product.promotionLabel, '-15%');
     });
   });
 

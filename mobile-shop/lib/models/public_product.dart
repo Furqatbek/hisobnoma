@@ -6,6 +6,13 @@ class PublicProduct {
   final String? shortDescription;
   final String? description;
   final double price;
+
+  /// Discounted price when a shop promotion applies; null otherwise.
+  final double? salePrice;
+
+  /// Short badge label like "-15%"; null when no promotion applies.
+  final String? promotionLabel;
+
   final String currency;
   final int? categoryId;
   final String? categoryName;
@@ -21,6 +28,8 @@ class PublicProduct {
     this.shortDescription,
     this.description,
     required this.price,
+    this.salePrice,
+    this.promotionLabel,
     required this.currency,
     this.categoryId,
     this.categoryName,
@@ -38,6 +47,8 @@ class PublicProduct {
       shortDescription: json['shortDescription'] as String?,
       description: json['description'] as String?,
       price: (json['price'] as num?)?.toDouble() ?? 0,
+      salePrice: (json['salePrice'] as num?)?.toDouble(),
+      promotionLabel: json['promotionLabel'] as String?,
       currency: json['currency'] as String? ?? 'UZS',
       categoryId: (json['categoryId'] as num?)?.toInt(),
       categoryName: json['categoryName'] as String?,

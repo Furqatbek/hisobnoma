@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.pos.entity;
 
 import com.hisobnoma.platform.common.entity.TenantAwareEntity;
+import com.hisobnoma.platform.pos.enums.PromotionChannel;
 import com.hisobnoma.platform.pos.enums.PromotionScope;
 import com.hisobnoma.platform.pos.enums.PromotionType;
 import jakarta.persistence.*;
@@ -48,6 +49,14 @@ public class Promotion extends TenantAwareEntity {
     @Column(nullable = false, length = 20)
     @Builder.Default
     private PromotionScope scope = PromotionScope.ORDER;
+
+    /**
+     * Sales channel: POS terminal only (default), online shop only, or both.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private PromotionChannel channel = PromotionChannel.POS;
 
     /**
      * Priority for stacking (higher = applied first)
@@ -195,6 +204,13 @@ public class Promotion extends TenantAwareEntity {
 
     public void incrementUsage() {
         this.currentUses = (this.currentUses == null ? 0 : this.currentUses) + 1;
+    }
+
+    /**
+     * Releases one recorded usage (e.g. when a confirmed online order is cancelled).
+     */
+    public void decrementUsage() {
+        this.currentUses = Math.max(0, (this.currentUses == null ? 0 : this.currentUses) - 1);
     }
 
     public void addCondition(PromotionCondition condition) {

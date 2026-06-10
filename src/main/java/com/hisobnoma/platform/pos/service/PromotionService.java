@@ -9,6 +9,7 @@ import com.hisobnoma.platform.inventory.entity.Product;
 import com.hisobnoma.platform.inventory.repository.ProductRepository;
 import com.hisobnoma.platform.pos.dto.*;
 import com.hisobnoma.platform.pos.entity.*;
+import com.hisobnoma.platform.pos.enums.PromotionChannel;
 import com.hisobnoma.platform.pos.mapper.PromotionMapper;
 import com.hisobnoma.platform.pos.repository.*;
 import lombok.*;
@@ -324,7 +325,7 @@ public class PromotionService {
     // ==================== Promotion Engine ====================
 
     /**
-     * Apply automatic promotions to items.
+     * Apply automatic POS promotions to items (staff context).
      */
     @Transactional(readOnly = true)
     public PromotionApplicationResult applyPromotions(
@@ -332,13 +333,30 @@ public class PromotionService {
             BigDecimal orderTotal,
             Long customerId,
             Long locationId) {
+        return applyPromotions(items, orderTotal, customerId, locationId,
+                securityContextHelper.getCurrentTenantId(), PromotionChannel.POS);
+    }
 
-        Long tenantId = securityContextHelper.getCurrentTenantId();
+    /**
+     * Apply automatic promotions for an explicit tenant and sales channel.
+     * Used by the online shop where there is no authenticated staff context.
+     */
+    @Transactional(readOnly = true)
+    public PromotionApplicationResult applyPromotions(
+            List<PriceCalculationResult.PriceCalculationItemResult> items,
+            BigDecimal orderTotal,
+            Long customerId,
+            Long locationId,
+            Long tenantId,
+            PromotionChannel channel) {
+
         LocalDate today = LocalDate.now();
         LocalTime now = LocalTime.now();
 
-        // Get active promotions
-        List<Promotion> promotions = promotionRepository.findActivePromotions(tenantId, today, locationId);
+        // Get active promotions for the channel (ALL applies everywhere)
+        List<Promotion> promotions = promotionRepository.findActivePromotionsForChannels(
+                tenantId, today, locationId,
+                List.of(channel, PromotionChannel.ALL));
 
         // Filter by time and stackability
         List<Promotion> applicablePromotions = promotions.stream()
@@ -362,7 +380,7 @@ public class PromotionService {
             }
 
             // Check conditions
-            if (!evaluateConditions(promotion, updatedItems, orderTotal.subtract(totalDiscount), customerId)) {
+            if (!evaluateConditions(promotion, updatedItems, orderTotal.subtract(totalDiscount), customerId, tenantId)) {
                 continue;
             }
 
@@ -547,7 +565,7 @@ public class PromotionService {
     }
 
     private boolean evaluateConditions(Promotion promotion, List<PriceCalculationResult.PriceCalculationItemResult> items,
-                                        BigDecimal orderTotal, Long customerId) {
+                                        BigDecimal orderTotal, Long customerId, Long tenantId) {
         List<PromotionCondition> conditions = promotion.getConditions();
         if (conditions == null || conditions.isEmpty()) {
             return true; // No conditions = always applicable
@@ -560,7 +578,7 @@ public class PromotionService {
 
         // Evaluate each condition
         for (PromotionCondition condition : conditions) {
-            boolean met = evaluateCondition(condition, items, orderTotal, customerId);
+            boolean met = evaluateCondition(condition, items, orderTotal, customerId, tenantId);
             if (condition.isRequired() && !met) {
                 return false; // Required condition not met
             }
@@ -573,9 +591,7 @@ public class PromotionService {
     }
 
     private boolean evaluateCondition(PromotionCondition condition, List<PriceCalculationResult.PriceCalculationItemResult> items,
-                                       BigDecimal orderTotal, Long customerId) {
-        Long tenantId = securityContextHelper.getCurrentTenantId();
-
+                                       BigDecimal orderTotal, Long customerId, Long tenantId) {
         switch (condition.getConditionType()) {
             case MINIMUM_PURCHASE:
                 return condition.getThresholdAmount() == null ||

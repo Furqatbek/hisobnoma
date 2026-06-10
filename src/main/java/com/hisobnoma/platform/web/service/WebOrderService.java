@@ -51,6 +51,7 @@ public class WebOrderService {
     private final StockRepository stockRepository;
     private final StockReservationRepository stockReservationRepository;
     private final StockService stockService;
+    private final com.hisobnoma.platform.pos.repository.PromotionRepository promotionRepository;
 
     @Transactional(readOnly = true)
     public Page<WebOrderDto> getOrders(WebOrderStatus status, Pageable pageable) {
@@ -94,9 +95,13 @@ public class WebOrderService {
 
         if (target == WebOrderStatus.CONFIRMED) {
             reserveStock(order);
+            adjustPromotionUsage(order, true);
         } else if (previous != WebOrderStatus.NEW
                 && (target == WebOrderStatus.CANCELLED || target == WebOrderStatus.COMPLETED)) {
             releaseReservations(order);
+            if (target == WebOrderStatus.CANCELLED) {
+                adjustPromotionUsage(order, false);
+            }
         }
 
         log.info("Web order {} status changed to {}", order.getOrderNumber(), target);
@@ -156,6 +161,11 @@ public class WebOrderService {
                 .invoiceDate(LocalDate.now())
                 .dueDate(LocalDate.now().plusDays(30))
                 .totalAmount(order.getTotalAmount())
+                // Promotion discount as a header discount keeps line snapshots
+                // at full price while the invoice total matches the order total
+                .discountAmount(order.getDiscountTotal() != null
+                        && order.getDiscountTotal().compareTo(BigDecimal.ZERO) > 0
+                        ? order.getDiscountTotal() : null)
                 .currency(order.getCurrency())
                 .description("Онлайн буюртма " + order.getOrderNumber())
                 .lines(lines)
@@ -225,6 +235,39 @@ public class WebOrderService {
         }
     }
 
+    // ---- promotion usage ----
+
+    /**
+     * Best-effort usage tracking against promotion max-use limits: counted
+     * when the order is confirmed, released when a confirmed order is
+     * cancelled. A deleted promotion is skipped silently.
+     */
+    private void adjustPromotionUsage(WebOrder order, boolean increment) {
+        if (order.getAppliedPromotions() == null || order.getAppliedPromotions().isBlank()) {
+            return;
+        }
+        for (String code : order.getAppliedPromotions().split(",")) {
+            String trimmed = code.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            try {
+                promotionRepository.findByCodeAndTenantId(trimmed, order.getTenantId())
+                        .ifPresent(promotion -> {
+                            if (increment) {
+                                promotion.incrementUsage();
+                            } else {
+                                promotion.decrementUsage();
+                            }
+                            promotionRepository.save(promotion);
+                        });
+            } catch (Exception e) {
+                log.warn("Web order {}: failed to {} usage for promotion {}: {}",
+                        order.getOrderNumber(), increment ? "increment" : "release", trimmed, e.getMessage());
+            }
+        }
+    }
+
     // ---- internals ----
 
     private Long findLinkedCustomerId(WebOrder order) {
@@ -279,6 +322,8 @@ public class WebOrderService {
                 .deliveryVillageName(order.getDeliveryVillageName())
                 .customerNote(order.getCustomerNote())
                 .deliveryFee(order.getDeliveryFee())
+                .discountTotal(order.getDiscountTotal())
+                .appliedPromotions(order.getAppliedPromotions())
                 .totalAmount(order.getTotalAmount())
                 .currency(order.getCurrency())
                 .customerId(order.getCustomerId())

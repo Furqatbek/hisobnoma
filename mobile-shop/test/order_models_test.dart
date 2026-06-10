@@ -69,6 +69,48 @@ void main() {
     });
   });
 
+  group('PublicOrder discount', () {
+    test('maps discountTotal and defaults to zero', () {
+      final discounted = PublicOrder.fromJson({
+        'orderNumber': 'WO-1',
+        'status': 'NEW',
+        'discountTotal': 3600.0,
+        'totalAmount': 32400.0,
+      });
+      final plain = PublicOrder.fromJson({
+        'orderNumber': 'WO-2',
+        'status': 'NEW',
+        'totalAmount': 36000.0,
+      });
+
+      expect(discounted.discountTotal, 3600.0);
+      expect(plain.discountTotal, 0);
+    });
+  });
+
+  group('CartPrice.fromJson', () {
+    test('maps all fields', () {
+      final price = CartPrice.fromJson({
+        'subtotal': 36000.0,
+        'discountTotal': 3600.0,
+        'total': 32400.0,
+        'appliedPromotions': ['Лето -10%'],
+      });
+
+      expect(price.subtotal, 36000.0);
+      expect(price.discountTotal, 3600.0);
+      expect(price.total, 32400.0);
+      expect(price.appliedPromotions, ['Лето -10%']);
+    });
+
+    test('defaults missing fields', () {
+      final price = CartPrice.fromJson({'subtotal': 100.0, 'total': 100.0});
+
+      expect(price.discountTotal, 0);
+      expect(price.appliedPromotions, isEmpty);
+    });
+  });
+
   group('Delivery models', () {
     test('region and village map id/name/regionId', () {
       final region = DeliveryRegion.fromJson({'id': 1, 'name': 'Тошкент'});

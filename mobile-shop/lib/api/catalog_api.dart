@@ -40,6 +40,9 @@ abstract class CatalogApi {
 
   Future<PublicOrder> submitOrder(OrderRequest request);
 
+  /// Server-side cart pricing preview (promotion discounts).
+  Future<CartPrice> priceCart(List<OrderRequestLine> lines);
+
   Future<PublicOrder> getOrderStatus(String orderNumber, String phone);
 
   Future<void> requestOtp(String phone);
@@ -133,6 +136,14 @@ class HttpCatalogApi implements CatalogApi {
   Future<PublicOrder> submitOrder(OrderRequest request) async {
     final json = await _post('/api/v1/web/orders', request.toJson());
     return PublicOrder.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<CartPrice> priceCart(List<OrderRequestLine> lines) async {
+    final json = await _post('/api/v1/web/cart/price', {
+      'lines': lines.map((l) => l.toJson()).toList(),
+    });
+    return CartPrice.fromJson(json['data'] as Map<String, dynamic>);
   }
 
   @override

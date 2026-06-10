@@ -133,6 +133,58 @@ class PromotionRepositoryTest {
     }
 
     @Test
+    void findActivePromotionsForChannels_filtersByChannel() {
+        LocalDate today = LocalDate.now();
+        Promotion posPromo = persistPromotion("POS-P", "Pos Only", PromotionType.PERCENTAGE_OFF,
+                true, false, null, null, 0, null, 0, null); // default channel POS
+        Promotion webPromo = Promotion.builder()
+                .code("WEB-P").name("Web Only").type(PromotionType.PERCENTAGE_OFF)
+                .channel(com.hisobnoma.platform.pos.enums.PromotionChannel.WEB)
+                .build();
+        webPromo.setTenantId(TENANT_ID);
+        em.persistAndFlush(webPromo);
+        Promotion allPromo = Promotion.builder()
+                .code("ALL-P").name("Everywhere").type(PromotionType.PERCENTAGE_OFF)
+                .channel(com.hisobnoma.platform.pos.enums.PromotionChannel.ALL)
+                .build();
+        allPromo.setTenantId(TENANT_ID);
+        em.persistAndFlush(allPromo);
+
+        List<Promotion> webResult = promotionRepository.findActivePromotionsForChannels(
+                TENANT_ID, today, null,
+                List.of(com.hisobnoma.platform.pos.enums.PromotionChannel.WEB,
+                        com.hisobnoma.platform.pos.enums.PromotionChannel.ALL));
+        List<Promotion> posResult = promotionRepository.findActivePromotionsForChannels(
+                TENANT_ID, today, null,
+                List.of(com.hisobnoma.platform.pos.enums.PromotionChannel.POS,
+                        com.hisobnoma.platform.pos.enums.PromotionChannel.ALL));
+
+        assertEquals(List.of("WEB-P", "ALL-P"),
+                webResult.stream().map(Promotion::getCode).sorted(java.util.Comparator.reverseOrder()).toList());
+        assertEquals(2, posResult.size());
+        assertTrue(posResult.stream().anyMatch(p -> p.getCode().equals("POS-P")));
+        assertTrue(posResult.stream().anyMatch(p -> p.getCode().equals("ALL-P")));
+        assertTrue(posResult.stream().noneMatch(p -> p.getCode().equals("WEB-P")));
+    }
+
+    @Test
+    void findActivePromotionsForChannels_isolatesTenants() {
+        Promotion other = Promotion.builder()
+                .code("OTHER-T").name("Other Tenant").type(PromotionType.PERCENTAGE_OFF)
+                .channel(com.hisobnoma.platform.pos.enums.PromotionChannel.WEB)
+                .build();
+        other.setTenantId(999L);
+        em.persistAndFlush(other);
+
+        List<Promotion> result = promotionRepository.findActivePromotionsForChannels(
+                TENANT_ID, LocalDate.now(), null,
+                List.of(com.hisobnoma.platform.pos.enums.PromotionChannel.WEB,
+                        com.hisobnoma.platform.pos.enums.PromotionChannel.ALL));
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
     void findAllActivePromotions_filtersActiveAndDate() {
         LocalDate today = LocalDate.now();
         persistPromotion("P1", "Active 1", PromotionType.PERCENTAGE_OFF, true, false,

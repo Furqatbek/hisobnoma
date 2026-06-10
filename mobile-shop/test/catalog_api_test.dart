@@ -123,6 +123,40 @@ void main() {
       expect(order.orderNumber, 'WO-000001');
     });
 
+    test('priceCart posts lines and maps the price preview', () async {
+      late http.Request captured;
+      final client = MockClient((request) async {
+        captured = request;
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'subtotal': 36000,
+              'discountTotal': 3600,
+              'total': 32400,
+              'currency': 'UZS',
+              'appliedPromotions': ['10% off'],
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final price = await apiWith(client).priceCart(
+          const [OrderRequestLine(catalogItemId: 1, quantity: 3)]);
+
+      expect(captured.method, 'POST');
+      expect(captured.url.path, '/api/v1/web/cart/price');
+      expect(captured.headers['X-Tenant-ID'], '7');
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect((body['lines'] as List).single['quantity'], 3);
+      expect(price.subtotal, 36000);
+      expect(price.discountTotal, 3600);
+      expect(price.total, 32400);
+      expect(price.appliedPromotions, ['10% off']);
+    });
+
     test('getOrderStatus passes phone as query param', () async {
       late http.Request captured;
       final client = MockClient((request) async {

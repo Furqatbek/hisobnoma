@@ -56,11 +56,51 @@ class ProductCard extends StatelessWidget {
                           ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     const Spacer(),
-                    Text(
-                      formatUzs(product.price),
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(color: theme.colorScheme.primary),
-                    ),
+                    if (product.salePrice != null) ...[
+                      Text(
+                        formatUzs(product.price),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.grey,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              formatUzs(product.salePrice),
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          if (product.promotionLabel != null) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                product.promotionLabel!,
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.red.shade700,
+                                    fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ] else
+                      Text(
+                        formatUzs(product.price),
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(color: theme.colorScheme.primary),
+                      ),
                     const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

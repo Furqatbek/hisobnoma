@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -43,6 +44,7 @@ public class WebOrderPublicService {
     private final DeliveryVillageRepository villageRepository;
     private final CheckoutRateLimiter rateLimiter;
     private final TelegramNotificationService telegramNotificationService;
+    private final WebPricingService pricingService;
 
     @Transactional
     public PublicOrderDto checkout(CheckoutRequest request, String sourceIp, String userAgent) {
@@ -67,6 +69,7 @@ public class WebOrderPublicService {
 
         applyDelivery(order, request, tenantId);
 
+        List<WebPricingService.PricedLine> pricedLines = new ArrayList<>();
         for (CheckoutRequest.CheckoutLine lineRequest : request.getLines()) {
             WebCatalogItem catalogItem = catalogRepository
                     .findByIdAndTenantId(lineRequest.getCatalogItemId(), tenantId)
@@ -90,8 +93,11 @@ public class WebOrderPublicService {
                     .unitPrice(unitPrice)
                     .lineTotal(lineTotal)
                     .build());
+            pricedLines.add(new WebPricingService.PricedLine(catalogItem.getId(), product.getId(),
+                    catalogItem.getEffectiveName(), lineRequest.getQuantity(), unitPrice, lineTotal));
         }
 
+        applyPromotions(order, pricedLines, tenantId, request.getPhone());
         order.recalculateTotal();
         WebOrder saved = orderRepository.save(order);
         log.info("Web order {} created for tenant {} ({} lines, total {})",
@@ -132,6 +138,25 @@ public class WebOrderPublicService {
     private Long resolveTenantId() {
         Long tenantId = TenantContext.getCurrentTenant();
         return tenantId != null ? tenantId : DEFAULT_TENANT_ID;
+    }
+
+    /**
+     * Applies WEB-channel promotions through the shared engine. A failure in
+     * the promotion engine must never block checkout — the customer simply
+     * pays the undiscounted price and the error is logged.
+     */
+    private void applyPromotions(WebOrder order, List<WebPricingService.PricedLine> pricedLines,
+                                 Long tenantId, String phone) {
+        try {
+            WebPricingService.CartPrice price = pricingService.priceResolved(pricedLines, tenantId, phone);
+            order.setDiscountTotal(price.discountTotal());
+            order.setAppliedPromotions(price.joinedPromotionCodes());
+        } catch (Exception e) {
+            log.warn("Promotion application failed for order {} (tenant {}): {}",
+                    order.getOrderNumber(), tenantId, e.getMessage());
+            order.setDiscountTotal(BigDecimal.ZERO);
+            order.setAppliedPromotions(null);
+        }
     }
 
     private void applyDelivery(WebOrder order, CheckoutRequest request, Long tenantId) {
@@ -193,6 +218,7 @@ public class WebOrderPublicService {
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus().name())
                 .deliveryFee(order.getDeliveryFee())
+                .discountTotal(order.getDiscountTotal())
                 .totalAmount(order.getTotalAmount())
                 .currency(order.getCurrency())
                 .createdAt(order.getCreatedAt())

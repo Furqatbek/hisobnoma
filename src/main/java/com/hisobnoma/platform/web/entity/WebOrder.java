@@ -70,6 +70,20 @@ public class WebOrder extends TenantAwareEntity {
     @Builder.Default
     private BigDecimal deliveryFee = BigDecimal.ZERO;
 
+    /**
+     * Total promotion discount snapshotted at checkout time (server-computed).
+     */
+    @Column(name = "discount_total", precision = 18, scale = 4, nullable = false)
+    @Builder.Default
+    private BigDecimal discountTotal = BigDecimal.ZERO;
+
+    /**
+     * Comma-joined codes of the promotions applied at checkout. Used to
+     * increment/release promotion usage on confirm/cancel and shown to staff.
+     */
+    @Column(name = "applied_promotions", length = 500)
+    private String appliedPromotions;
+
     @Column(name = "total_amount", precision = 18, scale = 4, nullable = false)
     @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
@@ -109,9 +123,12 @@ public class WebOrder extends TenantAwareEntity {
     }
 
     public void recalculateTotal() {
-        this.totalAmount = lines.stream()
+        BigDecimal linesTotal = lines.stream()
                 .map(WebOrderLine::getLineTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal discount = discountTotal != null ? discountTotal : BigDecimal.ZERO;
+        // A discount can never push the goods total below zero
+        this.totalAmount = linesTotal.subtract(discount).max(BigDecimal.ZERO)
                 .add(deliveryFee != null ? deliveryFee : BigDecimal.ZERO);
     }
 }

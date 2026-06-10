@@ -1,19 +1,74 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../api/catalog_api.dart';
 import '../l10n/strings.dart';
+import '../models/order.dart';
 import '../util/format.dart';
 import '../widgets/cart_scope.dart';
 import 'checkout_screen.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   final CatalogApi api;
 
   const CartScreen({super.key, required this.api});
 
   @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  Timer? _debounce;
+  String _lastSignature = '';
+  CartPrice? _serverPrice;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  /// Asks the server to price the cart (promotion discounts) whenever its
+  /// contents change. Display only — checkout recomputes everything.
+  void _schedulePriceRefresh(BuildContext context) {
+    final cart = CartScope.of(context);
+    final signature = cart.items
+        .map((i) => '${i.catalogItemId}:${i.quantity}')
+        .join(',');
+    if (signature == _lastSignature) {
+      return;
+    }
+    _lastSignature = signature;
+    _debounce?.cancel();
+    if (cart.isEmpty) {
+      _serverPrice = null;
+      return;
+    }
+    final lines = cart.items
+        .map((i) => OrderRequestLine(
+            catalogItemId: i.catalogItemId, quantity: i.quantity))
+        .toList();
+    _debounce = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final price = await widget.api.priceCart(lines);
+        if (mounted && _lastSignature == signature) {
+          setState(() => _serverPrice = price);
+        }
+      } catch (_) {
+        // Preview is best-effort; keep showing the local subtotal.
+        if (mounted && _lastSignature == signature) {
+          setState(() => _serverPrice = null);
+        }
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cart = CartScope.of(context);
+    _schedulePriceRefresh(context);
+    final discount = _serverPrice?.discountTotal ?? 0;
 
     return Scaffold(
       appBar: AppBar(title: const Text(S.cartTitle)),
@@ -75,12 +130,38 @@ class CartScreen extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (discount > 0) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _serverPrice!.appliedPromotions.isNotEmpty
+                                  ? '${S.discount} (${_serverPrice!.appliedPromotions.join(', ')})'
+                                  : S.discount,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.green),
+                            ),
+                          ),
+                          Text('−${formatUzs(discount)}',
+                              style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                    ],
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(S.total,
                             style: TextStyle(fontSize: 16, color: Colors.grey)),
-                        Text(formatUzs(cart.total),
+                        Text(
+                            formatUzs(discount > 0
+                                ? _serverPrice!.total
+                                : cart.total),
                             style: const TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold)),
                       ],
@@ -91,7 +172,7 @@ class CartScreen extends StatelessWidget {
                       child: FilledButton.icon(
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (_) => CheckoutScreen(api: api)),
+                              builder: (_) => CheckoutScreen(api: widget.api)),
                         ),
                         icon: const Icon(Icons.arrow_forward),
                         label: const Text(S.checkout),

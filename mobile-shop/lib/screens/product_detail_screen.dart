@@ -124,10 +124,42 @@ class _ProductDetailBody extends StatelessWidget {
                         ?.copyWith(color: Colors.grey.shade700)),
               ],
               const SizedBox(height: 12),
+              if (product.salePrice != null) ...[
+                Row(
+                  children: [
+                    Text(
+                      formatUzs(product.price),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: Colors.grey,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                    if (product.promotionLabel != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          product.promotionLabel!,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+              ],
               Row(
                 children: [
                   Text(
-                    formatUzs(product.price),
+                    formatUzs(product.salePrice ?? product.price),
                     style: theme.textTheme.headlineSmall
                         ?.copyWith(color: theme.colorScheme.primary),
                   ),

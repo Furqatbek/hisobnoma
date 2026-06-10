@@ -30,11 +30,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   DeliveryVillage? _selectedVillage;
 
   bool _submitting = false;
+  CartPrice? _serverPrice;
 
   @override
   void initState() {
     super.initState();
     _loadRegions();
+    _loadCartPrice();
     // Pre-fill contact data for logged-in customers.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -65,6 +67,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (mounted) setState(() => _regions = regions);
     } catch (_) {
       // Delivery selects are optional; the form still works without them.
+    }
+  }
+
+  /// Server-side promotion preview; the order totals are recomputed at
+  /// checkout anyway, so a failure here only hides the discount row.
+  Future<void> _loadCartPrice() async {
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    final cart = CartScope.of(context);
+    if (cart.isEmpty) return;
+    final lines = cart.items
+        .map((i) => OrderRequestLine(
+            catalogItemId: i.catalogItemId, quantity: i.quantity))
+        .toList();
+    try {
+      final price = await widget.api.priceCart(lines);
+      if (mounted) setState(() => _serverPrice = price);
+    } catch (_) {
+      // Keep the undiscounted totals.
     }
   }
 
@@ -214,6 +235,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     style: const TextStyle(fontSize: 15)),
               ],
             ),
+            if ((_serverPrice?.discountTotal ?? 0) > 0) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(S.discount,
+                      style: TextStyle(fontSize: 15, color: Colors.green)),
+                  Text('−${formatUzs(_serverPrice!.discountTotal)}',
+                      style: const TextStyle(
+                          fontSize: 15, color: Colors.green)),
+                ],
+              ),
+            ],
             if (_selectedRegion != null && _selectedRegion!.deliveryFee > 0) ...[
               const SizedBox(height: 4),
               Row(
@@ -233,7 +267,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 const Text(S.grandTotal,
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 Text(
-                  formatUzs(cart.total +
+                  // The server preview only overrides the local math when it
+                  // actually found a discount.
+                  formatUzs(((_serverPrice?.discountTotal ?? 0) > 0
+                          ? _serverPrice!.total
+                          : cart.total) +
                       (_selectedRegion?.deliveryFee ?? 0)),
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold),

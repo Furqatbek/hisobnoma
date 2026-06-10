@@ -25,6 +25,12 @@ public class WebCatalogItemDto {
     private BigDecimal basePrice;
     private BigDecimal priceOverride;
     private BigDecimal effectivePrice;
+
+    /**
+     * What the customer currently sees after WEB promotions; null when none apply.
+     */
+    private BigDecimal salePrice;
+    private String promotionLabel;
     private Integer sortOrder;
     private WebCatalogStatus status;
     private String imageUrl;

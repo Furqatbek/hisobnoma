@@ -33,11 +33,35 @@ const form = reactive({
   code: '',
   name: '',
   description: '',
+  type: 'PERCENTAGE_OFF',
+  discountValue: null,
+  channel: 'POS',
   startDate: '',
   endDate: '',
   priority: 0,
   active: true
 })
+
+const promotionTypes = computed(() => [
+  { value: 'PERCENTAGE_OFF', label: t('pos.promotions.typePercentageOff') },
+  { value: 'FIXED_AMOUNT_OFF', label: t('pos.promotions.typeFixedAmountOff') },
+  { value: 'BUY_X_GET_Y', label: t('pos.promotions.typeBuyXGetY') },
+  { value: 'BUNDLE', label: t('pos.promotions.typeBundle') },
+  { value: 'TIERED_DISCOUNT', label: t('pos.promotions.typeTieredDiscount') },
+  { value: 'SPEND_X_GET_Y', label: t('pos.promotions.typeSpendXGetY') },
+  { value: 'FREE_ITEM', label: t('pos.promotions.typeFreeItem') }
+])
+
+const channels = computed(() => [
+  { value: 'POS', label: t('pos.promotions.channelPos') },
+  { value: 'WEB', label: t('pos.promotions.channelWeb') },
+  { value: 'ALL', label: t('pos.promotions.channelAll') }
+])
+
+function channelLabel(channel) {
+  const found = channels.value.find(c => c.value === channel)
+  return found ? found.label : (channel || t('pos.promotions.channelPos'))
+}
 
 // Delete confirmation
 const showDeleteConfirm = ref(false)
@@ -138,6 +162,9 @@ function openModal(promotion = null) {
     form.code = promotion.code || ''
     form.name = promotion.name || ''
     form.description = promotion.description || ''
+    form.type = promotion.type || 'PERCENTAGE_OFF'
+    form.discountValue = promotion.discountValue ?? null
+    form.channel = promotion.channel || 'POS'
     form.startDate = promotion.startDate || ''
     form.endDate = promotion.endDate || ''
     form.priority = promotion.priority || 0
@@ -146,6 +173,9 @@ function openModal(promotion = null) {
     form.code = ''
     form.name = ''
     form.description = ''
+    form.type = 'PERCENTAGE_OFF'
+    form.discountValue = null
+    form.channel = 'POS'
     form.startDate = ''
     form.endDate = ''
     form.priority = 0
@@ -421,6 +451,7 @@ const tabs = computed(() => [
             <tr>
               <th>{{ $t('pos.promotions.code') }}</th>
               <th>{{ $t('pos.promotions.name') }}</th>
+              <th>{{ $t('pos.promotions.channel') }}</th>
               <th>{{ $t('pos.promotions.startDate') }}</th>
               <th>{{ $t('pos.promotions.endDate') }}</th>
               <th>{{ $t('pos.promotions.priority') }}</th>
@@ -437,6 +468,13 @@ const tabs = computed(() => [
                 <td>
                   <p class="font-medium text-sm">{{ promotion.name }}</p>
                   <p v-if="promotion.description" class="text-xs text-gray-400">{{ promotion.description }}</p>
+                </td>
+                <td>
+                  <span :class="['badge text-xs',
+                    promotion.channel === 'WEB' ? 'badge-info'
+                      : promotion.channel === 'ALL' ? 'badge-warning' : 'badge-secondary']">
+                    {{ channelLabel(promotion.channel) }}
+                  </span>
                 </td>
                 <td class="text-sm text-gray-500">{{ formatDate(promotion.startDate) }}</td>
                 <td class="text-sm text-gray-500">{{ formatDate(promotion.endDate) }}</td>
@@ -478,7 +516,7 @@ const tabs = computed(() => [
 
               <!-- Expanded Detail Row -->
               <tr v-if="expandedPromotion === promotion.id">
-                <td colspan="7" class="bg-gray-50 px-6 py-4">
+                <td colspan="8" class="bg-gray-50 px-6 py-4">
                   <div v-if="detailLoading" class="flex items-center justify-center py-8">
                     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                   </div>
@@ -669,6 +707,33 @@ const tabs = computed(() => [
               <div>
                 <label class="label">{{ $t('description') }}</label>
                 <textarea v-model="form.description" rows="2" class="input" :placeholder="$t('pos.promotions.descriptionPlaceholder')"></textarea>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="label">{{ $t('pos.promotions.type') }} <span class="text-red-500">*</span></label>
+                  <select v-model="form.type" class="input">
+                    <option v-for="type in promotionTypes" :key="type.value" :value="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+                <div>
+                  <label class="label">{{ $t('pos.promotions.discountValue') }}</label>
+                  <input v-model.number="form.discountValue" type="number" min="0" step="0.01" class="input" />
+                  <p class="mt-1 text-xs text-gray-400">{{ $t('pos.promotions.discountValueHint') }}</p>
+                </div>
+              </div>
+
+              <div>
+                <label class="label">{{ $t('pos.promotions.channel') }}</label>
+                <div class="flex gap-4">
+                  <label v-for="ch in channels" :key="ch.value" class="flex items-center gap-2 cursor-pointer">
+                    <input v-model="form.channel" type="radio" :value="ch.value"
+                           class="h-4 w-4 text-primary-600 border-gray-300" />
+                    <span class="text-sm text-gray-700">{{ ch.label }}</span>
+                  </label>
+                </div>
               </div>
 
               <div class="grid grid-cols-2 gap-4">

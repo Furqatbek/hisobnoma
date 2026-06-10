@@ -36,6 +36,9 @@ class WebCatalogPublicServiceTest {
     @Mock
     private StockRepository stockRepository;
 
+    @Mock
+    private WebPromotionBadgeService badgeService;
+
     @InjectMocks
     private WebCatalogPublicService service;
 
@@ -80,6 +83,34 @@ class WebCatalogPublicServiceTest {
         assertEquals(new BigDecimal("9999"), page.getContent().get(0).getPrice());
         assertEquals(new BigDecimal("8000"), page.getContent().get(1).getPrice());
         assertEquals("UZS", page.getContent().get(0).getCurrency());
+    }
+
+    @Test
+    void getProducts_mapsSaleBadgeFromBadgeService() {
+        Product p = product(10L, "Cola", new BigDecimal("12000"), false);
+        when(catalogRepository.findVisible(eq(DEFAULT_TENANT_ID), eq(WebCatalogStatus.LIVE), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(item(1L, p, WebCatalogStatus.LIVE))));
+        when(stockRepository.getTotalQuantitiesByTenant(DEFAULT_TENANT_ID)).thenReturn(List.of());
+        when(badgeService.badgeFor(DEFAULT_TENANT_ID, 1L, 10L, new BigDecimal("12000")))
+                .thenReturn(Optional.of(new WebPromotionBadgeService.Badge(new BigDecimal("10200"), "-15%")));
+
+        Page<PublicCatalogProductDto> page = service.getProducts(null, null, PageRequest.of(0, 20));
+
+        assertEquals(new BigDecimal("10200"), page.getContent().get(0).getSalePrice());
+        assertEquals("-15%", page.getContent().get(0).getPromotionLabel());
+    }
+
+    @Test
+    void getProducts_noBadgeLeavesSaleFieldsNull() {
+        Product p = product(10L, "Cola", new BigDecimal("12000"), false);
+        when(catalogRepository.findVisible(eq(DEFAULT_TENANT_ID), eq(WebCatalogStatus.LIVE), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(item(1L, p, WebCatalogStatus.LIVE))));
+        when(stockRepository.getTotalQuantitiesByTenant(DEFAULT_TENANT_ID)).thenReturn(List.of());
+
+        Page<PublicCatalogProductDto> page = service.getProducts(null, null, PageRequest.of(0, 20));
+
+        assertNull(page.getContent().get(0).getSalePrice());
+        assertNull(page.getContent().get(0).getPromotionLabel());
     }
 
     @Test

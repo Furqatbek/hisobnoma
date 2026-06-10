@@ -57,6 +57,7 @@ class S {
 
   static const deliveryFee = 'Етказиб бериш';
   static const grandTotal = 'Жами тўлов';
+  static const discount = 'Чегирма';
 
   // Auth / account
   static const loginTitle = 'Кириш';

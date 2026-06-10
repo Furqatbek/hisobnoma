@@ -34,6 +34,7 @@ public class WebCatalogService {
     private final WebCatalogItemRepository catalogRepository;
     private final ProductRepository productRepository;
     private final SecurityContextHelper securityContextHelper;
+    private final WebPromotionBadgeService badgeService;
 
     @Transactional(readOnly = true)
     public Page<WebCatalogItemDto> getItems(String search, Pageable pageable) {
@@ -185,6 +186,10 @@ public class WebCatalogService {
 
     private WebCatalogItemDto toDto(WebCatalogItem item) {
         Product p = item.getProduct();
+        // Staff sees the same sale price the customer would see in the app
+        WebPromotionBadgeService.Badge badge = badgeService
+                .badgeFor(item.getTenantId(), item.getId(), p.getId(), item.getEffectivePrice())
+                .orElse(null);
         return WebCatalogItemDto.builder()
                 .id(item.getId())
                 .productId(p.getId())
@@ -194,6 +199,8 @@ public class WebCatalogService {
                 .basePrice(p.getSellingPrice())
                 .priceOverride(item.getPriceOverride())
                 .effectivePrice(item.getEffectivePrice())
+                .salePrice(badge != null ? badge.salePrice() : null)
+                .promotionLabel(badge != null ? badge.label() : null)
                 .sortOrder(item.getSortOrder())
                 .status(item.getStatus())
                 .imageUrl(resolvePrimaryImage(p))

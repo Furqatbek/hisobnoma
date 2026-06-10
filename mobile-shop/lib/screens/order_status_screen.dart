@@ -157,6 +157,29 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                         ),
                       ),
                     const Divider(height: 24),
+                    if (order.discountTotal > 0) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(S.discount,
+                              style: TextStyle(color: Colors.green)),
+                          Text('−${formatUzs(order.discountTotal)}',
+                              style: const TextStyle(color: Colors.green)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                    if (order.deliveryFee > 0) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(S.deliveryFee,
+                              style: TextStyle(color: Colors.grey)),
+                          Text(formatUzs(order.deliveryFee)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                    ],
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

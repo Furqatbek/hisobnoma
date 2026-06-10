@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.pos.repository;
 
 import com.hisobnoma.platform.pos.entity.Promotion;
+import com.hisobnoma.platform.pos.enums.PromotionChannel;
 import com.hisobnoma.platform.pos.enums.PromotionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +45,25 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
             @Param("tenantId") Long tenantId,
             @Param("date") LocalDate date,
             @Param("locationId") Long locationId);
+
+    /**
+     * Same as {@link #findActivePromotions} but limited to the given sales
+     * channels (callers pass the requested channel plus ALL).
+     */
+    @Query("SELECT p FROM Promotion p WHERE p.tenantId = :tenantId " +
+           "AND p.active = true " +
+           "AND p.requiresCoupon = false " +
+           "AND p.channel IN :channels " +
+           "AND (p.startDate IS NULL OR p.startDate <= :date) " +
+           "AND (p.endDate IS NULL OR p.endDate >= :date) " +
+           "AND (p.maxUses IS NULL OR p.currentUses < p.maxUses) " +
+           "AND (p.locationId IS NULL OR p.locationId = :locationId) " +
+           "ORDER BY p.priority DESC")
+    List<Promotion> findActivePromotionsForChannels(
+            @Param("tenantId") Long tenantId,
+            @Param("date") LocalDate date,
+            @Param("locationId") Long locationId,
+            @Param("channels") List<PromotionChannel> channels);
 
     @Query("SELECT p FROM Promotion p WHERE p.tenantId = :tenantId " +
            "AND p.active = true " +

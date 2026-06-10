@@ -28,6 +28,26 @@ class FakeCatalogApi implements CatalogApi {
   int productCalls = 0;
   OrderRequest? lastOrderRequest;
 
+  /// Cart price preview returned by [priceCart]; defaults to no discount.
+  CartPrice? cartPrice;
+  bool failPriceCart = false;
+  int priceCartCalls = 0;
+  List<OrderRequestLine>? lastPricedLines;
+
+  @override
+  Future<CartPrice> priceCart(List<OrderRequestLine> lines) async {
+    priceCartCalls++;
+    lastPricedLines = lines;
+    if (failPriceCart) throw ApiException('preview down');
+    if (cartPrice != null) return cartPrice!;
+    double subtotal = 0;
+    for (final line in lines) {
+      final p = products.where((p) => p.id == line.catalogItemId).toList();
+      subtotal += (p.isEmpty ? 0 : p.first.price) * line.quantity;
+    }
+    return CartPrice(subtotal: subtotal, total: subtotal);
+  }
+
   @override
   Future<PageResult<PublicProduct>> getProducts({
     String? search,

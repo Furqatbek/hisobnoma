@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.pos.dto;
 
+import com.hisobnoma.platform.pos.enums.PromotionChannel;
 import com.hisobnoma.platform.pos.enums.PromotionScope;
 import com.hisobnoma.platform.pos.enums.PromotionType;
 import jakarta.validation.constraints.NotBlank;
@@ -36,6 +37,7 @@ public class CreatePromotionRequest {
     private PromotionType type;
 
     private PromotionScope scope;
+    private PromotionChannel channel;
     private Integer priority;
     private BigDecimal discountValue;
     private BigDecimal maxDiscountAmount;

@@ -47,7 +47,6 @@
   "percent": "Фоиз",
   "apply": "Қўллаш",
   "confirm": "Тасдиқлаш",
-
   "sellAsDebt": "Насияга сотиш",
   "confirmDebtSale": "{customer} га {amount} сўм насияга сотишни тасдиқлайсизми?",
   "customerRequiredForDebt": "Насия сотув учун мижоз танлаш шарт",
@@ -65,16 +64,13 @@
   "couponApplyFailed": "Купонни қўллашда хатолик",
   "filterCustomerPlaceholder": "Исм, код ёки телефон...",
   "noCustomersFound": "Мижозлар топилмади",
-
   "deliveryAddress": "Етказиш манзили",
   "noVillagesFound": "Маҳаллалар топилмади",
-
   "selectUom": "Ўлчов бирлигини танланг",
   "baseUnit": "Асосий бирлик",
   "baseUnitDescription": "1 = 1 (асосий)",
   "standard": "стандарт",
   "baseUnitSuffix": "асосий",
-
   "shifts": {
     "title": "Сменалар",
     "subtitle": "Касса сменалари тарихи",
@@ -211,7 +207,21 @@
     "conditionTypePlaceholder": "Шарт тури...",
     "conditionValuePlaceholder": "Шарт қиймати...",
     "actionTypePlaceholder": "Ҳаракат тури...",
-    "actionValuePlaceholder": "Ҳаракат қиймати..."
+    "actionValuePlaceholder": "Ҳаракат қиймати...",
+    "channel": "Сотув канали",
+    "channelPos": "Касса",
+    "channelWeb": "Онлайн дўкон",
+    "channelAll": "Иккаласи",
+    "type": "Акция тури",
+    "discountValue": "Чегирма қиймати",
+    "discountValueHint": "Фоиз тури учун % қиймати, бошқалар учун сумма",
+    "typePercentageOff": "Фоизли чегирма (%)",
+    "typeFixedAmountOff": "Қатъий сумма чегирма",
+    "typeBuyXGetY": "X олиб Y бепул",
+    "typeBundle": "Тўплам нархи",
+    "typeTieredDiscount": "Поғонали чегирма",
+    "typeSpendXGetY": "X сарфлаб Y чегирма",
+    "typeFreeItem": "Бепул маҳсулот"
   },
   "coupons": {
     "title": "Купонлар",

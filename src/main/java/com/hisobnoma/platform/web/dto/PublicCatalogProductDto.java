@@ -24,6 +24,17 @@ public class PublicCatalogProductDto {
     private String shortDescription;
     private String description;
     private BigDecimal price;
+
+    /**
+     * Discounted unit price when a WEB percentage promotion applies; null otherwise.
+     */
+    private BigDecimal salePrice;
+
+    /**
+     * Short badge label like "-15%"; null when no promotion applies.
+     */
+    private String promotionLabel;
+
     private String currency;
     private Long categoryId;
     private String categoryName;

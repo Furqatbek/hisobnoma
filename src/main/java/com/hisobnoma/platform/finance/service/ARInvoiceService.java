@@ -170,6 +170,10 @@ public class ARInvoiceService {
 
             invoice.setLines(lines);
             invoice.setSubtotal(totalAmount.subtract(invoice.getTaxAmount() != null ? invoice.getTaxAmount() : BigDecimal.ZERO));
+            // Header-level discount (e.g. online order promotions) reduces the total
+            BigDecimal headerDiscount = invoice.getDiscountAmount() != null
+                    ? invoice.getDiscountAmount() : BigDecimal.ZERO;
+            totalAmount = totalAmount.subtract(headerDiscount).max(BigDecimal.ZERO);
             invoice.setTotalAmount(totalAmount);
             invoice.setBalanceDue(totalAmount);
         }

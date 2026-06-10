@@ -66,22 +66,26 @@ SMS-OTP customer accounts (`WebCustomer`), staff order inbox, stock reservation,
 
 ## Phase 1 — Promotions in the online shop
 
-> **Status: planned**
+> **Status: ✅ implemented** (channel-scoped promotion engine, catalog sale badges,
+> cart price preview endpoint, checkout discounts, usage tracking on confirm/cancel,
+> header discount on invoice conversion, admin + Flutter UI)
 
 Customers see sale prices in the catalog and automatic discounts at checkout; staff control
 which promotions reach the web channel.
 
-### Backend
+### Backend (as built)
 
 | Item | Detail |
 |------|--------|
-| Migration `V58__promotion_channel.sql` | `ALTER TABLE promotions ADD COLUMN channel VARCHAR(10) NOT NULL DEFAULT 'POS'`; index on `(tenant_id, channel, active)` |
-| `Promotion` entity | add `PromotionChannel channel` enum (POS, WEB, ALL); default POS |
-| `PromotionService.applyPromotions(...)` | add `channel` parameter (overload keeping the old signature → POS) and filter `channel IN (:channel, 'ALL')` |
-| `WebPricingService` (new, `web` package) | thin adapter: maps cart lines (`catalogItemId`, qty) → `PriceCalculationRequest` items (resolving `WebCatalogItem.product.id` and **price-override-aware base prices**: a catalog price override wins over price lists), calls `PricingService` with channel=WEB and the caller's `webCustomerId`-mapped AR customer (nullable), returns a `PublicCartPriceDto` |
-| `POST /api/v1/web/cart/price` (anonymous, rate-limited) | body = same `lines` shape as checkout (+ optional auth header for customer-specific conditions); returns per-line discounts, applied promotion names, subtotal, discount total, grand total. Never exposes promotion internals (conditions, usage counts) |
-| Checkout integration | `WebOrderPublicService.checkout()` calls `WebPricingService`; `web_orders` gains `discount_total` column (in V58); `web_order_lines` gains `discount_amount` + `applied_promotions` (comma-joined codes, snapshot); `recalculateTotal()` subtracts discounts. `Promotion.incrementUsage()` fires on order **confirmation** (consistent with decision 4), released on cancel |
-| `PublicCatalogProductDto` | add `salePrice` (nullable) + `promotionLabel` (nullable, e.g. "−15%"). `WebCatalogPublicService` computes the single best LIVE-channel promotion per product for list/detail views — batched, cached 60s per tenant (`Caffeine`), since the catalog endpoint is the hottest path |
+| Migration `V58__promotion_channel_web_discounts.sql` | `promotions.channel VARCHAR(10) NOT NULL DEFAULT 'POS'` + index `(tenant_id, channel, is_active)`; `web_orders.discount_total NUMERIC(18,4) DEFAULT 0` + `web_orders.applied_promotions VARCHAR(500)` |
+| `PromotionChannel` enum + `Promotion` entity | POS / WEB / ALL, default POS; `decrementUsage()` added for cancellation release |
+| `PromotionService.applyPromotions(...)` | new overload with explicit `tenantId` + `channel` (the security context is unavailable for anonymous web calls); old signature delegates with channel=POS — POS behaviour unchanged. Repository query `findActivePromotionsForChannels` filters `channel IN (:channel, ALL)` |
+| `WebPricingService` (web package) | resolves cart lines against LIVE catalog items (price overrides win as the engine's base price), maps the AR customer linked to the phone's web account (so customer-group / first-purchase conditions work), calls the engine with channel=WEB; discount clamped to subtotal |
+| `POST /api/v1/web/cart/price` (`WebCartPublicController`, anonymous) | same `lines` shape as checkout; optional bearer token personalises conditions (phone from token, never from body); rate-limited 5 calls / 10s per IP (time-bucketed key on the shared `CheckoutRateLimiter`); returns lines, subtotal, discountTotal, total, applied promotion **names only** |
+| Checkout integration | `WebOrderPublicService.checkout()` snapshots `discountTotal` + comma-joined promotion codes on the order; **line snapshots stay at full price** — the discount lives at order level (the engine computes order-level discounts; distributing them per line would invent numbers). `recalculateTotal()` = lines − discount (floor 0) + delivery. Engine failure never blocks checkout (falls back to undiscounted) |
+| Usage tracking | `WebOrderService.updateStatus()`: NEW→CONFIRMED increments usage per applied code (best-effort, missing promo skipped), CONFIRMED/DELIVERING→CANCELLED decrements; COMPLETED never releases |
+| Invoice conversion | order discount travels as the **header** `discountAmount` on the AR invoice (`ARInvoiceService.createInvoice` now subtracts header discount from the computed total) — invoice lines stay at full snapshot prices and totals match exactly, no per-line percent rounding |
+| Catalog badges | `WebPromotionBadgeService` runs the real engine on a single-unit anonymous cart per product (60s in-memory cache keyed by tenant+item+price); only **PERCENTAGE_OFF** promotions badge (the only per-unit-accurate type); `salePrice` + `promotionLabel` ("-15%") on both the public DTO and the staff `WebCatalogItemDto` |
 
 ### Admin frontend
 
@@ -102,28 +106,34 @@ which promotions reach the web channel.
 - Checkout summary: discount row between subtotal and delivery fee; grand total from server
   preview. Success screen + order status show the discount.
 
-### Tests
+### Tests (as built)
 
-- **Repository:** channel filter query, tenant isolation.
-- **POS regression:** existing `PromotionService`/`PricingService` tests must pass
-  unchanged (old `applyPromotions` signature delegates with channel=POS); add cases proving
-  a WEB-only promotion never applies at the POS terminal and `channel=ALL` applies on both.
-- **Service (Mockito):** `WebPricingService` — price-override base price wins; channel
-  filtering (POS-only promo invisible to web); anonymous vs known customer conditions;
-  empty cart; promotion applied at checkout matches preview; usage incremented on confirm,
-  released on cancel.
-- **Controller (standalone MockMvc):** `/web/cart/price` validation (max lines, qty bounds),
-  rate limiting (429).
-- **Full-flow:** seed WEB percentage promo → catalog shows salePrice → preview shows
-  discount → checkout snapshots discounted lines → confirm increments promotion usage →
-  admin order shows discount; POS-channel promo end-to-end invisible to web endpoints.
-- **Flutter:** model mapping for salePrice/promotionLabel; cart price preview rendering;
-  checkout shows discount row (FakeCatalogApi extension).
+- **Repository:** `PromotionRepositoryTest` — channel filter (WEB query excludes POS,
+  POS query excludes WEB, ALL on both), tenant isolation.
+- **POS regression:** `PromotionServiceTest`, `PricingServiceTest`,
+  `PricingControllerFullFlowTest`, `PromotionControllerFullFlowTest`,
+  `ARInvoiceServiceTest` all pass unchanged.
+- **Service (Mockito):** `WebPricingServiceTest` (9) — override-aware base price, WEB
+  channel, AR-customer resolution by phone, discount clamping, draft/unknown rejection,
+  code joining/truncation; `WebPromotionBadgeServiceTest` (8) — percentage-only badges,
+  engine-failure safety, TTL cache + price-change bypass; `WebOrderPublicServiceTest` —
+  discount snapshot + engine-failure fallback; `WebOrderServiceTest` — usage
+  increment/release, COMPLETED keeps usage, header discount on conversion.
+- **Full-flow:** `WebPromotionFullFlowTest` (12) — catalog badge per channel, cart preview
+  (discount, names, validation, 429 burst), checkout discount + code snapshot, staff order
+  fields, confirm/cancel usage round-trip, invoice conversion with matching totals.
+- **Flutter (54 total):** salePrice/promotionLabel mapping, `CartPrice.fromJson`,
+  `priceCart` HTTP contract, cart screen discount row + fallback-on-failure widget tests.
 - **Manual checklist:** create −15% WEB promo in admin → see badge in app → order →
   confirm → numbers match everywhere.
 
-**Acceptance:** a staff-created web promotion is visible in the app and correctly reduces
-the order total, with POS promotions untouched. (~1.5–2 days)
+**Implementation note:** per-line `discount_amount` columns from the original sketch were
+dropped — the engine computes order-level discounts, so the honest snapshot is an
+order-level `discount_total` + promotion codes, with full-price line snapshots everywhere
+(web order lines and invoice lines alike).
+
+**Acceptance: met** — a staff-created web promotion is visible in the app and correctly
+reduces the order total, with POS promotions untouched.
 
 ---
 

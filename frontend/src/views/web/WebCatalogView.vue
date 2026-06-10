@@ -323,9 +323,13 @@ onMounted(() => {
                   class="input text-sm py-1"
                 />
               </td>
-              <!-- Base price -->
+              <!-- Base price (+ current sale price from WEB promotions) -->
               <td class="px-3 py-2 text-right text-sm text-gray-500 whitespace-nowrap">
                 {{ formatPrice(item.basePrice) }}
+                <div v-if="item.salePrice != null" class="text-xs text-green-600 font-medium">
+                  {{ formatPrice(item.salePrice) }}
+                  <span class="ml-1 px-1 py-0.5 bg-green-100 rounded">{{ item.promotionLabel }}</span>
+                </div>
               </td>
               <!-- Price override -->
               <td class="px-3 py-2 text-right">
