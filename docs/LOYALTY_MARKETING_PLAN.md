@@ -357,6 +357,79 @@ creates a rewarded second customer. (~2 days once Firebase exists)
 
 ---
 
+## Phase 6 — Wishlists ("like") + price/restock alerts
+
+> **Status: planned** — 6a (likes, wishlist screen, staff insights) has no external
+> prerequisites and can ship right after Phase 1; 6b (alerts) prefers Phase 5 push,
+> with an SMS fallback behind a paid, off-by-default tenant setting.
+
+Customers tap a heart on any product; their wishlist lives in the profile tab. When a
+wishlisted product gets a web discount or comes back (in stock again / re-published),
+the system notifies them — turning the wishlist into a self-building remarketing list.
+Staff see which products people want, which is exactly the list worth discounting.
+
+### 6a — Backend: wishlist mechanics
+
+| Item | Detail |
+|------|--------|
+| Migration `V63__web_wishlists.sql` | `web_wishlist_items` (tenant_id, web_customer_id → web_customers, catalog_item_id → web_catalog_items, created_at, `last_known_available BOOLEAN`, `last_notified_sale_price NUMERIC(18,4) NULL`, `notified_at TIMESTAMP NULL`); unique `(web_customer_id, catalog_item_id)`; index `(tenant_id, catalog_item_id)` for like counts |
+| `WebWishlistService` | `toggle(webCustomerId, catalogItemId)` (idempotent like/unlike, item must exist for the tenant — DRAFT items allowed, they may come back); `getWishlist(...)` paged, each entry rendered through the existing public catalog mapping (price, salePrice/promotionLabel via `WebPromotionBadgeService`, inStock, image) plus an `available` flag (LIVE + active + sellable); `likeCount(catalogItemId)` for staff |
+| Endpoints (web-customer auth, `/api/v1/web/me/wishlist`) | `GET` (paged), `PUT /{catalogItemId}` (like), `DELETE /{catalogItemId}` (unlike), `GET /ids` (lightweight id list so the app can paint hearts on the catalog grid without N calls). Wishlists require login — anonymous users are prompted to sign in when tapping the heart |
+| Catalog DTO | `PublicCatalogProductDto` stays unchanged (hearts are painted client-side from `/ids`) — keeps the hottest endpoint cacheable and identical for all users |
+| Staff insight | `WebCatalogItemDto.likeCount`; `GET /api/v1/web-catalog/most-wished` (top N with like counts, `WEB_CATALOG_VIEW`) |
+
+### 6b — Backend: alerts (discount + back-in-stock)
+
+| Item | Detail |
+|------|--------|
+| `WebWishlistAlertJob` (`@Scheduled`, e.g. every 30 min, per tenant) | loads distinct wishlisted catalog items, computes current state (salePrice via badge service, availability via the same LIVE/active/sellable+stock rules as the catalog): **discount alert** when salePrice exists and differs from `last_notified_sale_price` (dedupe — one alert per price level, never re-alert the same discount); **restock alert** when `available` flips false→true vs `last_known_available`. Updates the snapshot columns in the same transaction |
+| Delivery channels | Phase 5 push when a device token exists (free, default); else SMS **only if** tenant setting `wishlist.sms_alerts_enabled` (default false — 200 UZS each adds up) with a per-customer daily cap (`wishlist.max_sms_per_day`, default 1); in-app fallback always: the wishlist screen shows a "нарх тушди" badge on changed items |
+| Message content | uz-Cyrl template: product name + old→new price ("Coca-Cola 1.5л энди 10 200 сўм (-15%)") or "яна сотувда"; deep link to the product (push payload carries catalogItemId) |
+| Safety | job failures are logged and never affect catalog/checkout; batch size capped; alerts always best-effort |
+
+### Admin frontend
+
+- Web catalog view: likes column (sortable) — the most-wished products are the discount
+  shortlist.
+- Dashboard: "Энг кўп исталган" (most wished) mini-widget, top 5 with like counts.
+- Settings: wishlist SMS alerts toggle + daily cap (next to the loyalty/referral sections).
+- Web customer card: wishlist count + expandable list of their liked items.
+
+### Mobile app
+
+- Heart icon on `ProductCard` and product detail (filled when liked); anonymous tap →
+  login screen, then completes the like.
+- Hearts painted from a cached `/ids` fetch after login (refreshed on app resume).
+- Profile tab: "Севимлилар" (favorites) entry → wishlist screen — product cards with
+  current price/sale badge, out-of-stock and unavailable states, unlike via heart, tap →
+  product detail; "нарх тушди" change badges from 6b.
+- Push tap (Phase 5) deep-links to the product detail screen.
+
+### Tests
+
+- **Repository:** unique like constraint, like counts per item, tenant isolation,
+  cascade behaviour when a catalog item is deleted.
+- **Service (Mockito):** toggle idempotency; wishlist rendering includes salePrice and
+  availability; anonymous → 401; alert job — discount dedupe (same price never re-alerts,
+  deeper discount re-alerts), restock flip detection, snapshot update, SMS cap + disabled
+  flag = no SMS, push preferred over SMS, job failure isolation.
+- **Controller (standalone MockMvc):** auth required on all wishlist endpoints; `/ids`
+  shape; staff endpoint permission matrix.
+- **Full-flow:** login → like → appears in wishlist with badge data → staff sees like
+  count → create WEB promo → run job → alert recorded/dedup on second run → unlike →
+  gone; second customer's wishlist untouched (tenant + customer scoping).
+- **Flutter:** heart toggle (logged in + anonymous redirect), wishlist screen rendering
+  (sale badge, unavailable state), ids-cache painting on the catalog grid.
+- **Manual checklist:** like on two devices/accounts; publish a −15% WEB promo → push/SMS
+  arrives once, not again on the next job run; sell out and restock a product → restock
+  alert; unlike stops alerts.
+
+**Acceptance:** a customer who liked a product gets exactly one notification when it goes
+on sale or returns, and staff can see the most-wanted products. (6a ≈ 1 day, 6b ≈ 1–1.5
+days once a notification channel exists.)
+
+---
+
 ## Cross-cutting
 
 **Definition of done per phase** (same as WEB_SHOP_PLAN): code + migration + tests green
@@ -373,9 +446,11 @@ where relevant + this doc's status flipped + manual checklist run against local 
 | Double SMS blast / wasted budget | mandatory preview with cost + balance, single-send state machine on campaigns |
 | Existing POS promos leaking into the app on deploy | `channel` default `POS` in the migration — web exposure is always an explicit staff action |
 | Ledger drift | no balance column anywhere; balance is always an aggregate of the append-only ledger; manual changes only via audited ADJUST |
+| Wishlist alert spam / SMS cost runaway | one alert per price level (dedupe on `last_notified_sale_price`), SMS channel off by default + per-customer daily cap, push preferred when available |
 
 **Suggested order:** 1 → 2 → 3 are sequential (each reuses the previous), 4 is independent
-after 1, 5 last. Total ≈ 8–10 working days excluding Firebase setup.
+after 1, 6a is independent after 1 (good filler while waiting on Firebase), 5 then 6b last.
+Total ≈ 10–12 working days excluding Firebase setup.
 
 **Open questions for the owner**
 1. Earn rate and expiry for cashback (proposal: 1%, 180 days, min redeem 5 000 сўм)?
