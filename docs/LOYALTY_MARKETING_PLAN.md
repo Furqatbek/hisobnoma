@@ -8,6 +8,14 @@ and referrals.
 Builds on `docs/WEB_SHOP_PLAN.md` (phases 1–5 implemented): web catalog, in-app checkout,
 SMS-OTP customer accounts (`WebCustomer`), staff order inbox, stock reservation, delivery fees.
 
+> **Scope change (2026-06-10):** the customer mobile app is now owned by a **separate
+> mobile team**. Our deliverables from Phase 2 onward are the **backend (public API +
+> staff API), the admin frontend, and documented API contracts** — the "Mobile app
+> (mobile team)" sections in each phase describe the expected client behaviour as a
+> handoff spec, not our work. The existing Flutter app in `mobile-shop/` (implemented
+> through Phase 1) stays in the repo as a working reference implementation of every
+> public endpoint; the mobile team can reuse or replace it.
+
 ## Codebase context — what we reuse, what's missing
 
 **Already in the platform (POS module, fully tested, NOT used by the online shop today):**
@@ -160,7 +168,7 @@ on confirmation with full audit.
 - Web order detail: coupon code + discount shown; redemption/reversal status.
 - Coupons list: redemption rows now show "Онлайн буюртма WO-000012" as source when web.
 
-### Mobile app
+### Mobile app (mobile team — handoff spec)
 
 - Checkout: "Купон код" field with an "apply" button → calls validate endpoint → shows
   green discount row or inline error ("Купон нотўғри ёки муддати ўтган"). Code is sent with
@@ -176,7 +184,6 @@ on confirmation with full audit.
 - **Controller:** rate limit on validate endpoint; generic error body (no oracle).
 - **Full-flow:** generate coupons via existing `CouponService` → validate → checkout →
   confirm → redemption row has `web_order_id`; cancel → reversed.
-- **Flutter:** coupon field happy path + error rendering; payload includes `couponCode`.
 - **Manual checklist:** bulk-generate 10 coupons, use one twice from the same login (second
   rejected), cancel a confirmed couponed order and verify the coupon is usable again.
 
@@ -213,7 +220,7 @@ optionally a coupon batch, preview cost, send, and see the outcome.
 - `WebCustomersView.vue`: opt-out toggle + last-order column (helps eyeball segments).
 - Dashboard: "last campaign" mini-widget (name, sent/failed).
 
-### Mobile app
+### Mobile app (mobile team — handoff spec)
 
 - No app changes (SMS arrives out-of-band). Coupon codes from campaigns work via Phase 2.
 
@@ -261,7 +268,7 @@ customers only (points need an identity).
 - Dashboard: total outstanding points liability counter (sum over tenant — finance wants
   to see this number).
 
-### Mobile app
+### Mobile app (mobile team — handoff spec)
 
 - Profile tab (logged in): points balance card + ledger list ("Кешбек: 12 500 сўм").
 - Checkout (logged in, balance ≥ min_redeem): "Баллардан фойдаланиш" row with a slider or
@@ -278,8 +285,6 @@ customers only (points need an identity).
   FIFO correctness; disabled flag = all no-ops; anonymous checkout with `pointsToSpend` → 401.
 - **Full-flow:** login → order → complete → balance appears → second order spending points →
   totals correct → cancel → points returned.
-- **Flutter:** balance rendering; checkout slider clamping; payload includes `pointsToSpend`
-  only when authenticated.
 - **Manual checklist:** end-to-end earn/spend on two real orders; settings off hides
   everything in the app.
 
@@ -321,7 +326,7 @@ cashback whose every movement is visible in an auditable ledger. (~2–2.5 days)
 - Web order detail: no change (referral rewards appear in the Phase 4 loyalty ledger).
 - Dashboard: referred-customers counter added to the online-shop stat group.
 
-### Mobile app
+### Mobile app (mobile team — handoff spec; Firebase project shared with backend)
 
 - `firebase_messaging` dependency; token registration after login, deletion on logout;
   notification tap → order status screen (deep link by order number).
@@ -346,9 +351,7 @@ cashback whose every movement is visible in an auditable ledger. (~2–2.5 days)
   B's first order completes → both ledgers show ADJUST rewards → B's second order adds
   nothing; status change creates push payload (fake FCM client); permissions matrix on new
   staff endpoints.
-- **Flutter:** referral card rendering + share payload; verify payload includes
-  `referralCode`; notification tap routing (mocked).
-- **Manual checklist:** real push on a physical device for each status change; full referral
+- **Manual checklist (with mobile team):** real push on a physical device for each status change; full referral
   loop between two phones; campaign with push channel falls back to SMS for a customer
   without the app.
 
@@ -395,9 +398,9 @@ Staff see which products people want, which is exactly the list worth discountin
 - Settings: wishlist SMS alerts toggle + daily cap (next to the loyalty/referral sections).
 - Web customer card: wishlist count + expandable list of their liked items.
 
-### Mobile app
+### Mobile app (mobile team — handoff spec)
 
-- Heart icon on `ProductCard` and product detail (filled when liked); anonymous tap →
+- Heart icon on the product card and product detail (filled when liked); anonymous tap →
   login screen, then completes the like.
 - Hearts painted from a cached `/ids` fetch after login (refreshed on app resume).
 - Profile tab: "Севимлилар" (favorites) entry → wishlist screen — product cards with
@@ -418,9 +421,7 @@ Staff see which products people want, which is exactly the list worth discountin
 - **Full-flow:** login → like → appears in wishlist with badge data → staff sees like
   count → create WEB promo → run job → alert recorded/dedup on second run → unlike →
   gone; second customer's wishlist untouched (tenant + customer scoping).
-- **Flutter:** heart toggle (logged in + anonymous redirect), wishlist screen rendering
-  (sale badge, unavailable state), ids-cache painting on the catalog grid.
-- **Manual checklist:** like on two devices/accounts; publish a −15% WEB promo → push/SMS
+- **Manual checklist (with mobile team):** like on two devices/accounts; publish a −15% WEB promo → push/SMS
   arrives once, not again on the next job run; sell out and restock a product → restock
   alert; unlike stops alerts.
 
@@ -432,9 +433,11 @@ days once a notification channel exists.)
 
 ## Cross-cutting
 
-**Definition of done per phase** (same as WEB_SHOP_PLAN): code + migration + tests green
-(full backend suite + `flutter analyze && flutter test`) + uz-Cyrl i18n + dashboard touched
-where relevant + this doc's status flipped + manual checklist run against local stack.
+**Definition of done per phase** (mobile app excluded — owned by the mobile team since
+Phase 2): code + migration + full backend suite green + admin uz-Cyrl i18n + dashboard
+touched where relevant + **public API contract documented in `docs/API.md`** (endpoints,
+request/response shapes, error codes — this is the mobile team's interface) + this doc's
+status flipped + backend/admin manual checklist run against local stack.
 
 **Risks / notes**
 

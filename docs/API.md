@@ -3376,6 +3376,8 @@ stock quantities):
   "shortDescription": "0.5L",
   "description": "…",
   "price": 12000.0,
+  "salePrice": 10200.0,
+  "promotionLabel": "-15%",
   "currency": "UZS",
   "categoryId": 3,
   "categoryName": "Drinks",
@@ -3386,6 +3388,12 @@ stock quantities):
   "images": ["/uploads/products/1/main.jpg"]
 }
 ```
+
+`salePrice` and `promotionLabel` are **null/omitted unless an active WEB-channel
+percentage promotion applies** to the product (computed server-side, cached up to 60s).
+Clients should show `salePrice` with the original `price` struck through. The badge is a
+preview for a single unit — the authoritative discount for a full cart comes from
+`POST /web/cart/price` and from checkout itself.
 
 ### Staff endpoints (authenticated)
 
@@ -3418,14 +3426,20 @@ changes), staff endpoints authenticated with permissions.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | /web/orders | Checkout. Body: `{ customerName, phone, regionId?, villageId?, note?, lines: [{catalogItemId, quantity}] }`. Max 50 lines, qty 0.001–10000, products must be LIVE. **Prices are always taken server-side** from the catalog. Rate limited per IP+phone (5/min → 429). Returns 201 with `{ orderNumber, status, totalAmount, lines }` |
-| GET | /web/orders/{orderNumber}?phone= | Order status lookup; the phone must match the order (404 otherwise) |
-| GET | /web/delivery/regions | Active delivery regions for the checkout form |
+| POST | /web/cart/price | Cart pricing preview with promotion discounts. Body: `{ lines: [{catalogItemId, quantity}] }` (max 50 lines). Optional `Authorization: Bearer <web-customer-token>` personalises customer-specific promotion conditions. Rate limited 5 calls / 10s per IP (429). Returns `{ lines: [{catalogItemId, productName, quantity, unitPrice, lineTotal}], subtotal, discountTotal, total, currency, appliedPromotions: ["10% off"] }` — promotion **names only**, never conditions or usage counters. Display-only: checkout recomputes everything |
+| POST | /web/orders | Checkout. Body: `{ customerName, phone, regionId?, villageId?, note?, lines: [{catalogItemId, quantity}] }`. Max 50 lines, qty 0.001–10000, products must be LIVE. **Prices and discounts are always computed server-side**. Rate limited per IP+phone (5/min → 429). Returns 201 with `{ orderNumber, status, deliveryFee, discountTotal, totalAmount, lines }` |
+| GET | /web/orders/{orderNumber}?phone= | Order status lookup; the phone must match the order (404 otherwise). Includes `discountTotal` and `deliveryFee` |
+| GET | /web/delivery/regions | Active delivery regions for the checkout form (includes `deliveryFee`) |
 | GET | /web/delivery/villages?regionId= | Active villages, optionally filtered by region |
 
 Order lifecycle: `NEW → CONFIRMED → DELIVERING → COMPLETED`, cancellable until completed.
 Each new order triggers a Telegram `ORDER_PLACED` broadcast to staff. Orders record
-source IP and user agent; product name/price are snapshotted on each line.
+source IP and user agent; product name/price are snapshotted on each line **at full price** —
+promotion discounts live at order level (`discountTotal`), so
+`totalAmount = Σ lineTotal − discountTotal + deliveryFee`. WEB/ALL-channel promotions are
+applied automatically at checkout; POS-only promotions never affect online orders.
+Promotion usage limits are counted when staff confirm the order and released if a confirmed
+order is cancelled.
 
 ### Staff endpoints (authenticated)
 

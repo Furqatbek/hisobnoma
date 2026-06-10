@@ -1,5 +1,12 @@
 # Hisobnoma Shop — customer mobile app
 
+> **Ownership note (2026-06-10):** the customer mobile app is now developed by a separate
+> mobile team. This Flutter project is kept as a **working reference implementation** of
+> the public shop API (catalog with sale badges, cart price preview, checkout, order
+> status, SMS-OTP auth, order history) — every public endpoint is exercised here with
+> tests. The contract to build against is `../docs/API.md`; public `/api/v1/web/**`
+> endpoints only change additively, so installed apps never break.
+
 Flutter app for the store's customers: browse the curated **live item list** published from the
 Hisobnoma admin (“Веб-каталог” page), add products to a persistent cart and **order in-app**
 (name + phone + delivery region/village). Orders land in the admin "Онлайн буюртмалар" inbox
