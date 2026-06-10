@@ -52,6 +52,7 @@ class WebOrderServiceTest {
     @Mock private StockReservationRepository stockReservationRepository;
     @Mock private StockService stockService;
     @Mock private com.hisobnoma.platform.pos.repository.PromotionRepository promotionRepository;
+    @Mock private com.hisobnoma.platform.pos.service.PromotionService promotionService;
 
     @InjectMocks
     private WebOrderService service;
@@ -146,6 +147,60 @@ class WebOrderServiceTest {
         service.updateStatus(1L, statusRequest(WebOrderStatus.CONFIRMED, null));
 
         verifyNoInteractions(promotionRepository);
+    }
+
+    // ---- coupon redemption ----
+
+    @Test
+    void updateStatus_confirmRecordsCouponRedemption() {
+        order.setCouponCode("WELCOME");
+        order.setCouponDiscount(new BigDecimal("5000"));
+        order.recalculateTotal();
+        when(securityContextHelper.getCurrentUserId()).thenReturn(9L);
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.CONFIRMED, null));
+
+        verify(promotionService).recordWebCouponRedemption(
+                eq("WELCOME"), isNull(), eq(1L),
+                eq(order.getTotalAmount()), eq(new BigDecimal("5000")),
+                eq(TENANT_ID), eq(9L));
+    }
+
+    @Test
+    void updateStatus_confirmRedemptionFailureNeverBlocksConfirmation() {
+        order.setCouponCode("WELCOME");
+        order.setCouponDiscount(new BigDecimal("5000"));
+        when(securityContextHelper.getCurrentUserId()).thenReturn(9L);
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("db down")).when(promotionService)
+                .recordWebCouponRedemption(any(), any(), any(), any(), any(), any(), any());
+
+        WebOrderDto dto = service.updateStatus(1L, statusRequest(WebOrderStatus.CONFIRMED, null));
+
+        assertEquals(WebOrderStatus.CONFIRMED, dto.getStatus());
+    }
+
+    @Test
+    void updateStatus_cancelAfterConfirmReversesCouponRedemption() {
+        order.setStatus(WebOrderStatus.CONFIRMED);
+        order.setCouponCode("WELCOME");
+        when(securityContextHelper.getCurrentUserId()).thenReturn(9L);
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.CANCELLED, "Мижоз бекор қилди"));
+
+        verify(promotionService).reverseWebCouponRedemption(
+                eq(1L), eq(TENANT_ID), eq(9L), eq("Мижоз бекор қилди"));
+    }
+
+    @Test
+    void updateStatus_ordersWithoutCouponSkipRedemption() {
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.CONFIRMED, null));
+
+        verifyNoInteractions(promotionService);
     }
 
     // ---- status transitions ----
@@ -346,6 +401,26 @@ class WebOrderServiceTest {
         assertEquals(0, new BigDecimal("12000").compareTo(request.getLines().get(0).getUnitPrice()));
         assertEquals(0, new BigDecimal("3600").compareTo(request.getDiscountAmount()));
         assertEquals(0, new BigDecimal("32400").compareTo(request.getTotalAmount()));
+    }
+
+    @Test
+    void convert_combinesPromotionAndCouponDiscountInHeader() {
+        order.setCustomerId(88L);
+        order.setDiscountTotal(new BigDecimal("3600"));
+        order.setCouponCode("WELCOME");
+        order.setCouponDiscount(new BigDecimal("5000"));
+        order.recalculateTotal(); // 36000 - 3600 - 5000 = 27400
+        when(arInvoiceService.createInvoice(any(CreateARInvoiceRequest.class)))
+                .thenReturn(ARInvoiceDto.builder().id(64L).invoiceNumber("INV-000064").build());
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.convertToInvoice(1L);
+
+        ArgumentCaptor<CreateARInvoiceRequest> captor =
+                ArgumentCaptor.forClass(CreateARInvoiceRequest.class);
+        verify(arInvoiceService).createInvoice(captor.capture());
+        assertEquals(0, new BigDecimal("8600").compareTo(captor.getValue().getDiscountAmount()));
+        assertEquals(0, new BigDecimal("27400").compareTo(captor.getValue().getTotalAmount()));
     }
 
     @Test

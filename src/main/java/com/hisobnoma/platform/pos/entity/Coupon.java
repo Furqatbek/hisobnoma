@@ -136,4 +136,15 @@ public class Coupon extends TenantAwareEntity {
             this.status = CouponStatus.DEPLETED;
         }
     }
+
+    /**
+     * Releases one recorded usage (e.g. a confirmed online order was cancelled).
+     * Re-activates a coupon that was depleted only by the released usage.
+     */
+    public void releaseUsage() {
+        this.currentUses = Math.max(0, (this.currentUses == null ? 0 : this.currentUses) - 1);
+        if (status == CouponStatus.DEPLETED && (maxUses == null || currentUses < maxUses)) {
+            this.status = CouponStatus.ACTIVE;
+        }
+    }
 }

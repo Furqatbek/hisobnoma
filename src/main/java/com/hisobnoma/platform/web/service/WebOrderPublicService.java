@@ -45,6 +45,7 @@ public class WebOrderPublicService {
     private final CheckoutRateLimiter rateLimiter;
     private final TelegramNotificationService telegramNotificationService;
     private final WebPricingService pricingService;
+    private final WebCouponService couponService;
 
     @Transactional
     public PublicOrderDto checkout(CheckoutRequest request, String sourceIp, String userAgent) {
@@ -98,6 +99,7 @@ public class WebOrderPublicService {
         }
 
         applyPromotions(order, pricedLines, tenantId, request.getPhone());
+        applyCoupon(order, request, tenantId);
         order.recalculateTotal();
         WebOrder saved = orderRepository.save(order);
         log.info("Web order {} created for tenant {} ({} lines, total {})",
@@ -157,6 +159,30 @@ public class WebOrderPublicService {
             order.setDiscountTotal(BigDecimal.ZERO);
             order.setAppliedPromotions(null);
         }
+    }
+
+    /**
+     * Validates and snapshots the coupon. Unlike promotion-engine failures,
+     * an invalid coupon rejects the checkout — silently dropping a discount
+     * the customer typed in would be a nasty surprise on the bill.
+     */
+    private void applyCoupon(WebOrder order, CheckoutRequest request, Long tenantId) {
+        if (request.getCouponCode() == null || request.getCouponCode().isBlank()) {
+            return;
+        }
+        BigDecimal goodsAfterPromotions = order.getLines().stream()
+                .map(WebOrderLine::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .subtract(order.getDiscountTotal() != null ? order.getDiscountTotal() : BigDecimal.ZERO)
+                .max(BigDecimal.ZERO);
+
+        WebCouponService.CouponOutcome outcome = couponService.validate(
+                request.getCouponCode(), goodsAfterPromotions, tenantId, request.getPhone());
+        if (!outcome.valid()) {
+            throw new ValidationException("Coupon is invalid or expired");
+        }
+        order.setCouponCode(request.getCouponCode().trim());
+        order.setCouponDiscount(outcome.discount());
     }
 
     private void applyDelivery(WebOrder order, CheckoutRequest request, Long tenantId) {
@@ -219,6 +245,8 @@ public class WebOrderPublicService {
                 .status(order.getStatus().name())
                 .deliveryFee(order.getDeliveryFee())
                 .discountTotal(order.getDiscountTotal())
+                .couponCode(order.getCouponCode())
+                .couponDiscount(order.getCouponDiscount())
                 .totalAmount(order.getTotalAmount())
                 .currency(order.getCurrency())
                 .createdAt(order.getCreatedAt())

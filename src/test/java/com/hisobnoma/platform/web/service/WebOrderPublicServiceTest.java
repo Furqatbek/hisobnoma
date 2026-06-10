@@ -41,6 +41,7 @@ class WebOrderPublicServiceTest {
     @Mock private CheckoutRateLimiter rateLimiter;
     @Mock private TelegramNotificationService telegramNotificationService;
     @Mock private WebPricingService pricingService;
+    @Mock private WebCouponService couponService;
 
     @InjectMocks
     private WebOrderPublicService service;
@@ -140,6 +141,53 @@ class WebOrderPublicServiceTest {
         assertEquals("WEB10", captor.getValue().getAppliedPromotions());
         // Line snapshots stay at full price — the discount lives at order level
         assertEquals(0, new BigDecimal("12000").compareTo(captor.getValue().getLines().get(0).getUnitPrice()));
+    }
+
+    @Test
+    void checkout_validCouponSnapshotsCodeAndDiscount() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(couponService.validate(eq("WELCOME"), any(), eq(TENANT_ID), anyString()))
+                .thenReturn(new WebCouponService.CouponOutcome(true, new BigDecimal("5000")));
+
+        CheckoutRequest request = checkoutRequest(new BigDecimal("3"));
+        request.setCouponCode("WELCOME");
+
+        PublicOrderDto dto = service.checkout(request, "1.2.3.4", null);
+
+        assertEquals("WELCOME", dto.getCouponCode());
+        assertEquals(0, new BigDecimal("5000").compareTo(dto.getCouponDiscount()));
+        assertEquals(0, new BigDecimal("31000").compareTo(dto.getTotalAmount())); // 36000 - 5000
+        // Coupon discounts the goods total after automatic promotions
+        verify(couponService).validate(eq("WELCOME"), eq(new BigDecimal("36000")),
+                eq(TENANT_ID), anyString());
+    }
+
+    @Test
+    void checkout_invalidCouponRejectsCheckout() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(couponService.validate(eq("BOGUS"), any(), eq(TENANT_ID), anyString()))
+                .thenReturn(WebCouponService.CouponOutcome.invalid());
+
+        CheckoutRequest request = checkoutRequest(BigDecimal.ONE);
+        request.setCouponCode("BOGUS");
+
+        assertThrows(com.hisobnoma.platform.common.exception.ValidationException.class,
+                () -> service.checkout(request, "1.2.3.4", null));
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void checkout_withoutCouponNeverCallsCouponService() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.checkout(checkoutRequest(BigDecimal.ONE), "1.2.3.4", null);
+
+        verifyNoInteractions(couponService);
     }
 
     @Test

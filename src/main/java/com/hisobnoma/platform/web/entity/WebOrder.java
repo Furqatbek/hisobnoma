@@ -84,6 +84,17 @@ public class WebOrder extends TenantAwareEntity {
     @Column(name = "applied_promotions", length = 500)
     private String appliedPromotions;
 
+    /**
+     * Coupon code applied at checkout (validated server-side); redemption is
+     * recorded only when staff confirm the order.
+     */
+    @Column(name = "coupon_code", length = 50)
+    private String couponCode;
+
+    @Column(name = "coupon_discount", precision = 18, scale = 4, nullable = false)
+    @Builder.Default
+    private BigDecimal couponDiscount = BigDecimal.ZERO;
+
     @Column(name = "total_amount", precision = 18, scale = 4, nullable = false)
     @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
@@ -127,8 +138,18 @@ public class WebOrder extends TenantAwareEntity {
                 .map(WebOrderLine::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal discount = discountTotal != null ? discountTotal : BigDecimal.ZERO;
-        // A discount can never push the goods total below zero
-        this.totalAmount = linesTotal.subtract(discount).max(BigDecimal.ZERO)
+        BigDecimal coupon = couponDiscount != null ? couponDiscount : BigDecimal.ZERO;
+        // Discounts can never push the goods total below zero
+        this.totalAmount = linesTotal.subtract(discount).subtract(coupon).max(BigDecimal.ZERO)
                 .add(deliveryFee != null ? deliveryFee : BigDecimal.ZERO);
+    }
+
+    /**
+     * Promotion + coupon discounts combined — what conversion passes to the
+     * AR invoice as its header discount.
+     */
+    public BigDecimal totalDiscounts() {
+        return (discountTotal != null ? discountTotal : BigDecimal.ZERO)
+                .add(couponDiscount != null ? couponDiscount : BigDecimal.ZERO);
     }
 }

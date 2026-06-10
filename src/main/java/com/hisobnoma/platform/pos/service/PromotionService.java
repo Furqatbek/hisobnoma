@@ -410,11 +410,22 @@ public class PromotionService {
     }
 
     /**
-     * Apply a coupon code.
+     * Apply a coupon code (POS staff context).
      */
     @Transactional
     public PriceCalculationResult.CouponApplication applyCoupon(String couponCode, BigDecimal orderTotal, Long customerId) {
-        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return applyCoupon(couponCode, orderTotal, customerId,
+                securityContextHelper.getCurrentTenantId(), PromotionChannel.POS);
+    }
+
+    /**
+     * Apply a coupon code for an explicit tenant and sales channel. A coupon
+     * is only redeemable on the channel its promotion targets (ALL = both).
+     */
+    @Transactional
+    public PriceCalculationResult.CouponApplication applyCoupon(String couponCode, BigDecimal orderTotal,
+                                                                Long customerId, Long tenantId,
+                                                                PromotionChannel channel) {
         LocalDate today = LocalDate.now();
 
         // Find valid coupon
@@ -456,6 +467,17 @@ public class PromotionService {
                     .valid(false)
                     .message("The promotion for this coupon is no longer active")
                     .errorMessage("The promotion for this coupon is no longer active")
+                    .discountAmount(BigDecimal.ZERO)
+                    .build();
+        }
+
+        // Channel check: a WEB coupon must not redeem at the POS and vice versa
+        if (promotion.getChannel() != channel && promotion.getChannel() != PromotionChannel.ALL) {
+            return PriceCalculationResult.CouponApplication.builder()
+                    .couponCode(couponCode)
+                    .valid(false)
+                    .message("Coupon is not valid for this sales channel")
+                    .errorMessage("Coupon is not valid for this sales channel")
                     .discountAmount(BigDecimal.ZERO)
                     .build();
         }
@@ -554,6 +576,80 @@ public class PromotionService {
         promotionRepository.save(promotion);
 
         log.info("Recorded coupon redemption: {} for transaction {}", couponCode, transactionId);
+    }
+
+    /**
+     * Records the redemption of a coupon attached to an online order when
+     * staff confirm it. If the coupon got depleted between checkout and
+     * confirmation, the order keeps its discount (staff accepted that price);
+     * the redemption row notes the override instead of failing.
+     * A coupon deleted in the meantime is skipped silently.
+     */
+    @Transactional
+    public void recordWebCouponRedemption(String couponCode, Long customerId, Long webOrderId,
+                                          BigDecimal orderTotal, BigDecimal discountAmount,
+                                          Long tenantId, Long userId) {
+        Optional<Coupon> couponOpt = couponRepository.findByCodeAndTenantIdForUpdate(couponCode, tenantId);
+        if (couponOpt.isEmpty()) {
+            log.warn("Coupon {} no longer exists; skipping redemption for web order {}", couponCode, webOrderId);
+            return;
+        }
+        Coupon coupon = couponOpt.get();
+
+        String notes = null;
+        if (!coupon.isValid(LocalDate.now())) {
+            notes = "Redeemed past coupon limits — discount was granted at checkout and kept on staff confirmation";
+            log.warn("Coupon {} no longer valid at confirmation of web order {}; recording override", couponCode, webOrderId);
+        }
+
+        CouponRedemption redemption = CouponRedemption.builder()
+                .coupon(coupon)
+                .customerId(customerId)
+                .webOrderId(webOrderId)
+                .orderTotal(orderTotal)
+                .discountAmount(discountAmount)
+                .redeemedAt(Instant.now())
+                .redeemedBy(userId)
+                .notes(notes)
+                .build();
+        redemptionRepository.save(redemption);
+
+        coupon.recordUsage();
+        couponRepository.save(coupon);
+
+        Promotion promotion = coupon.getPromotion();
+        promotion.incrementUsage();
+        promotionRepository.save(promotion);
+
+        log.info("Recorded coupon redemption: {} for web order {}", couponCode, webOrderId);
+    }
+
+    /**
+     * Reverses the redemption when a confirmed online order is cancelled:
+     * marks the redemption rows reversed and releases coupon/promotion usage
+     * so the customer can use the coupon again.
+     */
+    @Transactional
+    public void reverseWebCouponRedemption(Long webOrderId, Long tenantId, Long userId, String reason) {
+        List<CouponRedemption> redemptions = redemptionRepository.findByWebOrderIdAndReversedFalse(webOrderId);
+        for (CouponRedemption redemption : redemptions) {
+            redemption.setReversed(true);
+            redemption.setReversedAt(Instant.now());
+            redemption.setReversedBy(userId);
+            redemption.setReversalReason(reason);
+            redemptionRepository.save(redemption);
+
+            Coupon coupon = couponRepository.findByCodeAndTenantIdForUpdate(
+                    redemption.getCoupon().getCode(), tenantId).orElse(null);
+            if (coupon != null) {
+                coupon.releaseUsage();
+                couponRepository.save(coupon);
+                Promotion promotion = coupon.getPromotion();
+                promotion.decrementUsage();
+                promotionRepository.save(promotion);
+            }
+            log.info("Reversed coupon redemption {} for web order {}", redemption.getId(), webOrderId);
+        }
     }
 
     // ==================== Private Helper Methods ====================

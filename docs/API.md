@@ -3427,19 +3427,22 @@ changes), staff endpoints authenticated with permissions.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | /web/cart/price | Cart pricing preview with promotion discounts. Body: `{ lines: [{catalogItemId, quantity}] }` (max 50 lines). Optional `Authorization: Bearer <web-customer-token>` personalises customer-specific promotion conditions. Rate limited 5 calls / 10s per IP (429). Returns `{ lines: [{catalogItemId, productName, quantity, unitPrice, lineTotal}], subtotal, discountTotal, total, currency, appliedPromotions: ["10% off"] }` — promotion **names only**, never conditions or usage counters. Display-only: checkout recomputes everything |
-| POST | /web/orders | Checkout. Body: `{ customerName, phone, regionId?, villageId?, note?, lines: [{catalogItemId, quantity}] }`. Max 50 lines, qty 0.001–10000, products must be LIVE. **Prices and discounts are always computed server-side**. Rate limited per IP+phone (5/min → 429). Returns 201 with `{ orderNumber, status, deliveryFee, discountTotal, totalAmount, lines }` |
-| GET | /web/orders/{orderNumber}?phone= | Order status lookup; the phone must match the order (404 otherwise). Includes `discountTotal` and `deliveryFee` |
+| POST | /web/cart/validate-coupon | Coupon check before checkout. Body: `{ code, lines: [{catalogItemId, quantity}] }` (the discount depends on the cart). Optional bearer token binds per-customer limits. **Strictly rate limited 5/min per IP** (429) — coupon codes are guessable. Returns `{ couponCode, valid, discount }`; every invalid reason (unknown / expired / depleted / wrong channel / below min order) produces the same generic `valid: false` so the endpoint can't probe codes |
+| POST | /web/orders | Checkout. Body: `{ customerName, phone, regionId?, villageId?, note?, couponCode?, lines: [{catalogItemId, quantity}] }`. Max 50 lines, qty 0.001–10000, products must be LIVE. **Prices and discounts are always computed server-side**. An invalid `couponCode` rejects the checkout with 400 (never silently drops the discount). Rate limited per IP+phone (5/min → 429). Returns 201 with `{ orderNumber, status, deliveryFee, discountTotal, couponCode, couponDiscount, totalAmount, lines }` |
+| GET | /web/orders/{orderNumber}?phone= | Order status lookup; the phone must match the order (404 otherwise). Includes `discountTotal`, `couponCode`, `couponDiscount` and `deliveryFee` |
 | GET | /web/delivery/regions | Active delivery regions for the checkout form (includes `deliveryFee`) |
 | GET | /web/delivery/villages?regionId= | Active villages, optionally filtered by region |
 
 Order lifecycle: `NEW → CONFIRMED → DELIVERING → COMPLETED`, cancellable until completed.
 Each new order triggers a Telegram `ORDER_PLACED` broadcast to staff. Orders record
 source IP and user agent; product name/price are snapshotted on each line **at full price** —
-promotion discounts live at order level (`discountTotal`), so
-`totalAmount = Σ lineTotal − discountTotal + deliveryFee`. WEB/ALL-channel promotions are
-applied automatically at checkout; POS-only promotions never affect online orders.
-Promotion usage limits are counted when staff confirm the order and released if a confirmed
-order is cancelled.
+promotion and coupon discounts live at order level, so
+`totalAmount = Σ lineTotal − discountTotal − couponDiscount + deliveryFee`. WEB/ALL-channel
+promotions are applied automatically at checkout; POS-only promotions and coupons never
+affect online orders. Promotion usage and coupon redemptions are counted when staff confirm
+the order (redemption rows carry `webOrderId`) and released/reversed if a confirmed order is
+cancelled — the customer can use the coupon again. Per-customer coupon limits bind to the AR
+customer linked to the phone's web account; unknown phones get only the coupon's global limits.
 
 ### Staff endpoints (authenticated)
 

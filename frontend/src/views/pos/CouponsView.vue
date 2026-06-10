@@ -592,9 +592,13 @@ const tabs = computed(() =>
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-gray-200">
-                        <tr v-for="redemption in redemptions" :key="redemption.id">
+                        <tr v-for="redemption in redemptions" :key="redemption.id"
+                            :class="{ 'opacity-50 line-through': redemption.reversed }">
                           <td class="text-sm">{{ redemption.customerName || redemption.customerId || '-' }}</td>
-                          <td class="text-sm">{{ redemption.orderNumber || redemption.orderId || '-' }}</td>
+                          <td class="text-sm">
+                            <span v-if="redemption.webOrderId">{{ $t('pos.coupons.webOrderSource') }} #{{ redemption.webOrderId }}</span>
+                            <span v-else>{{ redemption.orderNumber || redemption.orderId || '-' }}</span>
+                          </td>
                           <td class="text-sm text-gray-500">{{ formatDate(redemption.date || redemption.createdAt) }}</td>
                           <td class="text-sm text-right font-medium">{{ redemption.discountApplied ?? redemption.discountAmount ?? '-' }}</td>
                         </tr>

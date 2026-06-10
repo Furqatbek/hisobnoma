@@ -40,6 +40,12 @@ public class CouponRedemption extends BaseEntity {
     private POSTransaction transaction;
 
     /**
+     * Online order this redemption belongs to (null for POS redemptions).
+     */
+    @Column(name = "web_order_id")
+    private Long webOrderId;
+
+    /**
      * Order total before discount
      */
     @Column(name = "order_total", precision = 18, scale = 4)

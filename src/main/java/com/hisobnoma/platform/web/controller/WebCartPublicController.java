@@ -4,9 +4,12 @@ import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.web.dto.CartPriceRequest;
 import com.hisobnoma.platform.web.dto.PublicCartPriceDto;
+import com.hisobnoma.platform.web.dto.PublicCouponValidationDto;
+import com.hisobnoma.platform.web.dto.ValidateCouponRequest;
 import com.hisobnoma.platform.web.exception.TooManyRequestsException;
 import com.hisobnoma.platform.web.security.WebCustomerTokenService;
 import com.hisobnoma.platform.web.service.CheckoutRateLimiter;
+import com.hisobnoma.platform.web.service.WebCouponService;
 import com.hisobnoma.platform.web.service.WebPricingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -28,6 +31,7 @@ public class WebCartPublicController {
     private static final Long DEFAULT_TENANT_ID = 1L;
 
     private final WebPricingService pricingService;
+    private final WebCouponService couponService;
     private final CheckoutRateLimiter rateLimiter;
     private final WebCustomerTokenService tokenService;
 
@@ -51,6 +55,36 @@ public class WebCartPublicController {
 
         WebPricingService.CartPrice price = pricingService.price(request.getLines(), tenantId, phone);
         return ResponseEntity.ok(ApiResponse.success(toDto(price)));
+    }
+
+    /**
+     * Coupon codes are guessable, so this endpoint keeps the strict checkout
+     * window (5/min per IP, no time-bucket widening) and one generic outcome
+     * for every invalid reason.
+     */
+    @PostMapping("/validate-coupon")
+    public ResponseEntity<ApiResponse<PublicCouponValidationDto>> validateCoupon(
+            @Valid @RequestBody ValidateCouponRequest request,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            HttpServletRequest httpRequest) {
+
+        if (!rateLimiter.tryAcquire("coupon|" + clientIp(httpRequest))) {
+            throw new TooManyRequestsException("Too many coupon attempts, please try again later");
+        }
+
+        Long tenantId = TenantContext.getCurrentTenant() != null
+                ? TenantContext.getCurrentTenant() : DEFAULT_TENANT_ID;
+        String phone = phoneFromToken(authorization);
+
+        WebPricingService.CartPrice price = pricingService.price(request.getLines(), tenantId, phone);
+        WebCouponService.CouponOutcome outcome = couponService.validate(
+                request.getCode(), price.total(), tenantId, phone);
+
+        return ResponseEntity.ok(ApiResponse.success(PublicCouponValidationDto.builder()
+                .couponCode(request.getCode().trim())
+                .valid(outcome.valid())
+                .discount(outcome.discount())
+                .build()));
     }
 
     private String phoneFromToken(String authorization) {

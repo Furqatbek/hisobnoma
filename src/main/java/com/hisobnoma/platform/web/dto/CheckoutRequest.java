@@ -36,6 +36,9 @@ public class CheckoutRequest {
     @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
 
+    @Size(max = 50, message = "Coupon code cannot exceed 50 characters")
+    private String couponCode;
+
     @NotEmpty(message = "At least one order line is required")
     @Size(max = 50, message = "Order cannot contain more than 50 lines")
     @Valid

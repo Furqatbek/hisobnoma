@@ -282,6 +282,15 @@ onMounted(() => fetchOrders())
                   </td>
                   <td class="py-2 text-right">−{{ formatPrice(selectedOrder.discountTotal) }}</td>
                 </tr>
+                <tr v-if="selectedOrder.couponDiscount > 0" class="border-t text-green-700">
+                  <td colspan="3" class="py-2 text-right">
+                    {{ $t('webOrders.coupon') }}
+                    <span v-if="selectedOrder.couponCode" class="font-mono text-xs text-gray-500">
+                      ({{ selectedOrder.couponCode }})
+                    </span>:
+                  </td>
+                  <td class="py-2 text-right">−{{ formatPrice(selectedOrder.couponDiscount) }}</td>
+                </tr>
                 <tr v-if="selectedOrder.deliveryFee > 0" class="border-t">
                   <td colspan="3" class="py-2 text-right">{{ $t('webOrders.deliveryFee') }}:</td>
                   <td class="py-2 text-right">{{ formatPrice(selectedOrder.deliveryFee) }}</td>

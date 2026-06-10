@@ -23,6 +23,8 @@ public interface CouponRedemptionRepository extends JpaRepository<CouponRedempti
 
     List<CouponRedemption> findByTransactionId(Long transactionId);
 
+    List<CouponRedemption> findByWebOrderIdAndReversedFalse(Long webOrderId);
+
     @Query("SELECT COUNT(cr) FROM CouponRedemption cr " +
            "WHERE cr.coupon.id = :couponId AND cr.customerId = :customerId AND cr.reversed = false")
     int countByCustomerAndCoupon(@Param("couponId") Long couponId, @Param("customerId") Long customerId);

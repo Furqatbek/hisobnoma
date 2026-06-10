@@ -22,6 +22,8 @@ public class PublicOrderDto {
     private String status;
     private BigDecimal deliveryFee;
     private BigDecimal discountTotal;
+    private String couponCode;
+    private BigDecimal couponDiscount;
     private BigDecimal totalAmount;
     private String currency;
     private Instant createdAt;

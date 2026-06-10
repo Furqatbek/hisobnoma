@@ -147,20 +147,24 @@ reduces the order total, with POS promotions untouched.
 
 ## Phase 2 — Coupons at checkout
 
-> **Status: planned**
+> **Status: ✅ implemented** (validate endpoint, checkout snapshot, redemption on
+> confirm with web-order audit link, reversal on cancel, channel check, admin UI)
 
 Customer types a coupon code at checkout; per-customer limits enforced; redemption recorded
 on confirmation with full audit.
 
-### Backend
+### Backend (as built)
 
 | Item | Detail |
 |------|--------|
-| Migration `V59__web_coupons.sql` | `coupon_redemptions ADD COLUMN web_order_id BIGINT NULL REFERENCES web_orders(id)`; make POS transaction link logically optional (already nullable ManyToOne); `web_orders ADD COLUMN coupon_code VARCHAR(50) NULL, coupon_discount NUMERIC(18,4) NOT NULL DEFAULT 0` |
-| `POST /api/v1/web/cart/validate-coupon` (anonymous, rate-limited 5/min — coupon codes are guessable, this endpoint is a brute-force target) | body: `{code, lines}` (+ optional auth); reuses `PromotionService.applyCoupon()` with channel check; identity for per-customer limits = `webCustomerId` when logged in, else `phoneNormalized` is *not* trusted (anonymous users get only global limits). Response: valid flag, discount, generic error message (never reveals whether a code exists vs is depleted) |
-| Checkout | `CheckoutRequest` gains optional `couponCode`; service re-validates, snapshots code + discount on the order. Invalid coupon at checkout = 422 with a clean error, cart untouched |
-| Confirmation / cancellation | `WebOrderService.updateStatus()`: on NEW→CONFIRMED call `recordCouponRedemption()` (row-locked; if the coupon got depleted between checkout and confirm, confirmation still succeeds but the discount is kept — staff accepted the order at that price — and the redemption row notes the override); on CONFIRMED→CANCELLED reverse the redemption (`isReversed=true`, decrement uses) |
-| `WebCustomer` ↔ AR customer | coupon `customerId` binding continues to use AR customer ids (existing field); web flow checks the linked AR customer when present |
+| Migration `V59__web_coupons.sql` | `coupon_redemptions.web_order_id BIGINT NULL REFERENCES web_orders` + index; `web_orders.coupon_code VARCHAR(50)` + `coupon_discount NUMERIC(18,4) DEFAULT 0` |
+| `PromotionService.applyCoupon(...)` | new overload with explicit `tenantId` + `channel`; old signature delegates with POS. A coupon is rejected when its promotion's channel doesn't match (ALL works on both) — WEB coupons can't redeem at the POS terminal and vice versa |
+| `WebCouponService` (web package) | resolves the AR customer linked to the phone's web account for per-customer limits (unknown phones get only global limits — self-reported phones are never trusted as identity); collapses every invalid reason into one generic `CouponOutcome.invalid()`; clamps the discount to the cart total |
+| `POST /api/v1/web/cart/validate-coupon` (`WebCartPublicController`) | body `{code, lines}` + optional bearer token; prices the cart through `WebPricingService` first so the coupon discounts the post-promotion total; strict 5/min-per-IP rate limit (no time-bucket widening — this is a brute-force target); response `{couponCode, valid, discount}` — provably identical payloads for all invalid reasons (full-flow test asserts it) |
+| Checkout | `CheckoutRequest.couponCode` (optional); re-validated server-side against the goods total after automatic promotions; an **invalid coupon rejects checkout with 400** — silently dropping a typed-in discount would surprise the customer on the bill; code + discount snapshotted on the order; `recalculateTotal()` = lines − promo discount − coupon discount (floor 0) + delivery |
+| Confirmation | `recordWebCouponRedemption()` (coupon row locked FOR UPDATE): creates a redemption row with `web_order_id`, increments coupon + promotion usage. If the coupon got depleted between checkout and confirm, confirmation still succeeds, the discount is kept, and the redemption row notes the override. A deleted coupon is skipped silently. Best-effort — never blocks confirmation |
+| Cancellation (after confirm) | `reverseWebCouponRedemption()`: marks redemption rows reversed (who/when/why), `Coupon.releaseUsage()` decrements uses **and re-activates a coupon depleted only by the released usage**, promotion usage decremented — the customer can use the coupon again |
+| Invoice conversion | header `discountAmount` = promotion + coupon discounts combined (`WebOrder.totalDiscounts()`); invoice total still matches the order total exactly |
 
 ### Admin frontend
 
@@ -174,21 +178,29 @@ on confirmation with full audit.
   green discount row or inline error ("Купон нотўғри ёки муддати ўтган"). Code is sent with
   the order; success screen shows the coupon discount.
 
-### Tests
+### Tests (as built)
 
-- **Repository:** redemption by web order id; tenant isolation.
-- **Service:** validate → checkout → confirm records redemption exactly once (idempotent on
-  re-confirm attempts); cancel reverses; depleted-between-checkout-and-confirm keeps
-  discount; per-customer limit blocks a second use for the same web customer; anonymous user
-  bypasses per-customer but not global limits; POS-channel coupon rejected.
-- **Controller:** rate limit on validate endpoint; generic error body (no oracle).
-- **Full-flow:** generate coupons via existing `CouponService` → validate → checkout →
-  confirm → redemption row has `web_order_id`; cancel → reversed.
+- **Service (Mockito):** `WebCouponServiceTest` (7) — discount mapping/clamping/trim,
+  generic collapse of invalid reasons, zero-discount = invalid, AR-customer resolution by
+  phone, unknown phone stays anonymous; `WebOrderPublicServiceTest` — coupon snapshot,
+  invalid coupon rejects checkout (nothing persisted), no coupon = no coupon-service call;
+  `WebOrderServiceTest` — redemption recorded on confirm, redemption failure never blocks
+  confirmation, reversal on cancel, no-coupon orders skip it, combined header discount on
+  conversion.
+- **Full-flow:** `WebCouponFullFlowTest` (11) — validate (valid / generic outcome proven
+  identical for unknown vs wrong-channel codes / 5-min 429), checkout discount + totals,
+  invalid and POS-channel coupons rejected, redemption row linked to the web order with
+  coupon+promotion counters, cancel reverses and the coupon becomes usable again
+  (max-uses=1 round-trip), per-customer limit blocks a second use for the linked customer
+  while an unlinked phone passes, staff order fields, invoice conversion totals.
 - **Manual checklist:** bulk-generate 10 coupons, use one twice from the same login (second
   rejected), cancel a confirmed couponed order and verify the coupon is usable again.
 
-**Acceptance:** a coupon distributed by staff can be redeemed exactly per its limits from
-the app, with a clean audit trail. (~1–1.5 days)
+**Implementation note:** invalid coupons at checkout return 400 (the codebase's
+`ValidationException` convention), not the 422 sketched originally.
+
+**Acceptance: met** — a coupon distributed by staff can be redeemed exactly per its limits
+from the app, with a clean audit trail.
 
 ---
 

@@ -290,7 +290,8 @@
       "EXPIRED": "Муддати ўтган",
       "DEPLETED": "Тугаган",
       "CANCELLED": "Бекор қилинган"
-    }
+    },
+    "webOrderSource": "Онлайн буюртма"
   },
   "priceLists": {
     "title": "Нарх рўйхатлари",

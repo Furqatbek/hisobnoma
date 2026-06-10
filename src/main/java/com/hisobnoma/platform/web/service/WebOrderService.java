@@ -52,6 +52,7 @@ public class WebOrderService {
     private final StockReservationRepository stockReservationRepository;
     private final StockService stockService;
     private final com.hisobnoma.platform.pos.repository.PromotionRepository promotionRepository;
+    private final com.hisobnoma.platform.pos.service.PromotionService promotionService;
 
     @Transactional(readOnly = true)
     public Page<WebOrderDto> getOrders(WebOrderStatus status, Pageable pageable) {
@@ -96,11 +97,13 @@ public class WebOrderService {
         if (target == WebOrderStatus.CONFIRMED) {
             reserveStock(order);
             adjustPromotionUsage(order, true);
+            recordCouponRedemption(order);
         } else if (previous != WebOrderStatus.NEW
                 && (target == WebOrderStatus.CANCELLED || target == WebOrderStatus.COMPLETED)) {
             releaseReservations(order);
             if (target == WebOrderStatus.CANCELLED) {
                 adjustPromotionUsage(order, false);
+                reverseCouponRedemption(order, request.getReason());
             }
         }
 
@@ -161,11 +164,10 @@ public class WebOrderService {
                 .invoiceDate(LocalDate.now())
                 .dueDate(LocalDate.now().plusDays(30))
                 .totalAmount(order.getTotalAmount())
-                // Promotion discount as a header discount keeps line snapshots
-                // at full price while the invoice total matches the order total
-                .discountAmount(order.getDiscountTotal() != null
-                        && order.getDiscountTotal().compareTo(BigDecimal.ZERO) > 0
-                        ? order.getDiscountTotal() : null)
+                // Promotion + coupon discounts as a header discount keep line
+                // snapshots at full price while invoice and order totals match
+                .discountAmount(order.totalDiscounts().compareTo(BigDecimal.ZERO) > 0
+                        ? order.totalDiscounts() : null)
                 .currency(order.getCurrency())
                 .description("Онлайн буюртма " + order.getOrderNumber())
                 .lines(lines)
@@ -268,6 +270,46 @@ public class WebOrderService {
         }
     }
 
+    // ---- coupon redemption ----
+
+    /**
+     * Records the coupon redemption when the order is confirmed. Best-effort:
+     * a failure is logged but never blocks confirmation — the customer was
+     * already promised the discount at checkout.
+     */
+    private void recordCouponRedemption(WebOrder order) {
+        if (order.getCouponCode() == null || order.getCouponCode().isBlank()) {
+            return;
+        }
+        try {
+            promotionService.recordWebCouponRedemption(
+                    order.getCouponCode(),
+                    order.getCustomerId() != null ? order.getCustomerId() : findLinkedCustomerId(order),
+                    order.getId(),
+                    order.getTotalAmount(),
+                    order.getCouponDiscount(),
+                    order.getTenantId(),
+                    securityContextHelper.getCurrentUserId());
+        } catch (Exception e) {
+            log.warn("Web order {}: failed to record coupon redemption for {}: {}",
+                    order.getOrderNumber(), order.getCouponCode(), e.getMessage());
+        }
+    }
+
+    private void reverseCouponRedemption(WebOrder order, String reason) {
+        if (order.getCouponCode() == null || order.getCouponCode().isBlank()) {
+            return;
+        }
+        try {
+            promotionService.reverseWebCouponRedemption(
+                    order.getId(), order.getTenantId(),
+                    securityContextHelper.getCurrentUserId(), reason);
+        } catch (Exception e) {
+            log.warn("Web order {}: failed to reverse coupon redemption: {}",
+                    order.getOrderNumber(), e.getMessage());
+        }
+    }
+
     // ---- internals ----
 
     private Long findLinkedCustomerId(WebOrder order) {
@@ -324,6 +366,8 @@ public class WebOrderService {
                 .deliveryFee(order.getDeliveryFee())
                 .discountTotal(order.getDiscountTotal())
                 .appliedPromotions(order.getAppliedPromotions())
+                .couponCode(order.getCouponCode())
+                .couponDiscount(order.getCouponDiscount())
                 .totalAmount(order.getTotalAmount())
                 .currency(order.getCurrency())
                 .customerId(order.getCustomerId())

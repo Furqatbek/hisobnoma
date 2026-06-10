@@ -211,6 +211,8 @@ public class WebAuthService {
                 .status(order.getStatus().name())
                 .deliveryFee(order.getDeliveryFee())
                 .discountTotal(order.getDiscountTotal())
+                .couponCode(order.getCouponCode())
+                .couponDiscount(order.getCouponDiscount())
                 .totalAmount(order.getTotalAmount())
                 .currency(order.getCurrency())
                 .createdAt(order.getCreatedAt())
