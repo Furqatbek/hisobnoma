@@ -53,6 +53,7 @@ class WebOrderServiceTest {
     @Mock private StockService stockService;
     @Mock private com.hisobnoma.platform.pos.repository.PromotionRepository promotionRepository;
     @Mock private com.hisobnoma.platform.pos.service.PromotionService promotionService;
+    @Mock private WebLoyaltyService loyaltyService;
 
     @InjectMocks
     private WebOrderService service;

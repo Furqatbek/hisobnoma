@@ -42,6 +42,8 @@ class WebOrderPublicServiceTest {
     @Mock private TelegramNotificationService telegramNotificationService;
     @Mock private WebPricingService pricingService;
     @Mock private WebCouponService couponService;
+    @Mock private WebLoyaltyService loyaltyService;
+    @Mock private com.hisobnoma.platform.web.repository.WebCustomerRepository webCustomerRepository;
 
     @InjectMocks
     private WebOrderPublicService service;

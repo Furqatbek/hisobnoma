@@ -213,6 +213,7 @@ public class WebAuthService {
                 .discountTotal(order.getDiscountTotal())
                 .couponCode(order.getCouponCode())
                 .couponDiscount(order.getCouponDiscount())
+                .pointsSpent(order.getPointsSpent())
                 .totalAmount(order.getTotalAmount())
                 .currency(order.getCurrency())
                 .createdAt(order.getCreatedAt())

@@ -34,6 +34,7 @@ public class WebOrderDto {
     private String appliedPromotions;
     private String couponCode;
     private BigDecimal couponDiscount;
+    private BigDecimal pointsSpent;
     private BigDecimal totalAmount;
     private String currency;
     private Long customerId;

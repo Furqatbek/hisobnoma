@@ -2,12 +2,14 @@ package com.hisobnoma.platform.web.controller;
 
 import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.common.dto.PageResponse;
+import com.hisobnoma.platform.web.dto.LoyaltyBalanceDto;
 import com.hisobnoma.platform.web.dto.PublicOrderDto;
 import com.hisobnoma.platform.web.dto.RequestOtpRequest;
 import com.hisobnoma.platform.web.dto.VerifyOtpRequest;
 import com.hisobnoma.platform.web.dto.WebAuthResponse;
 import com.hisobnoma.platform.web.entity.WebCustomer;
 import com.hisobnoma.platform.web.service.WebAuthService;
+import com.hisobnoma.platform.web.service.WebLoyaltyService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,7 @@ import java.util.Map;
 public class WebAuthPublicController {
 
     private final WebAuthService authService;
+    private final WebLoyaltyService loyaltyService;
 
     @PostMapping("/auth/request-otp")
     public ResponseEntity<ApiResponse<Void>> requestOtp(
@@ -62,6 +65,14 @@ public class WebAuthPublicController {
             @PageableDefault(size = 20) Pageable pageable) {
         Page<PublicOrderDto> page = authService.getMyOrders(authorization, pageable);
         return ResponseEntity.ok(PageResponse.of(page));
+    }
+
+    @GetMapping("/me/loyalty")
+    public ResponseEntity<ApiResponse<LoyaltyBalanceDto>> myLoyalty(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        return ResponseEntity.ok(ApiResponse.success(
+                loyaltyService.getBalance(customer.getTenantId(), customer.getId())));
     }
 
     private String clientIp(HttpServletRequest request) {

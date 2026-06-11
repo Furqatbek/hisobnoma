@@ -53,6 +53,7 @@ public class WebOrderService {
     private final StockService stockService;
     private final com.hisobnoma.platform.pos.repository.PromotionRepository promotionRepository;
     private final com.hisobnoma.platform.pos.service.PromotionService promotionService;
+    private final WebLoyaltyService loyaltyService;
 
     @Transactional(readOnly = true)
     public Page<WebOrderDto> getOrders(WebOrderStatus status, Pageable pageable) {
@@ -101,9 +102,13 @@ public class WebOrderService {
         } else if (previous != WebOrderStatus.NEW
                 && (target == WebOrderStatus.CANCELLED || target == WebOrderStatus.COMPLETED)) {
             releaseReservations(order);
+            if (target == WebOrderStatus.COMPLETED) {
+                earnLoyaltyPoints(order);
+            }
             if (target == WebOrderStatus.CANCELLED) {
                 adjustPromotionUsage(order, false);
                 reverseCouponRedemption(order, request.getReason());
+                reverseLoyaltyPoints(order);
             }
         }
 
@@ -310,6 +315,26 @@ public class WebOrderService {
         }
     }
 
+    // ---- loyalty ----
+
+    private void earnLoyaltyPoints(WebOrder order) {
+        try {
+            loyaltyService.earn(order);
+        } catch (Exception e) {
+            log.warn("Web order {}: failed to earn loyalty points: {}",
+                    order.getOrderNumber(), e.getMessage());
+        }
+    }
+
+    private void reverseLoyaltyPoints(WebOrder order) {
+        try {
+            loyaltyService.reverseOrder(order);
+        } catch (Exception e) {
+            log.warn("Web order {}: failed to reverse loyalty points: {}",
+                    order.getOrderNumber(), e.getMessage());
+        }
+    }
+
     // ---- internals ----
 
     private Long findLinkedCustomerId(WebOrder order) {
@@ -368,6 +393,7 @@ public class WebOrderService {
                 .appliedPromotions(order.getAppliedPromotions())
                 .couponCode(order.getCouponCode())
                 .couponDiscount(order.getCouponDiscount())
+                .pointsSpent(order.getPointsSpent())
                 .totalAmount(order.getTotalAmount())
                 .currency(order.getCurrency())
                 .customerId(order.getCustomerId())

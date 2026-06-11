@@ -56,6 +56,7 @@ public class AdminDashboardService {
     private final WebOrderRepository webOrderRepository;
     private final WebCustomerRepository webCustomerRepository;
     private final WebCampaignRepository webCampaignRepository;
+    private final com.hisobnoma.platform.web.service.WebLoyaltyService webLoyaltyService;
 
     @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
@@ -114,6 +115,7 @@ public class AdminDashboardService {
                 .onlineCustomers(getOnlineCustomerCount(tenantId))
                 .recentOnlineOrders(getRecentOnlineOrders(tenantId))
                 .lastCampaign(getLastCampaign(tenantId))
+                .loyaltyLiability(getLoyaltyLiability(tenantId))
 
                 // Activity statistics
                 .totalAuditLogsToday(getAuditLogCount(tenantId, startOfToday))
@@ -366,6 +368,15 @@ public class AdminDashboardService {
         } catch (Exception e) {
             log.warn("Failed to get last campaign: {}", e.getMessage());
             return null;
+        }
+    }
+
+    private BigDecimal getLoyaltyLiability(Long tenantId) {
+        try {
+            return webLoyaltyService.getTotalLiability(tenantId);
+        } catch (Exception e) {
+            log.warn("Failed to get loyalty liability: {}", e.getMessage());
+            return BigDecimal.ZERO;
         }
     }
 

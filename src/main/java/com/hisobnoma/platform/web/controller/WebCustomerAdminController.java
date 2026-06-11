@@ -3,8 +3,12 @@ package com.hisobnoma.platform.web.controller;
 import com.hisobnoma.platform.auth.security.RequiresPermission;
 import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.common.dto.PageResponse;
+import com.hisobnoma.platform.web.dto.LoyaltyAdjustRequest;
+import com.hisobnoma.platform.web.dto.LoyaltyBalanceDto;
 import com.hisobnoma.platform.web.dto.WebCustomerDto;
 import com.hisobnoma.platform.web.service.WebCustomerService;
+import com.hisobnoma.platform.web.service.WebLoyaltyService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +27,7 @@ import java.util.Map;
 public class WebCustomerAdminController {
 
     private final WebCustomerService customerService;
+    private final WebLoyaltyService loyaltyService;
 
     @GetMapping
     @RequiresPermission("WEB_CUSTOMER_VIEW")
@@ -60,5 +65,18 @@ public class WebCustomerAdminController {
             @PathVariable Long id, @RequestBody Map<String, Boolean> body) {
         return ResponseEntity.ok(ApiResponse.success(
                 customerService.setSmsOptOut(id, Boolean.TRUE.equals(body.get("optOut")))));
+    }
+
+    @GetMapping("/{id}/loyalty")
+    @RequiresPermission("WEB_LOYALTY_VIEW")
+    public ResponseEntity<ApiResponse<LoyaltyBalanceDto>> getLoyalty(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(loyaltyService.getCustomerLoyalty(id)));
+    }
+
+    @PostMapping("/{id}/loyalty/adjust")
+    @RequiresPermission("WEB_LOYALTY_MANAGE")
+    public ResponseEntity<ApiResponse<LoyaltyBalanceDto>> adjustLoyalty(
+            @PathVariable Long id, @Valid @RequestBody LoyaltyAdjustRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(loyaltyService.adjust(id, request)));
     }
 }

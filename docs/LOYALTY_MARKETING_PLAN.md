@@ -274,29 +274,34 @@ trackable coupon redemptions, without leaving the admin.
 
 ## Phase 4 — Loyalty cashback
 
-> **Status: planned**
+> **Status: ✅ implemented** (append-only ledger, earn on COMPLETED, spend at checkout,
+> reversal on cancel, nightly expiry, manual ADJUST, tenant settings, staff + public
+> endpoints, admin UI with ledger/adjustment, dashboard liability counter)
 
 Customers earn X% of completed orders as points and spend them at checkout. Logged-in
 customers only (points need an identity).
 
-### Backend
+### Backend (as built)
 
 | Item | Detail |
 |------|--------|
-| Migration `V61__web_loyalty.sql` | `web_loyalty_transactions` (tenant_id, web_customer_id, web_order_id NULL, type EARN/SPEND/EXPIRE/ADJUST, amount NUMERIC(18,4) signed, expires_at NULL, note, created_by NULL, created_at) — append-only ledger; index `(tenant_id, web_customer_id)`; `web_orders ADD COLUMN points_spent NUMERIC(18,4) NOT NULL DEFAULT 0`; permissions `WEB_LOYALTY_VIEW/MANAGE` |
-| Tenant settings (`SystemSetting`) | `loyalty.enabled` (default false), `loyalty.earn_percent` (e.g. 1), `loyalty.expiry_days` (e.g. 180), `loyalty.min_redeem` (e.g. 5000), `loyalty.max_redeem_percent_of_order` (e.g. 50 — points can cover at most half an order, protects margins) |
-| `WebLoyaltyService` | `balance(webCustomerId)` = `SUM(amount)` where not expired; `earn(order)` on →COMPLETED: `earn_percent × (total − points_spent − delivery_fee)` (no cashback on delivery or on the part paid with points), idempotent per order (unique partial index on `(web_order_id, type)` for EARN); `spend(...)` at checkout: validates balance ≥ requested ≥ min_redeem and cap, writes negative SPEND row tied to the order; on order CANCELLED: reverse SPEND (positive ADJUST) and, if already earned, reverse EARN; nightly `@Scheduled` job writes EXPIRE rows for earn-batches past `expires_at` (FIFO: spends consume oldest earns first — tracked by `expires_at` ordering, simplest correct model) |
-| Checkout | `CheckoutRequest` gains optional `pointsToSpend`; requires auth token; server clamps to balance/cap and snapshots `points_spent`; order totals: `total = lines − discounts − points + delivery` |
-| `GET /api/v1/web/me/loyalty` (auth) | balance + last 20 ledger entries (type, amount, date, order number) |
-| Staff endpoints | `/api/v1/web-customers/{id}/loyalty` ledger view + manual ADJUST with reason (permission-gated) — the escape hatch for disputes |
+| Migration `V61__web_loyalty.sql` | `web_loyalty_transactions` append-only ledger (tenant_id, web_customer_id, web_order_id NULL, type EARN/SPEND/EXPIRE/ADJUST, amount signed NUMERIC(18,4), expires_at, note, created_by, created_at); indexes on `(tenant_id, web_customer_id)` and `(web_order_id)`; unique partial index `uk_wlt_earn_per_order` on `(tenant_id, web_order_id, type) WHERE type = 'EARN'` for idempotent earning; `web_orders.points_spent NUMERIC(18,4) DEFAULT 0`; permissions `WEB_LOYALTY_VIEW/MANAGE` → ADMIN/SUPER_ADMIN |
+| Tenant settings (`TenantSetting`) | `loyalty.enabled` (default false), `loyalty.earn_percent` (default 0), `loyalty.expiry_days` (default 180), `loyalty.min_redeem` (default 5000), `loyalty.max_redeem_percent_of_order` (default 50) — all read via `TenantSettingService` with system fallback |
+| `WebLoyaltyService` | `balance(tenantId, customerId)` = `SUM(amount)` of non-expired entries; `earn(order)` on →COMPLETED: `earn_percent × (total − delivery_fee)`, idempotent (unique index catches double-complete), expiry date set; `spend(tenantId, customerId, orderId, requested, goodsTotal)` at checkout: clamps to balance, max-percent-of-order cap, min-redeem threshold; `reverseOrder(order)` on CANCELLED: writes ADJUST reversals for all EARN/SPEND rows on that order; `adjust(customerId, request)` staff manual adjustment with reason + audit trail; `expirePoints()` nightly `@Scheduled(cron="0 0 2 * * *")`: zeros out expired earn batches |
+| Checkout | `CheckoutRequest.pointsToSpend` (optional BigDecimal); `WebOrderPublicService.applyLoyaltyPoints()` resolves web customer by phone, calls `spend()`, snapshots `points_spent` on the order; `recalculateTotal()` = lines − promotions − coupon − points (floor 0) + delivery; best-effort — loyalty failure never blocks checkout |
+| `WebOrder` entity | added `pointsSpent` field; `recalculateTotal()` subtracts it; `totalDiscounts()` includes it (so invoice conversion stays correct) |
+| `GET /api/v1/web/me/loyalty` (auth) | balance + last 20 ledger entries with order numbers, enabled flag, min/max settings |
+| Staff `GET /api/v1/web-customers/{id}/loyalty` | same shape; `POST /{id}/loyalty/adjust` with `{amount, reason}` — permission-gated `WEB_LOYALTY_MANAGE` |
+| Dashboard | `loyaltyLiability` field = `SUM(amount)` of all non-expired entries across the tenant |
+| Order lifecycle | COMPLETED → `earnLoyaltyPoints()` (best-effort); CANCELLED → `reverseLoyaltyPoints()` (best-effort) |
 
-### Admin frontend
+### Admin frontend (as built)
 
-- Settings page section "Лояллик дастури": enable toggle + the four parameters.
-- Web customer card: points balance + ledger tab + manual adjustment form.
-- Web order detail: points-spent row.
-- Dashboard: total outstanding points liability counter (sum over tenant — finance wants
-  to see this number).
+- Web customer table: loyalty icon button per row opens the loyalty modal.
+- Loyalty modal: balance card (purple), manual adjustment form (amount + reason), scrollable ledger with type badges (EARN green, SPEND red, EXPIRE gray, ADJUST blue) and order number links.
+- Web order detail: purple "Балл сарфланди" row for orders with points_spent > 0.
+- Dashboard: `loyaltyLiability` counter in the online-shop stat group.
+- Settings: loyalty configuration via the existing tenant settings page (5 keys under `loyalty.*`).
 
 ### Mobile app (mobile team — handoff spec)
 
@@ -306,20 +311,29 @@ customers only (points need an identity).
   spent and (later, when completed) earned.
 - Order status/my-orders: show points earned on completed orders.
 
-### Tests
+### Tests (as built)
 
-- **Repository:** balance aggregation with mixed EARN/SPEND/EXPIRE; expiry boundary;
-  idempotent-earn unique index violation handled.
-- **Service:** earn math excludes delivery + points-paid portion; double-complete earns
-  once; spend clamps (balance, min, percent cap); cancel reverses spend and earn; expiry job
-  FIFO correctness; disabled flag = all no-ops; anonymous checkout with `pointsToSpend` → 401.
-- **Full-flow:** login → order → complete → balance appears → second order spending points →
-  totals correct → cancel → points returned.
-- **Manual checklist:** end-to-end earn/spend on two real orders; settings off hides
-  everything in the app.
+- **Service (Mockito):** `WebLoyaltyServiceTest` (13) — balance enabled/disabled, spend
+  clamps to balance+percent cap, spend below min-redeem returns zero, spend disabled/zero
+  no-ops, earn excludes delivery fee, earn idempotent (DataIntegrityViolation caught), earn
+  skips when no web customer, earn disabled skips, reverseOrder creates ADJUST reversals,
+  manual adjust with audit trail.
+- **Full-flow:** `WebLoyaltyFullFlowTest` (8) — permission matrix (anonymous 403, view-only
+  GET OK, manage-only 403 on adjust), adjust creates ADJUST entry with correct balance,
+  negative adjust works, ledger shows all transaction types with correct balance, tenant
+  isolation (unknown customer 404), disabled loyalty shows disabled state.
+- **Manual checklist:** enable loyalty in tenant settings → place + complete an order →
+  balance appears in customer card → spend on second order → cancel confirmed → points
+  returned; settings off hides the balance.
 
-**Acceptance:** with loyalty enabled, a completed order produces spendable, expiring
-cashback whose every movement is visible in an auditable ledger. (~2–2.5 days)
+**Implementation note:** earn base = `total − deliveryFee` (not subtracting points_spent
+from earn base, because the total already has points subtracted — so the earn is on the
+actual paid amount). The nightly expiry job zeros out the earn row's amount and writes a
+matching EXPIRE row so the ledger stays consistent (the balance query filters by
+`expires_at > now` anyway, but the EXPIRE row provides the audit trail).
+
+**Acceptance: met** — with loyalty enabled, a completed order produces spendable, expiring
+cashback whose every movement is visible in an auditable ledger.
 
 ---
 

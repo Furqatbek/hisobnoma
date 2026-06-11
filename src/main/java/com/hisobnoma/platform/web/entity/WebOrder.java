@@ -95,6 +95,10 @@ public class WebOrder extends TenantAwareEntity {
     @Builder.Default
     private BigDecimal couponDiscount = BigDecimal.ZERO;
 
+    @Column(name = "points_spent", precision = 18, scale = 4, nullable = false)
+    @Builder.Default
+    private BigDecimal pointsSpent = BigDecimal.ZERO;
+
     @Column(name = "total_amount", precision = 18, scale = 4, nullable = false)
     @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
@@ -139,8 +143,8 @@ public class WebOrder extends TenantAwareEntity {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal discount = discountTotal != null ? discountTotal : BigDecimal.ZERO;
         BigDecimal coupon = couponDiscount != null ? couponDiscount : BigDecimal.ZERO;
-        // Discounts can never push the goods total below zero
-        this.totalAmount = linesTotal.subtract(discount).subtract(coupon).max(BigDecimal.ZERO)
+        BigDecimal points = pointsSpent != null ? pointsSpent : BigDecimal.ZERO;
+        this.totalAmount = linesTotal.subtract(discount).subtract(coupon).subtract(points).max(BigDecimal.ZERO)
                 .add(deliveryFee != null ? deliveryFee : BigDecimal.ZERO);
     }
 
@@ -150,6 +154,7 @@ public class WebOrder extends TenantAwareEntity {
      */
     public BigDecimal totalDiscounts() {
         return (discountTotal != null ? discountTotal : BigDecimal.ZERO)
-                .add(couponDiscount != null ? couponDiscount : BigDecimal.ZERO);
+                .add(couponDiscount != null ? couponDiscount : BigDecimal.ZERO)
+                .add(pointsSpent != null ? pointsSpent : BigDecimal.ZERO);
     }
 }

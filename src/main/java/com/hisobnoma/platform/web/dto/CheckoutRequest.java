@@ -39,6 +39,8 @@ public class CheckoutRequest {
     @Size(max = 50, message = "Coupon code cannot exceed 50 characters")
     private String couponCode;
 
+    private BigDecimal pointsToSpend;
+
     @NotEmpty(message = "At least one order line is required")
     @Size(max = 50, message = "Order cannot contain more than 50 lines")
     @Valid

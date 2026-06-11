@@ -17,6 +17,7 @@ import com.hisobnoma.platform.web.dto.PublicVillageDto;
 import com.hisobnoma.platform.web.entity.*;
 import com.hisobnoma.platform.web.exception.TooManyRequestsException;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
+import com.hisobnoma.platform.web.repository.WebCustomerRepository;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +47,8 @@ public class WebOrderPublicService {
     private final TelegramNotificationService telegramNotificationService;
     private final WebPricingService pricingService;
     private final WebCouponService couponService;
+    private final WebLoyaltyService loyaltyService;
+    private final WebCustomerRepository webCustomerRepository;
 
     @Transactional
     public PublicOrderDto checkout(CheckoutRequest request, String sourceIp, String userAgent) {
@@ -102,6 +105,7 @@ public class WebOrderPublicService {
         applyCoupon(order, request, tenantId);
         order.recalculateTotal();
         WebOrder saved = orderRepository.save(order);
+        applyLoyaltyPoints(saved, request, tenantId);
         log.info("Web order {} created for tenant {} ({} lines, total {})",
                 saved.getOrderNumber(), tenantId, saved.getLines().size(), saved.getTotalAmount());
 
@@ -185,6 +189,38 @@ public class WebOrderPublicService {
         order.setCouponDiscount(outcome.discount());
     }
 
+    private void applyLoyaltyPoints(WebOrder order, CheckoutRequest request, Long tenantId) {
+        if (request.getPointsToSpend() == null || request.getPointsToSpend().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        try {
+            String phone = normalizePhone(request.getPhone());
+            WebCustomer customer = webCustomerRepository.findByTenantIdAndPhone(tenantId, phone)
+                    .orElse(null);
+            if (customer == null) {
+                log.debug("Loyalty: no web customer for phone {} — points skipped", phone);
+                return;
+            }
+            BigDecimal goodsTotal = order.getLines().stream()
+                    .map(WebOrderLine::getLineTotal)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .subtract(order.getDiscountTotal() != null ? order.getDiscountTotal() : BigDecimal.ZERO)
+                    .subtract(order.getCouponDiscount() != null ? order.getCouponDiscount() : BigDecimal.ZERO)
+                    .max(BigDecimal.ZERO);
+
+            BigDecimal spent = loyaltyService.spend(tenantId, customer.getId(), order.getId(),
+                    request.getPointsToSpend(), goodsTotal);
+            if (spent.compareTo(BigDecimal.ZERO) > 0) {
+                order.setPointsSpent(spent);
+                order.recalculateTotal();
+                orderRepository.save(order);
+            }
+        } catch (Exception e) {
+            log.warn("Loyalty: failed to spend points for order {}: {}",
+                    order.getOrderNumber(), e.getMessage());
+        }
+    }
+
     private void applyDelivery(WebOrder order, CheckoutRequest request, Long tenantId) {
         if (request.getRegionId() != null) {
             DeliveryRegion region = regionRepository.findByIdAndTenantId(request.getRegionId(), tenantId)
@@ -247,6 +283,7 @@ public class WebOrderPublicService {
                 .discountTotal(order.getDiscountTotal())
                 .couponCode(order.getCouponCode())
                 .couponDiscount(order.getCouponDiscount())
+                .pointsSpent(order.getPointsSpent())
                 .totalAmount(order.getTotalAmount())
                 .currency(order.getCurrency())
                 .createdAt(order.getCreatedAt())

@@ -24,6 +24,7 @@ public class PublicOrderDto {
     private BigDecimal discountTotal;
     private String couponCode;
     private BigDecimal couponDiscount;
+    private BigDecimal pointsSpent;
     private BigDecimal totalAmount;
     private String currency;
     private Instant createdAt;

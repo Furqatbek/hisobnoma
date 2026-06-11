@@ -22,5 +22,17 @@
   "smsOn": "Рухсат",
   "smsOff": "Бекор",
   "smsAllowed": "SMS рекламага рухсат берилган",
-  "smsOptedOut": "Мижоз SMS рекламадан воз кечган"
+  "smsOptedOut": "Мижоз SMS рекламадан воз кечган",
+  "loyalty": "Лояллик баллари",
+  "loyaltyBalance": "Жорий баланс",
+  "loyaltyDisabled": "Лояллик дастури ўчирилган",
+  "loyaltyAdjust": "Қўлда тўғрилаш",
+  "loyaltyAmount": "Миқдор",
+  "loyaltyReason": "Сабаб",
+  "loyaltyLedger": "Ҳаракатлар тарихи",
+  "loyaltyEmpty": "Ҳеч қандай ҳаракат йўқ",
+  "loyaltyEarn": "Ҳисобланди",
+  "loyaltySpend": "Сарфланди",
+  "loyaltyExpire": "Муддати ўтди",
+  "loyaltyAdjustType": "Тўғрилаш"
 }

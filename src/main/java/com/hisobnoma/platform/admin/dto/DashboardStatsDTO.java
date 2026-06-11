@@ -58,6 +58,9 @@ public class DashboardStatsDTO {
     // Last SMS campaign (null if none)
     private LastCampaignDTO lastCampaign;
 
+    // Loyalty program liability (total outstanding points)
+    private BigDecimal loyaltyLiability;
+
     // Activity statistics
     private Long totalAuditLogsToday;
     private Long failedLoginsToday;
