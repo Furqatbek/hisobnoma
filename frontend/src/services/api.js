@@ -68,6 +68,42 @@ api.interceptors.response.use(
 
 export default api
 
+// ---------------------------------------------------------------------------
+// Response unwrapping
+//
+// The backend uses two envelope shapes:
+//   single objects/lists:  { success, message, data, timestamp }
+//   paginated results:     { content: [...], page: { number, totalElements, ... } }
+//
+// Use these instead of hand-rolled fallback chains like
+// `res.data?.data?.content || res.data?.data || res.data?.content || []`.
+// ---------------------------------------------------------------------------
+
+/** Payload of an ApiResponse envelope: unwrapData(res) -> res.data.data */
+export function unwrapData(response, fallback = null) {
+  const body = response?.data
+  if (body && typeof body === 'object' && 'data' in body) return body.data ?? fallback
+  return body ?? fallback
+}
+
+/** List payload, tolerating both envelope shapes; always returns an array. */
+export function unwrapList(response) {
+  const value = unwrapData(response, [])
+  if (Array.isArray(value)) return value
+  if (Array.isArray(value?.content)) return value.content
+  return []
+}
+
+/** Paginated payload: { content, page } with safe defaults. */
+export function unwrapPage(response) {
+  const body = response?.data
+  const source = body && typeof body === 'object' && 'content' in body ? body : body?.data
+  return {
+    content: source?.content || [],
+    page: source?.page || { number: 0, size: 0, totalElements: 0, totalPages: 0 }
+  }
+}
+
 // Auth API
 export const authApi = {
   login: (credentials) => api.post('/auth/login', credentials),

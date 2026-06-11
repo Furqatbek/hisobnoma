@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { employeesApi, departmentsApi, positionsApi, usersApi } from '@/services/api'
+import { employeesApi, departmentsApi, positionsApi, usersApi, unwrapList } from '@/services/api'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
@@ -47,7 +47,7 @@ onMounted(async () => {
     ])
     departments.value = deptRes.data.data || deptRes.data || []
     positions.value = posRes.data.data || posRes.data || []
-    users.value = usersRes.data.data?.content || usersRes.data.content || []
+    users.value = unwrapList(usersRes)
 
     if (isEdit.value) {
       const response = await employeesApi.getById(route.params.id)

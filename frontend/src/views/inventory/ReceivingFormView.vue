@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { receivingApi, suppliersApi, locationsApi, productsApi, uomApi, purchaseOrdersApi } from '@/services/api'
+import { receivingApi, suppliersApi, locationsApi, productsApi, uomApi, purchaseOrdersApi, unwrapList } from '@/services/api'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -45,11 +45,11 @@ onMounted(async () => {
       uomApi.getActive(),
       purchaseOrdersApi.getByStatus('APPROVED', { size: 200 })
     ])
-    vendors.value = vendorsRes.data.data?.content || vendorsRes.data.content || vendorsRes.data || []
+    vendors.value = unwrapList(vendorsRes)
     const locData = locationsRes.data.data || locationsRes.data
     locations.value = locData?.content || locData || []
     uoms.value = uomsRes.data.data || uomsRes.data || []
-    purchaseOrders.value = posRes.data.data?.content || posRes.data.content || posRes.data || []
+    purchaseOrders.value = unwrapList(posRes)
   } catch (error) {
     console.error('Failed to load form data:', error)
   }
@@ -62,7 +62,7 @@ async function searchProducts() {
   }
   try {
     const response = await productsApi.search(productSearch.value)
-    products.value = response.data.data?.content || response.data.content || response.data || []
+    products.value = unwrapList(response)
   } catch (error) {
     console.error('Search failed:', error)
   }

@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { purchaseOrdersApi, suppliersApi, productsApi, locationsApi } from '@/services/api'
+import { purchaseOrdersApi, suppliersApi, productsApi, locationsApi, unwrapList } from '@/services/api'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -39,8 +39,8 @@ onMounted(async () => {
       suppliersApi.getAll({ size: 100 }),
       locationsApi.getAll({ size: 100 })
     ])
-    suppliers.value = suppliersRes.data.data?.content || suppliersRes.data.content || suppliersRes.data || []
-    locations.value = locationsRes.data.data?.content || locationsRes.data.content || locationsRes.data || []
+    suppliers.value = unwrapList(suppliersRes)
+    locations.value = unwrapList(locationsRes)
   } catch (error) {
     console.error('Failed to load data:', error)
   }
@@ -53,7 +53,7 @@ async function searchProducts() {
   }
   try {
     const response = await productsApi.search(productSearch.value)
-    products.value = response.data.data?.content || response.data.content || response.data || []
+    products.value = unwrapList(response)
   } catch (error) {
     console.error('Search failed:', error)
   }

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { usersApi, rolesApi } from '@/services/api'
+import { usersApi, rolesApi, unwrapList } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   LockClosedIcon, LockOpenIcon, KeyIcon, ShieldCheckIcon, XMarkIcon
@@ -18,7 +18,7 @@ async function fetchUsers() {
   loading.value = true
   try {
     const response = await usersApi.getAll({ size: 50, search: search.value || undefined })
-    users.value = response.data.data?.content || response.data.content || []
+    users.value = unwrapList(response)
   } catch (error) {
     console.error('Failed to fetch users:', error)
   } finally {
@@ -104,7 +104,7 @@ async function openRolesModal(user) {
   if (!rolesLoaded.value) {
     try {
       const res = await rolesApi.getAll({ size: 100 })
-      availableRoles.value = res.data.data?.content || res.data.data || []
+      availableRoles.value = unwrapList(res)
       rolesLoaded.value = true
     } catch (error) {
       console.error('Failed to fetch roles:', error)

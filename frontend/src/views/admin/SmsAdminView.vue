@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { smsApi, customersApi, arReportsApi } from '@/services/api'
+import { smsApi, customersApi, arReportsApi, unwrapList } from '@/services/api'
 import {
   ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
@@ -327,7 +327,7 @@ async function loadCustomerList() {
       customersApi.getAll({ size: 1000, sort: 'name,asc' }),
       arReportsApi.getCustomerBalanceReport()
     ])
-    const custData = custRes.data?.data?.content || custRes.data?.data || custRes.data?.content || []
+    const custData = unwrapList(custRes)
     customerList.value = Array.isArray(custData) ? custData : []
 
     const debtData = debtRes.data?.data || debtRes.data

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { usersApi, rolesApi } from '@/services/api'
+import { usersApi, rolesApi, unwrapList } from '@/services/api'
 import { ArrowLeftIcon, LockClosedIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -49,7 +49,7 @@ onMounted(async () => {
     // Fetch all available roles from API
     const rolesResponse = await rolesApi.getAll({ size: 100 })
     // Response structure: { data: { content: [...], totalElements, ... } }
-    availableRoles.value = rolesResponse.data.data?.content || rolesResponse.data.data || []
+    availableRoles.value = unwrapList(rolesResponse)
 
     // If editing, also fetch user data
     if (isEdit.value) {
