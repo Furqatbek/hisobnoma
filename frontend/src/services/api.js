@@ -711,6 +711,7 @@ export const webCustomersApi = {
   linkCustomer: (id, customerId) => api.post(`/web-customers/${id}/link-customer`, { customerId }),
   unlinkCustomer: (id) => api.post(`/web-customers/${id}/unlink-customer`),
   setSmsOptOut: (id, optOut) => api.post(`/web-customers/${id}/sms-opt-out`, { optOut }),
+  getWishlist: (id, params) => api.get(`/web-customers/${id}/wishlist`, { params }),
   getLoyalty: (id) => api.get(`/web-customers/${id}/loyalty`),
   adjustLoyalty: (id, amount, reason) => api.post(`/web-customers/${id}/loyalty/adjust`, { amount, reason })
 }

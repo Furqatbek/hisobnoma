@@ -6,7 +6,10 @@ import {
   MagnifyingGlassIcon,
   LinkIcon,
   XMarkIcon,
-  GiftIcon
+  GiftIcon,
+  HeartIcon,
+  ChevronDownIcon,
+  ChevronUpIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -32,6 +35,11 @@ const loyaltyLoading = ref(false)
 const adjustAmount = ref('')
 const adjustReason = ref('')
 const adjustBusy = ref(false)
+
+// Wishlist expand state
+const expandedWishlist = ref(null)
+const wishlistItems = ref([])
+const wishlistLoading = ref(false)
 
 async function fetchCustomers(page = 0) {
   loading.value = true
@@ -123,6 +131,26 @@ async function toggleSmsOptOut(webCustomer) {
   }
 }
 
+async function toggleWishlist(webCustomer) {
+  if (expandedWishlist.value === webCustomer.id) {
+    expandedWishlist.value = null
+    wishlistItems.value = []
+    return
+  }
+  expandedWishlist.value = webCustomer.id
+  wishlistLoading.value = true
+  wishlistItems.value = []
+  try {
+    const response = await webCustomersApi.getWishlist(webCustomer.id, { size: 50 })
+    const data = response.data
+    wishlistItems.value = data.content || []
+  } catch (error) {
+    console.error('Failed to fetch wishlist:', error)
+  } finally {
+    wishlistLoading.value = false
+  }
+}
+
 async function openLoyaltyModal(webCustomer) {
   loyaltyTarget.value = webCustomer
   loyaltyData.value = null
@@ -211,65 +239,102 @@ onMounted(() => fetchCustomers())
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 bg-white">
-            <tr v-for="customer in customers" :key="customer.id" class="hover:bg-gray-50">
-              <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                +{{ customer.phone }}
-              </td>
-              <td class="px-4 py-3 text-sm text-gray-700">
-                {{ customer.name || '—' }}
-                <span v-if="customer.pushReachable" class="ml-1 inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700" :title="$t('webCustomers.pushReachable')">Push</span>
-                <span v-if="customer.wishlistCount > 0" class="ml-1 inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-pink-100 text-pink-700" :title="$t('webCustomers.wishlistCount')">♥ {{ customer.wishlistCount }}</span>
-                <div v-if="customer.referralCode" class="text-xs text-gray-400 font-mono mt-0.5">{{ customer.referralCode }}
-                  <span v-if="customer.referredCount > 0" class="text-purple-600">({{ customer.referredCount }})</span>
-                </div>
-                <div v-if="customer.referredByName" class="text-xs text-gray-400 mt-0.5">{{ $t('webCustomers.referredBy') }}: {{ customer.referredByName }}</div>
-              </td>
-              <td class="px-4 py-3 text-center text-sm">{{ customer.orderCount }}</td>
-              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                {{ formatDate(customer.lastOrderAt) }}
-              </td>
-              <td class="px-4 py-3 text-center">
-                <button
-                  @click="toggleSmsOptOut(customer)"
-                  :class="customer.smsOptOut ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'"
-                  class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
-                  :title="customer.smsOptOut ? $t('webCustomers.smsOptedOut') : $t('webCustomers.smsAllowed')"
-                >
-                  {{ customer.smsOptOut ? $t('webCustomers.smsOff') : $t('webCustomers.smsOn') }}
-                </button>
-              </td>
-              <td class="px-4 py-3 text-sm">
-                <span v-if="customer.customerId" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {{ customer.customerCode }} · {{ customer.customerName }}
-                </span>
-                <span v-else class="text-gray-400 text-xs">{{ $t('webCustomers.notLinked') }}</span>
-              </td>
-              <td class="px-4 py-3 text-right whitespace-nowrap space-x-1">
-                <button
-                  class="btn-secondary text-sm py-1 px-3"
-                  @click="openLoyaltyModal(customer)"
-                  :title="$t('webCustomers.loyalty')"
-                >
-                  <GiftIcon class="h-4 w-4 inline" />
-                </button>
-                <button
-                  v-if="!customer.customerId"
-                  class="btn-secondary text-sm py-1 px-3"
-                  @click="openLinkModal(customer)"
-                >
-                  <LinkIcon class="h-4 w-4 mr-1 inline" />
-                  {{ $t('webCustomers.link') }}
-                </button>
-                <button
-                  v-else
-                  class="btn-secondary text-sm py-1 px-3 text-red-600"
-                  @click="unlink(customer)"
-                >
-                  <XMarkIcon class="h-4 w-4 mr-1 inline" />
-                  {{ $t('webCustomers.unlink') }}
-                </button>
-              </td>
-            </tr>
+            <template v-for="customer in customers" :key="customer.id">
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                  +{{ customer.phone }}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700">
+                  {{ customer.name || '—' }}
+                  <span v-if="customer.pushReachable" class="ml-1 inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700" :title="$t('webCustomers.pushReachable')">Push</span>
+                  <button
+                    v-if="customer.wishlistCount > 0"
+                    class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-pink-100 text-pink-700 hover:bg-pink-200 transition-colors cursor-pointer"
+                    :title="$t('webCustomers.wishlistCount')"
+                    @click="toggleWishlist(customer)"
+                  >
+                    <HeartIcon class="h-3 w-3 mr-0.5" />
+                    {{ customer.wishlistCount }}
+                    <component :is="expandedWishlist === customer.id ? ChevronUpIcon : ChevronDownIcon" class="h-3 w-3 ml-0.5" />
+                  </button>
+                  <div v-if="customer.referralCode" class="text-xs text-gray-400 font-mono mt-0.5">{{ customer.referralCode }}
+                    <span v-if="customer.referredCount > 0" class="text-purple-600">({{ customer.referredCount }})</span>
+                  </div>
+                  <div v-if="customer.referredByName" class="text-xs text-gray-400 mt-0.5">{{ $t('webCustomers.referredBy') }}: {{ customer.referredByName }}</div>
+                </td>
+                <td class="px-4 py-3 text-center text-sm">{{ customer.orderCount }}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                  {{ formatDate(customer.lastOrderAt) }}
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <button
+                    @click="toggleSmsOptOut(customer)"
+                    :class="customer.smsOptOut ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'"
+                    class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
+                    :title="customer.smsOptOut ? $t('webCustomers.smsOptedOut') : $t('webCustomers.smsAllowed')"
+                  >
+                    {{ customer.smsOptOut ? $t('webCustomers.smsOff') : $t('webCustomers.smsOn') }}
+                  </button>
+                </td>
+                <td class="px-4 py-3 text-sm">
+                  <span v-if="customer.customerId" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    {{ customer.customerCode }} · {{ customer.customerName }}
+                  </span>
+                  <span v-else class="text-gray-400 text-xs">{{ $t('webCustomers.notLinked') }}</span>
+                </td>
+                <td class="px-4 py-3 text-right whitespace-nowrap space-x-1">
+                  <button
+                    class="btn-secondary text-sm py-1 px-3"
+                    @click="openLoyaltyModal(customer)"
+                    :title="$t('webCustomers.loyalty')"
+                  >
+                    <GiftIcon class="h-4 w-4 inline" />
+                  </button>
+                  <button
+                    v-if="!customer.customerId"
+                    class="btn-secondary text-sm py-1 px-3"
+                    @click="openLinkModal(customer)"
+                  >
+                    <LinkIcon class="h-4 w-4 mr-1 inline" />
+                    {{ $t('webCustomers.link') }}
+                  </button>
+                  <button
+                    v-else
+                    class="btn-secondary text-sm py-1 px-3 text-red-600"
+                    @click="unlink(customer)"
+                  >
+                    <XMarkIcon class="h-4 w-4 mr-1 inline" />
+                    {{ $t('webCustomers.unlink') }}
+                  </button>
+                </td>
+              </tr>
+              <!-- Expandable wishlist row -->
+              <tr v-if="expandedWishlist === customer.id">
+                <td colspan="7" class="px-4 py-3 bg-pink-50/50">
+                  <div v-if="wishlistLoading" class="text-center text-sm text-gray-500 py-2">{{ $t('loading') }}</div>
+                  <div v-else-if="wishlistItems.length === 0" class="text-center text-sm text-gray-400 py-2">{{ $t('webCustomers.wishlistEmpty') }}</div>
+                  <div v-else class="flex flex-wrap gap-2">
+                    <div
+                      v-for="item in wishlistItems" :key="item.catalogItemId"
+                      class="flex items-center gap-2 bg-white rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    >
+                      <img v-if="item.imageUrl" :src="item.imageUrl" class="h-8 w-8 rounded object-cover flex-shrink-0" alt="" />
+                      <div v-else class="h-8 w-8 rounded bg-gray-100 flex-shrink-0"></div>
+                      <div class="min-w-0">
+                        <div class="font-medium text-gray-900 truncate max-w-[160px]">{{ item.name }}</div>
+                        <div class="text-xs text-gray-500">
+                          <span v-if="item.salePrice != null" class="text-green-600 font-medium">{{ formatPrice(item.salePrice) }}</span>
+                          <span v-else>{{ formatPrice(item.price) }}</span>
+                          <span v-if="item.promotionLabel" class="ml-1 px-1 py-0.5 bg-green-100 text-green-700 rounded text-[10px]">{{ item.promotionLabel }}</span>
+                          <span v-if="!item.available" class="ml-1 text-red-500">{{ $t('webCustomers.wishlistUnavailable') }}</span>
+                          <span v-if="item.priceDrop" class="ml-1 text-orange-500">{{ $t('webCustomers.wishlistPriceDrop') }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>

@@ -23,6 +23,8 @@ const currentPage = ref(0)
 const totalPages = ref(0)
 
 // Add-products modal state
+const sortByLikes = ref(false)
+
 const showAddModal = ref(false)
 const productSearch = ref('')
 const productResults = ref([])
@@ -136,6 +138,11 @@ async function unpublishAll() {
 }
 
 // ---- Add products modal ----
+
+const sortedItems = computed(() => {
+  if (!sortByLikes.value) return items.value
+  return [...items.value].sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0))
+})
 
 const existingProductIds = computed(() => new Set(items.value.map(i => i.productId)))
 
@@ -262,13 +269,16 @@ onMounted(() => {
               <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('webCatalog.displayName') }}</th>
               <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('webCatalog.basePrice') }}</th>
               <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('webCatalog.priceOverride') }}</th>
-              <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ $t('webCatalog.likes') }}</th>
+              <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer select-none hover:text-gray-700 transition-colors" @click="sortByLikes = !sortByLikes">
+                {{ $t('webCatalog.likes') }}
+                <ChevronDownIcon v-if="sortByLikes" class="h-3 w-3 inline ml-0.5" />
+              </th>
               <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ $t('webCatalog.status') }}</th>
               <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 bg-white">
-            <tr v-for="(item, index) in items" :key="item.id" :class="{ 'opacity-60': !item.productActive || !item.productSellable }">
+            <tr v-for="(item, index) in sortedItems" :key="item.id" :class="{ 'opacity-60': !item.productActive || !item.productSellable }">
               <!-- Reorder -->
               <td class="px-3 py-2 whitespace-nowrap">
                 <div class="flex items-center gap-1">

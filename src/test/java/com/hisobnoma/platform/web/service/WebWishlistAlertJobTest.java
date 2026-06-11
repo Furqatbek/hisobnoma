@@ -56,7 +56,8 @@ class WebWishlistAlertJobTest {
 
         job.processAlertsForTenant(TENANT);
 
-        verify(pushService).sendToCustomer(eq(TENANT), eq(CUSTOMER), contains("нарх тушди"), any(), any());
+        verify(pushService).sendToCustomer(eq(TENANT), eq(CUSTOMER), contains("нарх тушди"),
+                argThat(body -> body.contains("8500") && body.contains("(-15%)")), any());
         assertEquals(BigDecimal.valueOf(8500), wi.getLastNotifiedSalePrice());
     }
 

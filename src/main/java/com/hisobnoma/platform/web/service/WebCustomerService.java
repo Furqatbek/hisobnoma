@@ -5,6 +5,7 @@ import com.hisobnoma.platform.common.exception.NotFoundException;
 import com.hisobnoma.platform.finance.entity.Customer;
 import com.hisobnoma.platform.finance.repository.CustomerRepository;
 import com.hisobnoma.platform.web.dto.WebCustomerDto;
+import com.hisobnoma.platform.web.dto.WishlistItemDto;
 import com.hisobnoma.platform.web.entity.WebCustomer;
 import com.hisobnoma.platform.web.repository.WebCustomerRepository;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
@@ -32,6 +33,7 @@ public class WebCustomerService {
     private final WebPushService pushService;
     private final WebReferralService referralService;
     private final WebWishlistItemRepository wishlistRepository;
+    private final WebWishlistService wishlistService;
 
     @Transactional(readOnly = true)
     public Page<WebCustomerDto> getCustomers(String search, Pageable pageable) {
@@ -73,6 +75,12 @@ public class WebCustomerService {
         webCustomer.setSmsOptOut(optOut);
         log.info("Web customer {} SMS opt-out set to {}", id, optOut);
         return toDto(webCustomerRepository.save(webCustomer));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WishlistItemDto> getCustomerWishlist(Long webCustomerId, Pageable pageable) {
+        WebCustomer wc = getEntity(webCustomerId);
+        return wishlistService.getWishlist(wc.getTenantId(), wc.getId(), pageable);
     }
 
     private WebCustomer getEntity(Long id) {

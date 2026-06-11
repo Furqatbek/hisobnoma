@@ -6,8 +6,10 @@ import com.hisobnoma.platform.common.dto.PageResponse;
 import com.hisobnoma.platform.web.dto.LoyaltyAdjustRequest;
 import com.hisobnoma.platform.web.dto.LoyaltyBalanceDto;
 import com.hisobnoma.platform.web.dto.WebCustomerDto;
+import com.hisobnoma.platform.web.dto.WishlistItemDto;
 import com.hisobnoma.platform.web.service.WebCustomerService;
 import com.hisobnoma.platform.web.service.WebLoyaltyService;
+import com.hisobnoma.platform.web.service.WebWishlistService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,6 +30,7 @@ public class WebCustomerAdminController {
 
     private final WebCustomerService customerService;
     private final WebLoyaltyService loyaltyService;
+    private final WebWishlistService wishlistService;
 
     @GetMapping
     @RequiresPermission("WEB_CUSTOMER_VIEW")
@@ -65,6 +68,14 @@ public class WebCustomerAdminController {
             @PathVariable Long id, @RequestBody Map<String, Boolean> body) {
         return ResponseEntity.ok(ApiResponse.success(
                 customerService.setSmsOptOut(id, Boolean.TRUE.equals(body.get("optOut")))));
+    }
+
+    @GetMapping("/{id}/wishlist")
+    @RequiresPermission("WEB_CUSTOMER_VIEW")
+    public ResponseEntity<PageResponse<WishlistItemDto>> getCustomerWishlist(
+            @PathVariable Long id,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(PageResponse.of(customerService.getCustomerWishlist(id, pageable)));
     }
 
     @GetMapping("/{id}/loyalty")

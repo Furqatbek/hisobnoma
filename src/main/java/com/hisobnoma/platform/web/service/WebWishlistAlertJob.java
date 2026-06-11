@@ -71,12 +71,14 @@ public class WebWishlistAlertJob {
             List<WebWishlistItem> wishlistItems = wishlistRepository
                     .findByTenantIdAndCatalogItemId(tenantId, catalogItemId);
 
+            String promotionLabel = badge != null ? badge.label() : null;
+
             for (WebWishlistItem wi : wishlistItems) {
                 boolean discountAlert = shouldSendDiscountAlert(wi, currentSalePrice);
                 boolean restockAlert = shouldSendRestockAlert(wi, currentlyAvailable);
 
                 if (discountAlert || restockAlert) {
-                    sendAlert(wi, catalogItem, discountAlert, restockAlert, currentSalePrice);
+                    sendAlert(wi, catalogItem, discountAlert, restockAlert, currentSalePrice, promotionLabel);
                     alertsSent++;
                 }
 
@@ -105,20 +107,23 @@ public class WebWishlistAlertJob {
 
     private void sendAlert(WebWishlistItem wi, WebCatalogItem catalogItem,
                            boolean discountAlert, boolean restockAlert,
-                           BigDecimal salePrice) {
+                           BigDecimal salePrice, String promotionLabel) {
         Long tenantId = wi.getTenantId();
         Long customerId = wi.getWebCustomerId();
         String productName = catalogItem.getEffectiveName();
+        String priceSuffix = promotionLabel != null
+                ? " (" + promotionLabel + ")"
+                : "";
 
         String title;
         String body;
 
         if (discountAlert && restockAlert) {
             title = productName + " — нарх тушди ва яна сотувда!";
-            body = productName + " энди " + formatPrice(salePrice) + " сўм ва яна мавжуд";
+            body = productName + " энди " + formatPrice(salePrice) + " сўм" + priceSuffix + " ва яна мавжуд";
         } else if (discountAlert) {
             title = productName + " — нарх тушди!";
-            body = productName + " энди " + formatPrice(salePrice) + " сўм";
+            body = productName + " энди " + formatPrice(salePrice) + " сўм" + priceSuffix;
         } else {
             title = productName + " — яна сотувда!";
             body = productName + " яна мавжуд";

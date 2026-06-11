@@ -39,5 +39,8 @@
   "referredBy": "Таклиф қилган",
   "referredCount": "Таклиф қилганлар сони",
   "pushReachable": "Push хабар юбориш мумкин",
-  "wishlistCount": "Севимлилар сони"
+  "wishlistCount": "Севимлилар сони",
+  "wishlistEmpty": "Севимлилар рўйхати бўш",
+  "wishlistUnavailable": "мавжуд эмас",
+  "wishlistPriceDrop": "нарх тушди"
 }
