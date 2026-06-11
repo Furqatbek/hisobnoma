@@ -3349,6 +3349,665 @@ POS transactions now accept optional `deliveryRegionId` and `deliveryVillageId` 
 
 ---
 
+# Mobile Shop App — Public API Reference
+
+This is the **complete, authoritative contract for the customer-facing shop mobile app**.
+Every endpoint the app consumes is documented below with request and response examples.
+The staff/admin-facing management endpoints (`/api/v1/web-catalog`, `/web-orders`,
+`/web-customers`, `/web-campaigns`) are documented in the sections that follow — the app
+never calls those.
+
+## Conventions
+
+**Base URL**
+```
+https://<host>/api/v1/web
+```
+
+**Tenant resolution.** Every request carries the shop's tenant in a header. Anonymous
+endpoints read it directly; authenticated endpoints also derive it from the token but the
+header should still be sent.
+```
+X-Tenant-ID: 1
+```
+If the header is omitted, tenant `1` is assumed (single-shop installs).
+
+**Response envelope.** Single-object endpoints wrap the payload in the standard envelope:
+```json
+{ "success": true, "message": "Optional", "data": { }, "timestamp": "2026-06-11T12:00:00Z" }
+```
+Paged endpoints return a `content` array plus `page` metadata (no `success` envelope):
+```json
+{
+  "content": [ ],
+  "page": { "number": 0, "size": 20, "totalElements": 42, "totalPages": 3,
+            "first": true, "last": false, "empty": false }
+}
+```
+
+**Authentication.** Two kinds of access:
+- **Anonymous** — catalog browse, cart price/coupon preview, checkout, order status,
+  delivery lookups, and OTP request/verify.
+- **Web-customer JWT** — everything under `/me/**`. Obtained from `POST /web/auth/verify`
+  and sent as `Authorization: Bearer <token>`. These tokens are signed with a key *derived
+  from* the staff secret, so they can never authenticate against staff endpoints (and staff
+  JWTs are rejected on `/web/me/**`). A missing/expired/invalid token on a `/me` endpoint
+  returns `401`.
+
+**Backward-compatibility rule.** Changes to these endpoints must be **additive only** —
+installed apps cannot be force-updated. New fields may appear; existing fields never change
+meaning or disappear.
+
+**Errors.** Standard error envelope with HTTP status:
+```json
+{ "success": false, "message": "Invalid coupon code",
+  "error": { "code": "VALIDATION_ERROR" }, "timestamp": "2026-06-11T12:00:00Z" }
+```
+Common statuses: `400` validation/business error, `401` missing/invalid customer token,
+`404` not found (or hidden/draft item, or order whose phone doesn't match), `429` rate
+limited, `201` created (checkout only).
+
+**Money & quantities.** All amounts are `UZS` decimals. `currency` is always `"UZS"`.
+Quantities allow up to 3 decimals (`0.001`–`10000`).
+
+---
+
+## 1. Catalog browse
+
+### GET /web/catalog/products
+Paged list of **LIVE** items. Anonymous.
+
+**Query params:** `search` (name filter, optional), `categoryId` (optional),
+`page` (default 0), `size` (default 20).
+
+**Request:**
+```http
+GET /api/v1/web/catalog/products?search=cola&categoryId=3&page=0&size=20
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "name": "Cola Bottle",
+      "shortDescription": "0.5L",
+      "description": "Chilled cola, 0.5 litre bottle",
+      "price": 12000.0,
+      "salePrice": 10200.0,
+      "promotionLabel": "-15%",
+      "currency": "UZS",
+      "categoryId": 3,
+      "categoryName": "Drinks",
+      "brandName": "Coca-Cola",
+      "unitName": "Pieces",
+      "inStock": true,
+      "imageUrl": "/uploads/products/1/main.jpg",
+      "images": ["/uploads/products/1/main.jpg"]
+    }
+  ],
+  "page": { "number": 0, "size": 20, "totalElements": 1, "totalPages": 1,
+            "first": true, "last": true, "empty": false }
+}
+```
+`salePrice` and `promotionLabel` are **null/omitted unless an active WEB-channel percentage
+promotion applies** (computed server-side, cached up to 60s). Show `salePrice` with the
+original `price` struck through. The badge is a single-unit preview — the authoritative
+cart discount comes from `POST /web/cart/price` and from checkout. Cost/wholesale prices and
+exact stock quantities are **never** exposed — only the `inStock` flag.
+
+### GET /web/catalog/products/{id}
+Single LIVE item detail. Anonymous. Returns `404` for draft/hidden items.
+
+**Request:**
+```http
+GET /api/v1/web/catalog/products/1
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1, "name": "Cola Bottle", "shortDescription": "0.5L",
+    "description": "Chilled cola, 0.5 litre bottle",
+    "price": 12000.0, "salePrice": 10200.0, "promotionLabel": "-15%",
+    "currency": "UZS", "categoryId": 3, "categoryName": "Drinks",
+    "brandName": "Coca-Cola", "unitName": "Pieces", "inStock": true,
+    "imageUrl": "/uploads/products/1/main.jpg",
+    "images": ["/uploads/products/1/main.jpg"]
+  },
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+
+### GET /web/catalog/categories
+Categories that contain at least one LIVE item. Anonymous.
+
+**Request:**
+```http
+GET /api/v1/web/catalog/categories
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 3, "name": "Drinks" },
+    { "id": 5, "name": "Snacks" }
+  ],
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+
+---
+
+## 2. Cart pricing & coupons
+
+These are **display-only previews** — checkout recomputes everything server-side. An optional
+`Authorization: Bearer <token>` personalises customer-specific promotion conditions and binds
+per-customer coupon limits.
+
+### POST /web/cart/price
+Cart pricing preview with promotion discounts. Anonymous (token optional).
+**Rate limited 5 calls / 10s per IP** (`429`). Max 50 lines.
+
+**Request:**
+```http
+POST /api/v1/web/cart/price
+X-Tenant-ID: 1
+Authorization: Bearer <token>   # optional
+Content-Type: application/json
+
+{
+  "lines": [
+    { "catalogItemId": 1, "quantity": 2 },
+    { "catalogItemId": 5, "quantity": 1 }
+  ]
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "lines": [
+      { "catalogItemId": 1, "productName": "Cola Bottle", "quantity": 2,
+        "unitPrice": 12000.0, "lineTotal": 24000.0 },
+      { "catalogItemId": 5, "productName": "Chips", "quantity": 1,
+        "unitPrice": 8000.0, "lineTotal": 8000.0 }
+    ],
+    "subtotal": 32000.0,
+    "discountTotal": 3600.0,
+    "total": 28400.0,
+    "currency": "UZS",
+    "appliedPromotions": ["15% off Drinks"]
+  },
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+`appliedPromotions` lists promotion **names only** — never conditions or usage counters.
+
+### POST /web/cart/validate-coupon
+Coupon check before checkout (the discount depends on the cart). Anonymous (token optional).
+**Strictly rate limited 5/min per IP** (`429`) — coupon codes are guessable.
+
+**Request:**
+```http
+POST /api/v1/web/cart/validate-coupon
+X-Tenant-ID: 1
+Content-Type: application/json
+
+{
+  "code": "SAVE10",
+  "lines": [ { "catalogItemId": 1, "quantity": 2 } ]
+}
+```
+
+**Response (valid):** `200 OK`
+```json
+{
+  "success": true,
+  "data": { "couponCode": "SAVE10", "valid": true, "discount": 2400.0 },
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+
+**Response (invalid):** `200 OK`
+```json
+{
+  "success": true,
+  "data": { "couponCode": "SAVE10", "valid": false, "discount": 0 },
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+Every invalid reason — unknown, expired, depleted, wrong channel, below min order — produces
+the **same** generic `valid: false`, so the endpoint can't be used to probe codes.
+
+---
+
+## 3. Checkout & orders
+
+### POST /web/orders
+Anonymous checkout. Tenant from `X-Tenant-ID`. Returns `201 Created`.
+Max 50 lines, qty `0.001`–`10000`, products must be LIVE. **Prices and discounts are always
+computed server-side.** Rate limited per IP+phone (5/min → `429`).
+
+**Request:**
+```http
+POST /api/v1/web/orders
+X-Tenant-ID: 1
+Content-Type: application/json
+
+{
+  "customerName": "Ali Valiyev",
+  "phone": "+998901234567",
+  "regionId": 2,
+  "villageId": 14,
+  "note": "Call on arrival",
+  "couponCode": "SAVE10",
+  "pointsToSpend": 5000,
+  "lines": [
+    { "catalogItemId": 1, "quantity": 2 },
+    { "catalogItemId": 5, "quantity": 1 }
+  ]
+}
+```
+`regionId`, `villageId`, `note`, `couponCode`, `pointsToSpend` are all optional.
+`pointsToSpend` redeems loyalty points (capped server-side by the shop's max-redeem-percent
+and the customer's balance; ignored if the loyalty program is off or the phone has no
+account). An invalid `couponCode` **rejects** the checkout with `400` (never silently drops
+the discount).
+
+**Response:** `201 Created`
+```json
+{
+  "success": true,
+  "data": {
+    "orderNumber": "WEB-20260611-0007",
+    "status": "NEW",
+    "deliveryFee": 10000.0,
+    "discountTotal": 3600.0,
+    "couponCode": "SAVE10",
+    "couponDiscount": 2400.0,
+    "pointsSpent": 5000.0,
+    "totalAmount": 27400.0,
+    "currency": "UZS",
+    "createdAt": "2026-06-11T12:00:00Z",
+    "lines": [
+      { "productName": "Cola Bottle", "quantity": 2, "unitPrice": 12000.0, "lineTotal": 24000.0 },
+      { "productName": "Chips", "quantity": 1, "unitPrice": 8000.0, "lineTotal": 8000.0 }
+    ]
+  },
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+Line `productName`/`unitPrice` are snapshotted **at full price**; promotion, coupon and
+points discounts live at order level:
+`totalAmount = Σ lineTotal − discountTotal − couponDiscount − pointsSpent + deliveryFee`.
+Order lifecycle: `NEW → CONFIRMED → DELIVERING → COMPLETED` (cancellable until completed).
+
+### GET /web/orders/{orderNumber}?phone=
+Order status lookup. Anonymous, but the `phone` must match the order (`404` otherwise) — this
+is the "track my order" screen for guests without an account.
+
+**Request:**
+```http
+GET /api/v1/web/orders/WEB-20260611-0007?phone=+998901234567
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK` — same `PublicOrderDto` shape as checkout (current `status`).
+
+### GET /web/delivery/regions
+Active delivery regions for the checkout form. Anonymous.
+
+**Request:**
+```http
+GET /api/v1/web/delivery/regions
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 2, "name": "Yunusobod", "deliveryFee": 10000.0 },
+    { "id": 3, "name": "Chilonzor", "deliveryFee": 12000.0 }
+  ],
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+
+### GET /web/delivery/villages?regionId=
+Active villages, optionally filtered by region. Anonymous.
+
+**Request:**
+```http
+GET /api/v1/web/delivery/villages?regionId=2
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 14, "name": "Bodomzor", "regionId": 2 },
+    { "id": 15, "name": "Minor", "regionId": 2 }
+  ],
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+
+---
+
+## 4. Authentication (phone + SMS OTP)
+
+### POST /web/auth/request-otp
+Sends a 6-digit SMS code. Anonymous. Limits: 60s cooldown per phone, max 5 codes/day/phone,
+per-IP rate limit (`429`). Codes are stored salted+hashed and expire in 5 minutes.
+
+**Request:**
+```http
+POST /api/v1/web/auth/request-otp
+X-Tenant-ID: 1
+Content-Type: application/json
+
+{ "phone": "+998901234567" }
+```
+
+**Response:** `200 OK`
+```json
+{ "success": true, "message": "Code sent", "timestamp": "2026-06-11T12:00:00Z" }
+```
+
+### POST /web/auth/verify
+Verifies the code and returns the customer token. Anonymous. 5 wrong attempts lock the code
+(`429`); a new code must then be requested. On **first** login, `name` is stored and an
+optional `referralCode` is applied (credits the referrer once this customer's first order
+completes).
+
+**Request:**
+```http
+POST /api/v1/web/auth/verify
+X-Tenant-ID: 1
+Content-Type: application/json
+
+{
+  "phone": "+998901234567",
+  "code": "123456",
+  "name": "Ali Valiyev",
+  "referralCode": "ALI7K2"
+}
+```
+`name` and `referralCode` are optional.
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "phone": "+998901234567",
+    "name": "Ali Valiyev"
+  },
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+Store `token` and send it as `Authorization: Bearer <token>` on all `/me/**` calls.
+
+---
+
+## 5. Customer profile (`/me`)
+
+All `/me/**` endpoints require `Authorization: Bearer <token>`; a missing/invalid token → `401`.
+
+### GET /web/me
+Current customer's basic profile.
+
+**Request:**
+```http
+GET /api/v1/web/me
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": { "phone": "+998901234567", "name": "Ali Valiyev" },
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+
+### GET /web/me/orders
+Paged list of the customer's own orders (matched by verified phone), newest first.
+
+**Request:**
+```http
+GET /api/v1/web/me/orders?page=0&size=20
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK` — paged `PublicOrderDto` (same shape as checkout):
+```json
+{
+  "content": [
+    {
+      "orderNumber": "WEB-20260611-0007", "status": "CONFIRMED",
+      "deliveryFee": 10000.0, "discountTotal": 3600.0,
+      "couponCode": "SAVE10", "couponDiscount": 2400.0, "pointsSpent": 5000.0,
+      "totalAmount": 27400.0, "currency": "UZS", "createdAt": "2026-06-11T12:00:00Z",
+      "lines": [
+        { "productName": "Cola Bottle", "quantity": 2, "unitPrice": 12000.0, "lineTotal": 24000.0 }
+      ]
+    }
+  ],
+  "page": { "number": 0, "size": 20, "totalElements": 1, "totalPages": 1,
+            "first": true, "last": true, "empty": false }
+}
+```
+
+### GET /web/me/loyalty
+The customer's loyalty/cashback balance and recent ledger.
+
+**Request:**
+```http
+GET /api/v1/web/me/loyalty
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "balance": 18500.0,
+    "enabled": true,
+    "minRedeem": 5000.0,
+    "maxRedeemPercent": 30,
+    "entries": [
+      { "id": 12, "type": "EARN", "amount": 1200.0, "orderNumber": "WEB-20260611-0007",
+        "note": null, "expiresAt": "2026-12-08T00:00:00Z", "createdAt": "2026-06-11T12:05:00Z" },
+      { "id": 9, "type": "SPEND", "amount": -5000.0, "orderNumber": "WEB-20260611-0007",
+        "note": null, "expiresAt": null, "createdAt": "2026-06-11T12:00:00Z" }
+    ]
+  },
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+`balance` is the aggregate of the append-only ledger. When `enabled` is `false` the program
+is off (`balance: 0`, empty `entries`) and `pointsToSpend` at checkout is ignored. Redemption
+rules: `minRedeem` is the minimum spendable amount; points can cover at most
+`maxRedeemPercent`% of an order. `type` ∈ `EARN | SPEND | EXPIRE | ADJUST`.
+
+---
+
+## 6. Device tokens (push)
+
+Register the device's FCM token after login (and on app resume / token refresh) so the shop
+can send order-status and wishlist push notifications. Phase 5 push deep-links into the app.
+
+### POST /web/me/device-token
+Register (idempotent) the current device's push token.
+
+**Request:**
+```http
+POST /api/v1/web/me/device-token
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+Content-Type: application/json
+
+{ "token": "fcm-device-token-abc123", "platform": "android" }
+```
+`platform` is a free-form tag (`android` / `ios`), max 20 chars; `token` max 500 chars.
+
+**Response:** `200 OK`
+```json
+{ "success": true, "message": "Device token registered", "timestamp": "2026-06-11T12:00:00Z" }
+```
+
+### DELETE /web/me/device-token
+Remove a device token (call on logout). Optional `token` query param removes a single token;
+omit it to remove all of the customer's tokens.
+
+**Request:**
+```http
+DELETE /api/v1/web/me/device-token?token=fcm-device-token-abc123
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{ "success": true, "message": "Device token removed", "timestamp": "2026-06-11T12:00:00Z" }
+```
+
+---
+
+## 7. Referral code
+
+### GET /web/me/referral-code
+The customer's own referral code (created on first request, then stable). Share it; new users
+enter it as `referralCode` in `POST /web/auth/verify`, and both sides are rewarded when the
+referred customer's first order completes.
+
+**Request:**
+```http
+GET /api/v1/web/me/referral-code
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{ "success": true, "data": { "code": "ALI7K2" }, "timestamp": "2026-06-11T12:00:00Z" }
+```
+
+---
+
+## 8. Wishlist ("like")
+
+Customers tap a heart on any product. Wishlisted products that get a web discount or come
+back in stock trigger a push/SMS alert (see Phase 6). Anonymous taps should route to the
+login screen, then complete the like.
+
+### GET /web/me/wishlist
+Paged wishlist, each entry rendered with current price/sale/availability, newest first.
+
+**Request:**
+```http
+GET /api/v1/web/me/wishlist?page=0&size=20
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{
+  "content": [
+    {
+      "catalogItemId": 1,
+      "name": "Cola Bottle",
+      "price": 12000.0,
+      "salePrice": 10200.0,
+      "promotionLabel": "-15%",
+      "inStock": true,
+      "available": true,
+      "imageUrl": "/uploads/products/1/main.jpg",
+      "addedAt": "2026-06-10T09:30:00Z",
+      "priceDrop": true
+    }
+  ],
+  "page": { "number": 0, "size": 20, "totalElements": 1, "totalPages": 1,
+            "first": true, "last": true, "empty": false }
+}
+```
+`available` is the strict catalog rule (LIVE + active + sellable + in stock); `inStock` is the
+stock flag alone. `priceDrop: true` means the sale price dropped since the customer was last
+notified — show a "нарх тушди" badge. A wishlisted item whose catalog entry was deleted comes
+back with `name: "(ўчирилган)"` and `available: false`.
+
+### GET /web/me/wishlist/ids
+Lightweight id list so the app can paint hearts on the catalog grid without N calls. Fetch
+once after login, refresh on app resume.
+
+**Request:**
+```http
+GET /api/v1/web/me/wishlist/ids
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{ "success": true, "data": [1, 5, 42], "timestamp": "2026-06-11T12:00:00Z" }
+```
+
+### PUT /web/me/wishlist/{catalogItemId}
+Like a product (idempotent — liking twice is a no-op). The item must exist for the tenant
+(DRAFT items are allowed — they may come back). Unknown item → `400`.
+
+**Request:**
+```http
+PUT /api/v1/web/me/wishlist/1
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{ "success": true, "message": "Liked", "timestamp": "2026-06-11T12:00:00Z" }
+```
+
+### DELETE /web/me/wishlist/{catalogItemId}
+Unlike a product (idempotent).
+
+**Request:**
+```http
+DELETE /api/v1/web/me/wishlist/1
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{ "success": true, "message": "Unliked", "timestamp": "2026-06-11T12:00:00Z" }
+```
+
+---
+
 ## Web Catalog (Online Shop) APIs
 
 The web catalog is the curated **draft/live item list** shown in the store's customer mobile app.
@@ -3360,6 +4019,9 @@ public (anonymous) endpoints. See `docs/WEB_SHOP_PLAN.md` for the full roadmap.
 These live under the whitelisted `/api/v1/web/**` prefix. Tenant is resolved from the optional
 `X-Tenant-ID` header (defaults to `1`). **Backward compatibility rule:** changes to these
 endpoints must be additive only — installed mobile apps cannot be force-updated.
+
+> Full request/response examples are in
+> **[Mobile Shop App — Public API Reference](#mobile-shop-app--public-api-reference)** above.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -3424,11 +4086,14 @@ changes), staff endpoints authenticated with permissions.
 
 ### Public endpoints (mobile app contract)
 
+> Full request/response examples are in
+> **[Mobile Shop App — Public API Reference](#mobile-shop-app--public-api-reference)** above.
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | /web/cart/price | Cart pricing preview with promotion discounts. Body: `{ lines: [{catalogItemId, quantity}] }` (max 50 lines). Optional `Authorization: Bearer <web-customer-token>` personalises customer-specific promotion conditions. Rate limited 5 calls / 10s per IP (429). Returns `{ lines: [{catalogItemId, productName, quantity, unitPrice, lineTotal}], subtotal, discountTotal, total, currency, appliedPromotions: ["10% off"] }` — promotion **names only**, never conditions or usage counters. Display-only: checkout recomputes everything |
 | POST | /web/cart/validate-coupon | Coupon check before checkout. Body: `{ code, lines: [{catalogItemId, quantity}] }` (the discount depends on the cart). Optional bearer token binds per-customer limits. **Strictly rate limited 5/min per IP** (429) — coupon codes are guessable. Returns `{ couponCode, valid, discount }`; every invalid reason (unknown / expired / depleted / wrong channel / below min order) produces the same generic `valid: false` so the endpoint can't probe codes |
-| POST | /web/orders | Checkout. Body: `{ customerName, phone, regionId?, villageId?, note?, couponCode?, lines: [{catalogItemId, quantity}] }`. Max 50 lines, qty 0.001–10000, products must be LIVE. **Prices and discounts are always computed server-side**. An invalid `couponCode` rejects the checkout with 400 (never silently drops the discount). Rate limited per IP+phone (5/min → 429). Returns 201 with `{ orderNumber, status, deliveryFee, discountTotal, couponCode, couponDiscount, totalAmount, lines }` |
+| POST | /web/orders | Checkout. Body: `{ customerName, phone, regionId?, villageId?, note?, couponCode?, pointsToSpend?, lines: [{catalogItemId, quantity}] }`. Max 50 lines, qty 0.001–10000, products must be LIVE. **Prices and discounts are always computed server-side**. An invalid `couponCode` rejects the checkout with 400 (never silently drops the discount). `pointsToSpend` redeems loyalty points (capped server-side). Rate limited per IP+phone (5/min → 429). Returns 201 with `{ orderNumber, status, deliveryFee, discountTotal, couponCode, couponDiscount, pointsSpent, totalAmount, lines }` |
 | GET | /web/orders/{orderNumber}?phone= | Order status lookup; the phone must match the order (404 otherwise). Includes `discountTotal`, `couponCode`, `couponDiscount` and `deliveryFee` |
 | GET | /web/delivery/regions | Active delivery regions for the checkout form (includes `deliveryFee`) |
 | GET | /web/delivery/villages?regionId= | Active villages, optionally filtered by region |
@@ -3504,12 +4169,23 @@ Phone-based accounts for the shop mobile app. Web-customer tokens are signed wit
 
 ### Public endpoints (mobile app contract)
 
+> Full request/response examples for **every** endpoint below are in
+> **[Mobile Shop App — Public API Reference](#mobile-shop-app--public-api-reference)** above.
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | /web/auth/request-otp | `{ phone }` → sends a 6-digit SMS code. Limits: 60 s cooldown per phone, max 5 codes/day/phone, per-IP rate limit (429). Codes are stored salted+hashed, expire in 5 min |
-| POST | /web/auth/verify | `{ phone, code, name? }` → `{ token, phone, name }`. 5 wrong attempts lock the code (429); then a new code must be requested |
+| POST | /web/auth/verify | `{ phone, code, name?, referralCode? }` → `{ token, phone, name }`. 5 wrong attempts lock the code (429); then a new code must be requested. `referralCode` is applied on first registration |
 | GET | /web/me | Bearer token → `{ phone, name }` |
 | GET | /web/me/orders | Bearer token → paged list of the customer's own orders (matched by verified phone) |
+| GET | /web/me/loyalty | Bearer token → `{ balance, enabled, minRedeem, maxRedeemPercent, entries[] }` cashback balance + ledger |
+| POST | /web/me/device-token | Bearer token + `{ token, platform }` → registers an FCM push token (idempotent) |
+| DELETE | /web/me/device-token | Bearer token, optional `?token=` → removes one (or all) push tokens; call on logout |
+| GET | /web/me/referral-code | Bearer token → `{ code }` the customer's own referral code (created on first request) |
+| GET | /web/me/wishlist | Bearer token → paged wishlist with price/sale/availability and a `priceDrop` flag |
+| GET | /web/me/wishlist/ids | Bearer token → `[catalogItemId, …]` for painting hearts on the catalog grid |
+| PUT | /web/me/wishlist/{catalogItemId} | Bearer token → like a product (idempotent; unknown item → 400) |
+| DELETE | /web/me/wishlist/{catalogItemId} | Bearer token → unlike a product (idempotent) |
 
 ### Staff endpoints (authenticated)
 

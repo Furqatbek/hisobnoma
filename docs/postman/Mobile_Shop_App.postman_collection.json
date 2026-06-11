@@ -1,0 +1,418 @@
+{
+  "info": {
+    "name": "Hisobnoma — Mobile Shop App (Public API)",
+    "description": "Complete public API contract for the customer-facing shop mobile app. Every endpoint the app consumes, grouped by feature. Anonymous endpoints need only the X-Tenant-ID header; /me endpoints need the web-customer bearer token from POST /web/auth/verify. See docs/API.md → 'Mobile Shop App — Public API Reference' for field-level notes.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1", "type": "string" },
+    { "key": "tenantId", "value": "1", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "phone", "value": "+998901234567", "type": "string" },
+    { "key": "orderNumber", "value": "WEB-20260611-0007", "type": "string" },
+    { "key": "catalogItemId", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Catalog browse",
+      "item": [
+        {
+          "name": "GET products (paged)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "X-Tenant-ID", "value": "{{tenantId}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/web/catalog/products?search=cola&categoryId=3&page=0&size=20",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "catalog", "products" ],
+              "query": [
+                { "key": "search", "value": "cola" },
+                { "key": "categoryId", "value": "3" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Paged list of LIVE items. All params optional."
+          }
+        },
+        {
+          "name": "GET product detail",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "X-Tenant-ID", "value": "{{tenantId}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/web/catalog/products/{{catalogItemId}}",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "catalog", "products", "{{catalogItemId}}" ]
+            },
+            "description": "Single LIVE item; 404 for draft/hidden."
+          }
+        },
+        {
+          "name": "GET categories",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "X-Tenant-ID", "value": "{{tenantId}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/web/catalog/categories",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "catalog", "categories" ]
+            },
+            "description": "Categories with at least one LIVE item."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Cart pricing & coupons",
+      "item": [
+        {
+          "name": "POST cart price preview",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}", "description": "Optional — personalises promotions" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lines\": [\n    { \"catalogItemId\": 1, \"quantity\": 2 },\n    { \"catalogItemId\": 5, \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/web/cart/price",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "cart", "price" ]
+            },
+            "description": "Display-only preview. Rate limited 5 / 10s per IP."
+          }
+        },
+        {
+          "name": "POST validate coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}", "description": "Optional — binds per-customer limits" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SAVE10\",\n  \"lines\": [ { \"catalogItemId\": 1, \"quantity\": 2 } ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/web/cart/validate-coupon",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "cart", "validate-coupon" ]
+            },
+            "description": "Generic valid/invalid outcome. Rate limited 5/min per IP."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Checkout & orders",
+      "item": [
+        {
+          "name": "POST checkout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json && json.data && json.data.orderNumber) {",
+                  "  pm.collectionVariables.set('orderNumber', json.data.orderNumber);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Ali Valiyev\",\n  \"phone\": \"{{phone}}\",\n  \"regionId\": 2,\n  \"villageId\": 14,\n  \"note\": \"Call on arrival\",\n  \"couponCode\": \"SAVE10\",\n  \"pointsToSpend\": 5000,\n  \"lines\": [\n    { \"catalogItemId\": 1, \"quantity\": 2 },\n    { \"catalogItemId\": 5, \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/web/orders",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "orders" ]
+            },
+            "description": "Anonymous checkout. 201 Created. Prices computed server-side. regionId/villageId/note/couponCode/pointsToSpend optional."
+          }
+        },
+        {
+          "name": "GET order status",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "X-Tenant-ID", "value": "{{tenantId}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/web/orders/{{orderNumber}}?phone={{phone}}",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "orders", "{{orderNumber}}" ],
+              "query": [ { "key": "phone", "value": "{{phone}}" } ]
+            },
+            "description": "Phone must match the order, else 404."
+          }
+        },
+        {
+          "name": "GET delivery regions",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "X-Tenant-ID", "value": "{{tenantId}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/web/delivery/regions",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "delivery", "regions" ]
+            },
+            "description": "Active regions with deliveryFee."
+          }
+        },
+        {
+          "name": "GET delivery villages",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "X-Tenant-ID", "value": "{{tenantId}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/web/delivery/villages?regionId=2",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "delivery", "villages" ],
+              "query": [ { "key": "regionId", "value": "2", "description": "Optional filter" } ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Auth (phone + OTP)",
+      "item": [
+        {
+          "name": "POST request OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"phone\": \"{{phone}}\" }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/web/auth/request-otp",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "auth", "request-otp" ]
+            },
+            "description": "60s cooldown, max 5/day/phone, per-IP limit."
+          }
+        },
+        {
+          "name": "POST verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json && json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"123456\",\n  \"name\": \"Ali Valiyev\",\n  \"referralCode\": \"ALI7K2\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/web/auth/verify",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "auth", "verify" ]
+            },
+            "description": "Returns token (auto-saved to {{token}}). name/referralCode optional, applied on first login."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Customer profile (/me)",
+      "item": [
+        {
+          "name": "GET me",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/web/me", "host": [ "{{baseUrl}}" ], "path": [ "web", "me" ] }
+          }
+        },
+        {
+          "name": "GET my orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/web/me/orders?page=0&size=20",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "me", "orders" ],
+              "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ]
+            }
+          }
+        },
+        {
+          "name": "GET my loyalty",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/web/me/loyalty", "host": [ "{{baseUrl}}" ], "path": [ "web", "me", "loyalty" ] },
+            "description": "balance + ledger; enabled=false means program off."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Device tokens (push)",
+      "item": [
+        {
+          "name": "POST register device token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"token\": \"fcm-device-token-abc123\", \"platform\": \"android\" }"
+            },
+            "url": { "raw": "{{baseUrl}}/web/me/device-token", "host": [ "{{baseUrl}}" ], "path": [ "web", "me", "device-token" ] },
+            "description": "Idempotent. Call after login and on token refresh."
+          }
+        },
+        {
+          "name": "DELETE device token",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/web/me/device-token?token=fcm-device-token-abc123",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "me", "device-token" ],
+              "query": [ { "key": "token", "value": "fcm-device-token-abc123", "description": "Optional — omit to remove all tokens" } ]
+            },
+            "description": "Call on logout."
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Referral",
+      "item": [
+        {
+          "name": "GET my referral code",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/web/me/referral-code", "host": [ "{{baseUrl}}" ], "path": [ "web", "me", "referral-code" ] },
+            "description": "Stable code; share for referral rewards."
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Wishlist (like)",
+      "item": [
+        {
+          "name": "GET my wishlist (paged)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/web/me/wishlist?page=0&size=20",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "me", "wishlist" ],
+              "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ]
+            },
+            "description": "Each entry has price/salePrice/available + priceDrop flag."
+          }
+        },
+        {
+          "name": "GET wishlist ids",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/web/me/wishlist/ids", "host": [ "{{baseUrl}}" ], "path": [ "web", "me", "wishlist", "ids" ] },
+            "description": "Light id list for painting hearts on the grid."
+          }
+        },
+        {
+          "name": "PUT like item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/web/me/wishlist/{{catalogItemId}}",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "me", "wishlist", "{{catalogItemId}}" ]
+            },
+            "description": "Idempotent. Unknown item → 400."
+          }
+        },
+        {
+          "name": "DELETE unlike item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/web/me/wishlist/{{catalogItemId}}",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "me", "wishlist", "{{catalogItemId}}" ]
+            },
+            "description": "Idempotent."
+          }
+        }
+      ]
+    }
+  ]
+}
