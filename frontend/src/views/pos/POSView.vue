@@ -23,7 +23,6 @@ import {
   CheckIcon,
   DocumentTextIcon,
   ClockIcon,
-  ArrowRightStartOnRectangleIcon,
   MapPinIcon,
   PencilSquareIcon
 } from '@heroicons/vue/24/outline'
@@ -179,9 +178,6 @@ const canCompleteSale = computed(() => {
 })
 
 // Check if debt sale requires customer
-const isDebtSale = computed(() => {
-  return payments.value.some(p => p.method === 'CREDIT') || currentPayment.method === 'CREDIT'
-})
 
 // Methods
 async function fetchQuickProducts() {
@@ -228,7 +224,6 @@ async function loadAllCustomers() {
 const showUomModal = ref(false)
 const pendingProduct = ref(null)
 const productUoms = ref([])
-const uomLoading = ref(false)
 
 // Cache of product UOMs to avoid re-fetching
 const productUomCache = {}
