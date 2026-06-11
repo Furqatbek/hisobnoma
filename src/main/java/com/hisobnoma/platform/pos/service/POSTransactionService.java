@@ -906,6 +906,7 @@ public class POSTransactionService {
             ProductVariant variant = null;
             if (item.getVariantId() != null) {
                 variant = variantRepository.findById(item.getVariantId())
+                        .filter(v -> v.getProduct().getId().equals(product.getId()))
                         .orElseThrow(() -> new NotFoundException("Variant", item.getVariantId()));
             }
 

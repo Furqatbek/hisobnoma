@@ -146,7 +146,7 @@ public class ARPaymentService {
             for (ARPaymentAllocation allocation : payment.getAllocations()) {
                 if (allocation.getArInvoice() != null) {
                     arInvoiceService.applyPayment(
-                            allocation.getArInvoice().getId(),
+                            allocation.getArInvoice(),
                             allocation.getAllocatedAmount(),
                             allocation.getDiscountTaken(),
                             allocation.getWriteOffAmount()
@@ -255,7 +255,7 @@ public class ARPaymentService {
                 for (ARPaymentAllocation allocation : payment.getAllocations()) {
                     if (allocation.getArInvoice() != null) {
                         arInvoiceService.applyPayment(
-                                allocation.getArInvoice().getId(),
+                                allocation.getArInvoice(),
                                 allocation.getAllocatedAmount().negate(),
                                 allocation.getDiscountTaken() != null ? allocation.getDiscountTaken().negate() : BigDecimal.ZERO,
                                 allocation.getWriteOffAmount() != null ? allocation.getWriteOffAmount().negate() : BigDecimal.ZERO

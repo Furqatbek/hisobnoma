@@ -481,11 +481,10 @@ class ARInvoiceServiceTest {
         invoice.setPaidAmount(BigDecimal.ZERO);
         invoice.setBalanceDue(new BigDecimal("1000.00"));
 
-        when(arInvoiceRepository.findById(1L)).thenReturn(Optional.of(invoice));
         when(arInvoiceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        arInvoiceService.applyPayment(1L, new BigDecimal("1000.00"), BigDecimal.ZERO, BigDecimal.ZERO);
+        arInvoiceService.applyPayment(invoice, new BigDecimal("1000.00"), BigDecimal.ZERO, BigDecimal.ZERO);
 
         // Then
         assertEquals(0, new BigDecimal("1000.00").compareTo(invoice.getPaidAmount()));
@@ -502,11 +501,10 @@ class ARInvoiceServiceTest {
         invoice.setPaidAmount(BigDecimal.ZERO);
         invoice.setBalanceDue(new BigDecimal("1000.00"));
 
-        when(arInvoiceRepository.findById(1L)).thenReturn(Optional.of(invoice));
         when(arInvoiceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        arInvoiceService.applyPayment(1L, new BigDecimal("500.00"), BigDecimal.ZERO, BigDecimal.ZERO);
+        arInvoiceService.applyPayment(invoice, new BigDecimal("500.00"), BigDecimal.ZERO, BigDecimal.ZERO);
 
         // Then
         assertEquals(new BigDecimal("500.00"), invoice.getPaidAmount());

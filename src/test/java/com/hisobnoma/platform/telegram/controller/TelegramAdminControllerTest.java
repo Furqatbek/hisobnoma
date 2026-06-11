@@ -33,6 +33,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class TelegramAdminControllerTest {
 
+    private static final Long TENANT_ID = 1L;
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -189,7 +191,8 @@ class TelegramAdminControllerTest {
         User user = new User();
         user.setId(1L);
         user.setTelegramChatId(12345L);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(userRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(user));
         doNothing().when(notificationService).sendDirectMessage(any(), any(), any());
 
         String requestBody = """
@@ -270,7 +273,8 @@ class TelegramAdminControllerTest {
     void adminUnlinkUser_authenticated_returns200() throws Exception {
         User user = new User();
         user.setId(1L);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(userRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(user));
 
         mockMvc.perform(delete("/api/v1/telegram/admin/users/1/unlink"))
                 .andExpect(status().isOk())

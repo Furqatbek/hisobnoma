@@ -14,6 +14,8 @@ import java.util.Optional;
 @Repository
 public interface RoleRepository extends JpaRepository<Role, Long> {
 
+    Optional<Role> findByIdAndTenantId(Long id, Long tenantId);
+
     Optional<Role> findByCode(String code);
 
     Optional<Role> findByCodeAndTenantId(String code, Long tenantId);
@@ -26,8 +28,11 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
     @Query("SELECT r FROM Role r WHERE r.tenantId IS NULL AND r.systemRole = true")
     List<Role> findAllSystemRoles();
 
-    @Query("SELECT r FROM Role r LEFT JOIN FETCH r.permissions WHERE r.id = :id")
-    Optional<Role> findByIdWithPermissions(@Param("id") Long id);
+    @Query("SELECT r FROM Role r WHERE r.id = :id AND (r.tenantId = :tenantId OR r.tenantId IS NULL)")
+    Optional<Role> findByIdScoped(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
+    @Query("SELECT r FROM Role r LEFT JOIN FETCH r.permissions WHERE r.id = :id AND (r.tenantId = :tenantId OR r.tenantId IS NULL)")
+    Optional<Role> findByIdWithPermissions(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     @Query("SELECT r FROM Role r LEFT JOIN FETCH r.permissions WHERE r.code = :code")
     Optional<Role> findByCodeWithPermissions(@Param("code") String code);

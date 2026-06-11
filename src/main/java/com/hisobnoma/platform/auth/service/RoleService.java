@@ -43,7 +43,7 @@ public class RoleService {
 
     @Transactional(readOnly = true)
     public RoleDto getRole(Long id) {
-        Role role = roleRepository.findByIdWithPermissions(id)
+        Role role = roleRepository.findByIdWithPermissions(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Role", id));
         return roleMapper.toDto(role);
     }
@@ -84,7 +84,7 @@ public class RoleService {
 
     @Transactional
     public RoleDto updateRole(Long id, CreateRoleRequest request) {
-        Role role = roleRepository.findByIdWithPermissions(id)
+        Role role = roleRepository.findByIdWithPermissions(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Role", id));
 
         if (role.isSystemRole()) {
@@ -107,7 +107,7 @@ public class RoleService {
 
     @Transactional
     public void deleteRole(Long id) {
-        Role role = roleRepository.findById(id)
+        Role role = roleRepository.findByIdScoped(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Role", id));
 
         if (role.isSystemRole()) {
@@ -124,7 +124,7 @@ public class RoleService {
 
     @Transactional
     public RoleDto assignPermissions(Long id, Set<String> permissionCodes) {
-        Role role = roleRepository.findByIdWithPermissions(id)
+        Role role = roleRepository.findByIdWithPermissions(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Role", id));
 
         if (role.isSystemRole()) {

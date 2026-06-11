@@ -49,7 +49,7 @@ public class BrandService {
 
     @Transactional(readOnly = true)
     public BrandDto getBrand(Long id) {
-        Brand brand = brandRepository.findById(id)
+        Brand brand = brandRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Brand", id));
         return brandMapper.toDto(brand);
     }
@@ -85,7 +85,7 @@ public class BrandService {
 
     @Transactional
     public BrandDto updateBrand(Long id, UpdateBrandRequest request) {
-        Brand brand = brandRepository.findById(id)
+        Brand brand = brandRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Brand", id));
 
         if (request.getName() != null) {
@@ -119,7 +119,7 @@ public class BrandService {
 
     @Transactional
     public void deleteBrand(Long id) {
-        Brand brand = brandRepository.findById(id)
+        Brand brand = brandRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Brand", id));
 
         brandRepository.delete(brand);

@@ -58,7 +58,7 @@ public class UnitOfMeasureService {
 
     @Transactional(readOnly = true)
     public UnitOfMeasureDto getUom(Long id) {
-        UnitOfMeasure uom = uomRepository.findById(id)
+        UnitOfMeasure uom = uomRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Unit of Measure", id));
         return uomMapper.toDto(uom);
     }
@@ -94,7 +94,7 @@ public class UnitOfMeasureService {
 
         // Set base UOM if specified
         if (request.getBaseUomId() != null) {
-            UnitOfMeasure baseUom = uomRepository.findById(request.getBaseUomId())
+            UnitOfMeasure baseUom = uomRepository.findByIdAndTenantId(request.getBaseUomId(), securityContextHelper.getCurrentTenantId())
                     .orElseThrow(() -> new NotFoundException("Base Unit of Measure", request.getBaseUomId()));
 
             if (!baseUom.isBaseUnit()) {
@@ -116,7 +116,7 @@ public class UnitOfMeasureService {
 
     @Transactional
     public UnitOfMeasureDto updateUom(Long id, CreateUomRequest request) {
-        UnitOfMeasure uom = uomRepository.findById(id)
+        UnitOfMeasure uom = uomRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Unit of Measure", id));
 
         if (request.getName() != null) {
@@ -144,7 +144,7 @@ public class UnitOfMeasureService {
 
     @Transactional
     public void deleteUom(Long id) {
-        UnitOfMeasure uom = uomRepository.findById(id)
+        UnitOfMeasure uom = uomRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Unit of Measure", id));
 
         // Check if used as base for other UOMs
@@ -163,9 +163,9 @@ public class UnitOfMeasureService {
             return quantity;
         }
 
-        UnitOfMeasure fromUom = uomRepository.findById(fromUomId)
+        UnitOfMeasure fromUom = uomRepository.findByIdAndTenantId(fromUomId, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("From Unit of Measure", fromUomId));
-        UnitOfMeasure toUom = uomRepository.findById(toUomId)
+        UnitOfMeasure toUom = uomRepository.findByIdAndTenantId(toUomId, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("To Unit of Measure", toUomId));
 
         // Convert to base first, then to target

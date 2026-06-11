@@ -100,7 +100,7 @@ public class UserService {
 
     @Transactional
     public UserDto updateUser(Long id, UpdateUserRequest request) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("User", id));
 
         // Check phone uniqueness if changing
@@ -144,7 +144,7 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Long id) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("User", id));
 
         // Prevent self-deletion
@@ -183,7 +183,7 @@ public class UserService {
 
     @Transactional
     public UserDto lockUser(Long id, boolean lock) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("User", id));
 
         // Prevent self-locking
@@ -209,7 +209,7 @@ public class UserService {
 
     @Transactional
     public void resetPassword(Long id, String newPassword) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("User", id));
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
@@ -223,7 +223,7 @@ public class UserService {
 
     @Transactional
     public void setUserPin(Long id, String pin) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("User", id));
 
         if (pin == null || pin.isEmpty()) {

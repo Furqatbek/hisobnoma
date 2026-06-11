@@ -48,6 +48,7 @@ class BrandServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         brand = Brand.builder()
                 .id(1L)
                 .code("SAMSUNG")
@@ -120,7 +121,7 @@ class BrandServiceTest {
     @Test
     void getBrand_found_returnsDto() {
         // Given
-        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+        when(brandRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(brand));
         when(brandMapper.toDto(brand)).thenReturn(brandDto);
 
         // When
@@ -134,7 +135,7 @@ class BrandServiceTest {
     @Test
     void getBrand_notFound_throwsNotFoundException() {
         // Given
-        when(brandRepository.findById(999L)).thenReturn(Optional.empty());
+        when(brandRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> brandService.getBrand(999L));
@@ -219,7 +220,7 @@ class BrandServiceTest {
                 .description("Updated description")
                 .build();
 
-        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+        when(brandRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(brand));
         when(brandRepository.save(any(Brand.class))).thenReturn(brand);
         when(brandMapper.toDto(brand)).thenReturn(brandDto);
 
@@ -238,7 +239,7 @@ class BrandServiceTest {
                 .name("Updated")
                 .build();
 
-        when(brandRepository.findById(999L)).thenReturn(Optional.empty());
+        when(brandRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> brandService.updateBrand(999L, request));
@@ -247,7 +248,7 @@ class BrandServiceTest {
     @Test
     void deleteBrand_success() {
         // Given
-        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+        when(brandRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(brand));
 
         // When
         brandService.deleteBrand(1L);
@@ -259,7 +260,7 @@ class BrandServiceTest {
     @Test
     void deleteBrand_notFound_throwsNotFoundException() {
         // Given
-        when(brandRepository.findById(999L)).thenReturn(Optional.empty());
+        when(brandRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> brandService.deleteBrand(999L));

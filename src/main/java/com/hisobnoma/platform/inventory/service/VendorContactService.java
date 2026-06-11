@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.inventory.service;
 
 import com.hisobnoma.platform.common.exception.BusinessException;
+import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.common.exception.NotFoundException;
 import com.hisobnoma.platform.inventory.dto.CreateVendorContactRequest;
 import com.hisobnoma.platform.inventory.dto.VendorContactDto;
@@ -22,6 +23,7 @@ public class VendorContactService {
     private final VendorContactRepository vendorContactRepository;
     private final VendorRepository vendorRepository;
     private final VendorContactMapper vendorContactMapper;
+    private final SecurityContextHelper securityContextHelper;
 
     @Transactional(readOnly = true)
     public List<VendorContactDto> getContactsByVendor(Long vendorId) {
@@ -59,7 +61,8 @@ public class VendorContactService {
 
     @Transactional
     public VendorContactDto createContact(CreateVendorContactRequest request) {
-        Vendor vendor = vendorRepository.findById(request.getVendorId())
+        Vendor vendor = vendorRepository.findByIdAndTenantId(request.getVendorId(),
+                        securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Vendor not found with id: " + request.getVendorId()));
 
         // Check for duplicate email within the same vendor

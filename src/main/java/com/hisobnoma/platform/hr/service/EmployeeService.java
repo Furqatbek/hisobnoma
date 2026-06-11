@@ -94,7 +94,7 @@ public class EmployeeService {
                     .orElseThrow(() -> new NotFoundException("Position", request.getPositionId())));
         }
         if (request.getUserId() != null) {
-            employee.setUser(userRepository.findById(request.getUserId())
+            employee.setUser(userRepository.findByIdAndTenantId(request.getUserId(), tenantId)
                     .orElseThrow(() -> new NotFoundException("User", request.getUserId())));
         }
 
@@ -132,7 +132,7 @@ public class EmployeeService {
             employee.setPosition(null);
         }
         if (request.getUserId() != null) {
-            employee.setUser(userRepository.findById(request.getUserId())
+            employee.setUser(userRepository.findByIdAndTenantId(request.getUserId(), tenantId)
                     .orElseThrow(() -> new NotFoundException("User", request.getUserId())));
         } else {
             employee.setUser(null);

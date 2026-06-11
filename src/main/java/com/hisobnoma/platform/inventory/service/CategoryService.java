@@ -86,7 +86,7 @@ public class CategoryService {
 
         // Set parent if specified
         if (request.getParentId() != null) {
-            Category parent = categoryRepository.findById(request.getParentId())
+            Category parent = categoryRepository.findByIdAndTenantId(request.getParentId(), securityContextHelper.getCurrentTenantId())
                     .orElseThrow(() -> new NotFoundException("Parent Category", request.getParentId()));
             category.setParent(parent);
             category.setLevel(parent.getLevel() + 1);
@@ -108,7 +108,7 @@ public class CategoryService {
 
     @Transactional
     public CategoryDto updateCategory(Long id, UpdateCategoryRequest request) {
-        Category category = categoryRepository.findById(id)
+        Category category = categoryRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Category", id));
 
         if (request.getName() != null) {
@@ -136,7 +136,7 @@ public class CategoryService {
                 throw new ValidationException("Category cannot be its own parent");
             }
 
-            Category newParent = categoryRepository.findById(request.getParentId())
+            Category newParent = categoryRepository.findByIdAndTenantId(request.getParentId(), securityContextHelper.getCurrentTenantId())
                     .orElseThrow(() -> new NotFoundException("Parent Category", request.getParentId()));
 
             // Check for circular reference

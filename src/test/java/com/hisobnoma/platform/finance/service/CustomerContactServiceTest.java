@@ -12,6 +12,7 @@ import com.hisobnoma.platform.finance.repository.CustomerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -37,6 +38,9 @@ class CustomerContactServiceTest {
     @Mock
     private CustomerContactMapper customerContactMapper;
 
+    @Mock
+    private SecurityContextHelper securityContextHelper;
+
     @InjectMocks
     private CustomerContactService customerContactService;
 
@@ -46,6 +50,7 @@ class CustomerContactServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(securityContextHelper.getCurrentTenantId()).thenReturn(1L);
         customer = Customer.builder()
                 .id(1L)
                 .code("CUST-000001")
@@ -252,7 +257,7 @@ class CustomerContactServiceTest {
                 .email("new@example.com")
                 .build();
 
-        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+        when(customerRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(customer));
         when(customerContactRepository.findByCustomerIdAndEmail(1L, "new@example.com"))
                 .thenReturn(Optional.empty());
         when(customerContactMapper.toEntity(request)).thenReturn(newContact);
@@ -276,7 +281,7 @@ class CustomerContactServiceTest {
                 .name("Contact")
                 .build();
 
-        when(customerRepository.findById(999L)).thenReturn(Optional.empty());
+        when(customerRepository.findByIdAndTenantId(999L, 1L)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> customerContactService.createContact(request));
@@ -291,7 +296,7 @@ class CustomerContactServiceTest {
                 .email("john@example.com")
                 .build();
 
-        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+        when(customerRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(customer));
         when(customerContactRepository.findByCustomerIdAndEmail(1L, "john@example.com"))
                 .thenReturn(Optional.of(contact));
 
@@ -314,7 +319,7 @@ class CustomerContactServiceTest {
                 .active(true)
                 .build();
 
-        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+        when(customerRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(customer));
         when(customerContactRepository.findByCustomerIdAndPrimaryTrue(1L)).thenReturn(Optional.of(contact));
         when(customerContactMapper.toEntity(request)).thenReturn(newPrimary);
         when(customerContactRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

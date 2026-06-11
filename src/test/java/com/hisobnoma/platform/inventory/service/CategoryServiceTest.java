@@ -47,6 +47,7 @@ class CategoryServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         rootCategory = Category.builder()
                 .id(1L)
                 .code("ELECTRONICS")
@@ -195,7 +196,7 @@ class CategoryServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(categoryRepository.existsByCodeAndTenantId("TABLETS", TENANT_ID)).thenReturn(false);
         when(categoryMapper.toEntity(request)).thenReturn(newCategory);
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(rootCategory));
+        when(categoryRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(rootCategory));
         when(categoryRepository.save(any(Category.class))).thenReturn(newCategory);
         when(categoryMapper.toDto(newCategory)).thenReturn(CategoryDto.builder().id(3L).name("Tablets").parentId(1L).build());
 
@@ -226,7 +227,7 @@ class CategoryServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(categoryRepository.existsByCodeAndTenantId("CHILD", TENANT_ID)).thenReturn(false);
         when(categoryMapper.toEntity(request)).thenReturn(newCategory);
-        when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
+        when(categoryRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> categoryService.createCategory(request));
@@ -255,7 +256,7 @@ class CategoryServiceTest {
                 .name("Updated Electronics")
                 .build();
 
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(rootCategory));
+        when(categoryRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(rootCategory));
         when(categoryRepository.save(any(Category.class))).thenReturn(rootCategory);
         when(categoryMapper.toDto(rootCategory)).thenReturn(rootCategoryDto);
 
@@ -274,7 +275,7 @@ class CategoryServiceTest {
                 .parentId(1L)
                 .build();
 
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(rootCategory));
+        when(categoryRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(rootCategory));
 
         // When/Then
         assertThrows(ValidationException.class, () -> categoryService.updateCategory(1L, request));

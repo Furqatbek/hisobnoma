@@ -171,7 +171,8 @@ public class TelegramAdminController {
             return ResponseEntity.badRequest().body(Map.of("error", "Telegram bot yoqilmagan"));
         }
 
-        User user = userRepository.findById(request.getUserId()).orElseThrow();
+        User user = userRepository.findByIdAndTenantId(request.getUserId(),
+                securityContextHelper.getCurrentTenantId()).orElseThrow();
         if (user.getTelegramChatId() == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "Foydalanuvchi Telegramga ulanmagan"));
         }
@@ -213,7 +214,8 @@ public class TelegramAdminController {
     @DeleteMapping("/users/{userId}/unlink")
     @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<Map<String, String>> adminUnlinkUser(@PathVariable Long userId) {
-        User user = userRepository.findById(userId).orElseThrow();
+        User user = userRepository.findByIdAndTenantId(userId,
+                securityContextHelper.getCurrentTenantId()).orElseThrow();
         if (user.getTelegramChatId() != null) {
             Long chatId = user.getTelegramChatId();
             user.setTelegramChatId(null);

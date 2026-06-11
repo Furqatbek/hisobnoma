@@ -55,6 +55,7 @@ class RoleServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         pageable = PageRequest.of(0, 20);
 
         customRole = Role.builder()
@@ -108,7 +109,7 @@ class RoleServiceTest {
     @Test
     void getRole_existingId_returnsRoleDtoWithPermissions() {
         // Given
-        when(roleRepository.findByIdWithPermissions(ROLE_ID)).thenReturn(Optional.of(customRole));
+        when(roleRepository.findByIdWithPermissions(ROLE_ID, TENANT_ID)).thenReturn(Optional.of(customRole));
         when(roleMapper.toDto(customRole)).thenReturn(customDto);
 
         // When
@@ -122,7 +123,7 @@ class RoleServiceTest {
     @Test
     void getRole_nonExistentId_throwsNotFoundException() {
         // Given
-        when(roleRepository.findByIdWithPermissions(999L)).thenReturn(Optional.empty());
+        when(roleRepository.findByIdWithPermissions(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When / Then
         assertThrows(NotFoundException.class, () -> roleService.getRole(999L));
@@ -180,7 +181,7 @@ class RoleServiceTest {
                 .code("CASHIER")
                 .description("Updated description")
                 .build();
-        when(roleRepository.findByIdWithPermissions(ROLE_ID)).thenReturn(Optional.of(customRole));
+        when(roleRepository.findByIdWithPermissions(ROLE_ID, TENANT_ID)).thenReturn(Optional.of(customRole));
         when(roleRepository.save(customRole)).thenReturn(customRole);
         when(roleMapper.toDto(customRole)).thenReturn(customDto);
 
@@ -198,7 +199,7 @@ class RoleServiceTest {
         // Given
         CreateRoleRequest request = CreateRoleRequest.builder()
                 .name("X").code("SUPER_ADMIN").build();
-        when(roleRepository.findByIdWithPermissions(100L)).thenReturn(Optional.of(systemRole));
+        when(roleRepository.findByIdWithPermissions(100L, TENANT_ID)).thenReturn(Optional.of(systemRole));
 
         // When / Then
         assertThrows(BusinessException.class, () -> roleService.updateRole(100L, request));
@@ -209,7 +210,7 @@ class RoleServiceTest {
     void updateRole_nonExistentId_throwsNotFoundException() {
         // Given
         CreateRoleRequest request = CreateRoleRequest.builder().name("X").code("X").build();
-        when(roleRepository.findByIdWithPermissions(999L)).thenReturn(Optional.empty());
+        when(roleRepository.findByIdWithPermissions(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When / Then
         assertThrows(NotFoundException.class, () -> roleService.updateRole(999L, request));
@@ -220,7 +221,7 @@ class RoleServiceTest {
     @Test
     void deleteRole_existingRole_deletesRole() {
         // Given
-        when(roleRepository.findById(ROLE_ID)).thenReturn(Optional.of(customRole));
+        when(roleRepository.findByIdScoped(ROLE_ID, TENANT_ID)).thenReturn(Optional.of(customRole));
 
         // When
         roleService.deleteRole(ROLE_ID);
@@ -232,7 +233,7 @@ class RoleServiceTest {
     @Test
     void deleteRole_systemRole_throwsBusinessException() {
         // Given
-        when(roleRepository.findById(100L)).thenReturn(Optional.of(systemRole));
+        when(roleRepository.findByIdScoped(100L, TENANT_ID)).thenReturn(Optional.of(systemRole));
 
         // When / Then
         assertThrows(BusinessException.class, () -> roleService.deleteRole(100L));
@@ -243,7 +244,7 @@ class RoleServiceTest {
     void deleteRole_roleInUse_throwsBusinessException() {
         // Given
         customRole.getUsers().add(new User());
-        when(roleRepository.findById(ROLE_ID)).thenReturn(Optional.of(customRole));
+        when(roleRepository.findByIdScoped(ROLE_ID, TENANT_ID)).thenReturn(Optional.of(customRole));
 
         // When / Then
         assertThrows(BusinessException.class, () -> roleService.deleteRole(ROLE_ID));
@@ -253,7 +254,7 @@ class RoleServiceTest {
     @Test
     void deleteRole_nonExistentId_throwsNotFoundException() {
         // Given
-        when(roleRepository.findById(999L)).thenReturn(Optional.empty());
+        when(roleRepository.findByIdScoped(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When / Then
         assertThrows(NotFoundException.class, () -> roleService.deleteRole(999L));
@@ -268,7 +269,7 @@ class RoleServiceTest {
         Permission posRead = Permission.builder().code("POS_READ").build();
         Set<Permission> perms = Set.of(invRead, posRead);
 
-        when(roleRepository.findByIdWithPermissions(ROLE_ID)).thenReturn(Optional.of(customRole));
+        when(roleRepository.findByIdWithPermissions(ROLE_ID, TENANT_ID)).thenReturn(Optional.of(customRole));
         when(permissionRepository.findByCodeIn(anySet())).thenReturn(perms);
         when(roleRepository.save(customRole)).thenReturn(customRole);
         when(roleMapper.toDto(customRole)).thenReturn(customDto);
@@ -285,7 +286,7 @@ class RoleServiceTest {
     void assignPermissions_invalidCode_silentlyIgnoresUnknownCodes() {
         // Given — actual service calls findByCodeIn which just returns what exists.
         // Plan expects NotFoundException, but service doesn't validate individual codes.
-        when(roleRepository.findByIdWithPermissions(ROLE_ID)).thenReturn(Optional.of(customRole));
+        when(roleRepository.findByIdWithPermissions(ROLE_ID, TENANT_ID)).thenReturn(Optional.of(customRole));
         when(permissionRepository.findByCodeIn(anySet())).thenReturn(Set.of()); // none match
         when(roleRepository.save(customRole)).thenReturn(customRole);
         when(roleMapper.toDto(customRole)).thenReturn(customDto);

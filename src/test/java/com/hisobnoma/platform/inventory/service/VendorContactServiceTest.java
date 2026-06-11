@@ -12,6 +12,7 @@ import com.hisobnoma.platform.inventory.repository.VendorRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,6 +34,9 @@ class VendorContactServiceTest {
     @Mock
     private VendorContactMapper vendorContactMapper;
 
+    @Mock
+    private SecurityContextHelper securityContextHelper;
+
     @InjectMocks
     private VendorContactService vendorContactService;
 
@@ -42,6 +46,7 @@ class VendorContactServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(securityContextHelper.getCurrentTenantId()).thenReturn(1L);
         vendor = Vendor.builder()
                 .id(1L)
                 .code("VND-001")
@@ -238,7 +243,7 @@ class VendorContactServiceTest {
                 .active(true)
                 .build();
 
-        when(vendorRepository.findById(1L)).thenReturn(Optional.of(vendor));
+        when(vendorRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(vendor));
         when(vendorContactRepository.findByVendorIdAndEmail(1L, "jane@acme.com")).thenReturn(Optional.empty());
         when(vendorContactMapper.toEntity(request)).thenReturn(newContact);
         when(vendorContactRepository.save(any(VendorContact.class))).thenReturn(newContact);
@@ -261,7 +266,7 @@ class VendorContactServiceTest {
                 .name("Jane Smith")
                 .build();
 
-        when(vendorRepository.findById(999L)).thenReturn(Optional.empty());
+        when(vendorRepository.findByIdAndTenantId(999L, 1L)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> vendorContactService.createContact(request));
@@ -277,7 +282,7 @@ class VendorContactServiceTest {
                 .email("john@acme.com")
                 .build();
 
-        when(vendorRepository.findById(1L)).thenReturn(Optional.of(vendor));
+        when(vendorRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(vendor));
         when(vendorContactRepository.findByVendorIdAndEmail(1L, "john@acme.com")).thenReturn(Optional.of(contact));
 
         // When/Then
@@ -315,7 +320,7 @@ class VendorContactServiceTest {
                 .primary(true)
                 .build();
 
-        when(vendorRepository.findById(1L)).thenReturn(Optional.of(vendor));
+        when(vendorRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(vendor));
         when(vendorContactRepository.findByVendorIdAndPrimaryTrue(1L)).thenReturn(Optional.of(existingPrimary));
         when(vendorContactMapper.toEntity(request)).thenReturn(newContact);
         when(vendorContactRepository.save(any(VendorContact.class))).thenReturn(newContact);

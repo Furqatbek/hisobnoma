@@ -315,11 +315,11 @@ public class ARInvoiceService {
         return arInvoiceMapper.toDto(invoice);
     }
 
+    /**
+     * Applies a payment to the given (already tenant-validated) invoice.
+     */
     @Transactional
-    public void applyPayment(Long invoiceId, BigDecimal amount, BigDecimal discountTaken, BigDecimal writeOff) {
-        ARInvoice invoice = arInvoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new NotFoundException("AR Invoice not found with id: " + invoiceId));
-
+    public void applyPayment(ARInvoice invoice, BigDecimal amount, BigDecimal discountTaken, BigDecimal writeOff) {
         BigDecimal totalApplied = amount.add(discountTaken != null ? discountTaken : BigDecimal.ZERO)
                 .add(writeOff != null ? writeOff : BigDecimal.ZERO);
 

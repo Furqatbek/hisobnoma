@@ -49,6 +49,7 @@ class UnitOfMeasureServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         uom = UnitOfMeasure.builder()
                 .id(1L)
                 .code("KG")
@@ -104,7 +105,7 @@ class UnitOfMeasureServiceTest {
     @Test
     void getUom_found_returnsDto() {
         // Given
-        when(uomRepository.findById(1L)).thenReturn(Optional.of(uom));
+        when(uomRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(uom));
         when(uomMapper.toDto(uom)).thenReturn(uomDto);
 
         // When
@@ -118,7 +119,7 @@ class UnitOfMeasureServiceTest {
     @Test
     void getUom_notFound_throwsNotFoundException() {
         // Given
-        when(uomRepository.findById(999L)).thenReturn(Optional.empty());
+        when(uomRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> uomService.getUom(999L));
@@ -202,7 +203,7 @@ class UnitOfMeasureServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(uomRepository.existsByCodeAndTenantId("G", TENANT_ID)).thenReturn(false);
         when(uomMapper.toEntity(request)).thenReturn(newUom);
-        when(uomRepository.findById(1L)).thenReturn(Optional.of(uom));
+        when(uomRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(uom));
         when(uomRepository.save(any(UnitOfMeasure.class))).thenReturn(newUom);
         when(uomMapper.toDto(newUom)).thenReturn(uomDto);
 
@@ -233,7 +234,7 @@ class UnitOfMeasureServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(uomRepository.existsByCodeAndTenantId("G", TENANT_ID)).thenReturn(false);
         when(uomMapper.toEntity(request)).thenReturn(newUom);
-        when(uomRepository.findById(999L)).thenReturn(Optional.empty());
+        when(uomRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> uomService.createUom(request));
@@ -249,7 +250,7 @@ class UnitOfMeasureServiceTest {
                 .active(true)
                 .build();
 
-        when(uomRepository.findById(1L)).thenReturn(Optional.of(uom));
+        when(uomRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(uom));
         when(uomRepository.save(any(UnitOfMeasure.class))).thenReturn(uom);
         when(uomMapper.toDto(uom)).thenReturn(uomDto);
 
@@ -270,7 +271,7 @@ class UnitOfMeasureServiceTest {
                 .active(true)
                 .build();
 
-        when(uomRepository.findById(999L)).thenReturn(Optional.empty());
+        when(uomRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> uomService.updateUom(999L, request));
@@ -279,7 +280,7 @@ class UnitOfMeasureServiceTest {
     @Test
     void deleteUom_success() {
         // Given
-        when(uomRepository.findById(1L)).thenReturn(Optional.of(uom));
+        when(uomRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(uom));
         when(uomRepository.findByBaseUomId(1L)).thenReturn(Collections.emptyList());
 
         // When
@@ -293,7 +294,7 @@ class UnitOfMeasureServiceTest {
     void deleteUom_usedByOthers_throwsValidationException() {
         // Given
         UnitOfMeasure dependentUom = UnitOfMeasure.builder().id(2L).code("G").build();
-        when(uomRepository.findById(1L)).thenReturn(Optional.of(uom));
+        when(uomRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(uom));
         when(uomRepository.findByBaseUomId(1L)).thenReturn(List.of(dependentUom));
 
         // When/Then
@@ -304,7 +305,7 @@ class UnitOfMeasureServiceTest {
     @Test
     void deleteUom_notFound_throwsNotFoundException() {
         // Given
-        when(uomRepository.findById(999L)).thenReturn(Optional.empty());
+        when(uomRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> uomService.deleteUom(999L));
@@ -331,8 +332,8 @@ class UnitOfMeasureServiceTest {
                 .isBaseUnit(false)
                 .build();
 
-        when(uomRepository.findById(1L)).thenReturn(Optional.of(uom));
-        when(uomRepository.findById(2L)).thenReturn(Optional.of(gramUom));
+        when(uomRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(uom));
+        when(uomRepository.findByIdAndTenantId(2L, TENANT_ID)).thenReturn(Optional.of(gramUom));
 
         // When
         BigDecimal result = uomService.convert(new BigDecimal("1"), 1L, 2L);
@@ -344,7 +345,7 @@ class UnitOfMeasureServiceTest {
     @Test
     void convert_fromUomNotFound_throwsNotFoundException() {
         // Given
-        when(uomRepository.findById(999L)).thenReturn(Optional.empty());
+        when(uomRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> uomService.convert(BigDecimal.ONE, 999L, 1L));

@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.finance.service;
 
 import com.hisobnoma.platform.common.exception.BusinessException;
+import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.common.exception.NotFoundException;
 import com.hisobnoma.platform.finance.dto.CreateCustomerContactRequest;
 import com.hisobnoma.platform.finance.dto.CustomerContactDto;
@@ -22,6 +23,7 @@ public class CustomerContactService {
     private final CustomerContactRepository customerContactRepository;
     private final CustomerRepository customerRepository;
     private final CustomerContactMapper customerContactMapper;
+    private final SecurityContextHelper securityContextHelper;
 
     @Transactional(readOnly = true)
     public List<CustomerContactDto> getContactsByCustomer(Long customerId) {
@@ -59,7 +61,8 @@ public class CustomerContactService {
 
     @Transactional
     public CustomerContactDto createContact(CreateCustomerContactRequest request) {
-        Customer customer = customerRepository.findById(request.getCustomerId())
+        Customer customer = customerRepository.findByIdAndTenantId(request.getCustomerId(),
+                        securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Customer not found with id: " + request.getCustomerId()));
 
         // Check for duplicate email within the same customer

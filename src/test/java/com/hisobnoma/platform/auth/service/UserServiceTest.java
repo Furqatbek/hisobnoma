@@ -58,6 +58,7 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         pageable = PageRequest.of(0, 20);
 
         sampleUser = User.builder()
@@ -213,7 +214,7 @@ class UserServiceTest {
                 .lastName("Smith")
                 .enabled(true)
                 .build();
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantId(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
         when(userRepository.save(sampleUser)).thenReturn(sampleUser);
         when(userMapper.toDto(sampleUser)).thenReturn(sampleDto);
 
@@ -230,7 +231,7 @@ class UserServiceTest {
     void updateUser_nonExistentId_throwsNotFoundException() {
         // Given
         UpdateUserRequest request = UpdateUserRequest.builder().firstName("X").build();
-        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When / Then
         assertThrows(NotFoundException.class, () -> userService.updateUser(999L, request));
@@ -243,7 +244,7 @@ class UserServiceTest {
         UpdateUserRequest request = UpdateUserRequest.builder()
                 .phone("+998909999999")
                 .build();
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantId(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
         when(userRepository.existsByPhone("+998909999999")).thenReturn(true);
 
         // When / Then
@@ -255,7 +256,7 @@ class UserServiceTest {
     @Test
     void deleteUser_existingId_deletesUser() {
         // Given
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantId(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
         when(securityContextHelper.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
 
         // When
@@ -268,7 +269,7 @@ class UserServiceTest {
     @Test
     void deleteUser_nonExistentId_throwsNotFoundException() {
         // Given
-        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When / Then
         assertThrows(NotFoundException.class, () -> userService.deleteUser(999L));
@@ -277,7 +278,7 @@ class UserServiceTest {
     @Test
     void deleteUser_currentUserId_throwsValidationException() {
         // Given — plan says BusinessException, actual impl throws ValidationException
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantId(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
         when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
 
         // When / Then
@@ -326,7 +327,7 @@ class UserServiceTest {
     @Test
     void lockUser_lockTrue_disablesUser() {
         // Given
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantId(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
         when(securityContextHelper.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
         when(userRepository.save(sampleUser)).thenReturn(sampleUser);
         when(userMapper.toDto(sampleUser)).thenReturn(sampleDto);
@@ -343,7 +344,7 @@ class UserServiceTest {
     void lockUser_lockFalse_unlocksUser() {
         // Given
         sampleUser.setLocked(true);
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantId(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
         when(securityContextHelper.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
         when(userRepository.save(sampleUser)).thenReturn(sampleUser);
         when(userMapper.toDto(sampleUser)).thenReturn(sampleDto);
@@ -359,7 +360,7 @@ class UserServiceTest {
     @Test
     void lockUser_nonExistentId_throwsNotFoundException() {
         // Given
-        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When / Then
         assertThrows(NotFoundException.class, () -> userService.lockUser(999L, true));
@@ -370,7 +371,7 @@ class UserServiceTest {
     @Test
     void resetPassword_existingUser_hashesAndSavesPassword() {
         // Given
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantId(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
         when(passwordEncoder.encode("newAdminPass")).thenReturn("$2a$10$adminhash");
         when(userRepository.save(sampleUser)).thenReturn(sampleUser);
 
@@ -387,7 +388,7 @@ class UserServiceTest {
     @Test
     void setUserPin_validPin_hashesAndSavesPin() {
         // Given
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantId(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
         when(passwordEncoder.encode("1234")).thenReturn("$2a$10$pinhash");
         when(userRepository.save(sampleUser)).thenReturn(sampleUser);
 
@@ -401,7 +402,7 @@ class UserServiceTest {
     @Test
     void setUserPin_tooShortPin_throwsValidationException() {
         // Given
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantId(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
 
         // When / Then
         assertThrows(ValidationException.class, () -> userService.setUserPin(USER_ID, "12"));
@@ -410,7 +411,7 @@ class UserServiceTest {
     @Test
     void setUserPin_nonNumericPin_throwsValidationException() {
         // Given
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantId(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
 
         // When / Then
         assertThrows(ValidationException.class, () -> userService.setUserPin(USER_ID, "abcd"));

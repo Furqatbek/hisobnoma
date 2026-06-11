@@ -328,7 +328,7 @@ class ARPaymentServiceTest {
         // Then
         assertNotNull(result);
         verify(glIntegrationService).reverseARPayment(eq(payment), eq("Reverse completed"));
-        verify(arInvoiceService).applyPayment(eq(1L), any(), any(), any());
+        verify(arInvoiceService).applyPayment(any(ARInvoice.class), any(), any(), any());
         verify(customerService).updateCustomerBalance(any(Customer.class), any());
     }
 
