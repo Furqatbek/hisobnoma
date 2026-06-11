@@ -2,6 +2,7 @@ package com.hisobnoma.platform.web.service;
 
 import com.hisobnoma.platform.admin.service.TenantSettingService;
 import com.hisobnoma.platform.common.exception.ValidationException;
+import com.hisobnoma.platform.web.dto.ReferralStatsDto;
 import com.hisobnoma.platform.web.entity.WebCustomer;
 import com.hisobnoma.platform.web.entity.WebLoyaltyTransaction;
 import com.hisobnoma.platform.web.entity.WebLoyaltyTransactionType;
@@ -168,6 +169,19 @@ public class WebReferralService {
     @Transactional(readOnly = true)
     public long getReferredCount(Long tenantId, Long webCustomerId) {
         return customerRepository.countByTenantIdAndReferredBy(tenantId, webCustomerId);
+    }
+
+    @Transactional
+    public ReferralStatsDto getStats(Long tenantId, Long webCustomerId) {
+        String code = getOrCreateCode(tenantId, webCustomerId);
+        long invited = getReferredCount(tenantId, webCustomerId);
+        BigDecimal earned = loyaltyRepository.sumReferralRewards(tenantId, webCustomerId);
+        return ReferralStatsDto.builder()
+                .code(code != null ? code : "")
+                .enabled(isEnabled(tenantId))
+                .invitedCount(invited)
+                .pointsEarned(earned)
+                .build();
     }
 
     // ---- settings ----

@@ -3915,9 +3915,163 @@ X-Tenant-ID: 1
 { "success": true, "data": { "code": "ALI7K2" }, "timestamp": "2026-06-11T12:00:00Z" }
 ```
 
+### GET /web/me/referral-stats
+Full referral dashboard: the customer's code, whether the referral programme is enabled for this
+tenant, number of people invited, and total loyalty points earned from referrals.
+
+**Request:**
+```http
+GET /api/v1/web/me/referral-stats
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "code": "ALI7K2",
+    "enabled": true,
+    "invitedCount": 3,
+    "pointsEarned": 15000.0000
+  },
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+
 ---
 
-## 8. Wishlist ("like")
+## 8. Notifications feed
+
+Push notifications are now persisted so customers can review them later. Every push sent via
+`WebPushService.sendToCustomer()` is automatically stored in `web_notifications`.
+
+### GET /web/me/notifications
+Paged notification history, newest first. Each entry has a `type` (e.g. `ORDER_STATUS`,
+`GENERAL`), optional `referenceType`/`referenceId` for deep-linking, and a `read` flag.
+
+**Request:**
+```http
+GET /api/v1/web/me/notifications?page=0&size=20
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{
+  "content": [
+    {
+      "id": 42,
+      "title": "Буюртма тасдиқланди",
+      "body": "Буюртма WO-001 қабул қилинди",
+      "type": "ORDER_STATUS",
+      "referenceType": null,
+      "referenceId": "WO-001",
+      "read": false,
+      "createdAt": "2026-06-11T10:30:00Z"
+    }
+  ],
+  "page": { "number": 0, "size": 20, "totalElements": 1, "totalPages": 1,
+            "first": true, "last": true, "empty": false }
+}
+```
+
+### GET /web/me/notifications/unread-count
+Badge counter — lightweight endpoint to poll from the app home screen.
+
+**Request:**
+```http
+GET /api/v1/web/me/notifications/unread-count
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{ "success": true, "data": { "count": 5 }, "timestamp": "2026-06-11T12:00:00Z" }
+```
+
+### PUT /web/me/notifications/{id}/read
+Mark a single notification as read.
+
+**Request:**
+```http
+PUT /api/v1/web/me/notifications/42/read
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{ "success": true, "timestamp": "2026-06-11T12:00:00Z" }
+```
+
+### PUT /web/me/notifications/read-all
+Mark all unread notifications as read.
+
+**Request:**
+```http
+PUT /api/v1/web/me/notifications/read-all
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{ "success": true, "timestamp": "2026-06-11T12:00:00Z" }
+```
+
+---
+
+## 9. Coupons
+
+### GET /web/me/coupons
+Lists all coupon codes currently valid for this customer. Includes only coupons whose parent
+promotion targets the `WEB` or `ALL` channel, is within date range, hasn't been fully used,
+and hasn't exceeded this customer's per-customer limit. Customer-specific coupons (assigned
+by staff) are included alongside general ones.
+
+**Request:**
+```http
+GET /api/v1/web/me/coupons
+Authorization: Bearer <token>
+X-Tenant-ID: 1
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "code": "SUMMER25",
+      "description": "Summer sale — 25% off everything",
+      "discountType": "PERCENT",
+      "discountValue": 25.0000,
+      "minOrderAmount": 50000.0000,
+      "startDate": "2026-06-01",
+      "endDate": "2026-08-31"
+    },
+    {
+      "code": "VIP5000",
+      "description": "Loyal customer bonus",
+      "discountType": "FIXED",
+      "discountValue": 5000.0000,
+      "minOrderAmount": null,
+      "startDate": null,
+      "endDate": null
+    }
+  ],
+  "timestamp": "2026-06-11T12:00:00Z"
+}
+```
+Apply a coupon at checkout via `POST /web/cart/validate-coupon` (existing endpoint).
+
+---
+
+## 10. Wishlist ("like")
 
 Customers tap a heart on any product. Wishlisted products that get a web discount or come
 back in stock trigger a push/SMS alert (see Phase 6). Anonymous taps should route to the
@@ -4182,6 +4336,12 @@ Phone-based accounts for the shop mobile app. Web-customer tokens are signed wit
 | POST | /web/me/device-token | Bearer token + `{ token, platform }` → registers an FCM push token (idempotent) |
 | DELETE | /web/me/device-token | Bearer token, optional `?token=` → removes one (or all) push tokens; call on logout |
 | GET | /web/me/referral-code | Bearer token → `{ code }` the customer's own referral code (created on first request) |
+| GET | /web/me/referral-stats | Bearer token → `{ code, enabled, invitedCount, pointsEarned }` full referral dashboard |
+| GET | /web/me/notifications | Bearer token → paged notification history (title, body, type, read flag), newest first |
+| GET | /web/me/notifications/unread-count | Bearer token → `{ count }` unread notification badge counter |
+| PUT | /web/me/notifications/{id}/read | Bearer token → mark a single notification as read |
+| PUT | /web/me/notifications/read-all | Bearer token → mark all notifications as read |
+| GET | /web/me/coupons | Bearer token → list of valid coupon codes available to this customer (WEB/ALL channel only) |
 | GET | /web/me/wishlist | Bearer token → paged wishlist with price/sale/availability and a `priceDrop` flag |
 | GET | /web/me/wishlist/ids | Bearer token → `[catalogItemId, …]` for painting hearts on the catalog grid |
 | PUT | /web/me/wishlist/{catalogItemId} | Bearer token → like a product (idempotent; unknown item → 400) |

@@ -51,4 +51,10 @@ public interface WebLoyaltyTransactionRepository extends JpaRepository<WebLoyalt
     long countByTenantIdAndWebCustomerIdAndTypeAndNoteStartingWithAndCreatedAtBetween(
             Long tenantId, Long webCustomerId, WebLoyaltyTransactionType type,
             String notePrefix, Instant start, Instant end);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM WebLoyaltyTransaction t " +
+           "WHERE t.tenantId = :tenantId AND t.webCustomerId = :customerId " +
+           "AND t.type = 'ADJUST' AND t.note LIKE 'Реферал%'")
+    BigDecimal sumReferralRewards(@Param("tenantId") Long tenantId,
+                                  @Param("customerId") Long customerId);
 }

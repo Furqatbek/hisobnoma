@@ -75,4 +75,17 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
 
     @Query("SELECT COUNT(c) FROM Coupon c WHERE c.tenantId = :tenantId AND c.status = 'ACTIVE'")
     long countActiveByTenantId(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT c FROM Coupon c JOIN FETCH c.promotion p WHERE c.tenantId = :tenantId " +
+           "AND c.status = 'ACTIVE' " +
+           "AND (c.startDate IS NULL OR c.startDate <= :date) " +
+           "AND (c.endDate IS NULL OR c.endDate >= :date) " +
+           "AND (c.maxUses IS NULL OR c.currentUses < c.maxUses) " +
+           "AND (c.customerId IS NULL OR c.customerId = :customerId) " +
+           "AND (p.channel = 'WEB' OR p.channel = 'ALL') " +
+           "AND p.active = true " +
+           "ORDER BY c.endDate ASC NULLS LAST")
+    List<Coupon> findAvailableForWebCustomer(@Param("tenantId") Long tenantId,
+                                              @Param("customerId") Long customerId,
+                                              @Param("date") LocalDate date);
 }

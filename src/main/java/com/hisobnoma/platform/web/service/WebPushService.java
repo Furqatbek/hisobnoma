@@ -23,6 +23,7 @@ public class WebPushService {
     private final WebDeviceTokenRepository tokenRepository;
     private final WebCustomerRepository customerRepository;
     private final PushNotificationService pushNotificationService;
+    private final WebNotificationService notificationService;
 
     @Transactional
     public void register(Long tenantId, Long webCustomerId, String token, String platform) {
@@ -57,6 +58,11 @@ public class WebPushService {
 
     public void sendToCustomer(Long tenantId, Long webCustomerId,
                                String title, String body, Map<String, String> data) {
+        notificationService.create(tenantId, webCustomerId, title, body,
+                data.getOrDefault("type", "GENERAL"),
+                null,
+                data.get("orderNumber"));
+
         List<WebDeviceToken> tokens = tokenRepository.findByTenantIdAndWebCustomerId(tenantId, webCustomerId);
         for (WebDeviceToken dt : tokens) {
             try {

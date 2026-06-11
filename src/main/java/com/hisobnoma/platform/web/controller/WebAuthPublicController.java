@@ -4,15 +4,20 @@ import com.hisobnoma.platform.common.util.ClientIpResolver;
 import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.common.dto.PageResponse;
 import com.hisobnoma.platform.web.dto.LoyaltyBalanceDto;
+import com.hisobnoma.platform.web.dto.PublicCouponDto;
 import com.hisobnoma.platform.web.dto.PublicOrderDto;
+import com.hisobnoma.platform.web.dto.ReferralStatsDto;
 import com.hisobnoma.platform.web.dto.RegisterDeviceTokenRequest;
 import com.hisobnoma.platform.web.dto.RequestOtpRequest;
 import com.hisobnoma.platform.web.dto.VerifyOtpRequest;
 import com.hisobnoma.platform.web.dto.WebAuthResponse;
+import com.hisobnoma.platform.web.dto.WebNotificationDto;
 import com.hisobnoma.platform.web.dto.WishlistItemDto;
 import com.hisobnoma.platform.web.entity.WebCustomer;
 import com.hisobnoma.platform.web.service.WebAuthService;
+import com.hisobnoma.platform.web.service.WebCouponListService;
 import com.hisobnoma.platform.web.service.WebLoyaltyService;
+import com.hisobnoma.platform.web.service.WebNotificationService;
 import com.hisobnoma.platform.web.service.WebPushService;
 import com.hisobnoma.platform.web.service.WebReferralService;
 import com.hisobnoma.platform.web.service.WebWishlistService;
@@ -41,7 +46,9 @@ public class WebAuthPublicController {
 
     private final ClientIpResolver clientIpResolver;
     private final WebAuthService authService;
+    private final WebCouponListService couponListService;
     private final WebLoyaltyService loyaltyService;
+    private final WebNotificationService notificationService;
     private final WebPushService pushService;
     private final WebReferralService referralService;
     private final WebWishlistService wishlistService;
@@ -113,6 +120,61 @@ public class WebAuthPublicController {
         String code = referralService.getOrCreateCode(customer.getTenantId(), customer.getId());
         return ResponseEntity.ok(ApiResponse.success(Map.of(
                 "code", code != null ? code : "")));
+    }
+
+    @GetMapping("/me/referral-stats")
+    public ResponseEntity<ApiResponse<ReferralStatsDto>> myReferralStats(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        return ResponseEntity.ok(ApiResponse.success(
+                referralService.getStats(customer.getTenantId(), customer.getId())));
+    }
+
+    // ---- Notifications ----
+
+    @GetMapping("/me/notifications")
+    public ResponseEntity<PageResponse<WebNotificationDto>> myNotifications(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @PageableDefault(size = 20) Pageable pageable) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        Page<WebNotificationDto> page = notificationService.getNotifications(
+                customer.getTenantId(), customer.getId(), pageable);
+        return ResponseEntity.ok(PageResponse.of(page));
+    }
+
+    @GetMapping("/me/notifications/unread-count")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> notificationsUnreadCount(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        long count = notificationService.countUnread(customer.getTenantId(), customer.getId());
+        return ResponseEntity.ok(ApiResponse.success(Map.of("count", count)));
+    }
+
+    @PutMapping("/me/notifications/{id}/read")
+    public ResponseEntity<ApiResponse<Void>> markNotificationRead(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @PathVariable Long id) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        notificationService.markRead(customer.getTenantId(), customer.getId(), id);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PutMapping("/me/notifications/read-all")
+    public ResponseEntity<ApiResponse<Void>> markAllNotificationsRead(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        notificationService.markAllRead(customer.getTenantId(), customer.getId());
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    // ---- Coupons ----
+
+    @GetMapping("/me/coupons")
+    public ResponseEntity<ApiResponse<List<PublicCouponDto>>> myCoupons(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        return ResponseEntity.ok(ApiResponse.success(
+                couponListService.getAvailableCoupons(customer.getTenantId(), customer.getId())));
     }
 
     @GetMapping("/me/wishlist")

@@ -29,6 +29,7 @@ class WebPushServiceTest {
     @Mock private WebDeviceTokenRepository tokenRepository;
     @Mock private WebCustomerRepository customerRepository;
     @Mock private PushNotificationService pushNotificationService;
+    @Mock private WebNotificationService notificationService;
 
     @InjectMocks
     private WebPushService service;

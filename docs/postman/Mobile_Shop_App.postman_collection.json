@@ -345,11 +345,98 @@
             "url": { "raw": "{{baseUrl}}/web/me/referral-code", "host": [ "{{baseUrl}}" ], "path": [ "web", "me", "referral-code" ] },
             "description": "Stable code; share for referral rewards."
           }
+        },
+        {
+          "name": "GET referral stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/web/me/referral-stats", "host": [ "{{baseUrl}}" ], "path": [ "web", "me", "referral-stats" ] },
+            "description": "Full referral dashboard: code, enabled flag, invited count, points earned."
+          }
         }
       ]
     },
     {
-      "name": "8. Wishlist (like)",
+      "name": "8. Notifications",
+      "item": [
+        {
+          "name": "GET notifications (paged)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/web/me/notifications?page=0&size=20",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "web", "me", "notifications" ],
+              "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ]
+            },
+            "description": "Paged notification history, newest first."
+          }
+        },
+        {
+          "name": "GET unread count",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/web/me/notifications/unread-count", "host": [ "{{baseUrl}}" ], "path": [ "web", "me", "notifications", "unread-count" ] },
+            "description": "Badge counter for unread notifications."
+          }
+        },
+        {
+          "name": "PUT mark notification read",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/web/me/notifications/42/read", "host": [ "{{baseUrl}}" ], "path": [ "web", "me", "notifications", "42", "read" ] },
+            "description": "Mark a single notification as read."
+          }
+        },
+        {
+          "name": "PUT mark all read",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/web/me/notifications/read-all", "host": [ "{{baseUrl}}" ], "path": [ "web", "me", "notifications", "read-all" ] },
+            "description": "Mark all unread notifications as read."
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Coupons",
+      "item": [
+        {
+          "name": "GET my coupons",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/web/me/coupons", "host": [ "{{baseUrl}}" ], "path": [ "web", "me", "coupons" ] },
+            "description": "Lists all valid coupon codes available to this customer (WEB/ALL channel). Apply at checkout via POST /web/cart/validate-coupon."
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Wishlist (like)",
       "item": [
         {
           "name": "GET my wishlist (paged)",
