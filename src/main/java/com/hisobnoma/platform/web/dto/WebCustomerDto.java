@@ -27,4 +27,9 @@ public class WebCustomerDto {
     private long orderCount;
     private Instant lastOrderAt;
     private boolean smsOptOut;
+    private String referralCode;
+    private Long referredBy;
+    private String referredByName;
+    private long referredCount;
+    private boolean pushReachable;
 }

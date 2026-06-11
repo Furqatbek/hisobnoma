@@ -28,6 +28,8 @@ public class WebCustomerService {
     private final WebOrderRepository orderRepository;
     private final CustomerRepository customerRepository;
     private final SecurityContextHelper securityContextHelper;
+    private final WebPushService pushService;
+    private final WebReferralService referralService;
 
     @Transactional(readOnly = true)
     public Page<WebCustomerDto> getCustomers(String search, Pageable pageable) {
@@ -87,6 +89,13 @@ public class WebCustomerService {
                 customerName = customer.getName();
             }
         }
+        String referredByName = null;
+        if (webCustomer.getReferredBy() != null) {
+            referredByName = webCustomerRepository.findById(webCustomer.getReferredBy())
+                    .map(r -> r.getName() != null ? r.getName() : r.getPhone())
+                    .orElse(null);
+        }
+
         return WebCustomerDto.builder()
                 .id(webCustomer.getId())
                 .phone(webCustomer.getPhone())
@@ -101,6 +110,13 @@ public class WebCustomerService {
                 .lastOrderAt(orderRepository.findLastOrderDate(
                         webCustomer.getTenantId(), webCustomer.getPhone()))
                 .smsOptOut(webCustomer.isSmsOptOut())
+                .referralCode(webCustomer.getReferralCode())
+                .referredBy(webCustomer.getReferredBy())
+                .referredByName(referredByName)
+                .referredCount(referralService.getReferredCount(
+                        webCustomer.getTenantId(), webCustomer.getId()))
+                .pushReachable(pushService.hasPushToken(
+                        webCustomer.getTenantId(), webCustomer.getId()))
                 .build();
     }
 }

@@ -55,6 +55,7 @@ public class WebAuthService {
     private final WebCustomerTokenService tokenService;
     private final CheckoutRateLimiter rateLimiter;
     private final SmsService smsService;
+    private final WebReferralService referralService;
 
     private final SecureRandom random = new SecureRandom();
 
@@ -105,7 +106,7 @@ public class WebAuthService {
     }
 
     @Transactional
-    public WebAuthResponse verifyOtp(String rawPhone, String code, String name) {
+    public WebAuthResponse verifyOtp(String rawPhone, String code, String name, String referralCode) {
         Long tenantId = resolveTenantId();
         String phone = normalizePhone(rawPhone);
 
@@ -137,7 +138,17 @@ public class WebAuthService {
             customer.setName(name.trim());
         }
         customer.setLastLoginAt(now);
+        boolean isNew = customer.getId() == null;
         customer = webCustomerRepository.save(customer);
+
+        if (isNew && referralCode != null && !referralCode.isBlank()) {
+            try {
+                referralService.applyCode(tenantId, customer.getId(), referralCode);
+            } catch (Exception e) {
+                log.warn("Failed to apply referral code '{}' for customer {}: {}",
+                        referralCode, customer.getId(), e.getMessage());
+            }
+        }
 
         log.info("Web customer {} logged in (tenant {})", mask(phone), tenantId);
         return WebAuthResponse.builder()

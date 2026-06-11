@@ -25,4 +25,9 @@ public class VerifyOtpRequest {
      * Optional display name, stored on first login.
      */
     private String name;
+
+    /**
+     * Optional referral code, applied on first registration.
+     */
+    private String referralCode;
 }

@@ -16,12 +16,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Runs the actual SMS sending off the request thread. Sits in its own bean so
- * the {@code @Async} proxy applies (a self-invoked async method would run
- * synchronously). Security/tenant context is NOT propagated to async threads,
- * so the tenant is set explicitly for template resolution.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -29,22 +23,57 @@ public class WebCampaignDispatcher {
 
     private final SmsService smsService;
     private final WebCampaignRepository campaignRepository;
+    private final WebPushService pushService;
 
     @Async
     public void dispatch(Long campaignId, Long tenantId, Long templateId,
-                         List<SmsBulkSendRequest.Recipient> recipients, String from) {
+                         List<SmsBulkSendRequest.Recipient> smsRecipients,
+                         List<Long> pushCustomerIds, String messageTemplate,
+                         String from) {
         TenantContext.setCurrentTenant(tenantId);
         try {
-            Map<String, Object> result = smsService.sendBulk(templateId, recipients, from);
-            int sent = asInt(result.get("sent"));
-            int failed = asInt(result.get("failed"));
-            // Any success finalizes as SENT (with the failed count recorded);
-            // only a wholesale failure is FAILED.
-            finalize(campaignId, sent, failed,
-                    sent > 0 ? WebCampaignStatus.SENT : WebCampaignStatus.FAILED, null);
+            int totalSent = 0;
+            int totalFailed = 0;
+
+            // Push phase
+            if (pushCustomerIds != null && !pushCustomerIds.isEmpty()) {
+                String pushBody = messageTemplate != null ? messageTemplate : "";
+                for (Long customerId : pushCustomerIds) {
+                    try {
+                        pushService.sendToCustomer(tenantId, customerId,
+                                "Акция", pushBody,
+                                Map.of("type", "CAMPAIGN", "campaignId", campaignId.toString()));
+                        totalSent++;
+                    } catch (Exception e) {
+                        log.warn("Campaign {} push to customer {} failed: {}",
+                                campaignId, customerId, e.getMessage());
+                        totalFailed++;
+                    }
+                }
+            }
+
+            // SMS phase
+            String smsError = null;
+            if (smsRecipients != null && !smsRecipients.isEmpty()) {
+                try {
+                    Map<String, Object> result = smsService.sendBulk(templateId, smsRecipients, from);
+                    totalSent += asInt(result.get("sent"));
+                    totalFailed += asInt(result.get("failed"));
+                } catch (Exception e) {
+                    log.warn("Campaign {} SMS dispatch failed: {}", campaignId, e.getMessage());
+                    totalFailed += smsRecipients.size();
+                    smsError = e.getMessage();
+                }
+            }
+
+            finalize(campaignId, totalSent, totalFailed,
+                    totalSent > 0 ? WebCampaignStatus.SENT : WebCampaignStatus.FAILED,
+                    totalSent == 0 ? truncate(smsError) : null);
         } catch (Exception e) {
             log.warn("Campaign {} dispatch failed: {}", campaignId, e.getMessage());
-            finalize(campaignId, 0, recipients.size(), WebCampaignStatus.FAILED, truncate(e.getMessage()));
+            int total = (smsRecipients != null ? smsRecipients.size() : 0)
+                    + (pushCustomerIds != null ? pushCustomerIds.size() : 0);
+            finalize(campaignId, 0, total, WebCampaignStatus.FAILED, truncate(e.getMessage()));
         } finally {
             TenantContext.clear();
         }

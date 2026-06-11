@@ -61,6 +61,9 @@ public class DashboardStatsDTO {
     // Loyalty program liability (total outstanding points)
     private BigDecimal loyaltyLiability;
 
+    // Referral program
+    private Long referredCustomers;
+
     // Activity statistics
     private Long totalAuditLogsToday;
     private Long failedLoginsToday;

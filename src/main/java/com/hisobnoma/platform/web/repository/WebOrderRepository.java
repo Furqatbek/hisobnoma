@@ -43,6 +43,9 @@ public interface WebOrderRepository extends JpaRepository<WebOrder, Long> {
 
     long countByTenantIdAndPhoneNormalized(Long tenantId, String phoneNormalized);
 
+    long countByTenantIdAndPhoneNormalizedAndStatus(Long tenantId, String phoneNormalized,
+                                                     com.hisobnoma.platform.web.entity.WebOrderStatus status);
+
     @Query("SELECT MAX(o.createdAt) FROM WebOrder o WHERE o.tenantId = :tenantId AND o.phoneNormalized = :phone")
     Instant findLastOrderDate(@Param("tenantId") Long tenantId, @Param("phone") String phone);
 }

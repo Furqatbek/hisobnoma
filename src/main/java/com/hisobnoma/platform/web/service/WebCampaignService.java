@@ -17,9 +17,11 @@ import com.hisobnoma.platform.sms.service.SmsService;
 import com.hisobnoma.platform.web.dto.CampaignPreviewDto;
 import com.hisobnoma.platform.web.dto.CreateCampaignRequest;
 import com.hisobnoma.platform.web.dto.WebCampaignDto;
+import com.hisobnoma.platform.web.entity.CampaignChannel;
 import com.hisobnoma.platform.web.entity.WebCampaign;
 import com.hisobnoma.platform.web.entity.WebCampaignStatus;
 import com.hisobnoma.platform.web.entity.WebCustomer;
+import com.hisobnoma.platform.web.entity.WebDeviceToken;
 import com.hisobnoma.platform.web.entity.WebSegmentType;
 import com.hisobnoma.platform.web.repository.WebCampaignRepository;
 import com.hisobnoma.platform.web.repository.WebCustomerRepository;
@@ -54,6 +56,7 @@ public class WebCampaignService {
     private final CouponService couponService;
     private final WebCampaignDispatcher dispatcher;
     private final SecurityContextHelper securityContextHelper;
+    private final WebPushService pushService;
 
     // ==================== CRUD ====================
 
@@ -78,6 +81,7 @@ public class WebCampaignService {
         WebCampaign campaign = WebCampaign.builder()
                 .tenantId(tenantId)
                 .name(request.getName().trim())
+                .channel(request.getChannel() != null ? request.getChannel() : CampaignChannel.SMS)
                 .segmentType(request.getSegmentType())
                 .segmentParam(request.getSegmentParam())
                 .smsTemplateId(request.getSmsTemplateId())
@@ -96,6 +100,7 @@ public class WebCampaignService {
         validatePromotion(request.getPromotionId());
 
         campaign.setName(request.getName().trim());
+        campaign.setChannel(request.getChannel() != null ? request.getChannel() : CampaignChannel.SMS);
         campaign.setSegmentType(request.getSegmentType());
         campaign.setSegmentParam(request.getSegmentParam());
         campaign.setSmsTemplateId(request.getSmsTemplateId());
@@ -115,12 +120,32 @@ public class WebCampaignService {
     @Transactional(readOnly = true)
     public CampaignPreviewDto preview(Long id) {
         WebCampaign campaign = getEntity(id);
-        int count = resolveSegment(campaign).size();
-        BigDecimal cost = BigDecimal.valueOf(smsService.smsCost()).multiply(BigDecimal.valueOf(count));
+        List<WebCustomer> recipients = resolveSegment(campaign);
+        int count = recipients.size();
+
+        int pushCount = 0;
+        int smsCount = count;
+
+        if (campaign.getChannel() == CampaignChannel.PUSH) {
+            pushCount = count;
+            smsCount = 0;
+        } else if (campaign.getChannel() == CampaignChannel.PUSH_WITH_SMS_FALLBACK) {
+            List<Long> customerIds = recipients.stream().map(WebCustomer::getId).toList();
+            java.util.Set<Long> pushable = pushService.getTokensForCustomers(
+                    campaign.getTenantId(), customerIds).stream()
+                    .map(WebDeviceToken::getWebCustomerId)
+                    .collect(java.util.stream.Collectors.toSet());
+            pushCount = pushable.size();
+            smsCount = count - pushCount;
+        }
+
+        BigDecimal cost = BigDecimal.valueOf(smsService.smsCost()).multiply(BigDecimal.valueOf(smsCount));
         double balance = smsService.getBalanceAmount();
         boolean known = balance >= 0;
         return CampaignPreviewDto.builder()
                 .recipientCount(count)
+                .pushCount(pushCount)
+                .smsCount(smsCount)
                 .estimatedCost(cost)
                 .smsBalance(known ? BigDecimal.valueOf(balance) : null)
                 .sufficientBalance(!known || balance >= cost.doubleValue())
@@ -139,6 +164,8 @@ public class WebCampaignService {
             throw new BusinessException("Segment has no recipients");
         }
 
+        CampaignChannel channel = campaign.getChannel();
+
         // Guard: a {coupon} template needs a promotion to fill it
         SmsTemplate template = getTemplate(campaign.getTenantId(), campaign.getSmsTemplateId());
         boolean needsCoupon = template.getTemplate() != null && template.getTemplate().contains("{coupon}");
@@ -147,13 +174,37 @@ public class WebCampaignService {
         }
 
         int count = recipients.size();
-        BigDecimal cost = BigDecimal.valueOf(smsService.smsCost()).multiply(BigDecimal.valueOf(count));
 
-        // Block before going async / generating coupons so staff gets a clean error
-        double balance = smsService.getBalanceAmount();
-        if (balance >= 0 && balance < cost.doubleValue()) {
-            throw new BusinessException(String.format(
-                    "Insufficient SMS balance: have %.0f UZS, need %.0f UZS", balance, cost.doubleValue()));
+        // Split recipients by push reachability for fallback channel
+        List<WebCustomer> smsRecipients;
+        List<WebCustomer> pushRecipients;
+
+        if (channel == CampaignChannel.PUSH) {
+            pushRecipients = recipients;
+            smsRecipients = List.of();
+        } else if (channel == CampaignChannel.PUSH_WITH_SMS_FALLBACK) {
+            List<Long> customerIds = recipients.stream().map(WebCustomer::getId).toList();
+            java.util.Set<Long> pushable = pushService.getTokensForCustomers(
+                    campaign.getTenantId(), customerIds).stream()
+                    .map(WebDeviceToken::getWebCustomerId)
+                    .collect(java.util.stream.Collectors.toSet());
+            pushRecipients = recipients.stream().filter(c -> pushable.contains(c.getId())).toList();
+            smsRecipients = recipients.stream().filter(c -> !pushable.contains(c.getId())).toList();
+        } else {
+            pushRecipients = List.of();
+            smsRecipients = recipients;
+        }
+
+        int smsCount = smsRecipients.size();
+        BigDecimal cost = BigDecimal.valueOf(smsService.smsCost()).multiply(BigDecimal.valueOf(smsCount));
+
+        // Only check SMS balance if SMS recipients exist
+        if (smsCount > 0) {
+            double balance = smsService.getBalanceAmount();
+            if (balance >= 0 && balance < cost.doubleValue()) {
+                throw new BusinessException(String.format(
+                        "Insufficient SMS balance: have %.0f UZS, need %.0f UZS", balance, cost.doubleValue()));
+            }
         }
 
         // One personal single-use coupon per recipient, when a promotion is attached
@@ -161,16 +212,23 @@ public class WebCampaignService {
                 ? generatePersonalCoupons(campaign.getPromotionId(), count)
                 : List.of();
 
-        List<SmsBulkSendRequest.Recipient> payloads = buildRecipients(recipients, couponCodes);
-
         campaign.setRecipientCount(count);
         campaign.setCostEstimate(cost);
         campaign.setStatus(WebCampaignStatus.SENDING);
         campaign.setFailureReason(null);
         campaignRepository.save(campaign);
 
+        // Build SMS payloads only for SMS recipients
+        List<SmsBulkSendRequest.Recipient> smsPayloads = smsRecipients.isEmpty()
+                ? List.of()
+                : buildRecipients(smsRecipients, couponCodes);
+
+        // Build push recipient IDs
+        List<Long> pushCustomerIds = pushRecipients.stream().map(WebCustomer::getId).toList();
+
         dispatcher.dispatch(campaign.getId(), campaign.getTenantId(),
-                campaign.getSmsTemplateId(), payloads, null);
+                campaign.getSmsTemplateId(), smsPayloads,
+                pushCustomerIds, template.getTemplate(), null);
 
         return toDto(campaign);
     }
@@ -285,6 +343,7 @@ public class WebCampaignService {
         return WebCampaignDto.builder()
                 .id(campaign.getId())
                 .name(campaign.getName())
+                .channel(campaign.getChannel())
                 .segmentType(campaign.getSegmentType())
                 .segmentParam(campaign.getSegmentParam())
                 .smsTemplateId(campaign.getSmsTemplateId())

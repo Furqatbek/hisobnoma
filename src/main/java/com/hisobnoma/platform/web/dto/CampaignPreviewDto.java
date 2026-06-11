@@ -18,6 +18,8 @@ import java.math.BigDecimal;
 public class CampaignPreviewDto {
 
     private int recipientCount;
+    private int pushCount;
+    private int smsCount;
     private BigDecimal estimatedCost;
 
     /**

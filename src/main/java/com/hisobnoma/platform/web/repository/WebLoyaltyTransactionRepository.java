@@ -44,4 +44,11 @@ public interface WebLoyaltyTransactionRepository extends JpaRepository<WebLoyalt
            "AND (t.expiresAt IS NULL OR t.expiresAt > :now)")
     BigDecimal totalLiability(@Param("tenantId") Long tenantId,
                               @Param("now") Instant now);
+
+    boolean existsByTenantIdAndWebCustomerIdAndTypeAndNote(
+            Long tenantId, Long webCustomerId, WebLoyaltyTransactionType type, String note);
+
+    long countByTenantIdAndWebCustomerIdAndTypeAndNoteStartingWithAndCreatedAtBetween(
+            Long tenantId, Long webCustomerId, WebLoyaltyTransactionType type,
+            String notePrefix, Instant start, Instant end);
 }

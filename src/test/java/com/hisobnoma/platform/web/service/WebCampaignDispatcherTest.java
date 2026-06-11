@@ -25,6 +25,7 @@ class WebCampaignDispatcherTest {
 
     @Mock private SmsService smsService;
     @Mock private WebCampaignRepository campaignRepository;
+    @Mock private WebPushService pushService;
 
     @InjectMocks
     private WebCampaignDispatcher dispatcher;
@@ -52,7 +53,7 @@ class WebCampaignDispatcherTest {
         when(smsService.sendBulk(eq(5L), anyList(), isNull()))
                 .thenReturn(Map.of("total", 3, "sent", 3, "failed", 0));
 
-        dispatcher.dispatch(10L, 1L, 5L, recipients(3), null);
+        dispatcher.dispatch(10L, 1L, 5L, recipients(3), List.of(), null, null);
 
         assertEquals(WebCampaignStatus.SENT, campaign.getStatus());
         assertEquals(3, campaign.getSentCount());
@@ -65,7 +66,7 @@ class WebCampaignDispatcherTest {
         when(smsService.sendBulk(eq(5L), anyList(), isNull()))
                 .thenReturn(Map.of("total", 3, "sent", 2, "failed", 1));
 
-        dispatcher.dispatch(10L, 1L, 5L, recipients(3), null);
+        dispatcher.dispatch(10L, 1L, 5L, recipients(3), List.of(), null, null);
 
         assertEquals(WebCampaignStatus.SENT, campaign.getStatus());
         assertEquals(2, campaign.getSentCount());
@@ -77,7 +78,7 @@ class WebCampaignDispatcherTest {
         when(smsService.sendBulk(eq(5L), anyList(), isNull()))
                 .thenReturn(Map.of("total", 2, "sent", 0, "failed", 2));
 
-        dispatcher.dispatch(10L, 1L, 5L, recipients(2), null);
+        dispatcher.dispatch(10L, 1L, 5L, recipients(2), List.of(), null, null);
 
         assertEquals(WebCampaignStatus.FAILED, campaign.getStatus());
         assertEquals(0, campaign.getSentCount());
@@ -89,11 +90,32 @@ class WebCampaignDispatcherTest {
         when(smsService.sendBulk(eq(5L), anyList(), isNull()))
                 .thenThrow(new RuntimeException("balance gone"));
 
-        dispatcher.dispatch(10L, 1L, 5L, recipients(4), null);
+        dispatcher.dispatch(10L, 1L, 5L, recipients(4), List.of(), null, null);
 
         assertEquals(WebCampaignStatus.FAILED, campaign.getStatus());
         assertEquals(0, campaign.getSentCount());
         assertEquals(4, campaign.getFailedCount());
         assertEquals("balance gone", campaign.getFailureReason());
+    }
+
+    @Test
+    void dispatch_pushOnlySucceeds() {
+        dispatcher.dispatch(10L, 1L, 5L, List.of(), List.of(1L, 2L, 3L), "Hello", null);
+
+        assertEquals(WebCampaignStatus.SENT, campaign.getStatus());
+        assertEquals(3, campaign.getSentCount());
+        verify(pushService, times(3)).sendToCustomer(eq(1L), anyLong(),
+                eq("Акция"), eq("Hello"), anyMap());
+    }
+
+    @Test
+    void dispatch_pushAndSmsCombined() {
+        when(smsService.sendBulk(eq(5L), anyList(), isNull()))
+                .thenReturn(Map.of("total", 2, "sent", 2, "failed", 0));
+
+        dispatcher.dispatch(10L, 1L, 5L, recipients(2), List.of(1L), "Hello", null);
+
+        assertEquals(WebCampaignStatus.SENT, campaign.getStatus());
+        assertEquals(3, campaign.getSentCount());
     }
 }

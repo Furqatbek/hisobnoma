@@ -47,6 +47,7 @@ class WebCampaignServiceTest {
     @Mock private CouponService couponService;
     @Mock private WebCampaignDispatcher dispatcher;
     @Mock private SecurityContextHelper securityContextHelper;
+    @Mock private WebPushService pushService;
 
     @InjectMocks
     private WebCampaignService service;
@@ -133,7 +134,7 @@ class WebCampaignServiceTest {
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<SmsBulkSendRequest.Recipient>> captor = ArgumentCaptor.forClass(List.class);
-        verify(dispatcher).dispatch(eq(10L), eq(TENANT), eq(5L), captor.capture(), isNull());
+        verify(dispatcher).dispatch(eq(10L), eq(TENANT), eq(5L), captor.capture(), anyList(), any(), isNull());
         assertEquals(2, captor.getValue().size());
         assertEquals("C0", captor.getValue().get(0).getVariables().get("name"));
         verifyNoInteractions(couponService); // no promotion attached
@@ -156,7 +157,7 @@ class WebCampaignServiceTest {
         verify(couponService).generateCoupons(eq(7L), eq(2), any());
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<SmsBulkSendRequest.Recipient>> captor = ArgumentCaptor.forClass(List.class);
-        verify(dispatcher).dispatch(eq(10L), eq(TENANT), eq(5L), captor.capture(), isNull());
+        verify(dispatcher).dispatch(eq(10L), eq(TENANT), eq(5L), captor.capture(), anyList(), any(), isNull());
         assertEquals("AAA", captor.getValue().get(0).getVariables().get("coupon"));
         assertEquals("BBB", captor.getValue().get(1).getVariables().get("coupon"));
     }

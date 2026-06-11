@@ -215,7 +215,14 @@ onMounted(() => fetchCustomers())
               <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                 +{{ customer.phone }}
               </td>
-              <td class="px-4 py-3 text-sm text-gray-700">{{ customer.name || '—' }}</td>
+              <td class="px-4 py-3 text-sm text-gray-700">
+                {{ customer.name || '—' }}
+                <span v-if="customer.pushReachable" class="ml-1 inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700" :title="$t('webCustomers.pushReachable')">Push</span>
+                <div v-if="customer.referralCode" class="text-xs text-gray-400 font-mono mt-0.5">{{ customer.referralCode }}
+                  <span v-if="customer.referredCount > 0" class="text-purple-600">({{ customer.referredCount }})</span>
+                </div>
+                <div v-if="customer.referredByName" class="text-xs text-gray-400 mt-0.5">{{ $t('webCustomers.referredBy') }}: {{ customer.referredByName }}</div>
+              </td>
               <td class="px-4 py-3 text-center text-sm">{{ customer.orderCount }}</td>
               <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                 {{ formatDate(customer.lastOrderAt) }}

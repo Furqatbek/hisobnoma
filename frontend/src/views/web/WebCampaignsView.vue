@@ -28,7 +28,8 @@ const statusClasses = {
 // Create/edit modal
 const showForm = ref(false)
 const editingId = ref(null)
-const form = reactive({ name: '', segmentType: 'ALL_CUSTOMERS', segmentParam: null, smsTemplateId: '', promotionId: '' })
+const CHANNELS = ['SMS', 'PUSH', 'PUSH_WITH_SMS_FALLBACK']
+const form = reactive({ name: '', channel: 'SMS', segmentType: 'ALL_CUSTOMERS', segmentParam: null, smsTemplateId: '', promotionId: '' })
 
 const needsParam = computed(() => PARAM_DAYS.includes(form.segmentType) || PARAM_AMOUNT.includes(form.segmentType))
 const paramIsDays = computed(() => PARAM_DAYS.includes(form.segmentType))
@@ -64,6 +65,7 @@ onMounted(fetchAll)
 function openCreate() {
   editingId.value = null
   form.name = ''
+  form.channel = 'SMS'
   form.segmentType = 'ALL_CUSTOMERS'
   form.segmentParam = null
   form.smsTemplateId = ''
@@ -74,6 +76,7 @@ function openCreate() {
 function openEdit(c) {
   editingId.value = c.id
   form.name = c.name
+  form.channel = c.channel || 'SMS'
   form.segmentType = c.segmentType
   form.segmentParam = c.segmentParam
   form.smsTemplateId = c.smsTemplateId
@@ -86,6 +89,7 @@ async function save() {
   error.value = ''
   const payload = {
     name: form.name.trim(),
+    channel: form.channel,
     segmentType: form.segmentType,
     segmentParam: needsParam.value ? form.segmentParam : null,
     smsTemplateId: form.smsTemplateId,
@@ -193,6 +197,7 @@ function segmentLabel(c) {
           <thead class="bg-gray-50">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('webCampaigns.name') }}</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('webCampaigns.channel') }}</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('webCampaigns.segment') }}</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ $t('webCampaigns.status') }}</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('webCampaigns.recipients') }}</th>
@@ -207,6 +212,7 @@ function segmentLabel(c) {
                 {{ c.name }}
                 <div v-if="c.promotionCode" class="text-xs text-gray-400 font-mono">{{ c.promotionCode }}</div>
               </td>
+              <td class="px-4 py-3 text-sm text-gray-600">{{ $t('webCampaigns.channel' + (c.channel || 'SMS')) }}</td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ segmentLabel(c) }}</td>
               <td class="px-4 py-3 text-center">
                 <span :class="statusClasses[c.status]" class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium">
@@ -256,6 +262,12 @@ function segmentLabel(c) {
               <input v-model="form.name" type="text" class="input" :placeholder="$t('webCampaigns.namePlaceholder')" />
             </div>
             <div>
+              <label class="label">{{ $t('webCampaigns.channel') }}</label>
+              <select v-model="form.channel" class="input">
+                <option v-for="ch in CHANNELS" :key="ch" :value="ch">{{ $t('webCampaigns.channel' + ch) }}</option>
+              </select>
+            </div>
+            <div>
               <label class="label">{{ $t('webCampaigns.segment') }} <span class="text-red-500">*</span></label>
               <select v-model="form.segmentType" class="input">
                 <option v-for="s in SEGMENTS" :key="s" :value="s">{{ $t('webCampaigns.seg' + s) }}</option>
@@ -300,6 +312,14 @@ function segmentLabel(c) {
             <div class="flex justify-between text-sm">
               <span class="text-gray-500">{{ $t('webCampaigns.previewRecipients') }}</span>
               <span class="font-semibold">{{ previewData.recipientCount }}</span>
+            </div>
+            <div v-if="previewData.pushCount > 0" class="flex justify-between text-sm">
+              <span class="text-gray-500">{{ $t('webCampaigns.previewPush') }}</span>
+              <span class="font-semibold">{{ previewData.pushCount }}</span>
+            </div>
+            <div v-if="previewData.smsCount > 0 || previewData.pushCount > 0" class="flex justify-between text-sm">
+              <span class="text-gray-500">{{ $t('webCampaigns.previewSms') }}</span>
+              <span class="font-semibold">{{ previewData.smsCount }}</span>
             </div>
             <div class="flex justify-between text-sm">
               <span class="text-gray-500">{{ $t('webCampaigns.previewCost') }}</span>

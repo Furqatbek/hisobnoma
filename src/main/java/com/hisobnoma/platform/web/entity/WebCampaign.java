@@ -47,6 +47,11 @@ public class WebCampaign extends TenantAwareEntity {
     private Long promotionId;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    @Builder.Default
+    private CampaignChannel channel = CampaignChannel.SMS;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
     private WebCampaignStatus status = WebCampaignStatus.DRAFT;

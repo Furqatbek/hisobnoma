@@ -4,12 +4,15 @@ import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.common.dto.PageResponse;
 import com.hisobnoma.platform.web.dto.LoyaltyBalanceDto;
 import com.hisobnoma.platform.web.dto.PublicOrderDto;
+import com.hisobnoma.platform.web.dto.RegisterDeviceTokenRequest;
 import com.hisobnoma.platform.web.dto.RequestOtpRequest;
 import com.hisobnoma.platform.web.dto.VerifyOtpRequest;
 import com.hisobnoma.platform.web.dto.WebAuthResponse;
 import com.hisobnoma.platform.web.entity.WebCustomer;
 import com.hisobnoma.platform.web.service.WebAuthService;
 import com.hisobnoma.platform.web.service.WebLoyaltyService;
+import com.hisobnoma.platform.web.service.WebPushService;
+import com.hisobnoma.platform.web.service.WebReferralService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +37,8 @@ public class WebAuthPublicController {
 
     private final WebAuthService authService;
     private final WebLoyaltyService loyaltyService;
+    private final WebPushService pushService;
+    private final WebReferralService referralService;
 
     @PostMapping("/auth/request-otp")
     public ResponseEntity<ApiResponse<Void>> requestOtp(
@@ -47,7 +52,8 @@ public class WebAuthPublicController {
     public ResponseEntity<ApiResponse<WebAuthResponse>> verify(
             @Valid @RequestBody VerifyOtpRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
-                authService.verifyOtp(request.getPhone(), request.getCode(), request.getName())));
+                authService.verifyOtp(request.getPhone(), request.getCode(),
+                        request.getName(), request.getReferralCode())));
     }
 
     @GetMapping("/me")
@@ -73,6 +79,34 @@ public class WebAuthPublicController {
         WebCustomer customer = authService.requireCustomer(authorization);
         return ResponseEntity.ok(ApiResponse.success(
                 loyaltyService.getBalance(customer.getTenantId(), customer.getId())));
+    }
+
+    @PostMapping("/me/device-token")
+    public ResponseEntity<ApiResponse<Void>> registerDeviceToken(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @Valid @RequestBody RegisterDeviceTokenRequest request) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        pushService.register(customer.getTenantId(), customer.getId(),
+                request.getToken(), request.getPlatform());
+        return ResponseEntity.ok(ApiResponse.success(null, "Device token registered"));
+    }
+
+    @DeleteMapping("/me/device-token")
+    public ResponseEntity<ApiResponse<Void>> unregisterDeviceToken(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @RequestParam(required = false) String token) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        pushService.unregister(customer.getTenantId(), customer.getId(), token);
+        return ResponseEntity.ok(ApiResponse.success(null, "Device token removed"));
+    }
+
+    @GetMapping("/me/referral-code")
+    public ResponseEntity<ApiResponse<Map<String, String>>> myReferralCode(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        String code = referralService.getOrCreateCode(customer.getTenantId(), customer.getId());
+        return ResponseEntity.ok(ApiResponse.success(Map.of(
+                "code", code != null ? code : "")));
     }
 
     private String clientIp(HttpServletRequest request) {

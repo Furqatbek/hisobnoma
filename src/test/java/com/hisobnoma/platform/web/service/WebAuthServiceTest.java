@@ -36,6 +36,7 @@ class WebAuthServiceTest {
     @Mock private WebCustomerTokenService tokenService;
     @Mock private CheckoutRateLimiter rateLimiter;
     @Mock private SmsService smsService;
+    @Mock private WebReferralService referralService;
 
     @InjectMocks
     private WebAuthService service;
@@ -142,7 +143,7 @@ class WebAuthServiceTest {
         when(webCustomerRepository.save(any(WebCustomer.class))).thenAnswer(inv -> inv.getArgument(0));
         when(tokenService.generateToken(any(WebCustomer.class))).thenReturn("the-token");
 
-        WebAuthResponse response = service.verifyOtp("+998901234567", "123456", "Ali");
+        WebAuthResponse response = service.verifyOtp("+998901234567", "123456", "Ali", null);
 
         assertEquals("the-token", response.getToken());
         assertEquals(PHONE, response.getPhone());
@@ -163,7 +164,7 @@ class WebAuthServiceTest {
         when(otpRepository.save(any(WebOtpCode.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThrows(ValidationException.class,
-                () -> service.verifyOtp(PHONE, "999999", null));
+                () -> service.verifyOtp(PHONE, "999999", null, null));
         assertEquals(1, otp.getAttempts());
         verify(tokenService, never()).generateToken(any());
     }
@@ -177,7 +178,7 @@ class WebAuthServiceTest {
 
         // Even the CORRECT code is rejected once locked
         assertThrows(TooManyRequestsException.class,
-                () -> service.verifyOtp(PHONE, "123456", null));
+                () -> service.verifyOtp(PHONE, "123456", null, null));
     }
 
     @Test
@@ -188,7 +189,7 @@ class WebAuthServiceTest {
                 .thenReturn(Optional.of(otp));
 
         assertThrows(ValidationException.class,
-                () -> service.verifyOtp(PHONE, "123456", null));
+                () -> service.verifyOtp(PHONE, "123456", null, null));
     }
 
     @Test
@@ -205,7 +206,7 @@ class WebAuthServiceTest {
         when(webCustomerRepository.save(any(WebCustomer.class))).thenAnswer(inv -> inv.getArgument(0));
         when(tokenService.generateToken(any(WebCustomer.class))).thenReturn("t");
 
-        WebAuthResponse response = service.verifyOtp(PHONE, "123456", null);
+        WebAuthResponse response = service.verifyOtp(PHONE, "123456", null, null);
 
         assertEquals("Ali", response.getName());
     }

@@ -54,6 +54,8 @@ public class WebOrderService {
     private final com.hisobnoma.platform.pos.repository.PromotionRepository promotionRepository;
     private final com.hisobnoma.platform.pos.service.PromotionService promotionService;
     private final WebLoyaltyService loyaltyService;
+    private final WebPushService pushService;
+    private final WebReferralService referralService;
 
     @Transactional(readOnly = true)
     public Page<WebOrderDto> getOrders(WebOrderStatus status, Pageable pageable) {
@@ -104,6 +106,7 @@ public class WebOrderService {
             releaseReservations(order);
             if (target == WebOrderStatus.COMPLETED) {
                 earnLoyaltyPoints(order);
+                rewardReferral(order);
             }
             if (target == WebOrderStatus.CANCELLED) {
                 adjustPromotionUsage(order, false);
@@ -113,7 +116,11 @@ public class WebOrderService {
         }
 
         log.info("Web order {} status changed to {}", order.getOrderNumber(), target);
-        return toDto(orderRepository.save(order));
+        WebOrderDto result = toDto(orderRepository.save(order));
+
+        notifyStatusChange(order, target);
+
+        return result;
     }
 
     /**
@@ -311,6 +318,28 @@ public class WebOrderService {
                     securityContextHelper.getCurrentUserId(), reason);
         } catch (Exception e) {
             log.warn("Web order {}: failed to reverse coupon redemption: {}",
+                    order.getOrderNumber(), e.getMessage());
+        }
+    }
+
+    // ---- push notifications ----
+
+    private void notifyStatusChange(WebOrder order, WebOrderStatus status) {
+        try {
+            pushService.notifyOrderStatusChange(order, status);
+        } catch (Exception e) {
+            log.warn("Web order {}: push notification failed: {}",
+                    order.getOrderNumber(), e.getMessage());
+        }
+    }
+
+    // ---- referral ----
+
+    private void rewardReferral(WebOrder order) {
+        try {
+            referralService.rewardIfFirstCompletion(order);
+        } catch (Exception e) {
+            log.warn("Web order {}: referral reward failed: {}",
                     order.getOrderNumber(), e.getMessage());
         }
     }

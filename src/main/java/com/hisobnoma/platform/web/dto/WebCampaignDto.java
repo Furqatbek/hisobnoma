@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.web.dto;
 
+import com.hisobnoma.platform.web.entity.CampaignChannel;
 import com.hisobnoma.platform.web.entity.WebCampaignStatus;
 import com.hisobnoma.platform.web.entity.WebSegmentType;
 import lombok.AllArgsConstructor;
@@ -21,6 +22,7 @@ public class WebCampaignDto {
 
     private Long id;
     private String name;
+    private CampaignChannel channel;
     private WebSegmentType segmentType;
     private BigDecimal segmentParam;
     private Long smsTemplateId;

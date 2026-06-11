@@ -116,6 +116,7 @@ public class AdminDashboardService {
                 .recentOnlineOrders(getRecentOnlineOrders(tenantId))
                 .lastCampaign(getLastCampaign(tenantId))
                 .loyaltyLiability(getLoyaltyLiability(tenantId))
+                .referredCustomers(getReferredCustomerCount(tenantId))
 
                 // Activity statistics
                 .totalAuditLogsToday(getAuditLogCount(tenantId, startOfToday))
@@ -377,6 +378,15 @@ public class AdminDashboardService {
         } catch (Exception e) {
             log.warn("Failed to get loyalty liability: {}", e.getMessage());
             return BigDecimal.ZERO;
+        }
+    }
+
+    private Long getReferredCustomerCount(Long tenantId) {
+        try {
+            return webCustomerRepository.countByTenantIdAndReferredByIsNotNull(tenantId);
+        } catch (Exception e) {
+            log.warn("Failed to get referred customer count: {}", e.getMessage());
+            return 0L;
         }
     }
 

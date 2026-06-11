@@ -49,4 +49,10 @@ public class WebCustomer extends TenantAwareEntity {
     @Column(name = "sms_opt_out", nullable = false)
     @Builder.Default
     private boolean smsOptOut = false;
+
+    @Column(name = "referral_code", length = 12)
+    private String referralCode;
+
+    @Column(name = "referred_by")
+    private Long referredBy;
 }

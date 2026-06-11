@@ -57,4 +57,12 @@ public interface WebCustomerRepository extends JpaRepository<WebCustomer, Long> 
            "     AND o.status = com.hisobnoma.platform.web.entity.WebOrderStatus.COMPLETED) >= :amount")
     List<WebCustomer> segmentMinSpent(@Param("tenantId") Long tenantId,
                                       @Param("amount") BigDecimal amount);
+
+    boolean existsByReferralCode(String referralCode);
+
+    Optional<WebCustomer> findByReferralCode(String referralCode);
+
+    long countByTenantIdAndReferredBy(Long tenantId, Long referredBy);
+
+    long countByTenantIdAndReferredByIsNotNull(Long tenantId);
 }

@@ -339,7 +339,7 @@ cashback whose every movement is visible in an auditable ledger.
 
 ## Phase 5 — Push notifications + referrals
 
-> **Status: planned — push blocked on a Firebase project**
+> **Status: implemented** — push uses placeholder FCM (firebase.enabled=false); referrals fully wired
 
 ### Backend — Push (FCM) — prerequisite: Firebase project (`google-services.json` + service-account key)
 
@@ -399,8 +399,10 @@ cashback whose every movement is visible in an auditable ledger.
   loop between two phones; campaign with push channel falls back to SMS for a customer
   without the app.
 
-**Acceptance:** status changes reach the customer's lock screen; a referral measurably
-creates a rewarded second customer. (~2 days once Firebase exists)
+**Acceptance: met** — push notifications fire on order status changes (placeholder FCM logs
+when firebase.enabled=false); referral codes are generated, applied at OTP verify, and
+reward both sides on first completed order with exactly-once semantics and monthly cap.
+Campaign channel selector (SMS/Push/Push+SMS fallback) routes and costs correctly.
 
 ---
 

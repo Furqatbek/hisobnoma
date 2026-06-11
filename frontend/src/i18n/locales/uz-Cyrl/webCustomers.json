@@ -34,5 +34,9 @@
   "loyaltyEarn": "Ҳисобланди",
   "loyaltySpend": "Сарфланди",
   "loyaltyExpire": "Муддати ўтди",
-  "loyaltyAdjustType": "Тўғрилаш"
+  "loyaltyAdjustType": "Тўғрилаш",
+  "referralCode": "Реферал коди",
+  "referredBy": "Таклиф қилган",
+  "referredCount": "Таклиф қилганлар сони",
+  "pushReachable": "Push хабар юбориш мумкин"
 }

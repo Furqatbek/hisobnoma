@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.web.dto;
 
+import com.hisobnoma.platform.web.entity.CampaignChannel;
 import com.hisobnoma.platform.web.entity.WebSegmentType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -39,4 +40,7 @@ public class CreateCampaignRequest {
      * Optional promotion — one personal coupon is generated per recipient.
      */
     private Long promotionId;
+
+    @Builder.Default
+    private CampaignChannel channel = CampaignChannel.SMS;
 }
