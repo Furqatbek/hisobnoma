@@ -74,7 +74,12 @@ async function fetchCurrencies(page = 0) {
 }
 
 async function fetchActiveCurrencies() {
-  try { const res = await currenciesApi.getActive(); activeCurrencies.value = res.data.data || res.data || [] } catch {}
+  try {
+    const res = await currenciesApi.getActive()
+    activeCurrencies.value = res.data.data || res.data || []
+  } catch (error) {
+    console.error('Failed to fetch active currencies:', error)
+  }
 }
 
 function openCurrModal(c = null) {

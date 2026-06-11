@@ -153,7 +153,7 @@ async function handleChangePassword() {
     const response = error.response?.data
     if (response?.validationErrors && Array.isArray(response.validationErrors)) {
       response.validationErrors.forEach(err => {
-        if (err.field && passwordErrors.hasOwnProperty(err.field)) {
+        if (err.field && Object.hasOwn(passwordErrors, err.field)) {
           passwordErrors[err.field] = err.message
         }
       })

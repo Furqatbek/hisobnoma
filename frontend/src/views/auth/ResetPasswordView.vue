@@ -85,7 +85,7 @@ async function handleSubmit() {
     const response = error.response?.data
     if (response?.validationErrors && Array.isArray(response.validationErrors)) {
       response.validationErrors.forEach(err => {
-        if (err.field && errors.hasOwnProperty(err.field)) {
+        if (err.field && Object.hasOwn(errors, err.field)) {
           errors[err.field] = err.message
         }
       })

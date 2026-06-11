@@ -17,7 +17,7 @@ export const useReceiptStore = defineStore('receipt', () => {
   // Update config and save to localStorage
   function updateConfig(newConfig) {
     Object.keys(newConfig).forEach(key => {
-      if (config.value.hasOwnProperty(key)) {
+      if (Object.hasOwn(config.value, key)) {
         config.value[key] = newConfig[key]
         localStorage.setItem(`receipt_${key}`, newConfig[key])
       }
