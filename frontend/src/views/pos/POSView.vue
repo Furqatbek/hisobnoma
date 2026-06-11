@@ -214,7 +214,7 @@ async function loadAllCustomers() {
   customersLoading.value = true
   try {
     const response = await customersApi.getAll({ size: 1000, sort: 'name,asc' })
-    const data = response.data?.data?.content || unwrapList(response)
+    const data = unwrapList(response)
     allCustomers.value = Array.isArray(data) ? data : []
   } catch (error) {
     console.error('Failed to load customers:', error)

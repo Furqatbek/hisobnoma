@@ -17,7 +17,7 @@ async function loadEmployees() {
   loading.value = true
   try {
     const response = await employeesApi.getAll({ size: 100 })
-    employees.value = response.data.content || response.unwrapList(data)
+    employees.value = unwrapList(response)
   } catch (error) {
     console.error('Failed to load employees:', error)
   } finally {
@@ -33,7 +33,7 @@ async function handleSearch() {
   loading.value = true
   try {
     const response = await employeesApi.search(searchQuery.value, { size: 100 })
-    employees.value = response.data.content || response.unwrapList(data)
+    employees.value = unwrapList(response)
   } catch (error) {
     console.error('Failed to search:', error)
   } finally {

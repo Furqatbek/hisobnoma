@@ -98,7 +98,7 @@ async function loadData() {
       advancesApi.getByPeriod(filterYear.value, filterMonth.value).catch(() => ({ data: [] })),
       employeesApi.getActive()
     ])
-    records.value = salaryRes.data.content || salaryRes.unwrapList(data)
+    records.value = unwrapList(salaryRes)
     advances.value = unwrapList(advRes)
     employees.value = unwrapList(empRes)
   } catch (error) {
