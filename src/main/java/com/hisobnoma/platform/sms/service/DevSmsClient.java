@@ -47,12 +47,12 @@ public class DevSmsClient {
     @SuppressWarnings("unchecked")
     public Map<String, Object> sendSms(String phone, String message, String from) {
         if (!isConfigured()) {
-            log.warn("SMS is not configured, skipping send to {}", phone);
+            log.warn("SMS is not configured, skipping send to {}", PhoneUtils.mask(phone));
             return Map.of("success", false, "error", "SMS not configured");
         }
         try {
             String normalizedPhone = PhoneUtils.normalize(phone);
-            log.debug("Phone normalized: {} -> {}", phone, normalizedPhone);
+            log.debug("Phone normalized to {}", PhoneUtils.mask(normalizedPhone));
 
             Map<String, Object> body = new HashMap<>();
             body.put("phone", normalizedPhone);
@@ -63,10 +63,10 @@ public class DevSmsClient {
             ResponseEntity<Map> response = restTemplate.postForEntity(
                     properties.getBaseUrl() + "/send_sms.php", request, Map.class);
 
-            log.info("SMS sent to {}: status={}", phone, response.getStatusCode());
+            log.info("SMS sent to {}: status={}", PhoneUtils.mask(phone), response.getStatusCode());
             return response.getBody() != null ? response.getBody() : Map.of("success", true);
         } catch (Exception e) {
-            log.error("Failed to send SMS to {}: {}", phone, e.getMessage());
+            log.error("Failed to send SMS to {}: {}", PhoneUtils.mask(phone), e.getMessage());
             return Map.of("success", false, "error", e.getMessage());
         }
     }

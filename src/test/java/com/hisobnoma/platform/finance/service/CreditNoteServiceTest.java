@@ -289,7 +289,7 @@ class CreditNoteServiceTest {
         assertNotNull(result);
         assertEquals(CreditNoteStatus.APPROVED, result.getStatus());
         verify(glIntegrationService).postCreditNote(creditNote);
-        verify(customerService).updateCustomerBalance(eq(1L), any(BigDecimal.class));
+        verify(customerService).updateCustomerBalance(any(Customer.class), any(BigDecimal.class));
     }
 
     @Test
@@ -374,7 +374,7 @@ class CreditNoteServiceTest {
         // Then
         assertNotNull(result);
         verify(glIntegrationService).reverseCreditNote(eq(creditNote), eq("Cancelled for reversal"));
-        verify(customerService).updateCustomerBalance(eq(1L), any(BigDecimal.class));
+        verify(customerService).updateCustomerBalance(any(Customer.class), any(BigDecimal.class));
     }
 
     // ====== getCreditNotesByCustomer ======

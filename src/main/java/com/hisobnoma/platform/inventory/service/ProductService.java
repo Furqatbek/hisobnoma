@@ -202,20 +202,20 @@ public class ProductService {
 
         // Set category
         if (request.getCategoryId() != null) {
-            Category category = categoryRepository.findById(request.getCategoryId())
+            Category category = categoryRepository.findByIdAndTenantId(request.getCategoryId(), tenantId)
                     .orElseThrow(() -> new NotFoundException("Category", request.getCategoryId()));
             product.setCategory(category);
         }
 
         // Set brand
         if (request.getBrandId() != null) {
-            Brand brand = brandRepository.findById(request.getBrandId())
+            Brand brand = brandRepository.findByIdAndTenantId(request.getBrandId(), tenantId)
                     .orElseThrow(() -> new NotFoundException("Brand", request.getBrandId()));
             product.setBrand(brand);
         }
 
         // Set base UOM (required)
-        UnitOfMeasure baseUom = uomRepository.findById(request.getBaseUomId())
+        UnitOfMeasure baseUom = uomRepository.findByIdAndTenantId(request.getBaseUomId(), tenantId)
                 .orElseThrow(() -> new NotFoundException("Unit of Measure", request.getBaseUomId()));
         product.setBaseUom(baseUom);
 
@@ -261,10 +261,9 @@ public class ProductService {
 
     @Transactional
     public ProductDto updateProduct(Long id, UpdateProductRequest request) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Product", id));
-
         Long tenantId = securityContextHelper.getCurrentTenantId();
+        Product product = productRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Product", id));
 
         // Validate barcode uniqueness if changing
         if (request.getBarcode() != null && !request.getBarcode().equals(product.getBarcode())) {
@@ -287,19 +286,19 @@ public class ProductService {
         }
 
         if (request.getCategoryId() != null) {
-            Category category = categoryRepository.findById(request.getCategoryId())
+            Category category = categoryRepository.findByIdAndTenantId(request.getCategoryId(), tenantId)
                     .orElseThrow(() -> new NotFoundException("Category", request.getCategoryId()));
             product.setCategory(category);
         }
 
         if (request.getBrandId() != null) {
-            Brand brand = brandRepository.findById(request.getBrandId())
+            Brand brand = brandRepository.findByIdAndTenantId(request.getBrandId(), tenantId)
                     .orElseThrow(() -> new NotFoundException("Brand", request.getBrandId()));
             product.setBrand(brand);
         }
 
         if (request.getBaseUomId() != null) {
-            UnitOfMeasure baseUom = uomRepository.findById(request.getBaseUomId())
+            UnitOfMeasure baseUom = uomRepository.findByIdAndTenantId(request.getBaseUomId(), tenantId)
                     .orElseThrow(() -> new NotFoundException("Unit of Measure", request.getBaseUomId()));
             product.setBaseUom(baseUom);
         }
@@ -344,7 +343,8 @@ public class ProductService {
 
     @Transactional
     public void deleteProduct(Long id) {
-        Product product = productRepository.findById(id)
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        Product product = productRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Product", id));
 
         // Soft-delete: deactivate instead of hard-deleting to preserve

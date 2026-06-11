@@ -156,7 +156,7 @@ public class ARPaymentService {
         }
 
         // Update customer balance
-        customerService.updateCustomerBalance(payment.getCustomer().getId(), payment.getPaymentAmount().negate());
+        customerService.updateCustomerBalance(payment.getCustomer(), payment.getPaymentAmount().negate());
 
         payment.setStatus(ARPaymentStatus.COMPLETED);
         payment = arPaymentRepository.save(payment);
@@ -265,7 +265,7 @@ public class ARPaymentService {
             }
 
             // Reverse customer balance
-            customerService.updateCustomerBalance(payment.getCustomer().getId(), payment.getPaymentAmount());
+            customerService.updateCustomerBalance(payment.getCustomer(), payment.getPaymentAmount());
         }
 
         payment.setStatus(ARPaymentStatus.CANCELLED);
@@ -313,7 +313,7 @@ public class ARPaymentService {
         allocation.setWriteOffAmount(request.getWriteOffAmount() != null ? request.getWriteOffAmount() : BigDecimal.ZERO);
 
         if (request.getArInvoiceId() != null) {
-            ARInvoice invoice = arInvoiceRepository.findById(request.getArInvoiceId())
+            ARInvoice invoice = arInvoiceRepository.findByIdAndTenantId(request.getArInvoiceId(), payment.getTenantId())
                     .orElseThrow(() -> new NotFoundException("AR Invoice not found with id: " + request.getArInvoiceId()));
 
             // Validate allocation doesn't exceed balance
@@ -327,7 +327,7 @@ public class ARPaymentService {
 
             allocation.setArInvoice(invoice);
         } else if (request.getCreditNoteId() != null) {
-            CreditNote creditNote = creditNoteRepository.findById(request.getCreditNoteId())
+            CreditNote creditNote = creditNoteRepository.findByIdAndTenantId(request.getCreditNoteId(), payment.getTenantId())
                     .orElseThrow(() -> new NotFoundException("Credit Note not found with id: " + request.getCreditNoteId()));
             allocation.setCreditNote(creditNote);
         }

@@ -43,4 +43,15 @@ public final class PhoneUtils {
         // Already 12 digits with country code (e.g. 998901234567)
         return digits;
     }
+
+    /**
+     * Masks a phone number for logging — keeps only the last 4 digits
+     * (e.g. "***4567") so logs never contain full numbers (PII).
+     */
+    public static String mask(String phone) {
+        if (phone == null || phone.length() <= 4) {
+            return "***";
+        }
+        return "***" + phone.substring(phone.length() - 4);
+    }
 }

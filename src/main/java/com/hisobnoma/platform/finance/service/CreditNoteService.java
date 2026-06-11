@@ -174,7 +174,7 @@ public class CreditNoteService {
         glIntegrationService.postCreditNote(creditNote);
 
         // Update customer balance (reduce what they owe)
-        customerService.updateCustomerBalance(creditNote.getCustomer().getId(), creditNote.getCreditAmount().negate());
+        customerService.updateCustomerBalance(creditNote.getCustomer(), creditNote.getCreditAmount().negate());
 
         creditNote.setStatus(CreditNoteStatus.APPROVED);
         creditNote = creditNoteRepository.save(creditNote);
@@ -261,7 +261,7 @@ public class CreditNoteService {
             glIntegrationService.reverseCreditNote(creditNote, reason);
 
             // Reverse customer balance
-            customerService.updateCustomerBalance(creditNote.getCustomer().getId(), creditNote.getCreditAmount());
+            customerService.updateCustomerBalance(creditNote.getCustomer(), creditNote.getCreditAmount());
         }
 
         creditNote.setStatus(CreditNoteStatus.CANCELLED);

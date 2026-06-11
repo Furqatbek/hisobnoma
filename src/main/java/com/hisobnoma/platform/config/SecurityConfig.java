@@ -39,6 +39,14 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserDetailsService userDetailsService;
 
+    /**
+     * Comma-separated list of allowed CORS origins. Defaults to "*" so
+     * existing installs keep working; production should set
+     * CORS_ALLOWED_ORIGINS to the real frontend origin(s).
+     */
+    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:*}")
+    private String allowedOrigins;
+
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/v1/auth/login",
             "/api/v1/auth/pin-login",
@@ -97,7 +105,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedOriginPatterns(
+                Arrays.stream(allowedOrigins.split(",")).map(String::trim).toList());
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "X-Tenant-ID"));
         configuration.setExposedHeaders(List.of("Authorization"));

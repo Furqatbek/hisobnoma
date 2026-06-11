@@ -429,11 +429,10 @@ class AccountServiceTest {
     @Test
     void updateAccountBalance_updatesBalancesCorrectly() {
         // Given
-        when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
         when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        accountService.updateAccountBalance(1L, new BigDecimal("500.00"), BigDecimal.ZERO);
+        accountService.updateAccountBalance(account, new BigDecimal("500.00"), BigDecimal.ZERO);
 
         // Then
         assertEquals(new BigDecimal("500.00"), account.getYtdDebit());

@@ -255,13 +255,12 @@ public class AccountService {
     }
 
     /**
-     * Updates account balances after posting a journal entry.
+     * Updates account balances after posting a journal entry. Takes the
+     * already-loaded (tenant-validated) account so no unscoped re-fetch
+     * by id is needed.
      */
     @Transactional
-    public void updateAccountBalance(Long accountId, BigDecimal debitAmount, BigDecimal creditAmount) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new NotFoundException("Account not found with id: " + accountId));
-
+    public void updateAccountBalance(Account account, BigDecimal debitAmount, BigDecimal creditAmount) {
         account.setYtdDebit(account.getYtdDebit().add(debitAmount));
         account.setYtdCredit(account.getYtdCredit().add(creditAmount));
         account.setCurrentBalance(account.getBalance());

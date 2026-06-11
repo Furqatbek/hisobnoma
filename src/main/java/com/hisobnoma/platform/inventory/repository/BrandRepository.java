@@ -14,6 +14,9 @@ import java.util.Optional;
 @Repository
 public interface BrandRepository extends JpaRepository<Brand, Long> {
 
+    @Query("SELECT b FROM Brand b WHERE b.id = :id AND (b.tenantId = :tenantId OR b.tenantId IS NULL)")
+    Optional<Brand> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
     @Query("SELECT b FROM Brand b WHERE b.tenantId = :tenantId OR b.tenantId IS NULL ORDER BY b.sortOrder")
     List<Brand> findAllByTenantId(@Param("tenantId") Long tenantId);
 

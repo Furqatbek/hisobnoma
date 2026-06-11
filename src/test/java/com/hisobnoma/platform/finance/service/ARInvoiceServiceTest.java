@@ -261,7 +261,7 @@ class ARInvoiceServiceTest {
         assertNotNull(result);
         assertEquals(ARInvoiceStatus.PENDING, result.getStatus());
         verify(glIntegrationService).postARInvoice(invoice);
-        verify(customerService).updateCustomerBalance(eq(1L), any());
+        verify(customerService).updateCustomerBalance(any(Customer.class), any());
     }
 
     @Test
@@ -341,7 +341,7 @@ class ARInvoiceServiceTest {
         // Then
         assertNotNull(result);
         verify(glIntegrationService).reverseARInvoice(eq(invoice), eq("Reverse it"));
-        verify(customerService).updateCustomerBalance(eq(1L), any());
+        verify(customerService).updateCustomerBalance(any(Customer.class), any());
     }
 
     @Test

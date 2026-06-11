@@ -748,6 +748,7 @@ class JournalEntryServiceTest {
     @Test
     void getJournalEntryWithLines_found_returnsDtoWithLines() {
         // Given
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(journalEntryRepository.findByIdWithLines(1L)).thenReturn(Optional.of(journalEntry));
         when(journalEntryMapper.toDto(journalEntry)).thenReturn(journalEntryDto);
 

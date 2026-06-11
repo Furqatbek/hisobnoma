@@ -5,12 +5,14 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -18,6 +20,17 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class JwtTokenProvider {
+
+    /**
+     * The placeholder shipped in application.yml. Signing production tokens
+     * with a published secret would let anyone forge staff JWTs, so startup
+     * fails when the prod profile still runs on it.
+     */
+    static final String DEFAULT_PLACEHOLDER_SECRET =
+            "your-256-bit-secret-key-here-change-in-production-environment";
+
+    /** 64 bytes = 512 bits, the minimum HMAC key size for HS512. */
+    static final int MIN_SECRET_BYTES = 64;
 
     @Value("${app.jwt.secret}")
     private String jwtSecret;
@@ -31,11 +44,37 @@ public class JwtTokenProvider {
     @Value("${app.jwt.issuer}")
     private String issuer;
 
+    private final Environment environment;
+
     private SecretKey key;
+
+    public JwtTokenProvider(Environment environment) {
+        this.environment = environment;
+    }
 
     @PostConstruct
     public void init() {
+        validateSecret();
         this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void validateSecret() {
+        boolean isDefault = DEFAULT_PLACEHOLDER_SECRET.equals(jwtSecret);
+        boolean tooShort = jwtSecret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES;
+        if (!isDefault && !tooShort) {
+            return;
+        }
+        String problem = isDefault
+                ? "JWT secret is the published default placeholder"
+                : "JWT secret is shorter than " + MIN_SECRET_BYTES + " bytes (512 bits)";
+        boolean prod = Arrays.asList(environment.getActiveProfiles()).contains("prod");
+        if (prod) {
+            throw new IllegalStateException(problem
+                    + " — refusing to start with the prod profile. Set the JWT_SECRET"
+                    + " environment variable to a random string of at least 64 characters.");
+        }
+        log.warn("{} — acceptable for dev/test only. Set JWT_SECRET (>= 64 chars) before"
+                + " deploying to production.", problem);
     }
 
     public String generateAccessToken(Authentication authentication) {

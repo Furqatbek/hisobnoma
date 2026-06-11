@@ -257,7 +257,7 @@ public class ARInvoiceService {
         invoice = arInvoiceRepository.save(invoice);
 
         // Update customer balance
-        customerService.updateCustomerBalance(invoice.getCustomer().getId(), invoice.getTotalAmount());
+        customerService.updateCustomerBalance(invoice.getCustomer(), invoice.getTotalAmount());
 
         log.info("Posted AR invoice: {} to GL", invoice.getInvoiceNumber());
 
@@ -303,7 +303,7 @@ public class ARInvoiceService {
             glIntegrationService.reverseARInvoice(invoice, reason);
 
             // Update customer balance
-            customerService.updateCustomerBalance(invoice.getCustomer().getId(), invoice.getTotalAmount().negate());
+            customerService.updateCustomerBalance(invoice.getCustomer(), invoice.getTotalAmount().negate());
         }
 
         invoice.setStatus(ARInvoiceStatus.CANCELLED);
@@ -480,7 +480,7 @@ public class ARInvoiceService {
         // Posting the AR invoice to GL again would double-count revenue, COGS, and AR.
 
         // Update customer balance
-        customerService.updateCustomerBalance(customer.getId(), creditAmount);
+        customerService.updateCustomerBalance(customer, creditAmount);
 
         log.info("Created AR Invoice {} from POS Transaction {} for customer {}",
                 invoice.getInvoiceNumber(), transaction.getTransactionNumber(), customer.getCode());

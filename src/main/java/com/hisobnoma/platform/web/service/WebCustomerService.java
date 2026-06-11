@@ -90,10 +90,12 @@ public class WebCustomerService {
     }
 
     private WebCustomerDto toDto(WebCustomer webCustomer) {
+        Long tenantId = webCustomer.getTenantId();
         String customerCode = null;
         String customerName = null;
         if (webCustomer.getCustomerId() != null) {
-            Customer customer = customerRepository.findById(webCustomer.getCustomerId()).orElse(null);
+            Customer customer = customerRepository
+                    .findByIdAndTenantId(webCustomer.getCustomerId(), tenantId).orElse(null);
             if (customer != null) {
                 customerCode = customer.getCode();
                 customerName = customer.getName();
@@ -101,7 +103,8 @@ public class WebCustomerService {
         }
         String referredByName = null;
         if (webCustomer.getReferredBy() != null) {
-            referredByName = webCustomerRepository.findById(webCustomer.getReferredBy())
+            referredByName = webCustomerRepository
+                    .findByIdAndTenantId(webCustomer.getReferredBy(), tenantId)
                     .map(r -> r.getName() != null ? r.getName() : r.getPhone())
                     .orElse(null);
         }

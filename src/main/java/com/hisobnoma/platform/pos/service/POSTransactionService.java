@@ -195,6 +195,7 @@ public class POSTransactionService {
                 ProductVariant variant = null;
                 if (item.getVariantId() != null) {
                     variant = variantRepository.findById(item.getVariantId())
+                            .filter(v -> v.getProduct().getId().equals(product.getId()))
                             .orElseThrow(() -> new NotFoundException("Variant not found: " + item.getVariantId()));
                 }
 
@@ -283,10 +284,11 @@ public class POSTransactionService {
         Product product = productRepository.findByIdAndTenantId(request.getProductId(), tenantId)
                 .orElseThrow(() -> new NotFoundException("Product not found: " + request.getProductId()));
 
-        // Get variant if provided
+        // Get variant if provided — must belong to the (tenant-scoped) product
         ProductVariant variant = null;
         if (request.getVariantId() != null) {
             variant = variantRepository.findById(request.getVariantId())
+                    .filter(v -> v.getProduct().getId().equals(product.getId()))
                     .orElseThrow(() -> new NotFoundException("Variant not found: " + request.getVariantId()));
         }
 

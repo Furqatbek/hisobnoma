@@ -203,6 +203,7 @@ public class PriceListService {
         ProductVariant variant = null;
         if (request.getVariantId() != null) {
             variant = variantRepository.findById(request.getVariantId())
+                    .filter(v -> v.getProduct().getId().equals(product.getId()))
                     .orElseThrow(() -> new NotFoundException("ProductVariant", "id", request.getVariantId()));
         }
 
@@ -239,10 +240,12 @@ public class PriceListService {
             item.setProduct(product);
         }
 
-        // Update variant if changed
+        // Update variant if changed — must belong to the item's product
         if (request.getVariantId() != null) {
             if (item.getVariant() == null || !item.getVariant().getId().equals(request.getVariantId())) {
+                Long itemProductId = item.getProduct().getId();
                 ProductVariant variant = variantRepository.findById(request.getVariantId())
+                        .filter(v -> v.getProduct().getId().equals(itemProductId))
                         .orElseThrow(() -> new NotFoundException("ProductVariant", "id", request.getVariantId()));
                 item.setVariant(variant);
             }
@@ -321,7 +324,9 @@ public class PriceListService {
         if (product != null) {
             BigDecimal basePrice = product.getSellingPrice();
             if (dto.getVariantId() != null) {
-                ProductVariant variant = variantRepository.findById(dto.getVariantId()).orElse(null);
+                ProductVariant variant = variantRepository.findById(dto.getVariantId())
+                        .filter(v -> v.getProduct().getId().equals(product.getId()))
+                        .orElse(null);
                 if (variant != null && variant.getSellingPrice() != null) {
                     basePrice = variant.getSellingPrice();
                 }

@@ -189,7 +189,7 @@ class ARPaymentServiceTest {
         when(customerRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(customer));
         when(arPaymentRepository.findMaxPaymentNumber(TENANT_ID)).thenReturn(null);
         when(arPaymentMapper.toEntity(any())).thenReturn(payment);
-        when(arInvoiceRepository.findById(1L)).thenReturn(Optional.of(invoice));
+        when(arInvoiceRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(invoice));
         when(arPaymentRepository.save(any())).thenReturn(payment);
         when(arPaymentMapper.toDto(payment)).thenReturn(paymentDto);
 
@@ -230,7 +230,7 @@ class ARPaymentServiceTest {
                         .status(ARPaymentStatus.PENDING)
                         .allocations(new ArrayList<>())
                         .build());
-        when(arInvoiceRepository.findById(1L)).thenReturn(Optional.of(invoice));
+        when(arInvoiceRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(invoice));
 
         // When/Then
         assertThrows(BusinessException.class, () -> arPaymentService.createPayment(request));
@@ -263,7 +263,7 @@ class ARPaymentServiceTest {
                         .status(ARPaymentStatus.PENDING)
                         .allocations(new ArrayList<>())
                         .build());
-        when(arInvoiceRepository.findById(999L)).thenReturn(Optional.empty());
+        when(arInvoiceRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> arPaymentService.createPayment(request));
@@ -329,7 +329,7 @@ class ARPaymentServiceTest {
         assertNotNull(result);
         verify(glIntegrationService).reverseARPayment(eq(payment), eq("Reverse completed"));
         verify(arInvoiceService).applyPayment(eq(1L), any(), any(), any());
-        verify(customerService).updateCustomerBalance(eq(1L), any());
+        verify(customerService).updateCustomerBalance(any(Customer.class), any());
     }
 
     @Test
@@ -349,7 +349,7 @@ class ARPaymentServiceTest {
         assertNotNull(result);
         assertEquals(ARPaymentStatus.COMPLETED, result.getStatus());
         verify(glIntegrationService).postARPayment(payment);
-        verify(customerService).updateCustomerBalance(eq(1L), any());
+        verify(customerService).updateCustomerBalance(any(Customer.class), any());
     }
 
     @Test
@@ -490,7 +490,7 @@ class ARPaymentServiceTest {
 
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(arPaymentRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(payment));
-        when(arInvoiceRepository.findById(1L)).thenReturn(Optional.of(invoice));
+        when(arInvoiceRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(invoice));
         when(arPaymentAllocationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(arPaymentRepository.save(any())).thenReturn(payment);
         when(arPaymentMapper.toDto(any(ARPayment.class))).thenReturn(paymentDto);

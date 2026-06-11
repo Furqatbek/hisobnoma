@@ -433,7 +433,7 @@ class APInvoiceServiceTest {
         when(accountRepository.findByCodeAndTenantId("2100", TENANT_ID)).thenReturn(Optional.of(apAccount));
         when(glIntegrationService.postAPInvoice(any(APInvoice.class))).thenReturn(100L);
         when(apInvoiceRepository.save(any(APInvoice.class))).thenReturn(invoice);
-        when(vendorRepository.findById(1L)).thenReturn(Optional.of(vendor));
+        when(vendorRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(vendor));
 
         APInvoiceDto approvedDto = APInvoiceDto.builder()
                 .id(1L)

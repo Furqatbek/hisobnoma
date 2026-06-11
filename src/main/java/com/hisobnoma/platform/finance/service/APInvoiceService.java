@@ -340,7 +340,7 @@ public class APInvoiceService {
         invoice = apInvoiceRepository.save(invoice);
 
         // Update vendor balance
-        updateVendorBalance(invoice.getVendorId(), invoice.getTotalAmount());
+        updateVendorBalance(invoice.getVendorId(), invoice.getTenantId(), invoice.getTotalAmount());
 
         log.info("AP Invoice {} approved by user {}", invoice.getInvoiceNumber(), userId);
 
@@ -521,9 +521,9 @@ public class APInvoiceService {
         return LocalDate.now().plusDays(days);
     }
 
-    private void updateVendorBalance(Long vendorId, BigDecimal amount) {
+    private void updateVendorBalance(Long vendorId, Long tenantId, BigDecimal amount) {
         if (vendorId == null) return;
-        vendorRepository.findById(vendorId).ifPresent(vendor -> {
+        vendorRepository.findByIdAndTenantId(vendorId, tenantId).ifPresent(vendor -> {
             BigDecimal currentBalance = vendor.getCurrentBalance() != null ? vendor.getCurrentBalance() : BigDecimal.ZERO;
             vendor.setCurrentBalance(currentBalance.add(amount));
             vendorRepository.save(vendor);

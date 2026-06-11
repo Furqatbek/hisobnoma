@@ -210,7 +210,7 @@ class ProductServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(skuGeneratorService.generateSkuFromName("New Product")).thenReturn("NEW-PROD-001");
         when(productMapper.toEntity(request)).thenReturn(product);
-        when(uomRepository.findById(1L)).thenReturn(Optional.of(uom));
+        when(uomRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(uom));
         when(productRepository.save(any(Product.class))).thenReturn(product);
         when(productRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(product));
         when(productMapper.toDto(product)).thenReturn(productDto);
@@ -279,7 +279,7 @@ class ProductServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(skuGeneratorService.generateSkuFromName("New Product")).thenReturn("NEW-SKU");
         when(productMapper.toEntity(request)).thenReturn(Product.builder().id(1L).build());
-        when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
+        when(categoryRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> productService.createProduct(request));
@@ -298,7 +298,7 @@ class ProductServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(skuGeneratorService.generateSkuFromName("New Product")).thenReturn("NEW-SKU");
         when(productMapper.toEntity(request)).thenReturn(Product.builder().id(1L).build());
-        when(brandRepository.findById(999L)).thenReturn(Optional.empty());
+        when(brandRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> productService.createProduct(request));
@@ -316,7 +316,7 @@ class ProductServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(skuGeneratorService.generateSkuFromName("New Product")).thenReturn("NEW-SKU");
         when(productMapper.toEntity(request)).thenReturn(Product.builder().id(1L).build());
-        when(uomRepository.findById(999L)).thenReturn(Optional.empty());
+        when(uomRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> productService.createProduct(request));
@@ -332,7 +332,7 @@ class ProductServiceTest {
                 .sellingPrice(new BigDecimal("1099.00"))
                 .build();
 
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(product));
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(productRepository.save(any(Product.class))).thenReturn(product);
         when(productRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(product));
@@ -359,7 +359,8 @@ class ProductServiceTest {
                 .name("Updated Product")
                 .build();
 
-        when(productRepository.findById(999L)).thenReturn(Optional.empty());
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(productRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> productService.updateProduct(999L, request));
@@ -372,7 +373,7 @@ class ProductServiceTest {
                 .barcode("EXISTING-BARCODE")
                 .build();
 
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(product));
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(productRepository.existsByBarcodeAndTenantId("EXISTING-BARCODE", TENANT_ID)).thenReturn(true);
 
@@ -385,7 +386,8 @@ class ProductServiceTest {
     @Test
     void deleteProduct_success_softDeletes() {
         // Given
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(productRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenReturn(product);
 
         // When
@@ -399,7 +401,8 @@ class ProductServiceTest {
     @Test
     void deleteProduct_notFound_throwsNotFoundException() {
         // Given
-        when(productRepository.findById(999L)).thenReturn(Optional.empty());
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(productRepository.findByIdAndTenantId(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> productService.deleteProduct(999L));

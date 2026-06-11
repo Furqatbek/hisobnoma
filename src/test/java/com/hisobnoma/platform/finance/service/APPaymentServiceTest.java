@@ -455,7 +455,7 @@ class APPaymentServiceTest {
         when(apPaymentRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(payment));
         when(apInvoiceRepository.save(any(APInvoice.class))).thenReturn(invoice);
         when(apPaymentRepository.save(any(APPayment.class))).thenReturn(payment);
-        when(vendorRepository.findById(1L)).thenReturn(Optional.of(vendor));
+        when(vendorRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(vendor));
 
         APPaymentDto voidedDto = APPaymentDto.builder()
                 .id(1L)
@@ -471,7 +471,7 @@ class APPaymentServiceTest {
         assertEquals(APPaymentStatus.VOIDED, result.getStatus());
         verify(glIntegrationService).reverseAPPayment(any(APPayment.class));
         verify(apInvoiceRepository).save(any(APInvoice.class));
-        verify(vendorRepository).findById(1L);
+        verify(vendorRepository).findByIdAndTenantId(1L, TENANT_ID);
     }
 
     @Test
@@ -572,7 +572,7 @@ class APPaymentServiceTest {
         when(accountRepository.findByCodeAndTenantId("2100", TENANT_ID)).thenReturn(Optional.of(apAccount));
         when(accountRepository.findByCodeAndTenantId("1110", TENANT_ID)).thenReturn(Optional.of(cashAccount));
         when(glIntegrationService.postAPPayment(any(APPayment.class))).thenReturn(200L);
-        when(vendorRepository.findById(1L)).thenReturn(Optional.of(vendor));
+        when(vendorRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(vendor));
         when(apPaymentRepository.save(any(APPayment.class))).thenReturn(payment);
 
         APPaymentDto completedDto = APPaymentDto.builder()

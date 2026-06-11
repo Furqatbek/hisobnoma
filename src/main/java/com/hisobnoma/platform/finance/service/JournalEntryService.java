@@ -69,7 +69,9 @@ public class JournalEntryService {
 
     @Transactional(readOnly = true)
     public JournalEntryDto getJournalEntryWithLines(Long id) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
         JournalEntry entry = journalEntryRepository.findByIdWithLines(id)
+                .filter(e -> e.getTenantId().equals(tenantId))
                 .orElseThrow(() -> new NotFoundException("Journal entry not found with id: " + id));
         return journalEntryMapper.toDto(entry);
     }
@@ -164,6 +166,7 @@ public class JournalEntryService {
         Long userId = securityContextHelper.getCurrentUserId();
 
         JournalEntry entry = journalEntryRepository.findByIdWithLines(id)
+                .filter(e -> e.getTenantId().equals(tenantId))
                 .orElseThrow(() -> new NotFoundException("Journal entry not found with id: " + id));
 
         if (!entry.canPost()) {
@@ -182,7 +185,7 @@ public class JournalEntryService {
         // Update account balances
         for (JournalLine line : entry.getLines()) {
             accountService.updateAccountBalance(
-                    line.getAccount().getId(),
+                    line.getAccount(),
                     line.getBaseDebitAmount(),
                     line.getBaseCreditAmount()
             );
@@ -209,6 +212,7 @@ public class JournalEntryService {
         Long userId = securityContextHelper.getCurrentUserId();
 
         JournalEntry originalEntry = journalEntryRepository.findByIdWithLines(id)
+                .filter(e -> e.getTenantId().equals(tenantId))
                 .orElseThrow(() -> new NotFoundException("Journal entry not found with id: " + id));
 
         if (!originalEntry.canReverse()) {
@@ -269,7 +273,7 @@ public class JournalEntryService {
         // Update account balances
         for (JournalLine line : reversingEntry.getLines()) {
             accountService.updateAccountBalance(
-                    line.getAccount().getId(),
+                    line.getAccount(),
                     line.getBaseDebitAmount(),
                     line.getBaseCreditAmount()
             );
@@ -367,7 +371,7 @@ public class JournalEntryService {
         // Update account balances
         for (JournalLine line : entry.getLines()) {
             accountService.updateAccountBalance(
-                    line.getAccount().getId(),
+                    line.getAccount(),
                     line.getBaseDebitAmount(),
                     line.getBaseCreditAmount()
             );

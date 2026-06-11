@@ -211,7 +211,7 @@ public class APPaymentService {
         postToGL(payment);
 
         // Update vendor balance
-        updateVendorBalance(payment.getVendorId(), payment.getPaymentAmount().negate());
+        updateVendorBalance(payment.getVendorId(), payment.getTenantId(), payment.getPaymentAmount().negate());
 
         payment.setStatus(APPaymentStatus.COMPLETED);
         payment.setCompletedBy(userId);
@@ -261,7 +261,7 @@ public class APPaymentService {
             }
 
             // Restore vendor balance
-            updateVendorBalance(payment.getVendorId(), payment.getPaymentAmount());
+            updateVendorBalance(payment.getVendorId(), payment.getTenantId(), payment.getPaymentAmount());
         }
 
         payment.setStatus(APPaymentStatus.VOIDED);
@@ -360,9 +360,9 @@ public class APPaymentService {
         return String.format("PAY-%06d", nextNumber);
     }
 
-    private void updateVendorBalance(Long vendorId, BigDecimal amount) {
+    private void updateVendorBalance(Long vendorId, Long tenantId, BigDecimal amount) {
         if (vendorId == null) return;
-        vendorRepository.findById(vendorId).ifPresent(vendor -> {
+        vendorRepository.findByIdAndTenantId(vendorId, tenantId).ifPresent(vendor -> {
             BigDecimal currentBalance = vendor.getCurrentBalance() != null ? vendor.getCurrentBalance() : BigDecimal.ZERO;
             vendor.setCurrentBalance(currentBalance.add(amount));
             vendorRepository.save(vendor);

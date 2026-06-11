@@ -296,11 +296,10 @@ class CustomerServiceTest {
     void shouldUpdateCustomerBalance() {
         // Given
         customer.setCurrentBalance(new BigDecimal("1000.00"));
-        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
         when(customerRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        customerService.updateCustomerBalance(1L, new BigDecimal("500.00"));
+        customerService.updateCustomerBalance(customer, new BigDecimal("500.00"));
 
         // Then
         assertEquals(new BigDecimal("1500.00"), customer.getCurrentBalance());
@@ -311,11 +310,10 @@ class CustomerServiceTest {
     void shouldUpdateCustomerBalanceWithNullCurrentBalance() {
         // Given
         customer.setCurrentBalance(null);
-        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
         when(customerRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        customerService.updateCustomerBalance(1L, new BigDecimal("500.00"));
+        customerService.updateCustomerBalance(customer, new BigDecimal("500.00"));
 
         // Then
         assertEquals(new BigDecimal("500.00"), customer.getCurrentBalance());

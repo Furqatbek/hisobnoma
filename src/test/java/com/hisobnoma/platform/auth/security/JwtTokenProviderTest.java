@@ -30,7 +30,7 @@ class JwtTokenProviderTest {
 
     @BeforeEach
     void setUp() {
-        tokenProvider = new JwtTokenProvider();
+        tokenProvider = new JwtTokenProvider(new org.springframework.mock.env.MockEnvironment());
         ReflectionTestUtils.setField(tokenProvider, "jwtSecret", TEST_SECRET);
         ReflectionTestUtils.setField(tokenProvider, "accessTokenExpiration", ACCESS_EXP_MS);
         ReflectionTestUtils.setField(tokenProvider, "refreshTokenExpiration", REFRESH_EXP_MS);
@@ -52,6 +52,44 @@ class JwtTokenProviderTest {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    // ---- secret validation ----
+
+    private JwtTokenProvider buildProvider(String secret, String... activeProfiles) {
+        org.springframework.mock.env.MockEnvironment env = new org.springframework.mock.env.MockEnvironment();
+        env.setActiveProfiles(activeProfiles);
+        JwtTokenProvider provider = new JwtTokenProvider(env);
+        ReflectionTestUtils.setField(provider, "jwtSecret", secret);
+        ReflectionTestUtils.setField(provider, "accessTokenExpiration", ACCESS_EXP_MS);
+        ReflectionTestUtils.setField(provider, "refreshTokenExpiration", REFRESH_EXP_MS);
+        ReflectionTestUtils.setField(provider, "issuer", ISSUER);
+        return provider;
+    }
+
+    @Test
+    void init_defaultPlaceholderSecret_prodProfile_failsStartup() {
+        JwtTokenProvider provider = buildProvider(JwtTokenProvider.DEFAULT_PLACEHOLDER_SECRET, "prod");
+        IllegalStateException ex = assertThrows(IllegalStateException.class, provider::init);
+        assertTrue(ex.getMessage().contains("JWT_SECRET"));
+    }
+
+    @Test
+    void init_shortSecret_prodProfile_failsStartup() {
+        JwtTokenProvider provider = buildProvider("short-secret", "prod");
+        assertThrows(IllegalStateException.class, provider::init);
+    }
+
+    @Test
+    void init_strongSecret_prodProfile_starts() {
+        JwtTokenProvider provider = buildProvider("x".repeat(JwtTokenProvider.MIN_SECRET_BYTES), "prod");
+        assertDoesNotThrow(provider::init);
+    }
+
+    @Test
+    void init_defaultPlaceholderSecret_devProfile_startsWithWarning() {
+        JwtTokenProvider provider = buildProvider(JwtTokenProvider.DEFAULT_PLACEHOLDER_SECRET, "dev");
+        assertDoesNotThrow(provider::init);
     }
 
     // ---- generateAccessToken ----

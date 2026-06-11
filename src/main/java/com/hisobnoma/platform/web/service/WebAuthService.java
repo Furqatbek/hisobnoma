@@ -100,7 +100,7 @@ public class WebAuthService {
             smsService.sendSmsAsync("+" + phone, "Дўкон: тасдиқлаш коди " + code);
         } catch (Exception e) {
             // The code stays valid; the user can retry after the cooldown.
-            log.warn("Failed to send OTP SMS to {}: {}", phone, e.getMessage());
+            log.warn("Failed to send OTP SMS to {}: {}", mask(phone), e.getMessage());
         }
         log.info("OTP requested for phone {} (tenant {})", mask(phone), tenantId);
     }

@@ -16,9 +16,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -36,11 +36,17 @@ public class WebWishlistAlertJob {
     private final WebDeviceTokenRepository deviceTokenRepository;
     private final TenantSettingService tenantSettingService;
 
-    private final Map<String, Integer> smsDailyCount = new HashMap<>();
+    /**
+     * Per-customer daily SMS counters, keyed by "tenant:customer:day".
+     * Single-instance only — acceptable for a best-effort cost cap; a
+     * multi-instance deployment should move this to a shared store.
+     */
+    private final Map<String, Integer> smsDailyCount = new ConcurrentHashMap<>();
 
     @Scheduled(cron = "0 */30 * * * *")
     @Transactional
     public void processAlerts() {
+        evictStaleSmsCounters();
         List<Long> tenantIds = wishlistRepository.findDistinctTenantIds();
         for (Long tenantId : tenantIds) {
             try {
@@ -147,15 +153,29 @@ public class WebWishlistAlertJob {
             int maxPerDay = getMaxSmsPerDay(tenantId);
             String dailyKey = tenantId + ":" + customerId + ":" +
                     Instant.now().truncatedTo(ChronoUnit.DAYS);
-            int sent = smsDailyCount.getOrDefault(dailyKey, 0);
-            if (sent < maxPerDay) {
-                smsDailyCount.put(dailyKey, sent + 1);
+            // Atomic check-and-increment so concurrent sends can't exceed the cap
+            java.util.concurrent.atomic.AtomicBoolean underCap = new java.util.concurrent.atomic.AtomicBoolean(false);
+            smsDailyCount.compute(dailyKey, (k, v) -> {
+                int current = v == null ? 0 : v;
+                if (current < maxPerDay) {
+                    underCap.set(true);
+                    return current + 1;
+                }
+                return v;
+            });
+            if (underCap.get()) {
                 log.info("Wishlist SMS alert (placeholder): tenant={}, customer={}, product={}",
                         tenantId, customerId, productName);
             }
         }
 
         wi.setNotifiedAt(Instant.now());
+    }
+
+    /** Drops counters from previous days so the map cannot grow unboundedly. */
+    private void evictStaleSmsCounters() {
+        String today = Instant.now().truncatedTo(ChronoUnit.DAYS).toString();
+        smsDailyCount.keySet().removeIf(key -> !key.endsWith(today));
     }
 
     private boolean isSmsAlertsEnabled(Long tenantId) {

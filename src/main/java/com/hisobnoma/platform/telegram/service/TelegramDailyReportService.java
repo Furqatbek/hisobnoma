@@ -24,6 +24,7 @@ import java.text.NumberFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Sends daily business reports via Telegram to connected users.
@@ -58,8 +59,13 @@ public class TelegramDailyReportService {
     static final String SETTING_REPORT_INVENTORY = "telegram.daily_report.inventory";
     static final String SETTING_REPORT_FINANCE = "telegram.daily_report.finance";
 
-    /** Track which tenants already received their fixed-time report today. */
-    private final Map<Long, LocalDate> lastFixedTimeSentDate = new HashMap<>();
+    /**
+     * Track which tenants already received their fixed-time report today.
+     * Concurrent map for safe publication between scheduler runs; the
+     * dedupe itself assumes a single app instance (each instance keeps
+     * its own map) — move to a shared store for clustered deployments.
+     */
+    private final Map<Long, LocalDate> lastFixedTimeSentDate = new ConcurrentHashMap<>();
 
     // ===================== Scheduled (fixed time) trigger =====================
 

@@ -187,15 +187,15 @@ public class CustomerService {
     }
 
     /**
-     * Update customer balance after invoice or payment.
+     * Update customer balance after invoice or payment. Takes the
+     * already-loaded (tenant-validated) customer so no unscoped re-fetch
+     * by id is needed.
      */
     @Transactional
-    public void updateCustomerBalance(Long customerId, BigDecimal amount) {
-        customerRepository.findById(customerId).ifPresent(customer -> {
-            BigDecimal currentBalance = customer.getCurrentBalance() != null ? customer.getCurrentBalance() : BigDecimal.ZERO;
-            customer.setCurrentBalance(currentBalance.add(amount));
-            customerRepository.save(customer);
-        });
+    public void updateCustomerBalance(Customer customer, BigDecimal amount) {
+        BigDecimal currentBalance = customer.getCurrentBalance() != null ? customer.getCurrentBalance() : BigDecimal.ZERO;
+        customer.setCurrentBalance(currentBalance.add(amount));
+        customerRepository.save(customer);
     }
 
     /**
