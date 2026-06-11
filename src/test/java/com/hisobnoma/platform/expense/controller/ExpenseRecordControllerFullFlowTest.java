@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@org.springframework.security.test.context.support.WithMockUser
 class ExpenseRecordControllerFullFlowTest {
 
     private static final String BASE_URL = "/api/v1/web/expenses";
@@ -71,6 +72,14 @@ class ExpenseRecordControllerFullFlowTest {
     }
 
     // ---- GET /api/v1/web/expenses ----
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void getExpenses_anonymous_isRejected() throws Exception {
+        mockMvc.perform(get(BASE_URL)
+                        .header("X-Tenant-ID", tenant.getId().toString()))
+                .andExpect(status().isForbidden());
+    }
 
     @Test
     void getExpenses_returnsPaginatedResults() throws Exception {

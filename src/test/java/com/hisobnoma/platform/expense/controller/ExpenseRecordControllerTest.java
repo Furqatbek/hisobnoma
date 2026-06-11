@@ -38,8 +38,9 @@ class ExpenseRecordControllerTest {
     private ExpenseRecordRepository repository;
 
     // ==================== GET /api/v1/web/expenses ====================
-    // Note: ExpenseRecordController has no @RequiresPermission or @PreAuthorize annotations,
-    // so we test that authenticated users can access and unauthenticated cannot.
+    // The path sits under the public /api/v1/web/** prefix but is excluded
+    // from the whitelist in SecurityConfig: expense records are staff
+    // financial data, so anonymous access must be rejected.
 
     @Test
     @WithMockUser
@@ -52,12 +53,9 @@ class ExpenseRecordControllerTest {
     }
 
     @Test
-    void getExpenses_unauthenticated_returnsOk() throws Exception {
-        when(repository.findByTenantIdOrTenantIdIsNull(any(), any()))
-                .thenReturn(new PageImpl<>(List.of()));
-
+    void getExpenses_unauthenticated_returnsForbidden() throws Exception {
         mockMvc.perform(get("/api/v1/web/expenses"))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 
     // ==================== GET /api/v1/web/expenses/summary/total ====================
@@ -73,11 +71,9 @@ class ExpenseRecordControllerTest {
     }
 
     @Test
-    void getTotal_unauthenticated_returnsOk() throws Exception {
-        when(repository.sumTotalByTenantIdOrNull(any())).thenReturn(new BigDecimal("0.00"));
-
+    void getTotal_unauthenticated_returnsForbidden() throws Exception {
         mockMvc.perform(get("/api/v1/web/expenses/summary/total"))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 
     // ==================== POST /api/v1/web/expenses ====================
@@ -108,18 +104,11 @@ class ExpenseRecordControllerTest {
     }
 
     @Test
-    void createExpense_unauthenticated_returnsOk() throws Exception {
-        ExpenseRecord saved = ExpenseRecord.builder()
-                .id(2L)
-                .totalAmount(new BigDecimal("100.00"))
-                .category("Boshqa")
-                .build();
-        when(repository.save(any())).thenReturn(saved);
-
+    void createExpense_unauthenticated_returnsForbidden() throws Exception {
         mockMvc.perform(post("/api/v1/web/expenses")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"total_amount\": 100.00}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 
     // ==================== DELETE /api/v1/web/expenses/{id} ====================
@@ -135,8 +124,8 @@ class ExpenseRecordControllerTest {
     }
 
     @Test
-    void deleteExpense_unauthenticated_returns204() throws Exception {
+    void deleteExpense_unauthenticated_returnsForbidden() throws Exception {
         mockMvc.perform(delete("/api/v1/web/expenses/1"))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isForbidden());
     }
 }

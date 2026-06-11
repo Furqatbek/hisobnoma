@@ -147,3 +147,8 @@ app:
     max-login-attempts: 5
     lock-duration-minutes: 30
     password-reset-expiration-minutes: 60
+    # Trust X-Forwarded-For for client IPs (rate limiting, audit). Keep true
+    # behind a reverse proxy (nginx/ALB); set false when the app is exposed
+    # directly, otherwise per-IP rate limits can be bypassed with a spoofed
+    # header.
+    trust-proxy-headers: ${TRUST_PROXY_HEADERS:true}

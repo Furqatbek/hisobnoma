@@ -24,6 +24,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p WHERE p.id = :id AND (p.tenantId = :tenantId OR p.tenantId IS NULL)")
     Optional<Product> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
+    List<Product> findByIdInAndTenantId(java.util.Collection<Long> ids, Long tenantId);
+
     @Query("SELECT p FROM Product p WHERE p.sku = :sku AND (p.tenantId = :tenantId OR p.tenantId IS NULL)")
     Optional<Product> findBySkuAndTenantId(@Param("sku") String sku, @Param("tenantId") Long tenantId);
 

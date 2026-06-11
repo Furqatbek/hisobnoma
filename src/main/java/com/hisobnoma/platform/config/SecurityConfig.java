@@ -74,6 +74,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // More specific than the /api/v1/web/** whitelist below:
+                        // expense records are staff financial data, never public.
+                        .requestMatchers("/api/v1/web/expenses/**").authenticated()
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())

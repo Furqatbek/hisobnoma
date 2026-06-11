@@ -26,6 +26,11 @@ import java.util.Optional;
 /**
  * Integration service for posting journal entries from other modules.
  * This service provides methods for inventory, POS, AR, and AP modules to create GL entries.
+ *
+ * All posting is DB-local (journal entry rows in the same database) and is
+ * deliberately called INSIDE the caller's transaction: a document status
+ * change and its GL entry must commit or roll back together. Do not move
+ * these calls out of the owning transaction.
  */
 @Service
 @RequiredArgsConstructor

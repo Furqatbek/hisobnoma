@@ -186,17 +186,43 @@ public class POSTransactionService {
 
         // Add line items if provided
         if (request.getItems() != null && !request.getItems().isEmpty()) {
+            // Bulk-fetch products/variants/UOMs once instead of 3 queries per line
+            var productsById = productRepository.findByIdInAndTenantId(
+                            request.getItems().stream()
+                                    .map(CreateTransactionRequest.LineItem::getProductId)
+                                    .collect(java.util.stream.Collectors.toSet()), tenantId)
+                    .stream().collect(java.util.stream.Collectors.toMap(Product::getId, p -> p));
+            var variantIds = request.getItems().stream()
+                    .map(CreateTransactionRequest.LineItem::getVariantId)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toSet());
+            var variantsById = variantIds.isEmpty()
+                    ? java.util.Map.<Long, ProductVariant>of()
+                    : variantRepository.findAllById(variantIds)
+                            .stream().collect(java.util.stream.Collectors.toMap(ProductVariant::getId, v -> v));
+            var uomIds = request.getItems().stream()
+                    .map(CreateTransactionRequest.LineItem::getProductUomId)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toSet());
+            var uomsById = uomIds.isEmpty()
+                    ? java.util.Map.<Long, ProductUom>of()
+                    : productUomRepository.findByIdInAndTenantId(uomIds, tenantId)
+                            .stream().collect(java.util.stream.Collectors.toMap(ProductUom::getId, u -> u));
+
             int lineNumber = 0;
             for (CreateTransactionRequest.LineItem item : request.getItems()) {
                 lineNumber++;
-                Product product = productRepository.findByIdAndTenantId(item.getProductId(), tenantId)
-                        .orElseThrow(() -> new NotFoundException("Product not found: " + item.getProductId()));
+                Product product = productsById.get(item.getProductId());
+                if (product == null) {
+                    throw new NotFoundException("Product not found: " + item.getProductId());
+                }
 
                 ProductVariant variant = null;
                 if (item.getVariantId() != null) {
-                    variant = variantRepository.findById(item.getVariantId())
-                            .filter(v -> v.getProduct().getId().equals(product.getId()))
-                            .orElseThrow(() -> new NotFoundException("Variant not found: " + item.getVariantId()));
+                    variant = variantsById.get(item.getVariantId());
+                    if (variant == null || !variant.getProduct().getId().equals(product.getId())) {
+                        throw new NotFoundException("Variant not found: " + item.getVariantId());
+                    }
                 }
 
                 // Resolve alternate UOM if specified
@@ -205,8 +231,10 @@ public class POSTransactionService {
                 BigDecimal baseQuantity = item.getQuantity();
 
                 if (item.getProductUomId() != null) {
-                    productUom = productUomRepository.findByIdAndTenantId(item.getProductUomId(), tenantId)
-                            .orElseThrow(() -> new NotFoundException("Product UOM not found: " + item.getProductUomId()));
+                    productUom = uomsById.get(item.getProductUomId());
+                    if (productUom == null) {
+                        throw new NotFoundException("Product UOM not found: " + item.getProductUomId());
+                    }
                     baseQuantity = productUom.toBaseQuantity(saleQuantity);
                 }
 

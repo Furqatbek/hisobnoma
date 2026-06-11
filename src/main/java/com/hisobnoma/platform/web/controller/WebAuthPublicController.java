@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.web.controller;
 
+import com.hisobnoma.platform.common.util.ClientIpResolver;
 import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.common.dto.PageResponse;
 import com.hisobnoma.platform.web.dto.LoyaltyBalanceDto;
@@ -38,6 +39,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WebAuthPublicController {
 
+    private final ClientIpResolver clientIpResolver;
     private final WebAuthService authService;
     private final WebLoyaltyService loyaltyService;
     private final WebPushService pushService;
@@ -150,10 +152,6 @@ public class WebAuthPublicController {
     }
 
     private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return clientIpResolver.resolve(request);
     }
 }

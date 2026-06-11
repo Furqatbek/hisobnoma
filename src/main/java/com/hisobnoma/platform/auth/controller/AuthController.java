@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.auth.controller;
 
+import com.hisobnoma.platform.common.util.ClientIpResolver;
 import com.hisobnoma.platform.auth.dto.*;
 import com.hisobnoma.platform.auth.service.AuthService;
 import com.hisobnoma.platform.common.dto.ApiResponse;
@@ -20,6 +21,7 @@ import java.util.Map;
 @Tag(name = "Authentication", description = "Authentication APIs")
 public class AuthController {
 
+    private final ClientIpResolver clientIpResolver;
     private final AuthService authService;
 
     @PostMapping("/login")
@@ -118,10 +120,6 @@ public class AuthController {
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return clientIpResolver.resolve(request);
     }
 }

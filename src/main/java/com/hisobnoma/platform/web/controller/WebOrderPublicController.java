@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.web.controller;
 
+import com.hisobnoma.platform.common.util.ClientIpResolver;
 import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.web.dto.CheckoutRequest;
 import com.hisobnoma.platform.web.dto.PublicOrderDto;
@@ -24,6 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WebOrderPublicController {
 
+    private final ClientIpResolver clientIpResolver;
     private final WebOrderPublicService publicService;
 
     @PostMapping("/orders")
@@ -55,10 +57,6 @@ public class WebOrderPublicController {
     }
 
     private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return clientIpResolver.resolve(request);
     }
 }

@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.mobile.controller;
 
+import com.hisobnoma.platform.common.util.ClientIpResolver;
 import com.hisobnoma.platform.auth.dto.AuthResponse;
 import com.hisobnoma.platform.auth.dto.LoginRequest;
 import com.hisobnoma.platform.auth.dto.RefreshTokenRequest;
@@ -29,6 +30,7 @@ import java.util.List;
 @Tag(name = "Mobile Authentication", description = "Mobile authentication and device registration APIs")
 public class MobileAuthController {
 
+    private final ClientIpResolver clientIpResolver;
     private final AuthService authService;
     private final DeviceTokenService deviceTokenService;
     private final MobileAlertService alertService;
@@ -53,11 +55,7 @@ public class MobileAuthController {
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return clientIpResolver.resolve(request);
     }
 
     @PostMapping("/register-device")

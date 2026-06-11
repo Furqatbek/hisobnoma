@@ -11,6 +11,8 @@ import java.util.Optional;
 @Repository
 public interface ProductUomRepository extends JpaRepository<ProductUom, Long> {
 
+    List<ProductUom> findByIdInAndTenantId(java.util.Collection<Long> ids, Long tenantId);
+
     List<ProductUom> findByProductIdAndTenantIdOrderBySortOrderAsc(Long productId, Long tenantId);
 
     List<ProductUom> findByProductIdAndActiveTrueAndTenantIdOrderBySortOrderAsc(Long productId, Long tenantId);

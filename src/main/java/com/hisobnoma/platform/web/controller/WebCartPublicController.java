@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.web.controller;
 
+import com.hisobnoma.platform.common.util.ClientIpResolver;
 import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.web.dto.CartPriceRequest;
@@ -30,6 +31,7 @@ public class WebCartPublicController {
 
     private static final Long DEFAULT_TENANT_ID = 1L;
 
+    private final ClientIpResolver clientIpResolver;
     private final WebPricingService pricingService;
     private final WebCouponService couponService;
     private final CheckoutRateLimiter rateLimiter;
@@ -120,10 +122,6 @@ public class WebCartPublicController {
     }
 
     private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return clientIpResolver.resolve(request);
     }
 }

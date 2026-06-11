@@ -21,8 +21,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 /**
- * REST controller for expense records.
- * Supports both authenticated (JWT) and external (X-Tenant-ID header) access.
+ * REST controller for expense records. Requires authentication (enforced in
+ * SecurityConfig with a matcher more specific than the /api/v1/web/**
+ * whitelist); tenant comes from the staff JWT via TenantContext.
  */
 @Slf4j
 @RestController
