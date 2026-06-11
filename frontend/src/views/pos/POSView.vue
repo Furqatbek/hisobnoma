@@ -1,4 +1,11 @@
 <script setup>
+import PosCustomerModal from '@/components/pos/PosCustomerModal.vue'
+import PosQuickAddCustomerModal from '@/components/pos/PosQuickAddCustomerModal.vue'
+import PosUomModal from '@/components/pos/PosUomModal.vue'
+import PosDiscountModal from '@/components/pos/PosDiscountModal.vue'
+import PosOpenShiftModal from '@/components/pos/PosOpenShiftModal.vue'
+import PosDeliveryModal from '@/components/pos/PosDeliveryModal.vue'
+import PosCloseShiftModal from '@/components/pos/PosCloseShiftModal.vue'
 import { useToastStore } from '@/stores/toast'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -34,7 +41,6 @@ const loading = ref(false)
 // Customer list state (tap-based)
 const allCustomers = ref([])
 const customersLoading = ref(false)
-const customerFilter = ref('')
 
 // Terminal state
 const terminals = ref([])
@@ -94,7 +100,7 @@ const taxRate = ref(0) // 0% tax by default
 // Discount state
 const showDiscountModal = ref(false)
 const discountTarget = ref('transaction') // 'transaction' or item index
-const discountForm = reactive({
+const discountInitial = ref({
   type: 'percent', // 'percent' or 'amount'
   value: 0,
   reason: ''
@@ -113,11 +119,6 @@ const couponError = ref('')
 const couponValidating = ref(false)
 
 const showNewCustomerModal = ref(false)
-const newCustomer = reactive({
-  name: '',
-  phone: '',
-  email: ''
-})
 
 // Payment methods available
 const paymentMethods = computed(() => [
@@ -222,17 +223,6 @@ async function loadAllCustomers() {
     customersLoading.value = false
   }
 }
-
-const filteredCustomers = computed(() => {
-  const q = customerFilter.value.toLowerCase().trim()
-  if (!q) return allCustomers.value
-  return allCustomers.value.filter(c => {
-    const name = (c.name || '').toLowerCase()
-    const code = (c.code || '').toLowerCase()
-    const phone = (c.phone || c.mobilePhone || '').toLowerCase()
-    return name.includes(q) || code.includes(q) || phone.includes(q)
-  })
-})
 
 // UOM selection state
 const showUomModal = ref(false)
@@ -363,11 +353,9 @@ function selectCustomer(customer) {
   cart.customerId = customer.id
   cart.customerName = customer.name
   showCustomerModal.value = false
-  customerFilter.value = ''
 }
 
 function openCustomerModal() {
-  customerFilter.value = ''
   showCustomerModal.value = true
   loadAllCustomers()
 }
@@ -435,45 +423,41 @@ function clearDeliveryAddress() {
 // Discount functions
 function openTransactionDiscount() {
   discountTarget.value = 'transaction'
-  discountForm.type = transactionDiscount.type || 'percent'
-  discountForm.value = transactionDiscount.value || 0
-  discountForm.reason = transactionDiscount.reason || ''
+  discountInitial.value = {
+    type: transactionDiscount.type || 'percent',
+    value: transactionDiscount.value || 0,
+    reason: transactionDiscount.reason || ''
+  }
   showDiscountModal.value = true
 }
 
 function openItemDiscount(index) {
   const item = cart.items[index]
   discountTarget.value = index
-  const itemTotal = item.price * item.quantity
-  if (item.discountPercent) {
-    discountForm.type = 'percent'
-    discountForm.value = item.discountPercent
-  } else {
-    discountForm.type = 'amount'
-    discountForm.value = item.discount || 0
-  }
-  discountForm.reason = item.discountReason || ''
+  discountInitial.value = item.discountPercent
+    ? { type: 'percent', value: item.discountPercent, reason: item.discountReason || '' }
+    : { type: 'amount', value: item.discount || 0, reason: item.discountReason || '' }
   showDiscountModal.value = true
 }
 
-function applyDiscountFromModal() {
-  if (discountForm.value < 0) return
+function applyDiscountFromModal(form) {
+  if (form.value < 0) return
 
   if (discountTarget.value === 'transaction') {
-    transactionDiscount.type = discountForm.type
-    transactionDiscount.value = discountForm.value
-    transactionDiscount.reason = discountForm.reason
+    transactionDiscount.type = form.type
+    transactionDiscount.value = form.value
+    transactionDiscount.reason = form.reason
   } else {
     const item = cart.items[discountTarget.value]
     const itemTotal = item.price * item.quantity
-    if (discountForm.type === 'percent') {
-      item.discountPercent = discountForm.value
-      item.discount = itemTotal * (discountForm.value / 100)
+    if (form.type === 'percent') {
+      item.discountPercent = form.value
+      item.discount = itemTotal * (form.value / 100)
     } else {
       item.discountPercent = null
-      item.discount = Math.min(discountForm.value, itemTotal)
+      item.discount = Math.min(form.value, itemTotal)
     }
-    item.discountReason = discountForm.reason
+    item.discountReason = form.reason
   }
   showDiscountModal.value = false
 }
@@ -776,25 +760,22 @@ function formatCurrency(value) {
   }).format(value || 0)
 }
 
-async function createQuickCustomer() {
-  if (!newCustomer.name?.trim()) {
+async function createQuickCustomer(form) {
+  if (!form.name?.trim()) {
     toast.error(t('customers.form.nameRequired'))
     return
   }
 
   try {
     const response = await customersApi.create({
-      name: newCustomer.name,
-      phone: newCustomer.phone || null,
-      email: newCustomer.email || null
+      name: form.name,
+      phone: form.phone || null,
+      email: form.email || null
     })
     const customer = unwrapData(response)
     cart.customerId = customer.id
     cart.customerName = customer.name
     showNewCustomerModal.value = false
-    newCustomer.name = ''
-    newCustomer.phone = ''
-    newCustomer.email = ''
   } catch (error) {
     console.error('Failed to create customer:', error)
     toast.error(t('pos.failedToCreateCustomer') + ': ' + (error.response?.data?.message || error.message))
@@ -1503,453 +1484,75 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Customer Modal (tap-based list) -->
-    <div v-if="showCustomerModal" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showCustomerModal = false"></div>
-        <div class="relative bg-white rounded-xl max-w-md w-full p-5">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-lg font-bold text-gray-900">{{ $t('pos.selectCustomer') }}</h3>
-            <button @click="showCustomerModal = false" class="text-gray-400 hover:text-gray-600">
-              <XMarkIcon class="h-5 w-5" />
-            </button>
-          </div>
+    <!-- Customer selection / quick add -->
+    <PosCustomerModal
+      :show="showCustomerModal"
+      :customers="allCustomers"
+      :loading="customersLoading"
+      @close="showCustomerModal = false"
+      @select="selectCustomer"
+      @new-customer="showCustomerModal = false; showNewCustomerModal = true"
+    />
+    <PosQuickAddCustomerModal
+      :show="showNewCustomerModal"
+      @close="showNewCustomerModal = false"
+      @create="createQuickCustomer"
+    />
 
-          <!-- Filter -->
-          <div class="relative mb-3">
-            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              v-model="customerFilter"
-              type="text"
-              :placeholder="$t('pos.filterCustomerPlaceholder')"
-              class="input pl-9 text-sm"
-            />
-          </div>
+    <!-- Open Shift -->
+    <PosOpenShiftModal
+      :show="showOpenShiftModal"
+      :terminal-name="terminals.find(t => t.id === selectedTerminalId)?.name || terminals.find(t => t.id === selectedTerminalId)?.terminalCode || ''"
+      :loading="shiftLoading"
+      v-model:opening-cash="openingCash"
+      @close="showOpenShiftModal = false"
+      @open="openShift"
+    />
 
-          <!-- Customer List -->
-          <div v-if="customersLoading" class="flex items-center justify-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-          </div>
-          <div v-else-if="filteredCustomers.length === 0" class="text-center py-6 text-sm text-gray-400">
-            {{ $t('pos.noCustomersFound') }}
-          </div>
-          <div v-else class="max-h-72 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
-            <button
-              v-for="customer in filteredCustomers"
-              :key="customer.id"
-              @click="selectCustomer(customer)"
-              class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-primary-50 active:bg-primary-100 transition-colors"
-            >
-              <div class="h-9 w-9 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-                <span class="text-sm font-bold text-primary-700">{{ (customer.name || '?')[0] }}</span>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="font-medium text-sm text-gray-900 truncate">{{ customer.name }}</p>
-                <p class="text-xs text-gray-400">{{ customer.code }} {{ customer.phone ? '· ' + customer.phone : '' }}</p>
-              </div>
-              <div v-if="customer.currentBalance > 0" class="text-xs font-medium text-red-600 flex-shrink-0">
-                {{ formatCurrency(customer.currentBalance) }}
-              </div>
-            </button>
-          </div>
+    <!-- Close Shift -->
+    <PosCloseShiftModal
+      :show="showCloseShiftModal"
+      :shift="currentShift"
+      :unresolved="unresolvedTransactions"
+      :unresolved-loading="unresolvedLoading"
+      :loading="shiftLoading"
+      v-model:closing-cash="closingCash"
+      v-model:voiding-id="voidingTransactionId"
+      v-model:void-reason="shiftVoidReason"
+      @close="showCloseShiftModal = false; unresolvedTransactions.splice(0)"
+      @close-shift="closeShift"
+      @void="voidShiftTransaction"
+    />
 
-          <div class="flex gap-2 mt-4">
-            <button @click="showCustomerModal = false" class="btn-secondary flex-1">
-              {{ $t('cancel') }}
-            </button>
-            <button @click="showCustomerModal = false; showNewCustomerModal = true" class="btn-primary flex-1">
-              <PlusIcon class="h-4 w-4 mr-1" />
-              {{ $t('pos.quickAdd') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Delivery Address -->
+    <PosDeliveryModal
+      :show="showDeliveryModal"
+      :regions="deliveryRegions"
+      :villages="deliveryVillages"
+      v-model:region-id="selectedRegionId"
+      v-model:village-id="selectedVillageId"
+      @close="showDeliveryModal = false"
+      @confirm="confirmDeliveryAddress"
+      @region-change="onRegionChange"
+    />
 
-    <!-- Quick Add Customer Modal -->
-    <div v-if="showNewCustomerModal" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showNewCustomerModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">{{ $t('pos.quickAddCustomer') }}</h3>
+    <!-- UOM Selection -->
+    <PosUomModal
+      :show="showUomModal"
+      :product="pendingProduct"
+      :uoms="productUoms"
+      @close="showUomModal = false"
+      @select-base="selectBaseUom"
+      @select-uom="puom => addToCartWithUom(pendingProduct, puom)"
+    />
 
-          <div class="space-y-4">
-            <div>
-              <label class="label">{{ $t('name') }} *</label>
-              <input v-model="newCustomer.name" type="text" class="input" :placeholder="$t('name')" />
-            </div>
-            <div>
-              <label class="label">{{ $t('phone') }}</label>
-              <input v-model="newCustomer.phone" type="text" class="input" :placeholder="$t('phone')" />
-            </div>
-            <div>
-              <label class="label">{{ $t('customers.form.email') }}</label>
-              <input v-model="newCustomer.email" type="email" class="input" :placeholder="$t('customers.form.email')" />
-            </div>
-          </div>
-
-          <div class="flex space-x-3 mt-6">
-            <button @click="showNewCustomerModal = false" class="btn-secondary flex-1">
-              {{ $t('cancel') }}
-            </button>
-            <button @click="createQuickCustomer" class="btn-primary flex-1">
-              <PlusIcon class="h-5 w-5 mr-2" />
-              {{ $t('pos.createAndSelect') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Open Shift Modal -->
-    <div v-if="showOpenShiftModal" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showOpenShiftModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">{{ $t('pos.shifts.openShift') }}</h3>
-
-          <div class="space-y-4">
-            <div>
-              <label class="label">{{ $t('pos.shifts.terminal') }}</label>
-              <p class="text-sm text-gray-700 font-medium">
-                {{ terminals.find(t => t.id === selectedTerminalId)?.name || terminals.find(t => t.id === selectedTerminalId)?.terminalCode }}
-              </p>
-            </div>
-            <div>
-              <label class="label">{{ $t('pos.shifts.openingBalance') }}</label>
-              <input
-                v-model.number="openingCash"
-                type="number"
-                min="0"
-                step="1000"
-                class="input text-lg"
-                placeholder="0"
-              />
-            </div>
-          </div>
-
-          <div class="flex space-x-3 mt-6">
-            <button @click="showOpenShiftModal = false" class="btn-secondary flex-1">
-              {{ $t('cancel') }}
-            </button>
-            <button @click="openShift" :disabled="shiftLoading" class="btn-primary flex-1">
-              <ClockIcon class="h-5 w-5 mr-2" />
-              {{ shiftLoading ? $t('pos.processing') : $t('pos.shifts.openShift') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Close Shift Modal -->
-    <div v-if="showCloseShiftModal" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showCloseShiftModal = false"></div>
-        <div class="relative bg-white rounded-lg w-full p-6" :class="unresolvedTransactions.length ? 'max-w-2xl' : 'max-w-md'">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">{{ $t('pos.shifts.closeShift') }}</h3>
-
-          <div class="space-y-4">
-            <div class="p-3 bg-gray-50 rounded-lg space-y-2">
-              <div class="flex justify-between text-sm">
-                <span class="text-gray-500">{{ $t('pos.shifts.shiftNumber') }}:</span>
-                <span class="font-medium">{{ currentShift?.shiftNumber }}</span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span class="text-gray-500">{{ $t('pos.shifts.openingBalance') }}:</span>
-                <span class="font-medium">{{ formatCurrency(currentShift?.openingCash || 0) }}</span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span class="text-gray-500">{{ $t('pos.shifts.salesCount') }}:</span>
-                <span class="font-medium">{{ currentShift?.transactionCount || 0 }}</span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span class="text-gray-500">{{ $t('pos.shifts.totalSales') }}:</span>
-                <span class="font-medium">{{ formatCurrency(currentShift?.totalSales || 0) }}</span>
-              </div>
-            </div>
-
-            <!-- Unresolved Transactions Warning -->
-            <div v-if="unresolvedTransactions.length > 0" class="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
-              <div class="flex items-start gap-2">
-                <svg class="h-5 w-5 text-red-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                </svg>
-                <div>
-                  <p class="text-sm font-medium text-red-800">{{ $t('pos.shifts.unresolvedWarning', { count: unresolvedTransactions.length }) }}</p>
-                  <p class="text-xs text-red-600 mt-1">{{ $t('pos.shifts.unresolvedHint') }}</p>
-                </div>
-              </div>
-
-              <div class="space-y-2 max-h-60 overflow-y-auto">
-                <div
-                  v-for="tx in unresolvedTransactions"
-                  :key="tx.id"
-                  class="bg-white rounded-lg border border-red-100 p-3"
-                >
-                  <div class="flex items-center justify-between gap-4">
-                    <div class="min-w-0">
-                      <p class="text-sm font-medium text-gray-900 truncate">
-                        {{ tx.transactionNumber || `#${tx.id}` }}
-                        <span class="inline-block ml-2 px-1.5 py-0.5 rounded text-xs font-medium"
-                          :class="tx.status === 'HELD' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'">
-                          {{ tx.status === 'HELD' ? $t('pos.transactions.held') : $t('pos.transactions.pending') }}
-                        </span>
-                      </p>
-                      <p class="text-xs text-gray-500 mt-0.5">
-                        {{ tx.customerName || $t('pos.walkInCustomer') }} &middot; {{ formatCurrency(tx.totalAmount) }} {{ $t('sum') }}
-                      </p>
-                    </div>
-                    <button
-                      v-if="voidingTransactionId !== tx.id"
-                      @click="voidingTransactionId = tx.id; shiftVoidReason = ''"
-                      class="shrink-0 text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 font-medium"
-                    >
-                      {{ $t('pos.transactions.voidTransaction') }}
-                    </button>
-                    <div v-if="voidingTransactionId === tx.id" class="animate-spin h-4 w-4 border-2 border-red-500 border-t-transparent rounded-full shrink-0" v-show="shiftVoidReason === '__loading__'"></div>
-                  </div>
-                  <!-- Inline void reason input -->
-                  <div v-if="voidingTransactionId === tx.id && shiftVoidReason !== '__loading__'" class="mt-2 flex gap-2">
-                    <input
-                      v-model="shiftVoidReason"
-                      type="text"
-                      class="input text-sm flex-1"
-                      :placeholder="$t('pos.transactions.voidReasonPlaceholder')"
-                      @keyup.enter="shiftVoidReason.trim() && voidShiftTransaction(tx)"
-                    />
-                    <button
-                      @click="voidShiftTransaction(tx)"
-                      :disabled="!shiftVoidReason.trim()"
-                      class="px-3 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300"
-                    >
-                      {{ $t('confirm') }}
-                    </button>
-                    <button
-                      @click="voidingTransactionId = null"
-                      class="px-2 py-1 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-100"
-                    >
-                      {{ $t('cancel') }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div v-if="unresolvedLoading" class="flex items-center justify-center py-4">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-            </div>
-
-            <div>
-              <label class="label">{{ $t('pos.shifts.closingBalance') }}</label>
-              <input
-                v-model.number="closingCash"
-                type="number"
-                min="0"
-                step="1000"
-                class="input text-lg"
-                placeholder="0"
-              />
-            </div>
-          </div>
-
-          <div class="flex space-x-3 mt-6">
-            <button @click="showCloseShiftModal = false; unresolvedTransactions.splice(0)" class="btn-secondary flex-1">
-              {{ $t('cancel') }}
-            </button>
-            <button @click="closeShift" :disabled="shiftLoading" class="btn-primary flex-1 !bg-red-600 hover:!bg-red-700">
-              <ArrowRightStartOnRectangleIcon class="h-5 w-5 mr-2" />
-              {{ shiftLoading ? $t('pos.processing') : $t('pos.shifts.closeShift') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delivery Address Modal -->
-    <div v-if="showDeliveryModal" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showDeliveryModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">
-            <MapPinIcon class="h-5 w-5 inline mr-2 text-orange-500" />
-            {{ $t('pos.deliveryAddress') }}
-          </h3>
-
-          <div class="space-y-4">
-            <!-- Region -->
-            <div>
-              <label class="label">{{ $t('customers.form.region') }} *</label>
-              <select v-model="selectedRegionId" @change="onRegionChange" class="input">
-                <option :value="null">{{ $t('customers.form.selectRegion') }}</option>
-                <option v-for="region in deliveryRegions" :key="region.id" :value="region.id">
-                  {{ region.name }}
-                </option>
-              </select>
-            </div>
-
-            <!-- Village -->
-            <div>
-              <label class="label">{{ $t('customers.form.village') }}</label>
-              <select v-model="selectedVillageId" class="input" :disabled="!selectedRegionId">
-                <option :value="null">{{ $t('customers.form.selectVillage') }}</option>
-                <option v-for="village in deliveryVillages" :key="village.id" :value="village.id">
-                  {{ village.name }}
-                </option>
-              </select>
-              <p v-if="selectedRegionId && deliveryVillages.length === 0" class="text-xs text-gray-400 mt-1">
-                {{ $t('pos.noVillagesFound') }}
-              </p>
-            </div>
-          </div>
-
-          <div class="flex space-x-3 mt-6">
-            <button @click="showDeliveryModal = false" class="btn-secondary flex-1">
-              {{ $t('cancel') }}
-            </button>
-            <button
-              @click="confirmDeliveryAddress"
-              :disabled="!selectedRegionId"
-              class="btn-primary flex-1"
-            >
-              <CheckIcon class="h-5 w-5 mr-2" />
-              {{ $t('pos.confirm') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- UOM Selection Modal -->
-    <div v-if="showUomModal && pendingProduct" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showUomModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-sm w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-1">{{ $t('pos.selectUom') }}</h3>
-          <p class="text-sm text-gray-500 mb-4">{{ pendingProduct.name }}</p>
-
-          <div class="space-y-2">
-            <!-- Base UOM option -->
-            <button
-              @click="selectBaseUom()"
-              class="w-full p-3 text-left rounded-lg border-2 border-gray-200 hover:border-primary-500 hover:bg-primary-50 transition-colors"
-            >
-              <div class="flex justify-between items-center">
-                <div>
-                  <p class="font-medium text-gray-900">{{ $t('pos.baseUnit') }}</p>
-                  <p class="text-xs text-gray-500">{{ $t('pos.baseUnitDescription') }}</p>
-                </div>
-                <span class="font-bold text-primary-600">{{ formatCurrency(pendingProduct.sellingPrice) }}</span>
-              </div>
-            </button>
-
-            <!-- Alternate UOM options -->
-            <button
-              v-for="puom in productUoms"
-              :key="puom.id"
-              @click="addToCartWithUom(pendingProduct, puom)"
-              class="w-full p-3 text-left rounded-lg border-2 transition-colors"
-              :class="puom.defaultSale ? 'border-primary-300 bg-primary-50 hover:border-primary-500' : 'border-gray-200 hover:border-primary-500 hover:bg-primary-50'"
-            >
-              <div class="flex justify-between items-center">
-                <div>
-                  <p class="font-medium text-gray-900">
-                    {{ puom.uomName }}
-                    <span v-if="puom.defaultSale" class="text-xs text-primary-600">({{ $t('pos.standard') }})</span>
-                  </p>
-                  <p class="text-xs text-gray-500">1 {{ puom.uomCode }} = {{ puom.conversionFactor }} {{ $t('pos.baseUnitSuffix') }}</p>
-                </div>
-                <span class="font-bold text-primary-600">{{ formatCurrency(puom.effectiveSellingPrice) }}</span>
-              </div>
-            </button>
-          </div>
-
-          <button @click="showUomModal = false" class="btn-secondary w-full mt-4">
-            {{ $t('cancel') }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Discount Modal -->
-    <div v-if="showDiscountModal" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showDiscountModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-sm w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">
-            {{ discountTarget === 'transaction' ? $t('pos.discountTransaction') : $t('pos.discountItem') }}
-          </h3>
-
-          <div class="space-y-4">
-            <!-- Discount type toggle -->
-            <div class="flex rounded-lg border overflow-hidden">
-              <button
-                @click="discountForm.type = 'percent'"
-                :class="['flex-1 py-2 text-sm font-medium transition-colors', discountForm.type === 'percent' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50']"
-              >
-                {{ $t('pos.percent') }} (%)
-              </button>
-              <button
-                @click="discountForm.type = 'amount'"
-                :class="['flex-1 py-2 text-sm font-medium transition-colors', discountForm.type === 'amount' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50']"
-              >
-                {{ $t('amount') }}
-              </button>
-            </div>
-
-            <!-- Discount value -->
-            <div>
-              <label class="label">
-                {{ discountForm.type === 'percent' ? $t('pos.percent') + ' (%)' : $t('amount') }}
-              </label>
-              <input
-                v-model.number="discountForm.value"
-                type="number"
-                step="0.01"
-                min="0"
-                :max="discountForm.type === 'percent' ? 100 : undefined"
-                class="input text-lg text-center"
-                autofocus
-              />
-            </div>
-
-            <!-- Quick percent buttons -->
-            <div v-if="discountForm.type === 'percent'" class="flex gap-2">
-              <button
-                v-for="pct in [5, 10, 15, 20, 25]"
-                :key="pct"
-                @click="discountForm.value = pct"
-                :class="['flex-1 py-2 text-sm border rounded-lg transition-colors', discountForm.value === pct ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 hover:bg-gray-50']"
-              >
-                {{ pct }}%
-              </button>
-            </div>
-
-            <!-- Reason -->
-            <div>
-              <label class="label">{{ $t('pos.discountReason') }}</label>
-              <input
-                v-model="discountForm.reason"
-                type="text"
-                class="input"
-                :placeholder="$t('pos.discountReason')"
-              />
-            </div>
-          </div>
-
-          <div class="flex space-x-3 mt-6">
-            <button @click="showDiscountModal = false" class="btn-secondary flex-1">
-              {{ $t('cancel') }}
-            </button>
-            <button
-              @click="applyDiscountFromModal"
-              :disabled="discountForm.value <= 0"
-              class="btn-primary flex-1"
-            >
-              {{ $t('pos.apply') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Discount -->
+    <PosDiscountModal
+      :show="showDiscountModal"
+      :for-transaction="discountTarget === 'transaction'"
+      :initial="discountInitial"
+      @close="showDiscountModal = false"
+      @apply="applyDiscountFromModal"
+    />
   </div>
 </template>
