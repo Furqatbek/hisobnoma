@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { authApi } from '@/services/api'
+import { authApi, unwrapData } from '@/services/api'
 import { getRefreshToken, setTokens } from '@/services/tokenStorage'
 import {
   UserCircleIcon,
@@ -65,7 +65,7 @@ async function fetchProfile() {
   loading.value = true
   try {
     const response = await authApi.me()
-    profile.value = response.data.data || response.data
+    profile.value = unwrapData(response)
   } catch (error) {
     console.error('Failed to fetch profile:', error)
   } finally {
@@ -198,7 +198,7 @@ async function handleRefreshSession() {
       return
     }
     const response = await authApi.refresh(refreshToken)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     setTokens(data.accessToken, data.refreshToken)
     refreshSuccess.value = true
     setTimeout(() => { refreshSuccess.value = false }, 3000)

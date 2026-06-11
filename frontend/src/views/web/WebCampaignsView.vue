@@ -2,7 +2,7 @@
 import { formatPrice } from '@/utils/format'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { webCampaignsApi, smsApi, promotionsApi } from '@/services/api'
+import { promotionsApi, smsApi, unwrapData, unwrapList, webCampaignsApi } from '@/services/api'
 import { MegaphoneIcon, PlusIcon, PaperAirplaneIcon, EyeIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -49,10 +49,10 @@ async function fetchAll() {
       smsApi.getTemplates(),
       promotionsApi.getActive()
     ])
-    campaigns.value = campRes.data.content || []
-    const tmplData = tmplRes.data.data || tmplRes.data
+    campaigns.value = unwrapList(campRes)
+    const tmplData = unwrapData(tmplRes)
     templates.value = (Array.isArray(tmplData) ? tmplData : tmplData.content || []).filter(t => t.active)
-    const promoData = promoRes.data.data || promoRes.data
+    const promoData = unwrapData(promoRes)
     promotions.value = Array.isArray(promoData) ? promoData : promoData.content || []
   } catch (e) {
     if (e.response?.status !== 403) error.value = e.response?.data?.message || t('errorOccurred')
@@ -127,7 +127,7 @@ async function openPreview(c) {
   showPreview.value = true
   try {
     const res = await webCampaignsApi.preview(c.id)
-    previewData.value = res.data.data || res.data
+    previewData.value = unwrapData(res)
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')
     showPreview.value = false

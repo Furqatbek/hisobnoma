@@ -3,7 +3,7 @@ import { useToastStore } from '@/stores/toast'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { expensesApi, suppliersApi, productsApi } from '@/services/api'
+import { expensesApi, productsApi, suppliersApi, unwrapData } from '@/services/api'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, BanknotesIcon } from '@heroicons/vue/24/outline'
 
 const toast = useToastStore()
@@ -73,7 +73,7 @@ async function fetchExpense() {
   loading.value = true
   try {
     const response = await expensesApi.getById(route.params.id)
-    const expense = response.data.data || response.data
+    const expense = unwrapData(response)
     form.value = {
       vendorId: expense.vendorId || '',
       vendorInvoiceNumber: expense.vendorInvoiceNumber || '',
@@ -108,7 +108,7 @@ async function fetchExpense() {
 async function fetchVendors() {
   try {
     const response = await suppliersApi.getAll({ size: 100 })
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     vendors.value = data.content || data || []
   } catch (error) {
     console.error('Yetkazib beruvchilarni yuklashda xatolik:', error)
@@ -118,7 +118,7 @@ async function fetchVendors() {
 async function fetchProducts() {
   try {
     const response = await productsApi.getAll({ size: 100 })
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     products.value = data.content || data || []
   } catch (error) {
     console.error('Mahsulotlarni yuklashda xatolik:', error)

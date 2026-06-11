@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { authApi } from '@/services/api'
+import { authApi, unwrapList } from '@/services/api'
 import { ArrowLeftIcon, LockClosedIcon, KeyIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -44,7 +44,7 @@ onMounted(async () => {
   loadingUsers.value = true
   try {
     const res = await authApi.getUsersList()
-    users.value = res.data.data || res.data || []
+    users.value = unwrapList(res)
   } catch (error) {
     console.error('Failed to load users:', error)
     // Fall back to password login if user list fails

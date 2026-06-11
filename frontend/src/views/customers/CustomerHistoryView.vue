@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { customersApi, arInvoicesApi, arPaymentsApi, arReportsApi, posApi } from '@/services/api'
+import { arInvoicesApi, arPaymentsApi, arReportsApi, customersApi, posApi, unwrapData } from '@/services/api'
 import {
   MagnifyingGlassIcon,
   UserIcon,
@@ -67,7 +67,7 @@ function formatDate(dateStr) {
 async function fetchCustomers() {
   try {
     const res = await customersApi.getAll({ page: 0, size: 1000 })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     customers.value = data.content || data || []
   } catch (e) {
     console.error('Failed to load customers:', e)
@@ -105,25 +105,25 @@ async function loadCustomerData() {
     ])
 
     if (balanceRes) {
-      customerBalance.value = balanceRes.data.data || balanceRes.data
+      customerBalance.value = unwrapData(balanceRes)
     }
 
     if (invoiceRes) {
-      const iData = invoiceRes.data.data || invoiceRes.data
+      const iData = unwrapData(invoiceRes)
       invoices.value = iData.content || iData || []
       invoiceTotalPages.value = iData.totalPages || 0
       invoicePage.value = 0
     }
 
     if (paymentRes) {
-      const pData = paymentRes.data.data || paymentRes.data
+      const pData = unwrapData(paymentRes)
       payments.value = pData.content || pData || []
       paymentTotalPages.value = pData.totalPages || 0
       paymentPage.value = 0
     }
 
     if (txRes) {
-      const tData = txRes.data.data || txRes.data
+      const tData = unwrapData(txRes)
       transactions.value = tData.content || tData || []
       txTotalPages.value = tData.totalPages || 0
       txPage.value = 0
@@ -139,7 +139,7 @@ async function loadCustomerData() {
 async function loadInvoicePage(page) {
   try {
     const res = await arInvoicesApi.getByCustomer(selectedCustomerId.value, { page, size: 10, sort: 'invoiceDate,desc' })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     invoices.value = data.content || data || []
     invoiceTotalPages.value = data.totalPages || 0
     invoicePage.value = page
@@ -151,7 +151,7 @@ async function loadInvoicePage(page) {
 async function loadPaymentPage(page) {
   try {
     const res = await arPaymentsApi.getByCustomer(selectedCustomerId.value, { page, size: 10, sort: 'createdAt,desc' })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     payments.value = data.content || data || []
     paymentTotalPages.value = data.totalPages || 0
     paymentPage.value = page
@@ -163,7 +163,7 @@ async function loadPaymentPage(page) {
 async function loadTxPage(page) {
   try {
     const res = await posApi.getByCustomer(selectedCustomerId.value, { page, size: 10, sort: 'createdAt,desc' })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     transactions.value = data.content || data || []
     txTotalPages.value = data.totalPages || 0
     txPage.value = page
@@ -231,7 +231,7 @@ onMounted(async () => {
       // try loading directly
       try {
         const res = await customersApi.getById(route.params.id)
-        customer.value = res.data.data || res.data
+        customer.value = unwrapData(res)
         selectedCustomerId.value = customer.value.id
         await loadCustomerData()
       } catch (e) {

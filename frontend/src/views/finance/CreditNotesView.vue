@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { ref, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { creditNotesApi, customersApi } from '@/services/api'
+import { creditNotesApi, customersApi, unwrapData, unwrapList } from '@/services/api'
 import { PlusIcon, EyeIcon, XMarkIcon, CheckIcon, NoSymbolIcon, PencilIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 
 const toast = useToastStore()
@@ -22,7 +22,7 @@ async function fetchEntries() {
     const res = activeTab.value !== 'ALL'
       ? await creditNotesApi.getByStatus(activeTab.value, params)
       : await creditNotesApi.getAll(params)
-    entries.value = res.data.content || []
+    entries.value = unwrapList(res)
     pagination.value.totalPages = res.data.page?.totalPages || 0
     pagination.value.totalElements = res.data.page?.totalElements || 0
   } catch (e) { console.error(e) }
@@ -61,7 +61,7 @@ async function onCustomerFilter() {
     try {
       const params = { page: pagination.value.page, size: pagination.value.size }
       const res = await creditNotesApi.getByCustomer(customerFilter.value, params)
-      entries.value = res.data.content || []
+      entries.value = unwrapList(res)
       pagination.value.totalPages = res.data.page?.totalPages || 0
       pagination.value.totalElements = res.data.page?.totalElements || 0
     } catch (e) { console.error(e) }
@@ -73,7 +73,7 @@ async function onCustomerFilter() {
     } catch (e) { console.error(e) }
     try {
       const notesRes = await creditNotesApi.getAvailableByCustomer(customerFilter.value)
-      const data = notesRes.data.data || notesRes.data
+      const data = unwrapData(notesRes)
       availableCreditNotes.value = data.content || data || []
     } catch (e) { console.error(e) }
   } else {
@@ -87,7 +87,7 @@ async function searchByNumber() {
   if (!numberSearch.value.trim()) return
   try {
     const res = await creditNotesApi.getByNumber(numberSearch.value.trim())
-    numberSearchResult.value = res.data.data || res.data
+    numberSearchResult.value = unwrapData(res)
   } catch (e) {
     numberSearchError.value = t('finance.creditNotes.numberNotFound')
   }
@@ -97,7 +97,7 @@ async function openEdit(entry) {
   editingId.value = entry.id
   try {
     const res = await creditNotesApi.getById(entry.id)
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     editForm.customerId = data.customerId || null
     editForm.reason = data.reason || ''
     editForm.lines = data.lines?.length ? data.lines.map(l => ({ description: l.description || '', quantity: l.quantity || 1, unitPrice: l.unitPrice || 0 })) : [{ description: '', quantity: 1, unitPrice: 0 }]

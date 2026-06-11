@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { promotionsApi } from '@/services/api'
+import { promotionsApi, unwrapData } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   XMarkIcon, TagIcon, EyeIcon
@@ -98,7 +98,7 @@ async function fetchPromotions(page = 0) {
     } else {
       res = await promotionsApi.getAll({ page, size: pageSize, sort: 'priority,asc' })
     }
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       promotions.value = data
       totalPages.value = 1
@@ -138,7 +138,7 @@ async function lookupByCode() {
   codeLookupResult.value = null
   try {
     const res = await promotionsApi.getByCode(codeLookup.value.trim())
-    codeLookupResult.value = res.data.data || res.data
+    codeLookupResult.value = unwrapData(res)
   } catch (e) {
     if (e.response?.status === 404) {
       codeLookupError.value = t('pos.promotions.codeNotFound')
@@ -250,7 +250,7 @@ async function toggleDetail(promotion) {
   detailLoading.value = true
   try {
     const res = await promotionsApi.getById(promotion.id)
-    expandedDetail.value = res.data.data || res.data
+    expandedDetail.value = unwrapData(res)
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')
     expandedPromotion.value = null
@@ -274,7 +274,7 @@ async function addCondition() {
     successMsg.value = t('pos.promotions.conditionAdded')
     showConditionForm.value = false
     const res = await promotionsApi.getById(expandedPromotion.value)
-    expandedDetail.value = res.data.data || res.data
+    expandedDetail.value = unwrapData(res)
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')
   }
@@ -286,7 +286,7 @@ async function removeCondition(conditionId) {
     await promotionsApi.removeCondition(expandedPromotion.value, conditionId)
     successMsg.value = t('pos.promotions.conditionRemoved')
     const res = await promotionsApi.getById(expandedPromotion.value)
-    expandedDetail.value = res.data.data || res.data
+    expandedDetail.value = unwrapData(res)
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')
   }
@@ -307,7 +307,7 @@ async function addAction() {
     successMsg.value = t('pos.promotions.actionAdded')
     showActionForm.value = false
     const res = await promotionsApi.getById(expandedPromotion.value)
-    expandedDetail.value = res.data.data || res.data
+    expandedDetail.value = unwrapData(res)
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')
   }
@@ -319,7 +319,7 @@ async function removeAction(actionId) {
     await promotionsApi.removeAction(expandedPromotion.value, actionId)
     successMsg.value = t('pos.promotions.actionRemoved')
     const res = await promotionsApi.getById(expandedPromotion.value)
-    expandedDetail.value = res.data.data || res.data
+    expandedDetail.value = unwrapData(res)
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')
   }

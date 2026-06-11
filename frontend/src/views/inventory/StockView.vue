@@ -2,7 +2,7 @@
 import { formatQty } from '@/utils/format'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { stockApi, warehousesApi } from '@/services/api'
+import { stockApi, unwrapData, unwrapList, warehousesApi } from '@/services/api'
 import { MagnifyingGlassIcon, ExclamationTriangleIcon, BuildingStorefrontIcon, PencilSquareIcon, XMarkIcon, ClockIcon, ArrowUpIcon, ArrowDownIcon, ChevronDownIcon, ChevronUpIcon, CurrencyDollarIcon, ArrowsRightLeftIcon, CheckCircleIcon, XCircleIcon, InboxArrowDownIcon, ArrowRightStartOnRectangleIcon, ShieldCheckIcon, FunnelIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -82,7 +82,7 @@ async function fetchStock() {
     } else {
       response = await stockApi.getAll({ page: page.value, size: pageSize })
     }
-    stockItems.value = response.data.content || []
+    stockItems.value = unwrapList(response)
     totalElements.value = response.data.totalElements || 0
   } catch (error) {
     console.error('Failed to fetch stock:', error)
@@ -270,7 +270,7 @@ async function selectProduct(item) {
       stockApi.getByProduct(item.productId),
       stockApi.getAvailable(item.productId)
     ])
-    productDetail.value = detailRes.data.data || detailRes.data || []
+    productDetail.value = unwrapList(detailRes)
     productAvailable.value = availRes.data.data ?? availRes.data ?? null
   } catch (error) {
     console.error('Failed to fetch product detail:', error)
@@ -288,7 +288,7 @@ async function fetchProductLocationStock() {
   }
   try {
     const response = await stockApi.getByProductAndLocation(selectedProduct.value.productId, detailLocationId.value)
-    productLocationStock.value = response.data.data || response.data || null
+    productLocationStock.value = unwrapData(response) || null
   } catch (error) {
     console.error('Failed to fetch product location stock:', error)
     productLocationStock.value = null
@@ -304,7 +304,7 @@ async function fetchLowStock() {
   lowStockLoading.value = true
   try {
     const response = await stockApi.getLowStock()
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     lowStockItems.value = data.content || data || []
   } catch (error) {
     console.error('Failed to fetch low stock:', error)
@@ -318,7 +318,7 @@ async function fetchValuation() {
   valuationLoading.value = true
   try {
     const response = await stockApi.getValuation()
-    valuationData.value = response.data.data || response.data || null
+    valuationData.value = unwrapData(response) || null
   } catch (error) {
     console.error('Failed to fetch valuation:', error)
   } finally {
@@ -388,7 +388,7 @@ async function fetchHistory() {
         sort: 'movementDate,desc'
       })
     }
-    historyMovements.value = response.data.content || []
+    historyMovements.value = unwrapList(response)
     historyTotalPages.value = response.data.totalPages || 0
   } catch (error) {
     console.error('Failed to fetch history:', error)

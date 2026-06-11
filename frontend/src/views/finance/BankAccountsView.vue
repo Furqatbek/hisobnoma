@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { bankAccountsApi } from '@/services/api'
+import { bankAccountsApi, unwrapData } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   StarIcon, XMarkIcon, BuildingLibraryIcon, FunnelIcon
@@ -67,7 +67,7 @@ async function fetchAccounts(page = 0) {
     } else {
       res = await bankAccountsApi.getAll({ page, size: pageSize, sort: 'accountCode,asc' })
     }
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       accounts.value = data
       totalPages.value = 1
@@ -89,7 +89,7 @@ async function fetchAccounts(page = 0) {
 async function fetchDefaultAccount() {
   try {
     const res = await bankAccountsApi.getDefault()
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (data) {
       defaultAccountId.value = data.id
     }
@@ -115,7 +115,7 @@ async function lookupByCode() {
   codeLookupResult.value = null
   try {
     const res = await bankAccountsApi.getByCode(codeLookup.value.trim())
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (data) {
       codeLookupResult.value = data
     } else {
@@ -148,7 +148,7 @@ async function openModal(account = null) {
   if (account) {
     try {
       const res = await bankAccountsApi.getById(account.id)
-      const freshData = res.data.data || res.data
+      const freshData = unwrapData(res)
       editingAccount.value = freshData
       form.accountCode = freshData.accountCode || ''
       form.accountName = freshData.accountName || ''

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { shiftsApi } from '@/services/api'
+import { shiftsApi, unwrapData } from '@/services/api'
 import { EyeIcon, MagnifyingGlassIcon, XMarkIcon, UserCircleIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -37,7 +37,7 @@ async function fetchShifts() {
       size: pagination.value.size
     }
     const response = await shiftsApi.getAll(params)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     shifts.value = data.content || []
     pagination.value.totalPages = data.page?.totalPages || data.totalPages || 0
     pagination.value.totalElements = data.page?.totalElements || data.totalElements || 0
@@ -54,7 +54,7 @@ async function viewShift(shift) {
   detailLoading.value = true
   try {
     const res = await shiftsApi.getById(shift.id)
-    selectedShift.value = res.data.data || res.data
+    selectedShift.value = unwrapData(res)
   } catch (error) {
     console.error('Смена тафсилотларини юклашда хатолик:', error)
   } finally {
@@ -71,7 +71,7 @@ async function fetchCurrentShift() {
   currentShiftLoading.value = true
   try {
     const res = await shiftsApi.getCurrentForUser()
-    currentShift.value = res.data.data || res.data
+    currentShift.value = unwrapData(res)
   } catch (error) {
     if (error.response?.status !== 404) {
       console.error('Жорий сменани юклашда хатолик:', error)
@@ -85,7 +85,7 @@ async function fetchCurrentShift() {
 async function fetchOpenShifts() {
   try {
     const res = await shiftsApi.getOpen()
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     openShifts.value = Array.isArray(data) ? data : data.content || []
   } catch (error) {
     console.error('Очиқ сменаларни юклашда хатолик:', error)

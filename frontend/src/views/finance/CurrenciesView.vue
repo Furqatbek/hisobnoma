@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { currenciesApi, exchangeRatesApi } from '@/services/api'
+import { currenciesApi, exchangeRatesApi, unwrapData, unwrapList } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, StarIcon, XMarkIcon, ArrowsRightLeftIcon,
   ListBulletIcon, MagnifyingGlassIcon
@@ -58,7 +58,7 @@ const pageSize = 20
 function clearMessages() { error.value = ''; successMsg.value = '' }
 
 function extractPage(res) {
-  const data = res.data.data || res.data
+  const data = unwrapData(res)
   if (Array.isArray(data)) return { items: data, total: 1, page: 0 }
   return { items: data.content || [], total: data.page?.totalPages || data.totalPages || 1, page: data.page?.number ?? data.number ?? 0 }
 }
@@ -76,7 +76,7 @@ async function fetchCurrencies(page = 0) {
 async function fetchActiveCurrencies() {
   try {
     const res = await currenciesApi.getActive()
-    activeCurrencies.value = res.data.data || res.data || []
+    activeCurrencies.value = unwrapList(res)
   } catch (error) {
     console.error('Failed to fetch active currencies:', error)
   }
@@ -121,7 +121,7 @@ async function loadAllCurrencies() {
   loading.value = true; error.value = ''
   try {
     const res = await currenciesApi.getAllList()
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     currencies.value = Array.isArray(data) ? data : data.content || data || []
     currTotalPages.value = 1; currPage.value = 0
     successMsg.value = t('finance.currencies.allLoaded')
@@ -133,7 +133,7 @@ async function loadAllCurrencies() {
 async function fetchBaseCurrency() {
   try {
     const res = await currenciesApi.getBase()
-    baseCurrency.value = res.data.data || res.data
+    baseCurrency.value = unwrapData(res)
   } catch { baseCurrency.value = null }
 }
 
@@ -142,7 +142,7 @@ async function openCurrModalById(c) {
   clearMessages()
   try {
     const res = await currenciesApi.getById(c.id)
-    const fresh = res.data.data || res.data
+    const fresh = unwrapData(res)
     openCurrModal(fresh)
   } catch (e) { error.value = e.response?.data?.message || t('failedToLoad'); openCurrModal(c) }
 }
@@ -153,7 +153,7 @@ async function lookupByCode() {
   codeLookupError.value = ''; codeLookupResult.value = null; clearMessages()
   try {
     const res = await currenciesApi.getByCode(codeLookupInput.value.trim())
-    codeLookupResult.value = res.data.data || res.data
+    codeLookupResult.value = unwrapData(res)
   } catch (e) {
     codeLookupError.value = t('finance.currencies.codeNotFound')
   }
@@ -229,7 +229,7 @@ async function loadAllRates() {
   loading.value = true; error.value = ''
   try {
     const res = await exchangeRatesApi.getAllList()
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     rates.value = Array.isArray(data) ? data : data.content || data || []
     rateTotalPages.value = 1; ratePage.value = 0
     successMsg.value = t('finance.exchangeRates.allLoaded')
@@ -242,7 +242,7 @@ async function openRateModalById(r) {
   clearMessages()
   try {
     const res = await exchangeRatesApi.getById(r.id)
-    const fresh = res.data.data || res.data
+    const fresh = unwrapData(res)
     openRateModal(fresh)
   } catch (e) { error.value = e.response?.data?.message || t('failedToLoad'); openRateModal(r) }
 }

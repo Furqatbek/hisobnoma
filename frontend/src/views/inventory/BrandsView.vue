@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { brandsApi } from '@/services/api'
+import { brandsApi, unwrapData } from '@/services/api'
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -44,14 +44,14 @@ async function fetchBrands() {
     if (searchQuery.value.trim()) {
       // Search overrides other filters
       response = await brandsApi.search(searchQuery.value)
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       brands.value = Array.isArray(data) ? data : data.content || []
       pagination.value.totalPages = 0
       pagination.value.totalElements = brands.value.length
     } else if (activeOnly.value) {
       // Active-only filter (returns a list, not paginated)
       response = await brandsApi.getActive()
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       brands.value = Array.isArray(data) ? data : data.content || []
       pagination.value.totalPages = 0
       pagination.value.totalElements = brands.value.length
@@ -61,7 +61,7 @@ async function fetchBrands() {
         page: pagination.value.page,
         size: pagination.value.size
       })
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       brands.value = data.content || data || []
       pagination.value.totalPages = data.page?.totalPages || data.totalPages || 0
       pagination.value.totalElements = data.page?.totalElements || data.totalElements || 0
@@ -102,7 +102,7 @@ async function openModal(brand = null) {
     // Fetch fresh data via getById
     try {
       const response = await brandsApi.getById(brand.id)
-      const fresh = response.data.data || response.data
+      const fresh = unwrapData(response)
       editingBrand.value = fresh
       form.name = fresh.name || ''
       form.code = fresh.code || ''

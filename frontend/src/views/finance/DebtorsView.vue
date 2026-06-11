@@ -3,7 +3,7 @@ import { formatDate } from '@/utils/format'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { arReportsApi, arInvoicesApi, arPaymentsApi } from '@/services/api'
+import { arInvoicesApi, arPaymentsApi, arReportsApi, unwrapData, unwrapList } from '@/services/api'
 import { useReceiptStore } from '@/stores/receipt'
 import { MagnifyingGlassIcon, ExclamationTriangleIcon, PrinterIcon, XMarkIcon, EyeIcon, PlusIcon, BanknotesIcon, PencilIcon, CheckIcon } from '@heroicons/vue/24/outline'
 
@@ -86,8 +86,8 @@ async function fetchData() {
       arReportsApi.getCustomerBalanceReport(),
       arReportsApi.getAgingReport()
     ])
-    balanceReport.value = balanceRes.data.data || balanceRes.data
-    agingReport.value = agingRes.data.data || agingRes.data
+    balanceReport.value = unwrapData(balanceRes)
+    agingReport.value = unwrapData(agingRes)
   } catch (error) {
     console.error('Ma\'lumotlarni yuklashda xatolik:', error)
   } finally {
@@ -153,7 +153,7 @@ async function viewCustomer(customer) {
   loadingOutstanding.value = true
   try {
     const res = await arInvoicesApi.getUnpaidByCustomer(customer.customerId)
-    unpaidInvoices.value = res.data.data || res.data || []
+    unpaidInvoices.value = unwrapList(res)
   } catch (error) {
     console.error('Fakturalarni yuklashda xatolik:', error)
   } finally {
@@ -161,7 +161,7 @@ async function viewCustomer(customer) {
   }
   try {
     const res = await arPaymentsApi.getByCustomer(customer.customerId, { page: 0, size: 50, sort: 'createdAt,desc' })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     customerPayments.value = data.content || data || []
   } catch (error) {
     console.error('To\'lovlarni yuklashda xatolik:', error)
@@ -256,8 +256,8 @@ async function submitPayment() {
       arInvoicesApi.getUnpaidByCustomer(selectedCustomer.value.customerId),
       arPaymentsApi.getByCustomer(selectedCustomer.value.customerId, { page: 0, size: 50, sort: 'createdAt,desc' })
     ])
-    unpaidInvoices.value = invoiceRes.data.data || invoiceRes.data || []
-    const payData = paymentRes.data.data || paymentRes.data
+    unpaidInvoices.value = unwrapList(invoiceRes)
+    const payData = unwrapData(paymentRes)
     customerPayments.value = payData.content || payData || []
     await fetchData()
   } catch (e) {

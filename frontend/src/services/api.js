@@ -79,11 +79,14 @@ export default api
 // `res.data?.data?.content || res.data?.data || res.data?.content || []`.
 // ---------------------------------------------------------------------------
 
-/** Payload of an ApiResponse envelope: unwrapData(res) -> res.data.data */
+/**
+ * Payload of an ApiResponse envelope, tolerating non-enveloped bodies —
+ * the exact equivalent of the old `res.data.data || res.data` idiom.
+ */
 export function unwrapData(response, fallback = null) {
   const body = response?.data
-  if (body && typeof body === 'object' && 'data' in body) return body.data ?? fallback
-  return body ?? fallback
+  if (body == null) return fallback
+  return (typeof body === 'object' && body.data) || body
 }
 
 /** List payload, tolerating both envelope shapes; always returns an array. */

@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { terminalsApi, warehousesApi } from '@/services/api'
+import { terminalsApi, unwrapData, unwrapList, warehousesApi } from '@/services/api'
 import {
   PlusIcon,
   PencilSquareIcon,
@@ -49,7 +49,7 @@ async function fetchTerminals() {
     }
 
     const response = await terminalsApi.getAll(params)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     let items = data.content || data || []
     // Backend returns boolean `active`, map to status string for frontend
     items = items.map(t => ({
@@ -73,7 +73,7 @@ async function fetchTerminals() {
 async function fetchLocations() {
   try {
     const response = await warehousesApi.getAll()
-    locations.value = response.data.data || response.data || []
+    locations.value = unwrapList(response)
   } catch (error) {
     console.error('Joylashuvlarni yuklashda xatolik:', error)
   }
@@ -118,7 +118,7 @@ async function lookupByCode() {
   codeLookupResult.value = null
   try {
     const response = await terminalsApi.getByCode(codeLookup.value.trim())
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     codeLookupResult.value = data
   } catch (error) {
     codeLookupError.value = error.response?.status === 404
@@ -143,7 +143,7 @@ async function filterByLocation() {
   loading.value = true
   try {
     const response = await terminalsApi.getByLocation(locationFilter.value)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     let items = data.content || data || []
     items = items.map(t => ({
       ...t,

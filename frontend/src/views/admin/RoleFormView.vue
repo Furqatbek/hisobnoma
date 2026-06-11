@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { rolesApi } from '@/services/api'
+import { rolesApi, unwrapData, unwrapList } from '@/services/api'
 import { ArrowLeftIcon, ShieldCheckIcon, CheckIcon, KeyIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -83,7 +83,7 @@ async function fetchRole() {
   loading.value = true
   try {
     const response = await rolesApi.getById(route.params.id)
-    const role = response.data.data || response.data
+    const role = unwrapData(response)
     form.value = {
       name: role.name || '',
       code: role.code || '',
@@ -103,7 +103,7 @@ async function fetchRole() {
 async function fetchPermissions() {
   try {
     const response = await rolesApi.getAllPermissions()
-    allPermissions.value = response.data.data || response.data || []
+    allPermissions.value = unwrapList(response)
   } catch (error) {
     console.error('Ruxsatlarni yuklashda xatolik:', error)
   }

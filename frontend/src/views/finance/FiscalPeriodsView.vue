@@ -2,7 +2,7 @@
 import { formatDate } from '@/utils/format'
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { fiscalApi } from '@/services/api'
+import { fiscalApi, unwrapData } from '@/services/api'
 import {
   PlusIcon, PencilIcon, StarIcon, LockClosedIcon, LockOpenIcon,
   XMarkIcon, ChevronDownIcon, ChevronRightIcon, MagnifyingGlassIcon,
@@ -78,7 +78,7 @@ async function fetchYears(page = 0) {
     } else {
       res = await fiscalApi.getAllYears()
     }
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       years.value = data
       totalPages.value = 1
@@ -103,7 +103,7 @@ function togglePaginated() {
 async function fetchCurrentYear() {
   try {
     const res = await fiscalApi.getCurrentYear()
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     currentYearId.value = data?.id || null
   } catch {
     currentYearId.value = null
@@ -186,7 +186,7 @@ async function toggleExpand(y) {
   periodsLoading.value[id] = true
   try {
     const res = await fiscalApi.getPeriods(id)
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     periodsData.value[id] = Array.isArray(data) ? data : (data.content || [])
   } catch (e) {
     error.value = e.response?.data?.message || t('failedToLoad')
@@ -215,7 +215,7 @@ async function doClosePeriod() {
       periodsLoading.value[yearId] = true
       try {
         const res = await fiscalApi.getPeriods(yearId)
-        const data = res.data.data || res.data
+        const data = unwrapData(res)
         periodsData.value[yearId] = Array.isArray(data) ? data : (data.content || [])
       } finally {
         periodsLoading.value[yearId] = false
@@ -247,7 +247,7 @@ async function doReopenPeriod() {
       periodsLoading.value[yearId] = true
       try {
         const res = await fiscalApi.getPeriods(yearId)
-        const data = res.data.data || res.data
+        const data = unwrapData(res)
         periodsData.value[yearId] = Array.isArray(data) ? data : (data.content || [])
       } finally {
         periodsLoading.value[yearId] = false
@@ -264,7 +264,7 @@ async function fetchOpenPeriods() {
   openPeriodsLoading.value = true
   try {
     const res = await fiscalApi.getOpenPeriods()
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     openPeriods.value = Array.isArray(data) ? data : (data.content || [])
   } catch (e) {
     if (e.response?.status !== 403) error.value = e.response?.data?.message || t('failedToLoad')
@@ -286,12 +286,12 @@ async function lookupByDate() {
       fiscalApi.getPeriodByDate(dateLookupInput.value)
     ])
     if (yearRes.status === 'fulfilled') {
-      dateLookupYearResult.value = yearRes.value.data.data || yearRes.value.data
+      dateLookupYearResult.value = unwrapData(yearRes.value)
     } else {
       dateLookupError.value = t('finance.fiscal.noYearForDate')
     }
     if (periodRes.status === 'fulfilled') {
-      dateLookupPeriodResult.value = periodRes.value.data.data || periodRes.value.data
+      dateLookupPeriodResult.value = unwrapData(periodRes.value)
     }
   } catch (e) {
     dateLookupError.value = e.response?.data?.message || t('errorOccurred')
@@ -311,14 +311,14 @@ async function toggleExpandWithDetails(y) {
   periodsLoading.value[id] = true
   try {
     const res = await fiscalApi.getYearDetails(id)
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     yearDetailsCache.value[id] = data
     periodsData.value[id] = Array.isArray(data.periods) ? data.periods : (Array.isArray(data) ? data : [])
   } catch (e) {
     // Fallback to getPeriods if getYearDetails fails
     try {
       const res = await fiscalApi.getPeriods(id)
-      const data = res.data.data || res.data
+      const data = unwrapData(res)
       periodsData.value[id] = Array.isArray(data) ? data : (data.content || [])
     } catch (e2) {
       error.value = e2.response?.data?.message || t('failedToLoad')
@@ -334,7 +334,7 @@ async function openYearModalFresh(y = null) {
   if (y) {
     try {
       const res = await fiscalApi.getYearById(y.id)
-      const fresh = res.data.data || res.data
+      const fresh = unwrapData(res)
       editingYear.value = fresh
       yearForm.year = fresh.year
       yearForm.name = fresh.name || ''
@@ -365,7 +365,7 @@ async function openPeriodDetail(period) {
   showPeriodDetailModal.value = true
   try {
     const res = await fiscalApi.getPeriodById(period.id)
-    periodDetail.value = res.data.data || res.data
+    periodDetail.value = unwrapData(res)
   } catch (e) {
     // Fallback to existing data
     periodDetail.value = period

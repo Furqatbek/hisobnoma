@@ -3,7 +3,7 @@ import { formatCurrency, formatDate } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
-import { receivingApi, expensesApi } from '@/services/api'
+import { expensesApi, receivingApi, unwrapData } from '@/services/api'
 import {
   PlusIcon, EyeIcon, MagnifyingGlassIcon, XMarkIcon,
   CheckCircleIcon, XCircleIcon, ArrowUpIcon, ArrowDownIcon,
@@ -56,7 +56,7 @@ async function fetchOrders() {
       response = await receivingApi.getAll(params)
     }
 
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     orders.value = data.content || data || []
     pagination.value.totalPages = data.page?.totalPages || data.totalPages || 0
     pagination.value.totalElements = data.page?.totalElements || data.totalElements || 0
@@ -76,7 +76,7 @@ async function viewOrder(order) {
 
   try {
     const response = await receivingApi.getById(order.id)
-    selectedOrder.value = response.data.data || response.data
+    selectedOrder.value = unwrapData(response)
   } catch (error) {
     console.error('Failed to load receiving order:', error)
   } finally {

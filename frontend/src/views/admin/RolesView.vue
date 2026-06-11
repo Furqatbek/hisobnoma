@@ -3,7 +3,7 @@ import { useToastStore } from '@/stores/toast'
 import { formatDate } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { rolesApi } from '@/services/api'
+import { rolesApi, unwrapData } from '@/services/api'
 import {
   PlusIcon,
   PencilSquareIcon,
@@ -44,7 +44,7 @@ async function fetchRoles() {
     }
 
     const response = await rolesApi.getAll(params)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     roles.value = data.content || data || []
     pagination.value.totalPages = data.page?.totalPages || data.totalPages || 1
     pagination.value.totalElements = data.page?.totalElements || data.totalElements || roles.value.length
@@ -76,7 +76,7 @@ async function fetchSystemRoles() {
   systemRolesLoading.value = true
   try {
     const response = await rolesApi.getSystemRoles()
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     systemRoles.value = data.content || data || []
   } catch (error) {
     console.error('Tizim rollarini yuklashda xatolik:', error)

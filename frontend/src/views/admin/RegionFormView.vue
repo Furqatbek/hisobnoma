@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { deliveryRegionsApi } from '@/services/api'
+import { deliveryRegionsApi, unwrapData } from '@/services/api'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -31,7 +31,7 @@ async function fetchRegion() {
   loading.value = true
   try {
     const response = await deliveryRegionsApi.getById(route.params.id)
-    const region = response.data.data || response.data
+    const region = unwrapData(response)
     Object.assign(form, {
       name: region.name || '',
       code: region.code || '',

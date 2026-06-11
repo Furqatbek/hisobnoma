@@ -2,7 +2,7 @@
 import { formatDate } from '@/utils/format'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { couponsApi, promotionsApi } from '@/services/api'
+import { couponsApi, promotionsApi, unwrapData } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   XMarkIcon, TicketIcon, ArrowPathIcon, ChevronDownIcon,
@@ -77,7 +77,7 @@ async function fetchCoupons(page = 0) {
     } else {
       res = await couponsApi.getAll({ page, size: pageSize, sort: 'id,desc' })
     }
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       coupons.value = data
       totalPages.value = 1
@@ -99,7 +99,7 @@ async function fetchCoupons(page = 0) {
 async function fetchPromotionsList() {
   try {
     const res = await promotionsApi.getAll({ size: 100 })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     promotionsList.value = data.content || (Array.isArray(data) ? data : [])
   } catch (e) {
     promotionsList.value = []
@@ -115,7 +115,7 @@ async function filterByPromotion() {
   error.value = ''
   try {
     const res = await couponsApi.getByPromotion(selectedPromotionFilter.value, { page: 0, size: pageSize, sort: 'id,desc' })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       coupons.value = data
       totalPages.value = 1
@@ -154,7 +154,7 @@ async function handleSearch() {
   error.value = ''
   try {
     const res = await couponsApi.getByCode(search.value.trim())
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     coupons.value = data ? [data] : []
     totalPages.value = 1
     currentPage.value = 0
@@ -296,8 +296,8 @@ async function toggleRedemptions(coupon) {
       couponsApi.getById(coupon.id),
       couponsApi.getRedemptions(coupon.id)
     ])
-    couponDetail.value = detailRes.data.data || detailRes.data
-    const data = redemptionsRes.data.data || redemptionsRes.data
+    couponDetail.value = unwrapData(detailRes)
+    const data = unwrapData(redemptionsRes)
     redemptions.value = Array.isArray(data) ? data : data.content || []
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')

@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { formatCurrency } from '@/utils/format'
 import { ref, onMounted } from 'vue'
-import { employeesApi } from '@/services/api'
+import { employeesApi, unwrapList } from '@/services/api'
 import { PlusIcon, PencilSquareIcon, MagnifyingGlassIcon, NoSymbolIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -17,7 +17,7 @@ async function loadEmployees() {
   loading.value = true
   try {
     const response = await employeesApi.getAll({ size: 100 })
-    employees.value = response.data.content || response.data.data?.content || []
+    employees.value = response.data.content || response.unwrapList(data)
   } catch (error) {
     console.error('Failed to load employees:', error)
   } finally {
@@ -33,7 +33,7 @@ async function handleSearch() {
   loading.value = true
   try {
     const response = await employeesApi.search(searchQuery.value, { size: 100 })
-    employees.value = response.data.content || response.data.data?.content || []
+    employees.value = response.data.content || response.unwrapList(data)
   } catch (error) {
     console.error('Failed to search:', error)
   } finally {

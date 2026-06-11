@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { deliveryVillagesApi, deliveryRegionsApi } from '@/services/api'
+import { deliveryRegionsApi, deliveryVillagesApi, unwrapData, unwrapList } from '@/services/api'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -31,7 +31,7 @@ const form = reactive({
 async function fetchRegions() {
   try {
     const response = await deliveryRegionsApi.getActive()
-    regions.value = response.data.data || response.data || []
+    regions.value = unwrapList(response)
   } catch (error) {
     console.error('Failed to fetch regions:', error)
   }
@@ -41,7 +41,7 @@ async function fetchVillage() {
   loading.value = true
   try {
     const response = await deliveryVillagesApi.getById(route.params.id)
-    const village = response.data.data || response.data
+    const village = unwrapData(response)
     Object.assign(form, {
       regionId: village.regionId,
       name: village.name || '',

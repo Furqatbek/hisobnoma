@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { employeesApi, departmentsApi, positionsApi, usersApi, unwrapList } from '@/services/api'
+import { departmentsApi, employeesApi, positionsApi, unwrapData, unwrapList, usersApi } from '@/services/api'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
@@ -45,13 +45,13 @@ onMounted(async () => {
       positionsApi.getAll(),
       usersApi.getAll({ size: 200 })
     ])
-    departments.value = deptRes.data.data || deptRes.data || []
-    positions.value = posRes.data.data || posRes.data || []
+    departments.value = unwrapList(deptRes)
+    positions.value = unwrapList(posRes)
     users.value = unwrapList(usersRes)
 
     if (isEdit.value) {
       const response = await employeesApi.getById(route.params.id)
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       Object.assign(form, data)
     }
   } catch (error) {

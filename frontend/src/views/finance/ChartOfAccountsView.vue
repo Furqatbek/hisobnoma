@@ -3,7 +3,7 @@ import { useToastStore } from '@/stores/toast'
 import { formatCurrency } from '@/utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { accountsApi } from '@/services/api'
+import { accountsApi, unwrapData, unwrapList } from '@/services/api'
 import {
   PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon,
   MagnifyingGlassIcon, ChevronRightIcon, ChevronDownIcon,
@@ -69,26 +69,26 @@ async function fetchAccounts() {
   try {
     if (search.value.trim()) {
       const res = await accountsApi.search(search.value)
-      const data = res.data.data || res.data
+      const data = unwrapData(res)
       allAccounts.value = data.content || data || []
       rootAccounts.value = allAccounts.value
     } else if (quickFilter.value === 'ACTIVE') {
       const res = await accountsApi.getActive()
-      allAccounts.value = res.data.data || res.data || []
+      allAccounts.value = unwrapList(res)
       rootAccounts.value = buildTree(allAccounts.value)
     } else if (quickFilter.value === 'POSTABLE') {
       const res = await accountsApi.getPostable()
-      allAccounts.value = res.data.data || res.data || []
+      allAccounts.value = unwrapList(res)
       rootAccounts.value = buildTree(allAccounts.value)
     } else if (activeType.value) {
       const res = await accountsApi.getByType(activeType.value)
-      allAccounts.value = res.data.data || res.data || []
+      allAccounts.value = unwrapList(res)
       rootAccounts.value = buildTree(allAccounts.value)
     } else {
       const res = await accountsApi.getRoots()
-      rootAccounts.value = res.data.data || res.data || []
+      rootAccounts.value = unwrapList(res)
       const allRes = await accountsApi.getAllList()
-      allAccounts.value = allRes.data.data || allRes.data || []
+      allAccounts.value = unwrapList(allRes)
     }
   } catch (error) {
     console.error('Failed to fetch accounts:', error)
@@ -115,19 +115,19 @@ async function toggleExpand(account) {
       try {
         // Try getTree first for full subtree, fall back to getChildren
         const res = await accountsApi.getTree(id)
-        const treeData = res.data.data || res.data
+        const treeData = unwrapData(res)
         if (treeData && treeData.childAccounts) {
           childrenCache.value[id] = treeData.childAccounts
         } else if (Array.isArray(treeData)) {
           childrenCache.value[id] = treeData
         } else {
           const childRes = await accountsApi.getChildren(id)
-          childrenCache.value[id] = childRes.data.data || childRes.data || []
+          childrenCache.value[id] = unwrapList(childRes)
         }
       } catch (e) {
         try {
           const childRes = await accountsApi.getChildren(id)
-          childrenCache.value[id] = childRes.data.data || childRes.data || []
+          childrenCache.value[id] = unwrapList(childRes)
         } catch (e2) {
           console.error('Failed to load children:', e2)
           childrenCache.value[id] = []
@@ -181,7 +181,7 @@ async function lookupByCode() {
   codeLookupResult.value = null
   try {
     const res = await accountsApi.getByCode(codeLookup.value.trim())
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (data) {
       codeLookupResult.value = data
     } else {
@@ -208,7 +208,7 @@ async function openEditModal(account) {
   modalErrors.value = {}
   try {
     const res = await accountsApi.getById(account.id)
-    const freshData = res.data.data || res.data
+    const freshData = unwrapData(res)
     modalForm.value = {
       id: freshData.id,
       code: freshData.code,
@@ -336,7 +336,7 @@ async function submitImport() {
   importing.value = true
   try {
     const res = await accountsApi.importCsv(importFile.value)
-    importResult.value = res.data.data || res.data
+    importResult.value = unwrapData(res)
     childrenCache.value = {}
     fetchAccounts()
   } catch (error) {

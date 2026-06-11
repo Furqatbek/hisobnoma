@@ -3,7 +3,7 @@ import { useToastStore } from '@/stores/toast'
 import { formatDate } from '@/utils/format'
 import { ref, onMounted, reactive, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { journalEntriesApi, accountsApi } from '@/services/api'
+import { accountsApi, journalEntriesApi, unwrapData, unwrapList } from '@/services/api'
 import {
   PlusIcon, MagnifyingGlassIcon, EyeIcon, TrashIcon,
   CheckIcon, ArrowUturnLeftIcon, XMarkIcon, CalendarDaysIcon
@@ -32,7 +32,7 @@ async function fetchEntries() {
     let response
     if (dateRangeActive.value && dateRangeStart.value && dateRangeEnd.value) {
       response = await journalEntriesApi.getByDateRange(dateRangeStart.value, dateRangeEnd.value)
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       entries.value = data.content || data || []
       pagination.value.totalPages = data.page?.totalPages || 0
       pagination.value.totalElements = data.page?.totalElements || Array.isArray(entries.value) ? entries.value.length : 0
@@ -41,7 +41,7 @@ async function fetchEntries() {
         page: pagination.value.page,
         size: pagination.value.size
       })
-      entries.value = response.data.content || []
+      entries.value = unwrapList(response)
       pagination.value.totalPages = response.data.page?.totalPages || 0
       pagination.value.totalElements = response.data.page?.totalElements || 0
     } else if (activeTab.value !== 'ALL') {
@@ -49,7 +49,7 @@ async function fetchEntries() {
         page: pagination.value.page,
         size: pagination.value.size
       })
-      entries.value = response.data.content || []
+      entries.value = unwrapList(response)
       pagination.value.totalPages = response.data.page?.totalPages || 0
       pagination.value.totalElements = response.data.page?.totalElements || 0
     } else {
@@ -57,7 +57,7 @@ async function fetchEntries() {
         page: pagination.value.page,
         size: pagination.value.size
       })
-      entries.value = response.data.content || []
+      entries.value = unwrapList(response)
       pagination.value.totalPages = response.data.page?.totalPages || 0
       pagination.value.totalElements = response.data.page?.totalElements || 0
     }
@@ -116,8 +116,8 @@ async function openDetail(entry) {
       journalEntriesApi.getById(entry.id),
       journalEntriesApi.getWithLines(entry.id)
     ])
-    const baseData = baseRes.data.data || baseRes.data
-    const linesData = linesRes.data.data || linesRes.data
+    const baseData = unwrapData(baseRes)
+    const linesData = unwrapData(linesRes)
     detailEntry.value = { ...baseData, lines: linesData.lines || baseData.lines || [] }
   } catch (error) {
     console.error('Failed to load journal entry:', error)
@@ -206,13 +206,13 @@ async function openCreateModal() {
     try {
       // Use getPostable() to only show accounts that allow direct posting
       const res = await accountsApi.getPostable()
-      const data = res.data.data || res.data
+      const data = unwrapData(res)
       accounts.value = data.content || data || []
     } catch (e) {
       // Fallback to getAll if getPostable fails
       try {
         const res = await accountsApi.getAll()
-        accounts.value = res.data.content || res.data || []
+        accounts.value = unwrapList(res)
       } catch (error) {
         console.error('Failed to load accounts:', error)
       }

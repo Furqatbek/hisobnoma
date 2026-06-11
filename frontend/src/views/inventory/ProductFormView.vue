@@ -3,7 +3,7 @@ import { useToastStore } from '@/stores/toast'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { productsApi, categoriesApi, brandsApi, uomApi, suppliersApi } from '@/services/api'
+import { brandsApi, categoriesApi, productsApi, suppliersApi, unwrapData, unwrapList, uomApi } from '@/services/api'
 import { ArrowLeftIcon, PhotoIcon, TrashIcon, StarIcon, PlusIcon, PencilIcon, XMarkIcon, ScaleIcon, SparklesIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/vue/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/vue/24/solid'
 
@@ -75,7 +75,7 @@ async function loadImages() {
   if (!isEdit.value) return
   try {
     const res = await productsApi.getImages(route.params.id)
-    productImages.value = res.data.data || res.data || []
+    productImages.value = unwrapList(res)
   } catch (error) {
     console.error('Failed to load images:', error)
   }
@@ -85,7 +85,7 @@ async function loadProductVendors() {
   if (!isEdit.value) return
   try {
     const res = await productsApi.getVendors(route.params.id)
-    productVendors.value = res.data.data || res.data || []
+    productVendors.value = unwrapList(res)
   } catch (error) {
     console.error('Failed to load product vendors:', error)
   }
@@ -228,7 +228,7 @@ async function loadProductAltUoms() {
   if (!isEdit.value) return
   try {
     const res = await productsApi.getUoms(route.params.id)
-    productAltUoms.value = res.data.data || res.data || []
+    productAltUoms.value = unwrapList(res)
   } catch (error) {
     console.error('Failed to load product UOMs:', error)
   }
@@ -453,15 +453,15 @@ onMounted(async () => {
     const [categoriesRes, brandsRes, uomsRes, vendorsRes] = await Promise.all(promises)
 
     // Backend returns a list directly (not paginated)
-    categories.value = categoriesRes.data.data || categoriesRes.data || []
-    brands.value = brandsRes.data.data || brandsRes.data || []
-    uoms.value = uomsRes.data.data || uomsRes.data || []
-    const vendorData = vendorsRes.data.data || vendorsRes.data || []
+    categories.value = unwrapList(categoriesRes)
+    brands.value = unwrapList(brandsRes)
+    uoms.value = unwrapList(uomsRes)
+    const vendorData = unwrapList(vendorsRes)
     vendors.value = Array.isArray(vendorData) ? vendorData : vendorData.content || []
 
     if (isEdit.value) {
       const productRes = await productsApi.getById(route.params.id)
-      const productData = productRes.data.data || productRes.data
+      const productData = unwrapData(productRes)
       Object.assign(form, productData)
       form.categoryId = productData.category?.id || productData.categoryId
       form.brandId = productData.brand?.id || productData.brandId
@@ -496,7 +496,7 @@ async function handleSubmit() {
       router.push('/inventory/products')
     } else {
       const res = await productsApi.create(form)
-      const created = res.data.data || res.data
+      const created = unwrapData(res)
       // Redirect to edit page so user can immediately add vendors/images
       router.replace(`/inventory/products/${created.id}/edit`)
     }

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { bankTransactionsApi, bankReconciliationsApi, bankAccountsApi } from '@/services/api'
+import { bankAccountsApi, bankReconciliationsApi, bankTransactionsApi, unwrapData } from '@/services/api'
 import {
   PlusIcon, CheckIcon, XMarkIcon, NoSymbolIcon,
   ArrowsRightLeftIcon, MagnifyingGlassIcon, BanknotesIcon,
@@ -139,7 +139,7 @@ function accountName(id) {
 async function fetchBankAccounts() {
   try {
     const res = await bankAccountsApi.getAllList()
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     bankAccounts.value = Array.isArray(data) ? data : data.content || []
   } catch (e) {
     if (e.response?.status !== 403) {
@@ -163,7 +163,7 @@ async function fetchTransactions(page = 0) {
     } else {
       res = await bankTransactionsApi.getAll({ page, size: txPageSize, sort: 'transactionDate,desc' })
     }
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       transactions.value = data
       txTotalPages.value = 1
@@ -276,7 +276,7 @@ async function fetchCashFlow() {
     const res = await bankTransactionsApi.getCashFlow(
       cashFlowAccountId.value, cashFlowStartDate.value, cashFlowEndDate.value
     )
-    cashFlowData.value = res.data.data || res.data
+    cashFlowData.value = unwrapData(res)
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')
   } finally {
@@ -295,7 +295,7 @@ async function fetchReconciliations(page = 0) {
     } else {
       res = await bankReconciliationsApi.getAll({ page, size: reconPageSize, sort: 'statementDate,desc' })
     }
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       reconciliations.value = data
       reconTotalPages.value = 1
@@ -387,7 +387,7 @@ async function viewTransactionDetail(tx) {
   txDetailData.value = null
   try {
     const res = await bankTransactionsApi.getById(tx.id)
-    txDetailData.value = res.data.data || res.data
+    txDetailData.value = unwrapData(res)
   } catch (e) {
     error.value = e.response?.data?.message || t('failedToLoad')
     showTxDetailModal.value = false
@@ -403,7 +403,7 @@ async function viewReconDetail(recon) {
   reconDetailData.value = null
   try {
     const res = await bankReconciliationsApi.getById(recon.id)
-    reconDetailData.value = res.data.data || res.data
+    reconDetailData.value = unwrapData(res)
   } catch (e) {
     error.value = e.response?.data?.message || t('failedToLoad')
     showReconDetailModal.value = false
@@ -421,7 +421,7 @@ async function fetchUnreconciled() {
   error.value = ''
   try {
     const res = await bankReconciliationsApi.getUnreconciled(unreconciledAccountId.value, unreconciledEndDate.value)
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     unreconciledTxs.value = Array.isArray(data) ? data : data.content || data || []
     showUnreconciledPanel.value = true
   } catch (e) {

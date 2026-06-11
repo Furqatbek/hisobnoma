@@ -1,7 +1,7 @@
 <script setup>
 import { useToastStore } from '@/stores/toast'
 import { ref, computed, onMounted } from 'vue'
-import { tenantSettingsApi } from '@/services/api'
+import { tenantSettingsApi, unwrapData, unwrapList } from '@/services/api'
 import {
   PlusIcon, PencilSquareIcon, XMarkIcon,
   EyeSlashIcon, CheckIcon, ArrowPathIcon
@@ -52,9 +52,9 @@ async function fetchAll() {
       tenantSettingsApi.getCategories(),
       tenantSettingsApi.getMap()
     ])
-    allSettings.value = settingsRes.data.data || settingsRes.data || []
-    categories.value = catsRes.data.data || catsRes.data || []
-    settingsMap.value = mapRes.data.data || mapRes.data || {}
+    allSettings.value = unwrapList(settingsRes)
+    categories.value = unwrapList(catsRes)
+    settingsMap.value = unwrapData(mapRes) || {}
     if (!activeCategory.value && categories.value.length > 0) {
       activeCategory.value = categories.value[0]
     }
@@ -73,7 +73,7 @@ async function fetchByCategory(category) {
   loading.value = true
   try {
     const response = await tenantSettingsApi.getByCategory(category)
-    const data = response.data.data || response.data || []
+    const data = unwrapList(response)
     allSettings.value = allSettings.value.filter(s => s.category !== category).concat(data)
     activeCategory.value = category
   } catch (error) {

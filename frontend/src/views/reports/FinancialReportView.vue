@@ -2,7 +2,7 @@
 import { formatCurrency } from '@/utils/format'
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { reportsApi } from '@/services/api'
+import { reportsApi, unwrapData } from '@/services/api'
 import { ArrowDownTrayIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, CheckCircleIcon, ExclamationTriangleIcon, ClockIcon, DocumentTextIcon, CalendarDaysIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -35,10 +35,10 @@ async function fetchReport() {
       reportsApi.getARAgingReport({ startDate: filters.startDate, endDate: filters.endDate }).catch(() => null),
       reportsApi.getAPAgingReport({ startDate: filters.startDate, endDate: filters.endDate }).catch(() => null)
     ])
-    trialBalance.value = tbRes.data.data || tbRes.data
-    incomeStatement.value = isRes.data.data || isRes.data
-    arAging.value = arRes?.data?.data || arRes?.data || null
-    apAging.value = apRes?.data?.data || apRes?.data || null
+    trialBalance.value = unwrapData(tbRes)
+    incomeStatement.value = unwrapData(isRes)
+    arAging.value = unwrapData(arRes)
+    apAging.value = unwrapData(apRes)
   } catch (error) {
     console.error('Failed to fetch report:', error)
   } finally {
@@ -115,7 +115,7 @@ async function fetchDefinitions() {
   loadingDefinitions.value = true
   try {
     const response = await reportsApi.getDefinitions({})
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     definitions.value = data.content || data || []
   } catch (error) {
     console.error('Failed to fetch definitions:', error)
@@ -128,7 +128,7 @@ async function fetchSchedules() {
   loadingSchedules.value = true
   try {
     const response = await reportsApi.getSchedules({})
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     schedules.value = data.content || data || []
   } catch (error) {
     console.error('Failed to fetch schedules:', error)
@@ -141,7 +141,7 @@ async function fetchExecutions() {
   loadingExecutions.value = true
   try {
     const response = await reportsApi.getExecutions({})
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     executions.value = data.content || data || []
   } catch (error) {
     console.error('Failed to fetch executions:', error)

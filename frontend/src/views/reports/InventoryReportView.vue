@@ -2,7 +2,7 @@
 import { formatCurrency } from '@/utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { reportsApi } from '@/services/api'
+import { reportsApi, unwrapData } from '@/services/api'
 import { ArrowDownTrayIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -19,7 +19,7 @@ async function fetchReport() {
   loading.value = true
   try {
     const response = await reportsApi.getStockOnHand({})
-    report.value = response.data.data || response.data
+    report.value = unwrapData(response)
   } catch (error) {
     console.error('Failed to fetch report:', error)
   } finally {
@@ -56,7 +56,7 @@ async function fetchValuation() {
   loadingValuation.value = true
   try {
     const response = await reportsApi.getInventoryValuation({})
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     valuation.value = data
   } catch (error) {
     console.error('Failed to fetch valuation:', error)

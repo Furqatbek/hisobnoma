@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { formatCurrency } from '@/utils/format'
 import { ref, reactive, onMounted } from 'vue'
-import { positionsApi, departmentsApi } from '@/services/api'
+import { departmentsApi, positionsApi, unwrapData, unwrapList } from '@/services/api'
 import { PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -25,8 +25,8 @@ async function loadData() {
       positionsApi.getAll(),
       departmentsApi.getAll()
     ])
-    positions.value = posRes.data.data || posRes.data || []
-    departments.value = deptRes.data.data || deptRes.data || []
+    positions.value = unwrapList(posRes)
+    departments.value = unwrapList(deptRes)
   } catch (error) {
     console.error('Failed to load:', error)
   } finally {
@@ -46,7 +46,7 @@ async function openEdit(pos) {
   showModal.value = true
   try {
     const response = await positionsApi.getById(pos.id)
-    const freshData = response.data.data || response.data
+    const freshData = unwrapData(response)
     Object.assign(form, freshData)
   } catch (error) {
     console.error('Failed to fetch position details:', error)

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { dashboardApi } from '@/services/api'
+import { dashboardApi, unwrapData } from '@/services/api'
 import { useI18n } from 'vue-i18n'
 import {
   CurrencyDollarIcon,
@@ -43,7 +43,7 @@ const stats = ref({
 onMounted(async () => {
   try {
     const response = await dashboardApi.getStats()
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     stats.value = data
   } catch (error) {
     console.error('Failed to load dashboard stats:', error)
@@ -79,7 +79,7 @@ async function loadSalesChart(period) {
   salesChartLoading.value = true
   try {
     const response = await dashboardApi.getSalesChart(period)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     salesChartData.value = Array.isArray(data) ? data : (data.items || data.chart || [])
   } catch (error) {
     console.error('Failed to load sales chart:', error)

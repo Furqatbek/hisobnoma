@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, reactive, watch } from 'vue'
-import { auditLogsApi, usersApi } from '@/services/api'
+import { auditLogsApi, unwrapData, unwrapList, usersApi } from '@/services/api'
 import {
   MagnifyingGlassIcon, FunnelIcon, ExclamationTriangleIcon,
   ChartBarIcon, UserGroupIcon, ShieldExclamationIcon, CalendarDaysIcon,
@@ -60,7 +60,7 @@ async function fetchLogs() {
       response = await auditLogsApi.getAll(pageParams)
     }
 
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     logs.value = data.content || data.items || []
     pagination.value.totalPages = data.totalPages || data.page?.totalPages || 0
     pagination.value.totalElements = data.totalElements || data.page?.totalElements || 0
@@ -74,7 +74,7 @@ async function fetchLogs() {
 async function fetchUsers() {
   try {
     const response = await usersApi.getAll({ size: 1000 })
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     usersList.value = data.content || data || []
   } catch (error) {
     console.error('Failed to fetch users:', error)
@@ -90,9 +90,9 @@ async function fetchStats() {
       auditLogsApi.getActiveUsers(statsDays.value),
       auditLogsApi.getFailedLogins(24)
     ])
-    actionStats.value = (actionRes.data.data || []).map(r => ({ action: r[0], count: r[1] }))
-    moduleStats.value = (moduleRes.data.data || []).map(r => ({ module: r[0], count: r[1] }))
-    activeUsers.value = (usersRes.data.data || []).map(r => ({ userId: r[0], username: r[1], count: r[2] }))
+    actionStats.value = (unwrapList(actionRes)).map(r => ({ action: r[0], count: r[1] }))
+    moduleStats.value = (unwrapList(moduleRes)).map(r => ({ module: r[0], count: r[1] }))
+    activeUsers.value = (unwrapList(usersRes)).map(r => ({ userId: r[0], username: r[1], count: r[2] }))
     failedLoginCount.value = failedRes.data.data?.count ?? 0
   } catch (error) {
     console.error('Failed to fetch stats:', error)

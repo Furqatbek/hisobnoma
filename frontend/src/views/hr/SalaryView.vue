@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { formatCurrency } from '@/utils/format'
 import { ref, reactive, onMounted, computed } from 'vue'
-import { salaryApi, advancesApi, employeesApi } from '@/services/api'
+import { advancesApi, employeesApi, salaryApi, unwrapData, unwrapList } from '@/services/api'
 import { PlusIcon, CheckCircleIcon, XCircleIcon, XMarkIcon, BanknotesIcon, EyeIcon, ListBulletIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -98,9 +98,9 @@ async function loadData() {
       advancesApi.getByPeriod(filterYear.value, filterMonth.value).catch(() => ({ data: [] })),
       employeesApi.getActive()
     ])
-    records.value = salaryRes.data.content || salaryRes.data.data?.content || []
-    advances.value = advRes.data.data || advRes.data || []
-    employees.value = empRes.data.data || empRes.data || []
+    records.value = salaryRes.data.content || salaryRes.unwrapList(data)
+    advances.value = unwrapList(advRes)
+    employees.value = unwrapList(empRes)
   } catch (error) {
     console.error('Failed to load:', error)
   } finally {
@@ -203,7 +203,7 @@ async function loadAllSalaries(page = 0) {
   allSalariesLoading.value = true
   try {
     const response = await salaryApi.getAll({ page, size: 50 })
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     if (Array.isArray(data)) {
       allSalaries.value = data
       allSalariesTotalPages.value = 1
@@ -226,7 +226,7 @@ async function viewSalaryDetail(id) {
   salaryDetail.value = null
   try {
     const response = await salaryApi.getById(id)
-    salaryDetail.value = response.data.data || response.data
+    salaryDetail.value = unwrapData(response)
   } catch (error) {
     console.error('Failed to load salary detail:', error)
     toast.error(error.response?.data?.message || t('errorOccurred'))

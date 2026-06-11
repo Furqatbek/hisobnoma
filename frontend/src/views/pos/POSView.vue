@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { productsApi, customersApi, posApi, terminalsApi, shiftsApi, deliveryRegionsApi, deliveryVillagesApi, pricingApi } from '@/services/api'
+import { customersApi, deliveryRegionsApi, deliveryVillagesApi, posApi, pricingApi, productsApi, shiftsApi, terminalsApi, unwrapData, unwrapList } from '@/services/api'
 import { ScaleIcon } from '@heroicons/vue/24/outline'
 import {
   MagnifyingGlassIcon,
@@ -186,7 +186,7 @@ const isDebtSale = computed(() => {
 async function fetchQuickProducts() {
   try {
     const response = await productsApi.getActive({ size: 50 })
-    quickProducts.value = response.data.content || response.data || []
+    quickProducts.value = unwrapList(response)
   } catch (error) {
     console.error('Failed to load products:', error)
   }
@@ -201,7 +201,7 @@ async function searchProducts() {
   loading.value = true
   try {
     const response = await productsApi.search(searchQuery.value)
-    products.value = response.data.content || response.data || []
+    products.value = unwrapList(response)
   } catch (error) {
     console.error('Search failed:', error)
   } finally {
@@ -214,7 +214,7 @@ async function loadAllCustomers() {
   customersLoading.value = true
   try {
     const response = await customersApi.getAll({ size: 1000, sort: 'name,asc' })
-    const data = response.data?.data?.content || response.data?.content || response.data?.data || response.data || []
+    const data = response.data?.data?.content || unwrapList(response)
     allCustomers.value = Array.isArray(data) ? data : []
   } catch (error) {
     console.error('Failed to load customers:', error)
@@ -251,7 +251,7 @@ async function addToCart(product) {
   if (!productUomCache[product.id]) {
     try {
       const res = await productsApi.getActiveUoms(product.id)
-      productUomCache[product.id] = res.data.data || res.data || []
+      productUomCache[product.id] = unwrapList(res)
     } catch {
       productUomCache[product.id] = []
     }
@@ -385,7 +385,7 @@ async function openDeliveryModal() {
   if (deliveryRegions.value.length === 0) {
     try {
       const response = await deliveryRegionsApi.getActive()
-      deliveryRegions.value = response.data.data || response.data || []
+      deliveryRegions.value = unwrapList(response)
     } catch (error) {
       console.error('Failed to fetch regions:', error)
     }
@@ -402,7 +402,7 @@ async function fetchVillagesForRegion(regionId) {
   }
   try {
     const response = await deliveryVillagesApi.getByRegion(regionId)
-    deliveryVillages.value = response.data.data || response.data || []
+    deliveryVillages.value = unwrapList(response)
   } catch (error) {
     console.error('Failed to fetch villages:', error)
     deliveryVillages.value = []
@@ -493,7 +493,7 @@ async function validateCoupon() {
   couponDiscount.value = null
   try {
     const res = await pricingApi.validateCoupon(couponCode.value.trim(), cart.customerId)
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     couponValid.value = data.valid !== false
     if (!couponValid.value) {
       couponError.value = data.message || t('pos.couponInvalid')
@@ -519,7 +519,7 @@ async function applyCoupon() {
         unitPrice: item.price
       }))
     })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     couponDiscount.value = data
     if (data.discountAmount > 0) {
       transactionDiscount.type = 'amount'
@@ -546,7 +546,7 @@ async function fetchProductPrice(productId) {
   if (!cart.customerId) return null
   try {
     const res = await pricingApi.getProductPrice(productId, { customerId: cart.customerId })
-    return res.data.data || res.data
+    return unwrapData(res)
   } catch {
     return null
   }
@@ -647,7 +647,7 @@ async function processPayment() {
     }
 
     const txResponse = await posApi.createTransaction(transactionData)
-    const txData = txResponse.data.data || txResponse.data
+    const txData = unwrapData(txResponse)
     transactionId = txData.id
 
     // Apply transaction-level discount if set
@@ -660,7 +660,7 @@ async function processPayment() {
         discountData.amount = transactionDiscountAmount.value
       }
       const discountResponse = await posApi.applyDiscount(transactionId, discountData)
-      const discountTxData = discountResponse.data.data || discountResponse.data
+      const discountTxData = unwrapData(discountResponse)
       backendTotal = Number(discountTxData.totalAmount) || backendTotal
     }
 
@@ -788,7 +788,7 @@ async function createQuickCustomer() {
       phone: newCustomer.phone || null,
       email: newCustomer.email || null
     })
-    const customer = response.data.data || response.data
+    const customer = unwrapData(response)
     cart.customerId = customer.id
     cart.customerName = customer.name
     showNewCustomerModal.value = false
@@ -835,7 +835,7 @@ async function handleKeydown(event) {
 async function fetchTerminals() {
   try {
     const response = await terminalsApi.getActive()
-    terminals.value = response.data.data || response.data || []
+    terminals.value = unwrapList(response)
     // Auto-select first terminal if available
     if (terminals.value.length > 0) {
       selectedTerminalId.value = terminals.value[0].id
@@ -864,7 +864,7 @@ async function openShift() {
       terminalId: selectedTerminalId.value,
       openingCash: openingCash.value
     })
-    currentShift.value = response.data.data || response.data
+    currentShift.value = unwrapData(response)
     showOpenShiftModal.value = false
     openingCash.value = 0
   } catch (error) {
@@ -902,7 +902,7 @@ async function fetchUnresolvedTransactions() {
   unresolvedLoading.value = true
   try {
     const response = await posApi.getUnresolved(currentShift.value.id)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     unresolvedTransactions.value = Array.isArray(data) ? data : (data.content || [])
   } catch (e) {
     console.error('Failed to fetch unresolved transactions:', e)

@@ -1,7 +1,7 @@
 <script setup>
 import { useToastStore } from '@/stores/toast'
 import { ref, reactive, onMounted } from 'vue'
-import { departmentsApi, employeesApi } from '@/services/api'
+import { departmentsApi, employeesApi, unwrapData, unwrapList } from '@/services/api'
 import { PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -24,8 +24,8 @@ async function loadData() {
       departmentsApi.getAll(),
       employeesApi.getActive()
     ])
-    departments.value = deptRes.data.data || deptRes.data || []
-    employees.value = empRes.data.data || empRes.data || []
+    departments.value = unwrapList(deptRes)
+    employees.value = unwrapList(empRes)
   } catch (error) {
     console.error('Failed to load:', error)
   } finally {
@@ -45,7 +45,7 @@ async function openEdit(dept) {
   showModal.value = true
   try {
     const response = await departmentsApi.getById(dept.id)
-    const freshData = response.data.data || response.data
+    const freshData = unwrapData(response)
     Object.assign(form, freshData)
   } catch (error) {
     console.error('Failed to fetch department details:', error)

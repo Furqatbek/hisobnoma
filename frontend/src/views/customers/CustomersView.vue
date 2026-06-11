@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { customersApi } from '@/services/api'
+import { customersApi, unwrapData, unwrapList } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   PhoneIcon, EnvelopeIcon, ExclamationTriangleIcon, NoSymbolIcon,
@@ -76,7 +76,7 @@ async function fetchCustomers() {
         size: pagination.value.size,
         search: search.value || undefined
       })
-      customers.value = response.data.content || []
+      customers.value = unwrapList(response)
       pagination.value.totalPages = response.data.page?.totalPages || 0
       pagination.value.totalElements = response.data.page?.totalElements || 0
     }
@@ -140,7 +140,7 @@ async function lookupByCode() {
   codeLookupResult.value = null
   try {
     const res = await customersApi.getByCode(codeLookup.value.trim())
-    codeLookupResult.value = res.data.data || res.data
+    codeLookupResult.value = unwrapData(res)
   } catch (e) {
     if (e.response?.status === 404) {
       codeLookupError.value = t('customers.codeNotFound')
@@ -167,7 +167,7 @@ async function runDedicatedSearch() {
   dedicatedSearchLoading.value = true
   try {
     const res = await customersApi.search(dedicatedSearch.value.trim())
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     dedicatedSearchResults.value = data.content || data || []
   } catch (e) {
     console.error('Search error:', e)

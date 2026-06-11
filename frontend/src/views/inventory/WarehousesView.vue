@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { warehousesApi } from '@/services/api'
+import { unwrapData, unwrapList, warehousesApi } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, BuildingStorefrontIcon,
   MagnifyingGlassIcon, ChevronDownIcon, ChevronRightIcon,
@@ -89,7 +89,7 @@ async function fetchWarehouses() {
       page: pagination.page,
       size: pagination.size
     })
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     warehouses.value = data.content || data || []
     pagination.totalPages = data.totalPages || 1
     pagination.totalElements = data.totalElements || warehouses.value.length
@@ -98,7 +98,7 @@ async function fetchWarehouses() {
     // Fallback to getAll
     try {
       const response = await warehousesApi.getAll()
-      warehouses.value = response.data.data || response.data || []
+      warehouses.value = unwrapList(response)
       pagination.totalPages = 1
       pagination.totalElements = warehouses.value.length
     } catch (e) {
@@ -113,7 +113,7 @@ async function fetchWarehouses() {
 async function fetchDefaultWarehouse() {
   try {
     const response = await warehousesApi.getDefault()
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     defaultWarehouse.value = data || null
   } catch (error) {
     console.error('Failed to fetch default warehouse:', error)
@@ -137,7 +137,7 @@ async function performSearch() {
   loading.value = true
   try {
     const response = await warehousesApi.search(query)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     warehouses.value = data.content || data || []
     pagination.totalPages = data.totalPages || 1
     pagination.totalElements = data.totalElements || warehouses.value.length
@@ -160,7 +160,7 @@ async function lookupByCode() {
   }
   try {
     const response = await warehousesApi.getByCode(code)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     codeLookupResult.value = data || null
     codeLookupError.value = !data
   } catch (error) {
@@ -190,7 +190,7 @@ async function applyTypeFilter(type) {
     } else {
       response = await warehousesApi.getByType(type)
     }
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     warehouses.value = data.content || data || []
     pagination.totalPages = data.totalPages || 1
     pagination.totalElements = data.totalElements || warehouses.value.length
@@ -206,14 +206,14 @@ async function fetchTree() {
   treeLoading.value = true
   try {
     const response = await warehousesApi.getTree()
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     treeData.value = data || []
   } catch (error) {
     console.error('Failed to fetch tree:', error)
     // Fallback to roots
     try {
       const response = await warehousesApi.getRoots()
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       treeData.value = (data.content || data || []).map(item => ({ ...item, children: [] }))
     } catch (e) {
       console.error('Fallback getRoots also failed:', e)
@@ -234,7 +234,7 @@ async function toggleTreeNode(nodeId) {
       treeChildrenLoading.value = { ...treeChildrenLoading.value, [nodeId]: true }
       try {
         const response = await warehousesApi.getChildren(nodeId)
-        const data = response.data.data || response.data
+        const data = unwrapData(response)
         treeChildrenMap.value = { ...treeChildrenMap.value, [nodeId]: data.content || data || [] }
       } catch (error) {
         console.error('Failed to fetch children:', error)
@@ -270,9 +270,9 @@ async function toggleExpandWarehouse(warehouse) {
       warehousesApi.getById(warehouse.id),
       warehousesApi.getChildren(warehouse.id)
     ])
-    const detailsData = detailsRes.data.data || detailsRes.data
+    const detailsData = unwrapData(detailsRes)
     expandedDetails.value = detailsData || warehouse
-    const childrenData = childrenRes.data.data || childrenRes.data
+    const childrenData = unwrapData(childrenRes)
     expandedChildren.value = childrenData.content || childrenData || []
   } catch (error) {
     console.error('Failed to fetch warehouse details:', error)

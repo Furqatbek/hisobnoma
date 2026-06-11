@@ -3,7 +3,7 @@ import { formatDate } from '@/utils/format'
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { expensesApi, expenseRecordsApi, suppliersApi, journalEntriesApi, apReportsApi } from '@/services/api'
+import { apReportsApi, expenseRecordsApi, expensesApi, journalEntriesApi, suppliersApi, unwrapData } from '@/services/api'
 import {
   PlusIcon,
   EyeIcon,
@@ -95,7 +95,7 @@ async function fetchExpenses() {
       response = await expensesApi.getAll(params)
     }
 
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     expenses.value = data.content || data || []
     pagination.value.totalPages = data.page?.totalPages || data.totalPages || 1
     pagination.value.totalElements = data.page?.totalElements || data.totalElements || expenses.value.length
@@ -109,7 +109,7 @@ async function fetchExpenses() {
 async function fetchVendors() {
   try {
     const response = await suppliersApi.getAll({ size: 100 })
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     vendors.value = data.content || data || []
   } catch (error) {
     console.error('Yetkazib beruvchilarni yuklashda xatolik:', error)
@@ -136,7 +136,7 @@ async function fetchExpenseRecords() {
       page: recordsPagination.value.page,
       size: recordsPagination.value.size
     })
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     expenseRecords.value = data.content || data || []
     recordsPagination.value.totalPages = data.page?.totalPages || data.totalPages || 1
     recordsPagination.value.totalElements = data.page?.totalElements || data.totalElements || expenseRecords.value.length
@@ -150,7 +150,7 @@ async function fetchExpenseRecords() {
 async function fetchRecordsTotal() {
   try {
     const response = await expenseRecordsApi.getTotal()
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     recordsTotal.value = Number(data.total ?? data) || 0
   } catch (error) {
     console.error('Xarajat jami yuklashda xatolik:', error)
@@ -195,7 +195,7 @@ async function fetchSalaryEntries() {
       page: salaryPagination.value.page,
       size: salaryPagination.value.size
     })
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     salaryEntries.value = data.content || data || []
     salaryPagination.value.totalPages = data.page?.totalPages || data.totalPages || 1
     salaryPagination.value.totalElements = data.page?.totalElements || data.totalElements || salaryEntries.value.length
@@ -214,7 +214,7 @@ async function showEntryDetail(entry) {
   selectedEntry.value = { ...entry, lines: [] }
   try {
     const response = await journalEntriesApi.getWithLines(entry.id)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     selectedEntry.value = data
   } catch (error) {
     console.error('Yozuv tafsilotini yuklashda xatolik:', error)
@@ -234,8 +234,8 @@ async function fetchApAging() {
       apReportsApi.getAging().catch(() => null),
       apReportsApi.getVendorBalance().catch(() => null)
     ])
-    if (agingRes) apAging.value = agingRes.data.data || agingRes.data
-    if (balanceRes) vendorBalances.value = balanceRes.data.data || balanceRes.data
+    if (agingRes) apAging.value = unwrapData(agingRes)
+    if (balanceRes) vendorBalances.value = unwrapData(balanceRes)
   } catch (e) {
     console.error('AP aging load failed:', e)
   } finally {

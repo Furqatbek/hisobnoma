@@ -1,7 +1,7 @@
 <script setup>
 import { useToastStore } from '@/stores/toast'
 import { ref, onMounted } from 'vue'
-import { deliveryVillagesApi } from '@/services/api'
+import { deliveryVillagesApi, unwrapData } from '@/services/api'
 import {
   PlusIcon,
   PencilSquareIcon,
@@ -29,7 +29,7 @@ async function fetchVillages(page = 0) {
     let response
     if (activeOnly.value) {
       response = await deliveryVillagesApi.getActive()
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       villages.value = Array.isArray(data) ? data : data.content || []
       currentPage.value = 0
       totalPages.value = 1

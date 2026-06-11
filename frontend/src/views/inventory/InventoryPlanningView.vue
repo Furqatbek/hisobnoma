@@ -2,7 +2,7 @@
 import { formatCurrency } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { inventoryPlanningApi, locationsApi } from '@/services/api'
+import { inventoryPlanningApi, locationsApi, unwrapData, unwrapList } from '@/services/api'
 import {
   ArrowPathIcon, FunnelIcon, ExclamationTriangleIcon,
   ArrowTrendingDownIcon, ArchiveBoxXMarkIcon, ChartBarIcon
@@ -34,7 +34,7 @@ const tabs = [
 onMounted(async () => {
   try {
     const res = await locationsApi.getAll()
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     locations.value = data?.content || data || []
   } catch (e) {
     console.error('Failed to load locations:', e)
@@ -48,22 +48,22 @@ async function loadTab() {
     switch (activeTab.value) {
       case 'reorder': {
         const res = await inventoryPlanningApi.getReorderSuggestions(selectedLocation.value)
-        reorderData.value = res.data.data || res.data || []
+        reorderData.value = unwrapList(res)
         break
       }
       case 'abc': {
         const res = await inventoryPlanningApi.getAbcAnalysis(abcDays.value)
-        abcData.value = res.data.data || res.data || []
+        abcData.value = unwrapList(res)
         break
       }
       case 'slowMoving': {
         const res = await inventoryPlanningApi.getSlowMoving(slowDays.value, selectedLocation.value)
-        slowMovingData.value = res.data.data || res.data || []
+        slowMovingData.value = unwrapList(res)
         break
       }
       case 'deadStock': {
         const res = await inventoryPlanningApi.getDeadStock(deadDays.value, selectedLocation.value)
-        deadStockData.value = res.data.data || res.data || []
+        deadStockData.value = unwrapList(res)
         break
       }
     }

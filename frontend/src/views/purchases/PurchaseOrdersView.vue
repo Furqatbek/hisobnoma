@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
-import { purchaseOrdersApi } from '@/services/api'
+import { purchaseOrdersApi, unwrapData } from '@/services/api'
 import { PlusIcon, EyeIcon, MagnifyingGlassIcon, PrinterIcon, XMarkIcon, PaperAirplaneIcon } from '@heroicons/vue/24/outline'
 import ReceiptTemplate from '@/components/ReceiptTemplate.vue'
 
@@ -40,7 +40,7 @@ async function fetchOrders() {
     } else {
       response = await purchaseOrdersApi.getAll(params)
     }
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     orders.value = data.content || []
     pagination.value.totalPages = data.page?.totalPages || data.totalPages || 0
     pagination.value.totalElements = data.page?.totalElements || data.totalElements || 0
@@ -71,7 +71,7 @@ async function viewOrder(order) {
 
   try {
     const response = await purchaseOrdersApi.getById(order.id)
-    selectedOrder.value = response.data.data || response.data
+    selectedOrder.value = unwrapData(response)
   } catch (error) {
     console.error('Buyurtma ma\'lumotlarini yuklashda xatolik:', error)
   } finally {

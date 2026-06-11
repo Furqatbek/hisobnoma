@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { ref, onMounted, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { uomApi } from '@/services/api'
+import { unwrapData, unwrapList, uomApi } from '@/services/api'
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, ArrowsRightLeftIcon, FunnelIcon } from '@heroicons/vue/24/outline'
 
 const toast = useToastStore()
@@ -61,20 +61,20 @@ async function fetchUoms() {
   try {
     if (searchQuery.value.trim()) {
       const response = await uomApi.search(searchQuery.value.trim())
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       uoms.value = data.content || data || []
       pagination.value.totalPages = data.page?.totalPages || 0
       pagination.value.totalElements = data.page?.totalElements || uoms.value.length
     } else if (showBaseOnly.value) {
       const response = await uomApi.getBase()
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       uoms.value = data.content || data || []
       pagination.value.totalPages = 0
       pagination.value.totalElements = uoms.value.length
     } else {
       const params = { page: pagination.value.page, size: pagination.value.size }
       const response = await uomApi.getPaginated(params)
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       uoms.value = data.content || data || []
       pagination.value.totalPages = data.page?.totalPages || 0
       pagination.value.totalElements = data.page?.totalElements || uoms.value.length
@@ -84,7 +84,7 @@ async function fetchUoms() {
     // Fallback to getAll
     try {
       const response = await uomApi.getAll()
-      uoms.value = response.data.data || response.data || []
+      uoms.value = unwrapList(response)
     } catch (e) { console.error(e) }
   } finally {
     loading.value = false
@@ -95,7 +95,7 @@ async function fetchUoms() {
 async function fetchAllUoms() {
   try {
     const response = await uomApi.getAll()
-    allUoms.value = response.data.data || response.data || []
+    allUoms.value = unwrapList(response)
   } catch (error) { console.error(error) }
 }
 
@@ -124,7 +124,7 @@ async function lookupByCode() {
   if (!codeLookup.value.trim()) return
   try {
     const response = await uomApi.getByCode(codeLookup.value.trim())
-    codeLookupResult.value = response.data.data || response.data
+    codeLookupResult.value = unwrapData(response)
   } catch (error) {
     codeLookupError.value = t('inventory.uom.codeNotFound')
   }
@@ -136,7 +136,7 @@ async function openModal(uom = null) {
   if (uom) {
     try {
       const response = await uomApi.getById(uom.id)
-      const fresh = response.data.data || response.data
+      const fresh = unwrapData(response)
       form.code = fresh.code || ''
       form.name = fresh.name || ''
       form.symbol = fresh.symbol || ''

@@ -2,7 +2,7 @@
 import { formatCurrency } from '@/utils/format'
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { reportsApi } from '@/services/api'
+import { reportsApi, unwrapData } from '@/services/api'
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -21,7 +21,7 @@ async function fetchReport() {
       startDate: filters.startDate,
       endDate: filters.endDate
     })
-    report.value = response.data.data || response.data
+    report.value = unwrapData(response)
   } catch (error) {
     console.error('Failed to fetch report:', error)
   } finally {

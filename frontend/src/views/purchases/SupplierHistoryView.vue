@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { suppliersApi, expensesApi, apPaymentsApi, purchaseOrdersApi, apReportsApi } from '@/services/api'
+import { apPaymentsApi, apReportsApi, expensesApi, purchaseOrdersApi, suppliersApi, unwrapData } from '@/services/api'
 import {
   MagnifyingGlassIcon,
   BuildingStorefrontIcon,
@@ -77,7 +77,7 @@ function formatDate(dateStr) {
 async function fetchSuppliers() {
   try {
     const res = await suppliersApi.getAll({ page: 0, size: 1000 })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     suppliers.value = data.content || data || []
   } catch (e) {
     console.error('Failed to load suppliers:', e)
@@ -118,32 +118,32 @@ async function loadSupplierData() {
     ])
 
     if (balanceRes) {
-      supplierBalance.value = balanceRes.data.data || balanceRes.data
+      supplierBalance.value = unwrapData(balanceRes)
     }
 
     if (invoiceRes) {
-      const iData = invoiceRes.data.data || invoiceRes.data
+      const iData = unwrapData(invoiceRes)
       invoices.value = iData.content || iData || []
       invoiceTotalPages.value = iData.totalPages || 0
       invoicePage.value = 0
     }
 
     if (paymentRes) {
-      const pData = paymentRes.data.data || paymentRes.data
+      const pData = unwrapData(paymentRes)
       payments.value = pData.content || pData || []
       paymentTotalPages.value = pData.totalPages || 0
       paymentPage.value = 0
     }
 
     if (poRes) {
-      const poData = poRes.data.data || poRes.data
+      const poData = unwrapData(poRes)
       purchaseOrders.value = poData.content || poData || []
       poTotalPages.value = poData.totalPages || 0
       poPage.value = 0
     }
 
     if (statementRes) {
-      vendorStatement.value = statementRes.data.data || statementRes.data
+      vendorStatement.value = unwrapData(statementRes)
     }
 
     if (vendorTotalRes) {
@@ -152,7 +152,7 @@ async function loadSupplierData() {
     }
 
     if (unpaidRes) {
-      const uData = unpaidRes.data.data || unpaidRes.data
+      const uData = unwrapData(unpaidRes)
       const unpaidList = Array.isArray(uData) ? uData : uData.content || uData || []
       const count = unpaidList.length
       const total = unpaidList.reduce((sum, inv) => sum + (inv.balanceDue || inv.totalAmount || 0), 0)
@@ -171,7 +171,7 @@ async function loadSupplierData() {
 async function loadInvoicePage(page) {
   try {
     const res = await expensesApi.getByVendor(selectedSupplierId.value, { page, size: 10, sort: 'invoiceDate,desc' })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     invoices.value = data.content || data || []
     invoiceTotalPages.value = data.totalPages || 0
     invoicePage.value = page
@@ -183,7 +183,7 @@ async function loadInvoicePage(page) {
 async function loadPaymentPage(page) {
   try {
     const res = await apPaymentsApi.getByVendor(selectedSupplierId.value, { page, size: 10, sort: 'createdAt,desc' })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     payments.value = data.content || data || []
     paymentTotalPages.value = data.totalPages || 0
     paymentPage.value = page
@@ -195,7 +195,7 @@ async function loadPaymentPage(page) {
 async function loadPOPage(page) {
   try {
     const res = await purchaseOrdersApi.getByVendor(selectedSupplierId.value, { page, size: 10, sort: 'createdAt,desc' })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     purchaseOrders.value = data.content || data || []
     poTotalPages.value = data.totalPages || 0
     poPage.value = page
@@ -257,7 +257,7 @@ async function loadAgingSummary() {
   loadingAging.value = true
   try {
     const res = await apReportsApi.getAging()
-    agingSummary.value = res.data.data || res.data
+    agingSummary.value = unwrapData(res)
   } catch (e) {
     console.error('Failed to load aging summary:', e)
   } finally {
@@ -268,7 +268,7 @@ async function loadAgingSummary() {
 async function loadVendorBalance() {
   try {
     const res = await apReportsApi.getVendorBalance()
-    return res.data.data || res.data
+    return unwrapData(res)
   } catch (e) {
     return null
   }
@@ -285,7 +285,7 @@ onMounted(async () => {
     } else {
       try {
         const res = await suppliersApi.getById(route.params.id)
-        supplier.value = res.data.data || res.data
+        supplier.value = unwrapData(res)
         selectedSupplierId.value = supplier.value.id
         await loadSupplierData()
       } catch (e) {

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { smsApi, customersApi, arReportsApi, unwrapList } from '@/services/api'
+import { arReportsApi, customersApi, smsApi, unwrapData, unwrapList } from '@/services/api'
 import {
   ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
@@ -105,7 +105,7 @@ async function loadData() {
   error.value = ''
   try {
     const settingsRes = await smsApi.getSettings()
-    const data = settingsRes.data?.data || settingsRes.data
+    const data = unwrapData(settingsRes)
     settingsForm.enabled = data.enabled || false
     settingsForm.apiToken = ''
     hasExistingToken.value = !!(data.apiToken && data.apiToken.length > 0)
@@ -124,7 +124,7 @@ async function loadData() {
 async function loadBalance() {
   try {
     const res = await smsApi.getBalance()
-    const wrapper = res.data?.data || res.data
+    const wrapper = unwrapData(res)
     balance.value = wrapper?.data || wrapper
   } catch (e) {
     // Silently fail
@@ -134,7 +134,7 @@ async function loadBalance() {
 async function loadTemplates() {
   try {
     const res = await smsApi.getTemplates()
-    templates.value = res.data?.data || res.data || []
+    templates.value = unwrapList(res)
   } catch (e) {
     // Silently fail
   }
@@ -148,7 +148,7 @@ async function loadHistory() {
       offset: historyOffset.value,
       status: historyFilter.value || undefined
     })
-    const wrapper = res.data?.data || res.data
+    const wrapper = unwrapData(res)
     const inner = wrapper?.data || wrapper
     history.value = inner?.history || inner?.data || []
   } catch (e) {
@@ -168,7 +168,7 @@ async function saveSettings() {
       apiToken: settingsForm.apiToken,
       senderId: settingsForm.senderId
     })
-    const data = res.data?.data || res.data
+    const data = unwrapData(res)
     if (data.saved) {
       if (data.valid === false) {
         error.value = t('admin.sms.invalidToken')
@@ -265,7 +265,7 @@ async function handleSend() {
       templateId: sendForm.templateId,
       variables: sendForm.variables
     })
-    sendResult.value = res.data?.data || res.data
+    sendResult.value = unwrapData(res)
     successMsg.value = t('admin.sms.smsSent')
     await Promise.all([loadBalance(), loadHistory()])
     showSendModal.value = false
@@ -330,7 +330,7 @@ async function loadCustomerList() {
     const custData = unwrapList(custRes)
     customerList.value = Array.isArray(custData) ? custData : []
 
-    const debtData = debtRes.data?.data || debtRes.data
+    const debtData = unwrapData(debtRes)
     const balances = debtData?.customerBalances || []
     debtorList.value = balances.filter(c => c.netBalance > 0).sort((a, b) => b.netBalance - a.netBalance)
   } catch (e) {
@@ -432,7 +432,7 @@ async function handleBulkSend() {
       templateId: bulkForm.templateId,
       recipients: bulkForm.recipients.map(r => ({ phone: r.phone, variables: r.variables }))
     })
-    bulkResult.value = res.data?.data || res.data
+    bulkResult.value = unwrapData(res)
     if (bulkResult.value?.sent > 0) {
       successMsg.value = t('admin.sms.bulkSent', { sent: bulkResult.value.sent, total: bulkResult.value.total })
     }
@@ -454,7 +454,7 @@ async function checkSmsStatus() {
     if (statusCheckForm.messageId) params.messageId = statusCheckForm.messageId
     if (statusCheckForm.phone) params.phone = statusCheckForm.phone
     const response = await smsApi.getStatus(params)
-    statusCheckResult.value = response.data?.data || response.data
+    statusCheckResult.value = unwrapData(response)
   } catch (e) {
     statusCheckError.value = e.response?.data?.message || t('admin.sms.statusCheckError')
   } finally {

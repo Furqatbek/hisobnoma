@@ -2,7 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { productsApi, categoriesApi, brandsApi } from '@/services/api'
+import { brandsApi, categoriesApi, productsApi, unwrapData, unwrapList } from '@/services/api'
 import {
   PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, FunnelIcon,
   ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentArrowDownIcon
@@ -61,7 +61,7 @@ async function fetchProducts() {
         search: search.value || undefined
       })
     }
-    products.value = response.data.content || []
+    products.value = unwrapList(response)
     pagination.value.totalPages = response.data.page?.totalPages || 0
     pagination.value.totalElements = response.data.page?.totalElements || 0
   } catch (error) {
@@ -79,8 +79,8 @@ async function loadMeta() {
       brandsApi.getAll()
     ])
     productCount.value = countRes.data || { total: 0, active: 0 }
-    categories.value = catRes.data.data || catRes.data || []
-    brands.value = brandRes.data.data || brandRes.data || []
+    categories.value = unwrapList(catRes)
+    brands.value = unwrapList(brandRes)
   } catch (error) {
     console.error('Failed to load metadata:', error)
   }
@@ -196,7 +196,7 @@ async function lookupBySku() {
   skuLookupResult.value = null
   try {
     const response = await productsApi.getBySku(skuLookup.value.trim())
-    const product = response.data.data || response.data
+    const product = unwrapData(response)
     if (product && product.id) {
       skuLookupResult.value = product
       // Check if the product is already in the current list and scroll to it

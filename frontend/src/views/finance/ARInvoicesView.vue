@@ -3,7 +3,7 @@ import { formatCurrency, formatDate } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
-import { arInvoicesApi } from '@/services/api'
+import { arInvoicesApi, unwrapData, unwrapList } from '@/services/api'
 import {
   PlusIcon, EyeIcon, MagnifyingGlassIcon, XMarkIcon,
   PaperAirplaneIcon, XCircleIcon, ClockIcon, ArrowPathIcon
@@ -53,7 +53,7 @@ async function fetchInvoices() {
         sort: 'invoiceDate,desc'
       })
     }
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     invoices.value = data.content || data || []
     pagination.value.totalPages = data.page?.totalPages || data.totalPages || 0
     pagination.value.totalElements = data.page?.totalElements || data.totalElements || 0
@@ -67,7 +67,7 @@ async function fetchInvoices() {
 async function fetchOverdueCount() {
   try {
     const res = await arInvoicesApi.getOverdue()
-    const data = res.data.data || res.data || []
+    const data = unwrapList(res)
     overdueCount.value = data.length
   } catch (e) {
     console.error('Failed to load overdue:', e)
@@ -82,7 +82,7 @@ async function searchByNumber() {
   loading.value = true
   try {
     const res = await arInvoicesApi.getByNumber(search.value.trim())
-    const inv = res.data.data || res.data
+    const inv = unwrapData(res)
     invoices.value = inv ? [inv] : []
     pagination.value.totalPages = 1
     pagination.value.totalElements = inv ? 1 : 0
@@ -108,7 +108,7 @@ async function viewInvoice(invoice) {
 
   try {
     const res = await arInvoicesApi.getById(invoice.id)
-    selectedInvoice.value = res.data.data || res.data
+    selectedInvoice.value = unwrapData(res)
   } catch (error) {
     console.error('Failed to load invoice:', error)
   } finally {
@@ -127,7 +127,7 @@ async function sendInvoice() {
   sending.value = true
   try {
     const res = await arInvoicesApi.send(selectedInvoice.value.id)
-    selectedInvoice.value = res.data.data || res.data
+    selectedInvoice.value = unwrapData(res)
     fetchInvoices()
   } catch (error) {
     console.error('Failed to send invoice:', error)
@@ -141,7 +141,7 @@ async function cancelInvoice() {
   cancelling.value = true
   try {
     const res = await arInvoicesApi.cancel(selectedInvoice.value.id, cancelReason.value)
-    selectedInvoice.value = res.data.data || res.data
+    selectedInvoice.value = unwrapData(res)
     showCancelInput.value = false
     fetchInvoices()
   } catch (error) {

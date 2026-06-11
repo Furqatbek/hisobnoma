@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { receivingApi, suppliersApi, locationsApi, productsApi, uomApi, purchaseOrdersApi, unwrapList } from '@/services/api'
+import { locationsApi, productsApi, purchaseOrdersApi, receivingApi, suppliersApi, unwrapData, unwrapList, uomApi } from '@/services/api'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -46,9 +46,9 @@ onMounted(async () => {
       purchaseOrdersApi.getByStatus('APPROVED', { size: 200 })
     ])
     vendors.value = unwrapList(vendorsRes)
-    const locData = locationsRes.data.data || locationsRes.data
+    const locData = unwrapData(locationsRes)
     locations.value = locData?.content || locData || []
-    uoms.value = uomsRes.data.data || uomsRes.data || []
+    uoms.value = unwrapList(uomsRes)
     purchaseOrders.value = unwrapList(posRes)
   } catch (error) {
     console.error('Failed to load form data:', error)
@@ -102,7 +102,7 @@ function loadPOLines() {
   }
 
   purchaseOrdersApi.getById(form.purchaseOrderId).then(res => {
-    const poData = res.data.data || res.data
+    const poData = unwrapData(res)
     if (poData.lines?.length) {
       form.lines = poData.lines.map(line => ({
         poLineId: line.id,

@@ -2,7 +2,7 @@
 import { formatDate } from '@/utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { arPaymentsApi, apPaymentsApi } from '@/services/api'
+import { apPaymentsApi, arPaymentsApi, unwrapData } from '@/services/api'
 import { MagnifyingGlassIcon, XMarkIcon, EyeIcon, XCircleIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, CheckCircleIcon, CalendarDaysIcon, FunnelIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -52,7 +52,7 @@ async function fetchARPayments(page = 0) {
     } else {
       res = await arPaymentsApi.getAll({ page, size: 20, sort: 'createdAt,desc' })
     }
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     arPayments.value = data.content || data || []
     arTotalPages.value = data.page?.totalPages || data.totalPages || 1
     arCurrentPage.value = data.page?.number ?? data.number ?? 0
@@ -102,7 +102,7 @@ async function fetchAPPayments(page = 0) {
     } else {
       res = await apPaymentsApi.getAll({ page, size: 20, sort: 'createdAt,desc' })
     }
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     apPayments.value = data.content || data || []
     apTotalPages.value = data.page?.totalPages || data.totalPages || 1
     apCurrentPage.value = data.page?.number ?? data.number ?? 0
@@ -122,7 +122,7 @@ async function fetchDateRangeTotal() {
   }
   try {
     const res = await apPaymentsApi.getDateRangeTotal(apDateStart.value, apDateEnd.value)
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     apDateRangeTotal.value = data
   } catch (e) {
     apDateRangeTotal.value = null
@@ -217,7 +217,7 @@ const filteredAPPayments = computed(() => {
 async function viewARPayment(payment) {
   try {
     const res = await arPaymentsApi.getById(payment.id)
-    selectedPayment.value = res.data.data || res.data
+    selectedPayment.value = unwrapData(res)
     detailType.value = 'ar'
     showDetailModal.value = true
   } catch (e) {
@@ -228,7 +228,7 @@ async function viewARPayment(payment) {
 async function viewAPPayment(payment) {
   try {
     const res = await apPaymentsApi.getById(payment.id)
-    selectedPayment.value = res.data.data || res.data
+    selectedPayment.value = unwrapData(res)
     detailType.value = 'ap'
     showDetailModal.value = true
   } catch (e) {

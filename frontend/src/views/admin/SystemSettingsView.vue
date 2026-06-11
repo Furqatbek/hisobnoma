@@ -1,7 +1,7 @@
 <script setup>
 import { useToastStore } from '@/stores/toast'
 import { ref, computed, onMounted } from 'vue'
-import { systemSettingsApi } from '@/services/api'
+import { systemSettingsApi, unwrapData, unwrapList } from '@/services/api'
 import {
   PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon,
   EyeSlashIcon, LockClosedIcon, CheckIcon, MagnifyingGlassIcon,
@@ -66,8 +66,8 @@ async function fetchAll() {
       systemSettingsApi.getAll(),
       systemSettingsApi.getCategories()
     ])
-    allSettings.value = settingsRes.data.data || settingsRes.data || []
-    categories.value = catsRes.data.data || catsRes.data || []
+    allSettings.value = unwrapList(settingsRes)
+    categories.value = unwrapList(catsRes)
     if (!activeCategory.value && categories.value.length > 0) {
       activeCategory.value = categories.value[0]
     }
@@ -86,7 +86,7 @@ async function fetchByCategory(category) {
   loading.value = true
   try {
     const response = await systemSettingsApi.getByCategory(category)
-    const data = response.data.data || response.data || []
+    const data = unwrapList(response)
     // Replace only the settings for this category in the full list
     allSettings.value = allSettings.value.filter(s => s.category !== category).concat(data)
     activeCategory.value = category
@@ -104,7 +104,7 @@ async function lookupByKey() {
   keyLookupResult.value = null
   try {
     const response = await systemSettingsApi.getByKey(keyLookup.value.trim())
-    keyLookupResult.value = response.data.data || response.data
+    keyLookupResult.value = unwrapData(response)
   } catch (error) {
     keyLookupError.value = error.response?.status === 404
       ? t('admin.systemSettings.keyNotFound')

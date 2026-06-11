@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { terminalsApi, warehousesApi } from '@/services/api'
+import { terminalsApi, unwrapData, unwrapList, warehousesApi } from '@/services/api'
 import { ArrowLeftIcon, ComputerDesktopIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 
@@ -33,7 +33,7 @@ async function fetchTerminal() {
   loading.value = true
   try {
     const response = await terminalsApi.getById(route.params.id)
-    const terminal = response.data.data || response.data
+    const terminal = unwrapData(response)
     form.value = {
       code: terminal.terminalCode || terminal.code || '',
       name: terminal.name || '',
@@ -53,7 +53,7 @@ async function fetchTerminal() {
 async function fetchLocations() {
   try {
     const response = await warehousesApi.getAll()
-    locations.value = response.data.data || response.data || []
+    locations.value = unwrapList(response)
   } catch (error) {
     console.error('Joylashuvlarni yuklashda xatolik:', error)
   }
@@ -96,7 +96,7 @@ async function saveTerminal() {
       await terminalsApi.update(terminalId, data)
     } else {
       const res = await terminalsApi.create(data)
-      const created = res.data.data || res.data
+      const created = unwrapData(res)
       terminalId = created.id
     }
 

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { categoriesApi } from '@/services/api'
+import { categoriesApi, unwrapData, unwrapList } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   ChevronDownIcon, ChevronRightIcon, ListBulletIcon, QueueListIcon
@@ -54,7 +54,7 @@ async function performSearch() {
   loading.value = true
   try {
     const response = await categoriesApi.search(query)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     categories.value = data.content || data || []
   } catch (error) {
     console.error('Failed to search categories:', error)
@@ -69,14 +69,14 @@ async function fetchTree() {
   treeLoading.value = true
   try {
     const response = await categoriesApi.getTree()
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     treeData.value = data || []
   } catch (error) {
     console.error('Failed to fetch category tree:', error)
     // Fallback to roots
     try {
       const response = await categoriesApi.getRoots()
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       treeData.value = (data.content || data || []).map(item => ({ ...item, children: [] }))
     } catch (e) {
       console.error('Fallback getRoots also failed:', e)
@@ -106,7 +106,7 @@ async function toggleExpandCategory(categoryId) {
   expandedChildrenLoading.value = true
   try {
     const response = await categoriesApi.getChildren(categoryId)
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     expandedChildren.value = data.content || data || []
   } catch (error) {
     console.error('Failed to fetch children:', error)
@@ -132,7 +132,7 @@ async function fetchCategories() {
   try {
     const response = await categoriesApi.getAll()
     // Backend returns a list directly (not paginated)
-    categories.value = response.data.data || response.data || []
+    categories.value = unwrapList(response)
   } catch (error) {
     console.error('Failed to fetch categories:', error)
   } finally {
@@ -148,7 +148,7 @@ async function openModal(category = null) {
     // Use getById to load fresh details for editing
     try {
       const response = await categoriesApi.getById(category.id)
-      const data = response.data.data || response.data
+      const data = unwrapData(response)
       const fresh = data || category
       form.name = fresh.name
       form.code = fresh.code || ''

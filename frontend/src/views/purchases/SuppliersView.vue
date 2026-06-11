@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { suppliersApi } from '@/services/api'
+import { suppliersApi, unwrapData, unwrapList } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   UserCircleIcon, StarIcon, PhoneIcon, EnvelopeIcon, XMarkIcon
@@ -53,10 +53,10 @@ async function fetchSuppliers() {
       suppliers.value = res.data || []
     } else if (search.value) {
       const res = await suppliersApi.search(search.value, { size: 100 })
-      suppliers.value = res.data.content || []
+      suppliers.value = unwrapList(res)
     } else {
       const response = await suppliersApi.getAll({ size: 100 })
-      suppliers.value = response.data.content || []
+      suppliers.value = unwrapList(response)
     }
   } catch (error) {
     console.error('Failed to fetch suppliers:', error)
@@ -72,7 +72,7 @@ async function lookupByCode() {
   codeLookupResult.value = null
   try {
     const res = await suppliersApi.getByCode(codeLookup.value.trim())
-    codeLookupResult.value = res.data.data || res.data
+    codeLookupResult.value = unwrapData(res)
   } catch (error) {
     if (error.response?.status === 404) {
       codeLookupError.value = t('purchases.suppliers.codeNotFound')
@@ -89,7 +89,7 @@ async function loadPrimaryContacts() {
     if (!supplier.id) continue
     try {
       const res = await suppliersApi.getPrimaryContact(supplier.id)
-      const contact = res.data.data || res.data
+      const contact = unwrapData(res)
       if (contact && contact.name) {
         primaryContacts.value[supplier.id] = contact
       }
@@ -191,7 +191,7 @@ async function loadContacts(vendorId) {
   loadingContacts.value = true
   try {
     const res = await suppliersApi.getContacts(vendorId)
-    contacts.value = res.data?.data || res.data || []
+    contacts.value = unwrapList(res)
   } catch (error) {
     console.error('Failed to load contacts:', error)
     contacts.value = []

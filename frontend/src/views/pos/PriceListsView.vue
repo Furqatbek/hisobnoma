@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { priceListsApi } from '@/services/api'
+import { priceListsApi, unwrapData } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   XMarkIcon, TagIcon, ChevronDownIcon, ChevronUpIcon,
@@ -90,7 +90,7 @@ async function fetchPriceLists(page = 0) {
     } else {
       res = await priceListsApi.getAll({ page, size: pageSize, sort: 'code,asc' })
     }
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       priceLists.value = data
       totalPages.value = 1
@@ -130,7 +130,7 @@ async function lookupByCode() {
   codeLookupResult.value = null
   try {
     const res = await priceListsApi.getByCode(codeLookup.value.trim())
-    codeLookupResult.value = res.data.data || res.data
+    codeLookupResult.value = unwrapData(res)
   } catch (e) {
     if (e.response?.status === 404) {
       codeLookupError.value = t('pos.priceLists.codeNotFound')
@@ -158,7 +158,7 @@ async function filterByCustomer() {
   error.value = ''
   try {
     const res = await priceListsApi.getByCustomer(customerFilterId.value)
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     priceLists.value = Array.isArray(data) ? data : data.content || []
     totalPages.value = 1
     currentPage.value = 0
@@ -277,7 +277,7 @@ async function toggleExpand(priceList) {
 async function fetchDetail(priceListId) {
   try {
     const res = await priceListsApi.getById(priceListId)
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     detailDataMap.value[priceListId] = data
   } catch (e) {
     // silently ignore
@@ -289,7 +289,7 @@ async function fetchItems(priceListId, page = 0) {
   itemsLoading.value[priceListId] = true
   try {
     const res = await priceListsApi.getItems(priceListId, { page, size: pageSize, sort: 'id,asc' })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       itemsMap.value[priceListId] = data
       itemsTotalPages.value[priceListId] = 1

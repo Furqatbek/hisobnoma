@@ -2,7 +2,7 @@
 import { useToastStore } from '@/stores/toast'
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { posApi, productsApi } from '@/services/api'
+import { posApi, productsApi, unwrapData } from '@/services/api'
 import {
   EyeIcon, MagnifyingGlassIcon, PrinterIcon, XMarkIcon, NoSymbolIcon,
   PlusIcon, TrashIcon, CalendarDaysIcon
@@ -81,7 +81,7 @@ async function fetchTransactions() {
 
     const response = await posApi.getTransactions(params)
     // Handle both response formats
-    const data = response.data.data || response.data
+    const data = unwrapData(response)
     transactions.value = data.content || []
     pagination.value.totalPages = data.page?.totalPages || data.totalPages || 0
     pagination.value.totalElements = data.page?.totalElements || data.totalElements || 0
@@ -100,7 +100,7 @@ async function viewTransaction(tx) {
   try {
     // Fetch full transaction details
     const response = await posApi.getTransaction(tx.id)
-    selectedTransaction.value = response.data.data || response.data
+    selectedTransaction.value = unwrapData(response)
   } catch (error) {
     console.error('Tranzaksiya ma\'lumotlarini yuklashda xatolik:', error)
     // Keep the basic transaction data if detail fetch fails
@@ -147,7 +147,7 @@ async function fetchDailySummary() {
   dailySummaryLoading.value = true
   try {
     const res = await posApi.getDailySummary(dailySummaryDate.value)
-    dailySummary.value = res.data.data || res.data
+    dailySummary.value = unwrapData(res)
   } catch (error) {
     console.error('Daily summary error:', error)
     dailySummary.value = null
@@ -172,7 +172,7 @@ async function addLineItem() {
     showAddLineModal.value = false
     // Refresh transaction details
     const response = await posApi.getTransaction(selectedTransaction.value.id)
-    selectedTransaction.value = response.data.data || response.data
+    selectedTransaction.value = unwrapData(response)
   } catch (error) {
     toast.error(t('pos.transactions.addLineError') + ': ' + (error.response?.data?.message || error.message))
   } finally {
@@ -188,7 +188,7 @@ async function removeLineItem(itemId) {
     await posApi.removeLineItem(selectedTransaction.value.id, itemId)
     // Refresh transaction details
     const response = await posApi.getTransaction(selectedTransaction.value.id)
-    selectedTransaction.value = response.data.data || response.data
+    selectedTransaction.value = unwrapData(response)
   } catch (error) {
     toast.error(t('pos.transactions.removeLineError') + ': ' + (error.response?.data?.message || error.message))
   } finally {

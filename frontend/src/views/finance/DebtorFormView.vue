@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { arInvoicesApi, customersApi, productsApi } from '@/services/api'
+import { arInvoicesApi, customersApi, productsApi, unwrapData } from '@/services/api'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, MagnifyingGlassIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
@@ -70,7 +70,7 @@ onMounted(async () => {
   loadingCustomers.value = true
   try {
     const res = await customersApi.getAll({ size: 200 })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     allCustomers.value = data?.content || (Array.isArray(data) ? data : [])
   } catch (err) {
     console.error('Failed to load customers:', err)
@@ -83,7 +83,7 @@ onMounted(async () => {
     loading.value = true
     try {
       const res = await arInvoicesApi.getById(invoiceId.value)
-      const invoice = res.data.data || res.data
+      const invoice = unwrapData(res)
       form.customerId = invoice.customerId
       form.invoiceDate = invoice.invoiceDate?.split('T')[0] || invoice.invoiceDate
       form.dueDate = invoice.dueDate?.split('T')[0] || invoice.dueDate
@@ -154,7 +154,7 @@ function clearCustomer() {
 let productSearchTimeout = null
 
 function extractList(res) {
-  const d = res.data.data || res.data
+  const d = unwrapData(res)
   return d?.content || (Array.isArray(d) ? d : [])
 }
 

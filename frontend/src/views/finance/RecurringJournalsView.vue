@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { recurringJournalsApi, accountsApi } from '@/services/api'
+import { accountsApi, recurringJournalsApi, unwrapData } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   PlayIcon, XMarkIcon, ArrowPathIcon
@@ -47,7 +47,7 @@ async function fetchJournals(page = 0) {
   error.value = ''
   try {
     const res = await recurringJournalsApi.getAll({ page, size: pageSize, search: search.value.trim() || undefined })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       journals.value = data
       totalPages.value = 1
@@ -69,7 +69,7 @@ async function fetchJournals(page = 0) {
 async function fetchAccounts() {
   try {
     const res = await accountsApi.getAll()
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       accounts.value = data
     } else {
@@ -97,7 +97,7 @@ async function openModal(journal = null) {
     showModal.value = true
     try {
       const res = await recurringJournalsApi.getById(journal.id)
-      const freshData = res.data.data || res.data
+      const freshData = unwrapData(res)
       editingJournal.value = freshData
       applyJournalToForm(freshData)
     } catch (e) {

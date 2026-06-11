@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { taxCodesApi } from '@/services/api'
+import { taxCodesApi, unwrapData } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   XMarkIcon, ChevronDownIcon, ChevronRightIcon, CalculatorIcon,
@@ -111,7 +111,7 @@ async function fetchTaxCodes(page = 0) {
     } else {
       res = await taxCodesApi.getAll({ page, size: pageSize, sort: 'code,asc' })
     }
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     if (Array.isArray(data)) {
       taxCodes.value = data
       totalPages.value = 1
@@ -166,7 +166,7 @@ async function openModal(taxCode = null) {
     // Fetch fresh data using getById before editing
     try {
       const res = await taxCodesApi.getById(taxCode.id)
-      const fresh = res.data.data || res.data
+      const fresh = unwrapData(res)
       editingTaxCode.value = fresh
       form.code = fresh.code || ''
       form.name = fresh.name || ''
@@ -240,7 +240,7 @@ async function fetchRates(taxCodeId) {
   ratesLoading.value[taxCodeId] = true
   try {
     const res = await taxCodesApi.getRates(taxCodeId)
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     ratesMap.value[taxCodeId] = Array.isArray(data) ? data : data.content || []
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')
@@ -320,7 +320,7 @@ async function calculateTax() {
   error.value = ''
   try {
     const res = await taxCodesApi.calculate({ taxCodeId: calcForm.taxCodeId, amount: calcForm.amount })
-    calcResult.value = res.data.data || res.data
+    calcResult.value = unwrapData(res)
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')
   } finally {
@@ -335,7 +335,7 @@ async function loadVatSummary() {
   error.value = ''
   try {
     const res = await taxCodesApi.getVatSummary(vatForm.periodStart, vatForm.periodEnd)
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     vatSummary.value = Array.isArray(data) ? data : [data]
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')
@@ -352,7 +352,7 @@ async function lookupByCode() {
   codeLookupResult.value = null
   try {
     const res = await taxCodesApi.getByCode(codeLookupInput.value.trim())
-    codeLookupResult.value = res.data.data || res.data
+    codeLookupResult.value = unwrapData(res)
   } catch (e) {
     if (e.response?.status === 404) {
       codeLookupError.value = t('finance.taxCodes.codeNotFound')
@@ -371,7 +371,7 @@ async function loadSummaryByType() {
   error.value = ''
   try {
     const res = await taxCodesApi.getSummaryByType(summaryByTypeForm.periodStart, summaryByTypeForm.periodEnd)
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     summaryByType.value = Array.isArray(data) ? data : [data]
   } catch (e) {
     error.value = e.response?.data?.message || t('errorOccurred')

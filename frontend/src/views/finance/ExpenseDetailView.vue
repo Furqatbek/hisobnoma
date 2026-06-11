@@ -4,7 +4,7 @@ import { formatDate } from '@/utils/format'
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { expensesApi, apPaymentsApi } from '@/services/api'
+import { apPaymentsApi, expensesApi, unwrapData } from '@/services/api'
 import {
   ArrowLeftIcon,
   PencilSquareIcon,
@@ -41,7 +41,7 @@ async function fetchExpense() {
   loading.value = true
   try {
     const response = await expensesApi.getById(route.params.id)
-    expense.value = response.data.data || response.data
+    expense.value = unwrapData(response)
   } catch (error) {
     console.error('Xarajatni yuklashda xatolik:', error)
     toast.error(t('failedToLoad'))
@@ -169,7 +169,7 @@ async function submitPayment() {
     }
 
     const res = await apPaymentsApi.create(paymentData)
-    const payment = res.data.data || res.data
+    const payment = unwrapData(res)
 
     // Auto-submit, approve and process the payment
     await apPaymentsApi.submit(payment.id)

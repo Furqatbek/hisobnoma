@@ -2,7 +2,7 @@
 import { formatCurrency } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { reportsApi } from '@/services/api'
+import { reportsApi, unwrapData } from '@/services/api'
 import { BanknotesIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -32,7 +32,7 @@ async function fetchReport() {
   loading.value = true
   try {
     const res = await reportsApi.getSalaryReport(filterYear.value, filterMonth.value)
-    report.value = res.data.data || res.data
+    report.value = unwrapData(res)
   } catch (error) {
     console.error('Failed to fetch salary report:', error)
   } finally {

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { employeesApi, salaryApi, advancesApi } from '@/services/api'
+import { advancesApi, employeesApi, salaryApi, unwrapData } from '@/services/api'
 import {
   MagnifyingGlassIcon,
   UserIcon,
@@ -62,7 +62,7 @@ function formatPeriod(year, month) {
 async function fetchEmployees() {
   try {
     const res = await employeesApi.getAll({ page: 0, size: 1000 })
-    const data = res.data.data || res.data
+    const data = unwrapData(res)
     employees.value = data.content || data || []
   } catch (e) {
     console.error('Failed to load employees:', e)
@@ -101,12 +101,12 @@ async function loadEmployeeData() {
     ])
 
     if (salaryRes) {
-      const sData = salaryRes.data.data || salaryRes.data
+      const sData = unwrapData(salaryRes)
       salaryRecords.value = Array.isArray(sData) ? sData : (sData.content || sData || [])
     }
 
     if (advanceRes) {
-      const aData = advanceRes.data.data || advanceRes.data
+      const aData = unwrapData(advanceRes)
       advanceRecords.value = Array.isArray(aData) ? aData : (aData.content || aData || [])
     }
   } catch (e) {
@@ -196,7 +196,7 @@ onMounted(async () => {
     } else {
       try {
         const res = await employeesApi.getById(route.params.id)
-        employee.value = res.data.data || res.data
+        employee.value = unwrapData(res)
         selectedEmployeeId.value = employee.value.id
         await loadEmployeeData()
       } catch (e) {
