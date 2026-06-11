@@ -50,7 +50,7 @@ class TenantIsolationArchTest {
             // Result filtered/validated against a tenant-scoped parent entity
             "POSTransactionService.createTransaction",
             "POSTransactionService.addLine",
-            "POSTransactionService.createReturn",
+            "POSReturnService.createReturn",
             "PriceListService.addPriceListItem",
             "PriceListService.updatePriceListItem",
             "PriceListService.enrichPriceListItemDto",
