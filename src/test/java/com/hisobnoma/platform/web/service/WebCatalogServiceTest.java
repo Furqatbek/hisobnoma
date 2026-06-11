@@ -12,6 +12,7 @@ import com.hisobnoma.platform.web.dto.WebCatalogItemDto;
 import com.hisobnoma.platform.web.entity.WebCatalogItem;
 import com.hisobnoma.platform.web.entity.WebCatalogStatus;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
+import com.hisobnoma.platform.web.repository.WebWishlistItemRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +42,9 @@ class WebCatalogServiceTest {
 
     @Mock
     private WebPromotionBadgeService badgeService;
+
+    @Mock
+    private WebWishlistItemRepository wishlistRepository;
 
     @InjectMocks
     private WebCatalogService service;

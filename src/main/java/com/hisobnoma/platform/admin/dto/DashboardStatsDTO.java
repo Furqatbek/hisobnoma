@@ -64,6 +64,9 @@ public class DashboardStatsDTO {
     // Referral program
     private Long referredCustomers;
 
+    // Most wished products
+    private List<MostWishedDTO> mostWished;
+
     // Activity statistics
     private Long totalAuditLogsToday;
     private Long failedLoginsToday;
@@ -117,6 +120,16 @@ public class DashboardStatsDTO {
         private Integer sentCount;
         private Integer failedCount;
         private String sentAt;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MostWishedDTO {
+        private Long catalogItemId;
+        private String productName;
+        private Long likeCount;
     }
 
     @Data

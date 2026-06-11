@@ -37,4 +37,5 @@ public class WebCatalogItemDto {
     private String categoryName;
     private boolean productActive;
     private boolean productSellable;
+    private long likeCount;
 }

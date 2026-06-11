@@ -408,9 +408,8 @@ Campaign channel selector (SMS/Push/Push+SMS fallback) routes and costs correctl
 
 ## Phase 6 — Wishlists ("like") + price/restock alerts
 
-> **Status: planned** — 6a (likes, wishlist screen, staff insights) has no external
-> prerequisites and can ship right after Phase 1; 6b (alerts) prefers Phase 5 push,
-> with an SMS fallback behind a paid, off-by-default tenant setting.
+> **Status: implemented** — 6a (likes, wishlist, staff insights) + 6b (alerts every 30 min,
+> push preferred, SMS fallback off by default)
 
 Customers tap a heart on any product; their wishlist lives in the profile tab. When a
 wishlisted product gets a web discount or comes back (in stock again / re-published),
@@ -471,9 +470,11 @@ Staff see which products people want, which is exactly the list worth discountin
   arrives once, not again on the next job run; sell out and restock a product → restock
   alert; unlike stops alerts.
 
-**Acceptance:** a customer who liked a product gets exactly one notification when it goes
-on sale or returns, and staff can see the most-wanted products. (6a ≈ 1 day, 6b ≈ 1–1.5
-days once a notification channel exists.)
+**Acceptance: met** — customers like/unlike products via public API; wishlists are paged with
+price/sale/availability data; staff see like counts on catalog items and the most-wished
+endpoint; alert job runs every 30 min (discount dedupe on `last_notified_sale_price`,
+restock flip detection, push preferred, SMS fallback off by default with daily cap);
+dashboard shows top 5 most-wished items.
 
 ---
 

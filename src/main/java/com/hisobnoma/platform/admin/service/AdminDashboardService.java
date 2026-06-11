@@ -23,6 +23,7 @@ import com.hisobnoma.platform.web.entity.WebCampaign;
 import com.hisobnoma.platform.web.repository.WebCampaignRepository;
 import com.hisobnoma.platform.web.repository.WebCustomerRepository;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
+import com.hisobnoma.platform.web.repository.WebWishlistItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -57,6 +58,7 @@ public class AdminDashboardService {
     private final WebCustomerRepository webCustomerRepository;
     private final WebCampaignRepository webCampaignRepository;
     private final com.hisobnoma.platform.web.service.WebLoyaltyService webLoyaltyService;
+    private final WebWishlistItemRepository wishlistItemRepository;
 
     @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
@@ -117,6 +119,7 @@ public class AdminDashboardService {
                 .lastCampaign(getLastCampaign(tenantId))
                 .loyaltyLiability(getLoyaltyLiability(tenantId))
                 .referredCustomers(getReferredCustomerCount(tenantId))
+                .mostWished(getMostWished(tenantId))
 
                 // Activity statistics
                 .totalAuditLogsToday(getAuditLogCount(tenantId, startOfToday))
@@ -387,6 +390,27 @@ public class AdminDashboardService {
         } catch (Exception e) {
             log.warn("Failed to get referred customer count: {}", e.getMessage());
             return 0L;
+        }
+    }
+
+    private List<DashboardStatsDTO.MostWishedDTO> getMostWished(Long tenantId) {
+        try {
+            List<Object[]> rows = wishlistItemRepository.findMostWished(tenantId, PageRequest.of(0, 5));
+            List<DashboardStatsDTO.MostWishedDTO> result = new ArrayList<>();
+            for (Object[] row : rows) {
+                Long catalogItemId = (Long) row[0];
+                Long count = (Long) row[1];
+                webCatalogItemRepository.findByIdAndTenantId(catalogItemId, tenantId).ifPresent(item ->
+                        result.add(DashboardStatsDTO.MostWishedDTO.builder()
+                                .catalogItemId(catalogItemId)
+                                .productName(item.getEffectiveName())
+                                .likeCount(count)
+                                .build()));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to get most wished: {}", e.getMessage());
+            return new ArrayList<>();
         }
     }
 

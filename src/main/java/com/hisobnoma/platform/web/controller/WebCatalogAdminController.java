@@ -4,10 +4,12 @@ import com.hisobnoma.platform.auth.security.RequiresPermission;
 import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.common.dto.PageResponse;
 import com.hisobnoma.platform.web.dto.AddCatalogItemsRequest;
+import com.hisobnoma.platform.web.dto.MostWishedItemDto;
 import com.hisobnoma.platform.web.dto.UpdateCatalogItemRequest;
 import com.hisobnoma.platform.web.dto.WebCatalogCountsDto;
 import com.hisobnoma.platform.web.dto.WebCatalogItemDto;
 import com.hisobnoma.platform.web.service.WebCatalogService;
+import com.hisobnoma.platform.web.service.WebWishlistService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,6 +30,7 @@ import java.util.List;
 public class WebCatalogAdminController {
 
     private final WebCatalogService catalogService;
+    private final WebWishlistService wishlistService;
 
     @GetMapping
     @RequiresPermission("WEB_CATALOG_VIEW")
@@ -103,5 +106,12 @@ public class WebCatalogAdminController {
     @RequiresPermission("WEB_CATALOG_MANAGE")
     public ResponseEntity<ApiResponse<Integer>> unpublishAll() {
         return ResponseEntity.ok(ApiResponse.success(catalogService.unpublishAll()));
+    }
+
+    @GetMapping("/most-wished")
+    @RequiresPermission("WEB_CATALOG_VIEW")
+    public ResponseEntity<ApiResponse<List<MostWishedItemDto>>> getMostWished(
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(ApiResponse.success(catalogService.getMostWished(limit)));
     }
 }

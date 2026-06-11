@@ -32,4 +32,5 @@ public class WebCustomerDto {
     private String referredByName;
     private long referredCount;
     private boolean pushReachable;
+    private long wishlistCount;
 }

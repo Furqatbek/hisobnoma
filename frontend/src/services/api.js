@@ -691,7 +691,8 @@ export const webCatalogApi = {
   moveUp: (id) => api.post(`/web-catalog/items/${id}/move-up`),
   moveDown: (id) => api.post(`/web-catalog/items/${id}/move-down`),
   publishAll: () => api.post('/web-catalog/publish-all'),
-  unpublishAll: () => api.post('/web-catalog/unpublish-all')
+  unpublishAll: () => api.post('/web-catalog/unpublish-all'),
+  getMostWished: (limit = 10) => api.get('/web-catalog/most-wished', { params: { limit } })
 }
 
 // Web Orders API (online shop orders) - Backend: /api/v1/web-orders

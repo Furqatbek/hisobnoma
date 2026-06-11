@@ -8,6 +8,7 @@ import com.hisobnoma.platform.web.dto.WebCustomerDto;
 import com.hisobnoma.platform.web.entity.WebCustomer;
 import com.hisobnoma.platform.web.repository.WebCustomerRepository;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
+import com.hisobnoma.platform.web.repository.WebWishlistItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,7 @@ public class WebCustomerService {
     private final SecurityContextHelper securityContextHelper;
     private final WebPushService pushService;
     private final WebReferralService referralService;
+    private final WebWishlistItemRepository wishlistRepository;
 
     @Transactional(readOnly = true)
     public Page<WebCustomerDto> getCustomers(String search, Pageable pageable) {
@@ -116,6 +118,8 @@ public class WebCustomerService {
                 .referredCount(referralService.getReferredCount(
                         webCustomer.getTenantId(), webCustomer.getId()))
                 .pushReachable(pushService.hasPushToken(
+                        webCustomer.getTenantId(), webCustomer.getId()))
+                .wishlistCount(wishlistRepository.countByTenantIdAndWebCustomerId(
                         webCustomer.getTenantId(), webCustomer.getId()))
                 .build();
     }

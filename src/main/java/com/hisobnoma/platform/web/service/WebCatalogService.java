@@ -7,12 +7,14 @@ import com.hisobnoma.platform.inventory.entity.Product;
 import com.hisobnoma.platform.inventory.entity.ProductImage;
 import com.hisobnoma.platform.inventory.repository.ProductRepository;
 import com.hisobnoma.platform.web.dto.AddCatalogItemsRequest;
+import com.hisobnoma.platform.web.dto.MostWishedItemDto;
 import com.hisobnoma.platform.web.dto.UpdateCatalogItemRequest;
 import com.hisobnoma.platform.web.dto.WebCatalogCountsDto;
 import com.hisobnoma.platform.web.dto.WebCatalogItemDto;
 import com.hisobnoma.platform.web.entity.WebCatalogItem;
 import com.hisobnoma.platform.web.entity.WebCatalogStatus;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
+import com.hisobnoma.platform.web.repository.WebWishlistItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Staff-facing management of the online shop catalog (draft/live item list).
@@ -35,6 +38,7 @@ public class WebCatalogService {
     private final ProductRepository productRepository;
     private final SecurityContextHelper securityContextHelper;
     private final WebPromotionBadgeService badgeService;
+    private final WebWishlistItemRepository wishlistRepository;
 
     @Transactional(readOnly = true)
     public Page<WebCatalogItemDto> getItems(String search, Pageable pageable) {
@@ -166,6 +170,32 @@ public class WebCatalogService {
         log.info("Removed web catalog item {}", id);
     }
 
+    @Transactional(readOnly = true)
+    public List<MostWishedItemDto> getMostWished(int limit) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        List<Object[]> rows = wishlistRepository.findMostWished(tenantId,
+                org.springframework.data.domain.PageRequest.of(0, limit));
+        List<MostWishedItemDto> result = new ArrayList<>();
+        for (Object[] row : rows) {
+            Long catalogItemId = (Long) row[0];
+            long count = (Long) row[1];
+            catalogRepository.findByIdAndTenantId(catalogItemId, tenantId).ifPresent(item -> {
+                WebPromotionBadgeService.Badge badge = badgeService
+                        .badgeFor(tenantId, item.getId(), item.getProduct().getId(), item.getEffectivePrice())
+                        .orElse(null);
+                result.add(MostWishedItemDto.builder()
+                        .catalogItemId(catalogItemId)
+                        .productName(item.getEffectiveName())
+                        .likeCount(count)
+                        .effectivePrice(item.getEffectivePrice())
+                        .salePrice(badge != null ? badge.salePrice() : null)
+                        .status(item.getStatus())
+                        .build());
+            });
+        }
+        return result;
+    }
+
     private void swapSortOrders(WebCatalogItem a, WebCatalogItem b) {
         Integer tmp = a.getSortOrder();
         a.setSortOrder(b.getSortOrder());
@@ -207,6 +237,7 @@ public class WebCatalogService {
                 .categoryName(p.getCategory() != null ? p.getCategory().getName() : null)
                 .productActive(p.isActive())
                 .productSellable(p.isSellable())
+                .likeCount(wishlistRepository.countByTenantIdAndCatalogItemId(item.getTenantId(), item.getId()))
                 .build();
     }
 

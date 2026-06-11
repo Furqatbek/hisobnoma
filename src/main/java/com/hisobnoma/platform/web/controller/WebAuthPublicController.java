@@ -8,11 +8,13 @@ import com.hisobnoma.platform.web.dto.RegisterDeviceTokenRequest;
 import com.hisobnoma.platform.web.dto.RequestOtpRequest;
 import com.hisobnoma.platform.web.dto.VerifyOtpRequest;
 import com.hisobnoma.platform.web.dto.WebAuthResponse;
+import com.hisobnoma.platform.web.dto.WishlistItemDto;
 import com.hisobnoma.platform.web.entity.WebCustomer;
 import com.hisobnoma.platform.web.service.WebAuthService;
 import com.hisobnoma.platform.web.service.WebLoyaltyService;
 import com.hisobnoma.platform.web.service.WebPushService;
 import com.hisobnoma.platform.web.service.WebReferralService;
+import com.hisobnoma.platform.web.service.WebWishlistService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -39,6 +42,7 @@ public class WebAuthPublicController {
     private final WebLoyaltyService loyaltyService;
     private final WebPushService pushService;
     private final WebReferralService referralService;
+    private final WebWishlistService wishlistService;
 
     @PostMapping("/auth/request-otp")
     public ResponseEntity<ApiResponse<Void>> requestOtp(
@@ -107,6 +111,42 @@ public class WebAuthPublicController {
         String code = referralService.getOrCreateCode(customer.getTenantId(), customer.getId());
         return ResponseEntity.ok(ApiResponse.success(Map.of(
                 "code", code != null ? code : "")));
+    }
+
+    @GetMapping("/me/wishlist")
+    public ResponseEntity<PageResponse<WishlistItemDto>> myWishlist(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @PageableDefault(size = 20) Pageable pageable) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        Page<WishlistItemDto> page = wishlistService.getWishlist(
+                customer.getTenantId(), customer.getId(), pageable);
+        return ResponseEntity.ok(PageResponse.of(page));
+    }
+
+    @GetMapping("/me/wishlist/ids")
+    public ResponseEntity<ApiResponse<List<Long>>> myWishlistIds(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        return ResponseEntity.ok(ApiResponse.success(
+                wishlistService.getWishlistIds(customer.getTenantId(), customer.getId())));
+    }
+
+    @PutMapping("/me/wishlist/{catalogItemId}")
+    public ResponseEntity<ApiResponse<Void>> likeItem(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @PathVariable Long catalogItemId) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        wishlistService.like(customer.getTenantId(), customer.getId(), catalogItemId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Liked"));
+    }
+
+    @DeleteMapping("/me/wishlist/{catalogItemId}")
+    public ResponseEntity<ApiResponse<Void>> unlikeItem(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @PathVariable Long catalogItemId) {
+        WebCustomer customer = authService.requireCustomer(authorization);
+        wishlistService.unlike(customer.getTenantId(), customer.getId(), catalogItemId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Unliked"));
     }
 
     private String clientIp(HttpServletRequest request) {

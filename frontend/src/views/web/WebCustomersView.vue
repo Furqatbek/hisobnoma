@@ -218,6 +218,7 @@ onMounted(() => fetchCustomers())
               <td class="px-4 py-3 text-sm text-gray-700">
                 {{ customer.name || '—' }}
                 <span v-if="customer.pushReachable" class="ml-1 inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700" :title="$t('webCustomers.pushReachable')">Push</span>
+                <span v-if="customer.wishlistCount > 0" class="ml-1 inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-pink-100 text-pink-700" :title="$t('webCustomers.wishlistCount')">♥ {{ customer.wishlistCount }}</span>
                 <div v-if="customer.referralCode" class="text-xs text-gray-400 font-mono mt-0.5">{{ customer.referralCode }}
                   <span v-if="customer.referredCount > 0" class="text-purple-600">({{ customer.referredCount }})</span>
                 </div>

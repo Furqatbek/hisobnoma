@@ -262,6 +262,7 @@ onMounted(() => {
               <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('webCatalog.displayName') }}</th>
               <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('webCatalog.basePrice') }}</th>
               <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('webCatalog.priceOverride') }}</th>
+              <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ $t('webCatalog.likes') }}</th>
               <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ $t('webCatalog.status') }}</th>
               <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('actions') }}</th>
             </tr>
@@ -343,6 +344,13 @@ onMounted(() => {
                   :placeholder="formatPrice(item.basePrice)"
                   class="input text-sm py-1 text-right w-32"
                 />
+              </td>
+              <!-- Likes -->
+              <td class="px-3 py-2 text-center text-sm text-gray-500">
+                <span v-if="item.likeCount > 0" class="inline-flex items-center px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 font-medium text-xs">
+                  ♥ {{ item.likeCount }}
+                </span>
+                <span v-else class="text-gray-300">—</span>
               </td>
               <!-- Status -->
               <td class="px-3 py-2 text-center whitespace-nowrap">
