@@ -1,4 +1,5 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { deliveryRegionsApi } from '@/services/api'
@@ -10,6 +11,8 @@ import {
   MapPinIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -48,7 +51,7 @@ async function deleteRegion(region) {
     await deliveryRegionsApi.delete(region.id)
     fetchRegions(currentPage.value)
   } catch (error) {
-    alert(error.response?.data?.message || t('admin.regions.deleteError'))
+    toast.error(error.response?.data?.message || t('admin.regions.deleteError'))
   }
 }
 

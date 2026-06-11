@@ -1,4 +1,5 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { posApi, productsApi } from '@/services/api'
@@ -7,6 +8,8 @@ import {
   PlusIcon, TrashIcon, CalendarDaysIcon
 } from '@heroicons/vue/24/outline'
 import ReceiptTemplate from '@/components/ReceiptTemplate.vue'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -132,7 +135,7 @@ async function voidTransaction() {
     selectedTransaction.value = null
     fetchTransactions()
   } catch (error) {
-    alert(t('pos.transactions.voidError') + ': ' + (error.response?.data?.message || error.message))
+    toast.error(t('pos.transactions.voidError') + ': ' + (error.response?.data?.message || error.message))
   } finally {
     voidLoading.value = false
   }
@@ -171,7 +174,7 @@ async function addLineItem() {
     const response = await posApi.getTransaction(selectedTransaction.value.id)
     selectedTransaction.value = response.data.data || response.data
   } catch (error) {
-    alert(t('pos.transactions.addLineError') + ': ' + (error.response?.data?.message || error.message))
+    toast.error(t('pos.transactions.addLineError') + ': ' + (error.response?.data?.message || error.message))
   } finally {
     addLineLoading.value = false
   }
@@ -187,7 +190,7 @@ async function removeLineItem(itemId) {
     const response = await posApi.getTransaction(selectedTransaction.value.id)
     selectedTransaction.value = response.data.data || response.data
   } catch (error) {
-    alert(t('pos.transactions.removeLineError') + ': ' + (error.response?.data?.message || error.message))
+    toast.error(t('pos.transactions.removeLineError') + ': ' + (error.response?.data?.message || error.message))
   } finally {
     removeLineLoading.value = false
   }

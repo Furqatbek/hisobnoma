@@ -1,4 +1,5 @@
 <script setup>
+import { formatCurrency } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { reportsApi } from '@/services/api'
@@ -11,10 +12,6 @@ const report = ref(null)
 const now = new Date()
 const filterYear = ref(now.getFullYear())
 const filterMonth = ref(now.getMonth() + 1)
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('uz-UZ').format(value || 0)
-}
 
 function statusBadge(status) {
   switch (status) {

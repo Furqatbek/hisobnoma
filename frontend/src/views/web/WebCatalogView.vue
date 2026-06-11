@@ -1,4 +1,6 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
+import { formatPrice } from '@/utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { webCatalogApi, productsApi } from '@/services/api'
 import {
@@ -12,6 +14,8 @@ import {
   GlobeAltIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -66,11 +70,6 @@ function handleSearch() {
   fetchItems(0)
 }
 
-function formatPrice(value) {
-  if (value == null) return '—'
-  return new Intl.NumberFormat('uz-UZ').format(value)
-}
-
 // ---- Row actions ----
 
 function markDirty(item) {
@@ -89,7 +88,7 @@ async function saveItem(item) {
     item._dirty = false
     refresh()
   } catch (error) {
-    alert(error.response?.data?.message || t('webCatalog.saveError'))
+    toast.error(error.response?.data?.message || t('webCatalog.saveError'))
   }
 }
 
@@ -102,7 +101,7 @@ async function togglePublish(item) {
     }
     refresh()
   } catch (error) {
-    alert(error.response?.data?.message || t('webCatalog.saveError'))
+    toast.error(error.response?.data?.message || t('webCatalog.saveError'))
   }
 }
 
@@ -123,7 +122,7 @@ async function removeItem(item) {
     await webCatalogApi.remove(item.id)
     refresh()
   } catch (error) {
-    alert(error.response?.data?.message || t('webCatalog.saveError'))
+    toast.error(error.response?.data?.message || t('webCatalog.saveError'))
   }
 }
 
@@ -195,7 +194,7 @@ async function addSelectedProducts() {
     showAddModal.value = false
     refresh()
   } catch (error) {
-    alert(error.response?.data?.message || t('webCatalog.saveError'))
+    toast.error(error.response?.data?.message || t('webCatalog.saveError'))
   }
 }
 

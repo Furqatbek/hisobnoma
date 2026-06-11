@@ -1,4 +1,5 @@
 <script setup>
+import { formatCurrency, formatDate } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
@@ -188,15 +189,6 @@ onMounted(() => {
   fetchInvoices()
   fetchOverdueCount()
 })
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value || 0)
-}
-
-function formatDate(date) {
-  if (!date) return '-'
-  return new Date(date).toLocaleDateString('uz-UZ')
-}
 
 function getStatusClass(status) {
   const cls = {

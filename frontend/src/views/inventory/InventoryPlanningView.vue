@@ -1,4 +1,5 @@
 <script setup>
+import { formatCurrency } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { inventoryPlanningApi, locationsApi } from '@/services/api'
@@ -76,10 +77,6 @@ async function loadTab() {
 function switchTab(key) {
   activeTab.value = key
   loadTab()
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value || 0)
 }
 
 function formatNumber(value) {

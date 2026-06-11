@@ -1,8 +1,11 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, onMounted, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { uomApi } from '@/services/api'
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, ArrowsRightLeftIcon, FunnelIcon } from '@heroicons/vue/24/outline'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -199,7 +202,7 @@ async function deleteUom(uom) {
     fetchAllUoms()
   } catch (error) {
     console.error('Failed to delete UOM:', error)
-    alert(error.response?.data?.message || t('failedToDelete'))
+    toast.error(error.response?.data?.message || t('failedToDelete'))
   }
 }
 

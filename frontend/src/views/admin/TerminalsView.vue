@@ -1,4 +1,5 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { terminalsApi, warehousesApi } from '@/services/api'
@@ -13,6 +14,8 @@ import {
   XMarkIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -92,7 +95,7 @@ async function toggleStatus(terminal) {
     }
   } catch (error) {
     console.error('Holatni o\'zgartirishda xatolik:', error)
-    alert(t('admin.terminals.statusChangeError'))
+    toast.error(t('admin.terminals.statusChangeError'))
   }
 }
 
@@ -104,7 +107,7 @@ async function deleteTerminal(terminal) {
     terminals.value = terminals.value.filter(t => t.id !== terminal.id)
   } catch (error) {
     console.error('Terminalni o\'chirishda xatolik:', error)
-    alert(t('admin.terminals.deleteError'))
+    toast.error(t('admin.terminals.deleteError'))
   }
 }
 

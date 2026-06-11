@@ -1,4 +1,5 @@
 <script setup>
+import { formatPrice } from '@/utils/format'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { webCampaignsApi, smsApi, promotionsApi } from '@/services/api'
@@ -148,10 +149,6 @@ async function confirmSend() {
   }
 }
 
-function formatPrice(v) {
-  if (v == null) return '—'
-  return new Intl.NumberFormat('uz-UZ').format(v)
-}
 function formatDate(v) {
   if (!v) return '—'
   return new Date(v).toLocaleDateString('uz-UZ')

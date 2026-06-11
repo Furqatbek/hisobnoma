@@ -1,4 +1,5 @@
 <script setup>
+import { formatCurrency } from '@/utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { reportsApi } from '@/services/api'
@@ -85,10 +86,6 @@ function switchTab(tab) {
   if (tab === 'valuation' && !valuation.value && !loadingValuation.value) {
     fetchValuation()
   }
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value || 0)
 }
 
 function formatQty(value) {

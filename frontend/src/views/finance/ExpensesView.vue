@@ -1,4 +1,5 @@
 <script setup>
+import { formatDate } from '@/utils/format'
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -260,11 +261,6 @@ function formatCurrency(value) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(Number(value) || 0)
-}
-
-function formatDate(date) {
-  if (!date) return '-'
-  return new Date(date).toLocaleDateString('uz-UZ')
 }
 
 function getStatusClass(status) {

@@ -1,4 +1,5 @@
 <script setup>
+import { formatCurrency } from '@/utils/format'
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { reportsApi } from '@/services/api'
@@ -47,10 +48,6 @@ async function exportReport() {
   } catch (error) {
     console.error('Export failed:', error)
   }
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value || 0)
 }
 
 function formatNumber(value) {

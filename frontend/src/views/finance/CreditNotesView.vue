@@ -1,8 +1,11 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { creditNotesApi, customersApi } from '@/services/api'
 import { PlusIcon, EyeIcon, XMarkIcon, CheckIcon, NoSymbolIcon, PencilIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -120,7 +123,7 @@ async function handleUpdate() {
     await creditNotesApi.update(editingId.value, editForm)
     showEdit.value = false
     fetchEntries()
-  } catch (e) { alert(e.response?.data?.message || 'Error') }
+  } catch (e) { toast.error(e.response?.data?.message || 'Error') }
   finally { updating.value = false }
 }
 
@@ -138,7 +141,7 @@ async function openDetail(entry) {
 
 async function approveNote() {
   try { await creditNotesApi.approve(detail.value.id); showDetail.value = false; fetchEntries() }
-  catch (e) { alert(e.response?.data?.message || 'Error') }
+  catch (e) { toast.error(e.response?.data?.message || 'Error') }
 }
 
 // Cancel
@@ -148,7 +151,7 @@ const cancelId = ref(null)
 function openCancel(entry) { cancelId.value = entry.id; cancelReason.value = ''; showCancelModal.value = true }
 async function confirmCancel() {
   try { await creditNotesApi.cancel(cancelId.value, cancelReason.value); showCancelModal.value = false; showDetail.value = false; fetchEntries() }
-  catch (e) { alert(e.response?.data?.message || 'Error') }
+  catch (e) { toast.error(e.response?.data?.message || 'Error') }
 }
 
 // Apply to invoice
@@ -157,7 +160,7 @@ const applyForm = reactive({ invoiceId: null, amount: 0 })
 function openApply(entry) { applyForm.invoiceId = null; applyForm.amount = 0; showApplyModal.value = true }
 async function confirmApply() {
   try { await creditNotesApi.applyToInvoice(detail.value.id, applyForm.invoiceId, applyForm.amount); showApplyModal.value = false; showDetail.value = false; fetchEntries() }
-  catch (e) { alert(e.response?.data?.message || 'Error') }
+  catch (e) { toast.error(e.response?.data?.message || 'Error') }
 }
 
 // Create
@@ -180,7 +183,7 @@ async function handleCreate() {
   if (!createForm.customerId) return
   creating.value = true
   try { await creditNotesApi.create(createForm); showCreate.value = false; fetchEntries() }
-  catch (e) { alert(e.response?.data?.message || 'Error') }
+  catch (e) { toast.error(e.response?.data?.message || 'Error') }
   finally { creating.value = false }
 }
 

@@ -1,4 +1,6 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
+import { formatCurrency } from '@/utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { accountsApi } from '@/services/api'
@@ -8,6 +10,8 @@ import {
   ArrowPathIcon, ArrowUpTrayIcon, SparklesIcon,
   CheckCircleIcon, XCircleIcon, FunnelIcon
 } from '@heroicons/vue/24/outline'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -284,7 +288,7 @@ async function deleteAccount(account) {
     childrenCache.value = {}
     fetchAccounts()
   } catch (error) {
-    alert(error.response?.data?.message || t('finance.accounts.deleteError'))
+    toast.error(error.response?.data?.message || t('finance.accounts.deleteError'))
   }
 }
 
@@ -299,7 +303,7 @@ async function toggleActive(account) {
     childrenCache.value = {}
     fetchAccounts()
   } catch (error) {
-    alert(error.response?.data?.message || t('finance.accounts.statusError'))
+    toast.error(error.response?.data?.message || t('finance.accounts.statusError'))
   }
 }
 
@@ -311,7 +315,7 @@ async function generateDefaults() {
     childrenCache.value = {}
     fetchAccounts()
   } catch (error) {
-    alert(error.response?.data?.message || t('finance.accounts.generateError'))
+    toast.error(error.response?.data?.message || t('finance.accounts.generateError'))
   } finally {
     generating.value = false
   }
@@ -351,10 +355,6 @@ function typeClass(type) {
     EXPENSE: 'bg-amber-100 text-amber-700'
   }
   return cls[type] || 'bg-gray-100 text-gray-600'
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value || 0)
 }
 
 const parentOptions = computed(() => {

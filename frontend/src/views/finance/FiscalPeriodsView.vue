@@ -1,4 +1,5 @@
 <script setup>
+import { formatDate } from '@/utils/format'
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fiscalApi } from '@/services/api'
@@ -66,11 +67,6 @@ const periodDetail = ref(null)
 const periodDetailLoading = ref(false)
 
 function clearMessages() { error.value = ''; successMsg.value = '' }
-
-function formatDate(dateStr) {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('uz-UZ')
-}
 
 async function fetchYears(page = 0) {
   loading.value = true

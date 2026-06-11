@@ -1,8 +1,12 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
+import { formatCurrency } from '@/utils/format'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { salaryApi, advancesApi, employeesApi } from '@/services/api'
 import { PlusIcon, CheckCircleIcon, XCircleIcon, XMarkIcon, BanknotesIcon, EyeIcon, ListBulletIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 const { t } = useI18n()
 
 const records = ref([])
@@ -63,10 +67,6 @@ const months = computed(() => [
   t('hr.salary.months.7'), t('hr.salary.months.8'), t('hr.salary.months.9'),
   t('hr.salary.months.10'), t('hr.salary.months.11'), t('hr.salary.months.12')
 ])
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('uz-UZ').format(value || 0)
-}
 
 function statusBadge(status) {
   switch (status) {
@@ -148,7 +148,7 @@ async function handleSave() {
     await loadData()
   } catch (error) {
     console.error('Failed to save:', error)
-    alert(error.response?.data?.message || t('noData'))
+    toast.error(error.response?.data?.message || t('noData'))
   } finally {
     saving.value = false
   }
@@ -163,7 +163,7 @@ async function handleAdvanceSave() {
     await loadData()
   } catch (error) {
     console.error('Failed to save advance:', error)
-    alert(error.response?.data?.message || t('noData'))
+    toast.error(error.response?.data?.message || t('noData'))
   } finally {
     saving.value = false
   }
@@ -175,7 +175,7 @@ async function handlePay(id) {
     await salaryApi.markPaid(id)
     await loadData()
   } catch (error) {
-    alert(error.response?.data?.message || t('noData'))
+    toast.error(error.response?.data?.message || t('noData'))
   }
 }
 
@@ -185,7 +185,7 @@ async function handleCancel(id) {
     await salaryApi.cancel(id)
     await loadData()
   } catch (error) {
-    alert(error.response?.data?.message || t('noData'))
+    toast.error(error.response?.data?.message || t('noData'))
   }
 }
 
@@ -195,7 +195,7 @@ async function handleCancelAdvance(id) {
     await advancesApi.cancel(id)
     await loadData()
   } catch (error) {
-    alert(error.response?.data?.message || t('noData'))
+    toast.error(error.response?.data?.message || t('noData'))
   }
 }
 
@@ -229,7 +229,7 @@ async function viewSalaryDetail(id) {
     salaryDetail.value = response.data.data || response.data
   } catch (error) {
     console.error('Failed to load salary detail:', error)
-    alert(error.response?.data?.message || t('errorOccurred'))
+    toast.error(error.response?.data?.message || t('errorOccurred'))
     showDetailModal.value = false
   } finally {
     loadingDetail.value = false

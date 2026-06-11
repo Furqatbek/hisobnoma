@@ -1,4 +1,6 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
+import { formatDate } from '@/utils/format'
 import { ref, onMounted, reactive, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { journalEntriesApi, accountsApi } from '@/services/api'
@@ -6,6 +8,8 @@ import {
   PlusIcon, MagnifyingGlassIcon, EyeIcon, TrashIcon,
   CheckIcon, ArrowUturnLeftIcon, XMarkIcon, CalendarDaysIcon
 } from '@heroicons/vue/24/outline'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -130,7 +134,7 @@ async function postEntry(entry) {
     fetchEntries()
   } catch (error) {
     console.error('Failed to post entry:', error)
-    alert(error.response?.data?.message || t('finance.journalEntries.postError'))
+    toast.error(error.response?.data?.message || t('finance.journalEntries.postError'))
   }
 }
 
@@ -153,7 +157,7 @@ async function reverseEntry() {
     fetchEntries()
   } catch (error) {
     console.error('Failed to reverse entry:', error)
-    alert(error.response?.data?.message || t('finance.journalEntries.reverseError'))
+    toast.error(error.response?.data?.message || t('finance.journalEntries.reverseError'))
   }
 }
 
@@ -165,7 +169,7 @@ async function deleteEntry(entry) {
     fetchEntries()
   } catch (error) {
     console.error('Failed to delete entry:', error)
-    alert(error.response?.data?.message || t('finance.journalEntries.deleteError'))
+    toast.error(error.response?.data?.message || t('finance.journalEntries.deleteError'))
   }
 }
 
@@ -245,7 +249,7 @@ async function handleCreate() {
     fetchEntries()
   } catch (error) {
     console.error('Failed to create journal entry:', error)
-    alert(error.response?.data?.message || t('finance.journalEntries.createError'))
+    toast.error(error.response?.data?.message || t('finance.journalEntries.createError'))
   } finally {
     creating.value = false
   }
@@ -253,11 +257,6 @@ async function handleCreate() {
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0)
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('uz-UZ')
 }
 
 function statusColor(status) {

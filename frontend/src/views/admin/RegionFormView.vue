@@ -1,9 +1,12 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { deliveryRegionsApi } from '@/services/api'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -39,7 +42,7 @@ async function fetchRegion() {
     })
   } catch (error) {
     console.error('Failed to fetch region:', error)
-    alert(t('admin.regions.loadError'))
+    toast.error(t('admin.regions.loadError'))
     router.push('/admin/regions')
   } finally {
     loading.value = false
@@ -65,7 +68,7 @@ async function handleSubmit() {
     router.push('/admin/regions')
   } catch (error) {
     const msg = error.response?.data?.message || t('admin.regionForm.saveError')
-    alert(msg)
+    toast.error(msg)
   } finally {
     saving.value = false
   }

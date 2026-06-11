@@ -1,9 +1,12 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { rolesApi } from '@/services/api'
 import { ArrowLeftIcon, ShieldCheckIcon, CheckIcon, KeyIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -90,7 +93,7 @@ async function fetchRole() {
     isSystemRole.value = role.systemRole || false
   } catch (error) {
     console.error('Rolni yuklashda xatolik:', error)
-    alert(t('admin.roleForm.loadError'))
+    toast.error(t('admin.roleForm.loadError'))
     router.push('/admin/roles')
   } finally {
     loading.value = false
@@ -149,9 +152,9 @@ async function saveRole() {
         errors.value[err.field] = err.message
       })
     } else if (error.response?.data?.message) {
-      alert(error.response.data.message)
+      toast.error(error.response.data.message)
     } else {
-      alert(t('admin.roleForm.saveError'))
+      toast.error(t('admin.roleForm.saveError'))
     }
   } finally {
     saving.value = false
@@ -169,9 +172,9 @@ async function savePermissionsOnly() {
   } catch (error) {
     console.error('Рухсатларни сақлашда хатолик:', error)
     if (error.response?.data?.message) {
-      alert(error.response.data.message)
+      toast.error(error.response.data.message)
     } else {
-      alert(t('admin.roleForm.permissionsSaveError'))
+      toast.error(t('admin.roleForm.permissionsSaveError'))
     }
   } finally {
     savingPermissions.value = false

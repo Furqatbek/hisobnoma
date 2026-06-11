@@ -1,4 +1,6 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
+import { formatPrice } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { webOrdersApi } from '@/services/api'
 import {
@@ -10,6 +12,8 @@ import {
   ArrowPathIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -62,11 +66,6 @@ function openOrder(order) {
   cancelReason.value = ''
 }
 
-function formatPrice(value) {
-  if (value == null) return '—'
-  return new Intl.NumberFormat('uz-UZ').format(value)
-}
-
 function formatDate(value) {
   if (!value) return '—'
   return new Date(value).toLocaleString('uz-UZ', {
@@ -82,7 +81,7 @@ async function updateStatus(order, status, reason = null) {
     selectedOrder.value = response.data.data
     fetchOrders(currentPage.value)
   } catch (error) {
-    alert(error.response?.data?.message || t('webOrders.actionError'))
+    toast.error(error.response?.data?.message || t('webOrders.actionError'))
   } finally {
     actionBusy.value = false
   }
@@ -101,7 +100,7 @@ async function convertToInvoice(order) {
     selectedOrder.value = response.data.data
     fetchOrders(currentPage.value)
   } catch (error) {
-    alert(error.response?.data?.message || t('webOrders.actionError'))
+    toast.error(error.response?.data?.message || t('webOrders.actionError'))
   } finally {
     actionBusy.value = false
   }

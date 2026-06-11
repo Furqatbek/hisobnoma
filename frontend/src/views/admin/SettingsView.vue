@@ -1,4 +1,5 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { Cog6ToothIcon, BuildingStorefrontIcon, CurrencyDollarIcon, BellIcon, PrinterIcon, PaperAirplaneIcon } from '@heroicons/vue/24/outline'
 import { useReceiptStore } from '@/stores/receipt'
@@ -6,6 +7,8 @@ import { telegramApi } from '@/services/api'
 import ReceiptTemplate from '@/components/ReceiptTemplate.vue'
 import InvoiceA4Template from '@/components/InvoiceA4Template.vue'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -91,9 +94,9 @@ async function saveSettings() {
   try {
     // API call would go here
     await new Promise(resolve => setTimeout(resolve, 1000))
-    alert(t('admin.settings.saved'))
+    toast.success(t('admin.settings.saved'))
   } catch (error) {
-    alert(t('admin.settings.saveError'))
+    toast.error(t('admin.settings.saveError'))
   } finally {
     saving.value = false
   }
@@ -101,7 +104,7 @@ async function saveSettings() {
 
 function saveReceiptSettings() {
   receiptStore.updateConfig(receiptSettings)
-  alert(t('admin.settings.receiptSettingsSaved'))
+  toast.success(t('admin.settings.receiptSettingsSaved'))
 }
 
 function printTestReceipt() {

@@ -1,8 +1,11 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, reactive, onMounted } from 'vue'
 import { departmentsApi, employeesApi } from '@/services/api'
 import { PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 const { t } = useI18n()
 
 const departments = ref([])
@@ -62,7 +65,7 @@ async function handleSave() {
     await loadData()
   } catch (error) {
     console.error('Failed to save:', error)
-    alert(error.response?.data?.message || t('noData'))
+    toast.error(error.response?.data?.message || t('noData'))
   } finally {
     saving.value = false
   }
@@ -74,7 +77,7 @@ async function handleDelete(id) {
     await departmentsApi.delete(id)
     await loadData()
   } catch (error) {
-    alert(error.response?.data?.message || t('noData'))
+    toast.error(error.response?.data?.message || t('noData'))
   }
 }
 

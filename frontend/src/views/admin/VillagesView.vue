@@ -1,4 +1,5 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, onMounted } from 'vue'
 import { deliveryVillagesApi } from '@/services/api'
 import {
@@ -9,6 +10,8 @@ import {
   MapPinIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -62,7 +65,7 @@ async function deleteVillage(village) {
     await deliveryVillagesApi.delete(village.id)
     fetchVillages(currentPage.value)
   } catch (error) {
-    alert(error.response?.data?.message || t('admin.villages.deleteError'))
+    toast.error(error.response?.data?.message || t('admin.villages.deleteError'))
   }
 }
 

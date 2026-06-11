@@ -1,9 +1,12 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { purchaseOrdersApi } from '@/services/api'
 import { ArrowLeftIcon, CheckIcon, XMarkIcon, TruckIcon } from '@heroicons/vue/24/outline'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -30,7 +33,7 @@ async function approveOrder() {
     await purchaseOrdersApi.approve(order.value.id)
     await loadOrder()
   } catch (error) {
-    alert(t('purchases.orders.failedToApprove'))
+    toast.error(t('purchases.orders.failedToApprove'))
   }
 }
 
@@ -40,7 +43,7 @@ async function cancelOrder() {
     await purchaseOrdersApi.cancel(order.value.id)
     await loadOrder()
   } catch (error) {
-    alert(t('purchases.orders.failedToCancel'))
+    toast.error(t('purchases.orders.failedToCancel'))
   }
 }
 
@@ -49,7 +52,7 @@ async function receiveOrder() {
     await purchaseOrdersApi.receive(order.value.id)
     await loadOrder()
   } catch (error) {
-    alert(t('purchases.orders.failedToReceive'))
+    toast.error(t('purchases.orders.failedToReceive'))
   }
 }
 

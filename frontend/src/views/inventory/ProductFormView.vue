@@ -1,10 +1,13 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { productsApi, categoriesApi, brandsApi, uomApi, suppliersApi } from '@/services/api'
 import { ArrowLeftIcon, PhotoIcon, TrashIcon, StarIcon, PlusIcon, PencilIcon, XMarkIcon, ScaleIcon, SparklesIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/vue/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/vue/24/solid'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -184,7 +187,7 @@ async function handleSaveVendor() {
     await loadProductVendors()
   } catch (error) {
     console.error('Failed to save vendor:', error)
-    alert(error.response?.data?.message || t('failedToSave'))
+    toast.error(error.response?.data?.message || t('failedToSave'))
   } finally {
     savingVendor.value = false
   }
@@ -271,7 +274,7 @@ async function handleSaveAltUom() {
     await loadProductAltUoms()
   } catch (error) {
     console.error('Failed to save product UOM:', error)
-    alert(error.response?.data?.message || t('failedToSave'))
+    toast.error(error.response?.data?.message || t('failedToSave'))
   } finally {
     savingAltUom.value = false
   }
@@ -416,7 +419,7 @@ async function handleSaveVariant() {
     await loadVariants()
   } catch (error) {
     console.error('Failed to save variant:', error)
-    alert(error.response?.data?.message || t('failedToSave'))
+    toast.error(error.response?.data?.message || t('failedToSave'))
   } finally {
     savingVariant.value = false
   }

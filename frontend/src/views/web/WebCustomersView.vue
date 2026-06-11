@@ -1,4 +1,5 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, onMounted } from 'vue'
 import { webCustomersApi, customersApi } from '@/services/api'
 import {
@@ -12,6 +13,8 @@ import {
   ChevronUpIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -108,7 +111,7 @@ async function linkTo(customer) {
     linkTarget.value = null
     fetchCustomers(currentPage.value)
   } catch (error) {
-    alert(error.response?.data?.message || t('webCustomers.actionError'))
+    toast.error(error.response?.data?.message || t('webCustomers.actionError'))
   }
 }
 
@@ -118,7 +121,7 @@ async function unlink(webCustomer) {
     await webCustomersApi.unlinkCustomer(webCustomer.id)
     fetchCustomers(currentPage.value)
   } catch (error) {
-    alert(error.response?.data?.message || t('webCustomers.actionError'))
+    toast.error(error.response?.data?.message || t('webCustomers.actionError'))
   }
 }
 
@@ -127,7 +130,7 @@ async function toggleSmsOptOut(webCustomer) {
     await webCustomersApi.setSmsOptOut(webCustomer.id, !webCustomer.smsOptOut)
     webCustomer.smsOptOut = !webCustomer.smsOptOut
   } catch (error) {
-    alert(error.response?.data?.message || t('webCustomers.actionError'))
+    toast.error(error.response?.data?.message || t('webCustomers.actionError'))
   }
 }
 
@@ -180,7 +183,7 @@ async function submitAdjust() {
     adjustAmount.value = ''
     adjustReason.value = ''
   } catch (error) {
-    alert(error.response?.data?.message || t('webCustomers.actionError'))
+    toast.error(error.response?.data?.message || t('webCustomers.actionError'))
   } finally {
     adjustBusy.value = false
   }

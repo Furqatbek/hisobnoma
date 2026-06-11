@@ -1,9 +1,12 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { terminalsApi, warehousesApi } from '@/services/api'
 import { ArrowLeftIcon, ComputerDesktopIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -40,7 +43,7 @@ async function fetchTerminal() {
     }
   } catch (error) {
     console.error('Terminalni yuklashda xatolik:', error)
-    alert(t('admin.terminalForm.loadError'))
+    toast.error(t('admin.terminalForm.loadError'))
     router.push('/admin/terminals')
   } finally {
     loading.value = false
@@ -116,9 +119,9 @@ async function saveTerminal() {
         errors.value[err.field] = err.message
       })
     } else if (error.response?.data?.message) {
-      alert(error.response.data.message)
+      toast.error(error.response.data.message)
     } else {
-      alert(t('admin.terminalForm.saveError'))
+      toast.error(t('admin.terminalForm.saveError'))
     }
   } finally {
     saving.value = false

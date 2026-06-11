@@ -1,4 +1,5 @@
 <script setup>
+import { formatDate } from '@/utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { arPaymentsApi, apPaymentsApi } from '@/services/api'
@@ -267,11 +268,6 @@ function formatCurrency(value) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(Number(value) || 0)
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('uz-UZ')
 }
 
 function formatDateTime(dateStr) {

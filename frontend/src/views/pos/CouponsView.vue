@@ -1,4 +1,5 @@
 <script setup>
+import { formatDate } from '@/utils/format'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { couponsApi, promotionsApi } from '@/services/api'
@@ -347,11 +348,6 @@ function formatDiscount(coupon) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(Number(coupon.discountValue) || 0)
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('uz-UZ')
 }
 
 const tabs = computed(() =>

@@ -1,4 +1,5 @@
 <script setup>
+import { formatQty } from '@/utils/format'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { stockApi, warehousesApi } from '@/services/api'
@@ -117,12 +118,6 @@ function getStockStatus(item) {
   if (item.quantityOnHand <= 0) return { label: t('inventory.stock.outOfStock'), class: 'badge-danger' }
   if (item.belowMinimum) return { label: t('inventory.stock.lowStock'), class: 'badge-warning' }
   return { label: t('inventory.stock.inStock'), class: 'badge-success' }
-}
-
-function formatQty(val) {
-  if (val == null) return '0'
-  const n = Number(val)
-  return n % 1 === 0 ? n.toFixed(0) : n.toFixed(2)
 }
 
 function openAdjustModal(item) {

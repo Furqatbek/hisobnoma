@@ -1,8 +1,12 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
+import { formatCurrency } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { employeesApi } from '@/services/api'
 import { PlusIcon, PencilSquareIcon, MagnifyingGlassIcon, NoSymbolIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 const { t } = useI18n()
 
 const employees = ref([])
@@ -61,7 +65,7 @@ async function handleTerminate(emp) {
     await employeesApi.terminate(emp.id)
     await loadEmployees()
   } catch (error) {
-    alert(error.response?.data?.message || t('errorOccurred'))
+    toast.error(error.response?.data?.message || t('errorOccurred'))
   }
 }
 
@@ -71,12 +75,8 @@ async function handleDelete(emp) {
     await employeesApi.delete(emp.id)
     await loadEmployees()
   } catch (error) {
-    alert(error.response?.data?.message || t('errorOccurred'))
+    toast.error(error.response?.data?.message || t('errorOccurred'))
   }
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('uz-UZ').format(value || 0)
 }
 
 onMounted(loadEmployees)

@@ -1,4 +1,5 @@
 <script setup>
+import { formatDate } from '@/utils/format'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -284,11 +285,6 @@ function formatCurrency(value) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(value || 0)
-}
-
-function formatDate(dateString) {
-  if (!dateString) return '-'
-  return new Date(dateString).toLocaleDateString('uz-UZ')
 }
 
 function getPaymentStatusLabel(status) {

@@ -1,4 +1,6 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
+import { formatDate } from '@/utils/format'
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -12,6 +14,8 @@ import {
   PlayIcon,
   BanknotesIcon
 } from '@heroicons/vue/24/outline'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 const route = useRoute()
@@ -40,7 +44,7 @@ async function fetchExpense() {
     expense.value = response.data.data || response.data
   } catch (error) {
     console.error('Xarajatni yuklashda xatolik:', error)
-    alert(t('failedToLoad'))
+    toast.error(t('failedToLoad'))
     router.push('/finance/expenses')
   } finally {
     loading.value = false
@@ -53,7 +57,7 @@ async function submitForApproval() {
     await expensesApi.submit(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || t('errorOccurred'))
+    toast.error(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
@@ -65,7 +69,7 @@ async function approveExpense() {
     await expensesApi.approve(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || t('errorOccurred'))
+    toast.error(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
@@ -80,7 +84,7 @@ async function rejectExpense() {
     await expensesApi.reject(expense.value.id, reason)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || t('errorOccurred'))
+    toast.error(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
@@ -92,7 +96,7 @@ async function holdExpense() {
     await expensesApi.hold(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || t('errorOccurred'))
+    toast.error(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
@@ -104,7 +108,7 @@ async function releaseHold() {
     await expensesApi.releaseHold(expense.value.id)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || t('errorOccurred'))
+    toast.error(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
@@ -119,7 +123,7 @@ async function cancelExpense() {
     await expensesApi.cancel(expense.value.id, reason)
     await fetchExpense()
   } catch (error) {
-    alert(error.response?.data?.message || t('errorOccurred'))
+    toast.error(error.response?.data?.message || t('errorOccurred'))
   } finally {
     actionLoading.value = false
   }
@@ -140,11 +144,11 @@ function openPaymentModal() {
 async function submitPayment() {
   const amount = parseFloat(paymentForm.value.paymentAmount)
   if (!amount || amount <= 0) {
-    alert(t('finance.expenseDetail.paymentAmountRequired'))
+    toast.error(t('finance.expenseDetail.paymentAmountRequired'))
     return
   }
   if (amount > balanceDue.value) {
-    alert(t('finance.expenseDetail.paymentExceedsBalance'))
+    toast.error(t('finance.expenseDetail.paymentExceedsBalance'))
     return
   }
 
@@ -176,7 +180,7 @@ async function submitPayment() {
     await fetchExpense()
   } catch (error) {
     console.error('To\'lov xatosi:', error)
-    alert(error.response?.data?.message || t('finance.expenseDetail.paymentError'))
+    toast.error(error.response?.data?.message || t('finance.expenseDetail.paymentError'))
   } finally {
     paymentSaving.value = false
   }
@@ -189,11 +193,6 @@ function formatCurrency(value) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(Number(value) || 0)
-}
-
-function formatDate(date) {
-  if (!date) return '-'
-  return new Date(date).toLocaleDateString('uz-UZ')
 }
 
 function getStatusClass(status) {

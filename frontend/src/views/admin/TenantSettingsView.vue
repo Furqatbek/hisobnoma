@@ -1,4 +1,5 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, computed, onMounted } from 'vue'
 import { tenantSettingsApi } from '@/services/api'
 import {
@@ -6,6 +7,8 @@ import {
   EyeSlashIcon, CheckIcon, ArrowPathIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -101,7 +104,7 @@ async function batchSaveAll() {
     setTimeout(() => { batchSuccess.value = false }, 3000)
   } catch (error) {
     console.error('Batch update failed:', error)
-    alert(error.response?.data?.message || t('admin.tenantSettings.batchSaveError'))
+    toast.error(error.response?.data?.message || t('admin.tenantSettings.batchSaveError'))
   } finally {
     batchSaving.value = false
   }

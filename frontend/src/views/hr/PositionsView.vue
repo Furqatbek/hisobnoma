@@ -1,8 +1,12 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
+import { formatCurrency } from '@/utils/format'
 import { ref, reactive, onMounted } from 'vue'
 import { positionsApi, departmentsApi } from '@/services/api'
 import { PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 const { t } = useI18n()
 
 const positions = ref([])
@@ -13,10 +17,6 @@ const editingId = ref(null)
 const saving = ref(false)
 
 const form = reactive({ code: '', name: '', description: '', departmentId: null, baseSalary: 0, active: true })
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('uz-UZ').format(value || 0)
-}
 
 async function loadData() {
   loading.value = true
@@ -66,7 +66,7 @@ async function handleSave() {
     await loadData()
   } catch (error) {
     console.error('Failed to save:', error)
-    alert(error.response?.data?.message || t('noData'))
+    toast.error(error.response?.data?.message || t('noData'))
   } finally {
     saving.value = false
   }
@@ -78,7 +78,7 @@ async function handleDelete(id) {
     await positionsApi.delete(id)
     await loadData()
   } catch (error) {
-    alert(error.response?.data?.message || t('noData'))
+    toast.error(error.response?.data?.message || t('noData'))
   }
 }
 

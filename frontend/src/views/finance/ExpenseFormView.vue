@@ -1,9 +1,12 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { expensesApi, suppliersApi, productsApi } from '@/services/api'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, BanknotesIcon } from '@heroicons/vue/24/outline'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 const route = useRoute()
@@ -220,9 +223,9 @@ async function saveExpense() {
         errors.value[err.field] = err.message
       })
     } else if (error.response?.data?.message) {
-      alert(error.response.data.message)
+      toast.error(error.response.data.message)
     } else {
-      alert(t('failedToSave'))
+      toast.error(t('failedToSave'))
     }
   } finally {
     saving.value = false

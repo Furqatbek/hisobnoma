@@ -1,4 +1,6 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
+import { formatDate } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { rolesApi } from '@/services/api'
@@ -11,6 +13,8 @@ import {
   LockClosedIcon
 } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -53,7 +57,7 @@ async function fetchRoles() {
 
 async function deleteRole(role) {
   if (role.systemRole) {
-    alert(t('admin.roles.systemRoleCannotDelete'))
+    toast.error(t('admin.roles.systemRoleCannotDelete'))
     return
   }
 
@@ -64,7 +68,7 @@ async function deleteRole(role) {
     roles.value = roles.value.filter(r => r.id !== role.id)
   } catch (error) {
     console.error('Rolni o\'chirishda xatolik:', error)
-    alert(t('admin.roles.deleteError'))
+    toast.error(t('admin.roles.deleteError'))
   }
 }
 
@@ -95,10 +99,6 @@ function handleSearch() {
   fetchRoles()
 }
 
-function formatDate(date) {
-  if (!date) return '-'
-  return new Date(date).toLocaleDateString('uz-UZ')
-}
 </script>
 
 <template>

@@ -1,4 +1,5 @@
 <script setup>
+import { useToastStore } from '@/stores/toast'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { productsApi, customersApi, posApi, terminalsApi, shiftsApi, deliveryRegionsApi, deliveryVillagesApi, pricingApi } from '@/services/api'
@@ -19,6 +20,8 @@ import {
   MapPinIcon,
   PencilSquareIcon
 } from '@heroicons/vue/24/outline'
+
+const toast = useToastStore()
 
 const { t } = useI18n()
 
@@ -563,7 +566,7 @@ function addPaymentSplit() {
 
   // For debt sales, customer is required
   if (currentPayment.method === 'CREDIT' && !cart.customerId) {
-    alert(t('pos.customerRequiredForDebt'))
+    toast.error(t('pos.customerRequiredForDebt'))
     return
   }
 
@@ -602,7 +605,7 @@ async function processPayment() {
                   (remainingAmount.value > 0 && currentPayment.method === 'CREDIT')
 
   if (hasDebt && !cart.customerId) {
-    alert(t('pos.customerRequiredForDebt'))
+    toast.error(t('pos.customerRequiredForDebt'))
     return
   }
 
@@ -614,13 +617,13 @@ async function processPayment() {
   // Verify total payments
   const finalTotal = payments.value.reduce((sum, p) => sum + p.amount, 0)
   if (finalTotal < total.value) {
-    alert(t('pos.paymentLessThanTotal'))
+    toast.error(t('pos.paymentLessThanTotal'))
     return
   }
 
   // Validate terminal is selected
   if (!selectedTerminalId.value) {
-    alert(t('pos.noTerminalAvailable'))
+    toast.error(t('pos.noTerminalAvailable'))
     return
   }
 
@@ -717,7 +720,7 @@ async function processPayment() {
     clearCoupon()
     showPaymentModal.value = false
 
-    alert(hasDebtPayment ? t('pos.saleCompletedWithDebt') : t('pos.saleComplete'))
+    toast.error(hasDebtPayment ? t('pos.saleCompletedWithDebt') : t('pos.saleComplete'))
   } catch (error) {
     console.error('Payment failed:', error)
 
@@ -730,14 +733,14 @@ async function processPayment() {
       }
     }
 
-    alert(t('pos.paymentFailed') + ': ' + (error.response?.data?.message || error.message))
+    toast.error(t('pos.paymentFailed') + ': ' + (error.response?.data?.message || error.message))
   }
 }
 
 // Quick debt sale - sell entire amount as debt
 async function sellAsDebt() {
   if (!cart.customerId) {
-    alert(t('pos.customerRequiredForDebt'))
+    toast.error(t('pos.customerRequiredForDebt'))
     showCustomerModal.value = true
     return
   }
@@ -775,7 +778,7 @@ function formatCurrency(value) {
 
 async function createQuickCustomer() {
   if (!newCustomer.name?.trim()) {
-    alert(t('customers.form.nameRequired'))
+    toast.error(t('customers.form.nameRequired'))
     return
   }
 
@@ -794,7 +797,7 @@ async function createQuickCustomer() {
     newCustomer.email = ''
   } catch (error) {
     console.error('Failed to create customer:', error)
-    alert(t('pos.failedToCreateCustomer') + ': ' + (error.response?.data?.message || error.message))
+    toast.error(t('pos.failedToCreateCustomer') + ': ' + (error.response?.data?.message || error.message))
   }
 }
 
@@ -865,7 +868,7 @@ async function openShift() {
     showOpenShiftModal.value = false
     openingCash.value = 0
   } catch (error) {
-    alert(t('pos.shifts.openError') + ': ' + (error.response?.data?.message || error.message))
+    toast.error(t('pos.shifts.openError') + ': ' + (error.response?.data?.message || error.message))
   } finally {
     shiftLoading.value = false
   }
@@ -887,7 +890,7 @@ async function closeShift() {
     if (msg && msg.includes('unresolved')) {
       await fetchUnresolvedTransactions()
     } else {
-      alert(t('pos.shifts.closeError') + ': ' + msg)
+      toast.error(t('pos.shifts.closeError') + ': ' + msg)
     }
   } finally {
     shiftLoading.value = false
@@ -917,7 +920,7 @@ async function voidShiftTransaction(tx) {
     unresolvedTransactions.value = unresolvedTransactions.value.filter(t => t.id !== tx.id)
     shiftVoidReason.value = ''
   } catch (error) {
-    alert(t('pos.transactions.voidError') + ': ' + (error.response?.data?.message || error.message))
+    toast.error(t('pos.transactions.voidError') + ': ' + (error.response?.data?.message || error.message))
   } finally {
     voidingTransactionId.value = null
   }
