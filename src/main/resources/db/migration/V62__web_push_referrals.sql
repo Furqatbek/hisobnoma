@@ -7,7 +7,9 @@ CREATE TABLE web_device_tokens (
     token           VARCHAR(500) NOT NULL,
     platform        VARCHAR(20)  NOT NULL,
     created_at      TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at      TIMESTAMP WITH TIME ZONE,
     last_seen_at    TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    version         BIGINT DEFAULT 0,
     CONSTRAINT uk_web_device_tokens_token_tenant UNIQUE (tenant_id, token)
 );
 

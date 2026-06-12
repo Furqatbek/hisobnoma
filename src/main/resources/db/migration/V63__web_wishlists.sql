@@ -10,6 +10,8 @@ CREATE TABLE web_wishlist_items (
     notified_at              TIMESTAMP WITH TIME ZONE,
     created_at               TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at               TIMESTAMP WITH TIME ZONE,
+    created_by               BIGINT,
+    updated_by               BIGINT,
     version                  BIGINT DEFAULT 0,
     CONSTRAINT uk_web_wishlist_item UNIQUE (web_customer_id, catalog_item_id)
 );

@@ -11,7 +11,8 @@ CREATE TABLE web_loyalty_transactions (
     note            VARCHAR(500) NULL,
     created_by      BIGINT       NULL,
     created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMP    NOT NULL DEFAULT NOW()
+    updated_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
+    version         BIGINT       DEFAULT 0
 );
 
 CREATE INDEX idx_wlt_tenant_customer ON web_loyalty_transactions (tenant_id, web_customer_id);
