@@ -1,7 +1,9 @@
 package com.hisobnoma.platform.web.service;
 
+import com.hisobnoma.platform.common.entity.Tenant;
 import com.hisobnoma.platform.common.exception.UnauthorizedException;
 import com.hisobnoma.platform.common.exception.ValidationException;
+import com.hisobnoma.platform.common.repository.TenantRepository;
 import com.hisobnoma.platform.sms.service.SmsService;
 import com.hisobnoma.platform.web.dto.WebAuthResponse;
 import com.hisobnoma.platform.web.entity.WebCustomer;
@@ -32,6 +34,7 @@ class WebAuthServiceTest {
 
     @Mock private WebOtpCodeRepository otpRepository;
     @Mock private WebCustomerRepository webCustomerRepository;
+    @Mock private TenantRepository tenantRepository;
     @Mock private WebOrderRepository orderRepository;
     @Mock private WebCustomerTokenService tokenService;
     @Mock private CheckoutRateLimiter rateLimiter;
@@ -140,7 +143,13 @@ class WebAuthServiceTest {
         when(otpRepository.save(any(WebOtpCode.class))).thenAnswer(inv -> inv.getArgument(0));
         when(webCustomerRepository.findByTenantIdAndPhone(TENANT_ID, PHONE))
                 .thenReturn(Optional.empty());
-        when(webCustomerRepository.save(any(WebCustomer.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(webCustomerRepository.save(any(WebCustomer.class))).thenAnswer(inv -> {
+            WebCustomer c = inv.getArgument(0);
+            if (c.getId() == null) {
+                c.setId(42L); // JPA assigns the PK on first persist
+            }
+            return c;
+        });
         when(tokenService.generateToken(any(WebCustomer.class))).thenReturn("the-token");
 
         WebAuthResponse response = service.verifyOtp("+998901234567", "123456", "Ali", null);
@@ -151,9 +160,11 @@ class WebAuthServiceTest {
         assertTrue(otp.isUsed());
 
         ArgumentCaptor<WebCustomer> captor = ArgumentCaptor.forClass(WebCustomer.class);
-        verify(webCustomerRepository).save(captor.capture());
-        assertNotNull(captor.getValue().getVerifiedAt());
-        assertNotNull(captor.getValue().getLastLoginAt());
+        verify(webCustomerRepository, times(2)).save(captor.capture());
+        WebCustomer saved = captor.getValue();
+        assertNotNull(saved.getVerifiedAt());
+        assertNotNull(saved.getLastLoginAt());
+        assertEquals("WC-00042", saved.getCustomerCode()); // auto-generated from PK
     }
 
     @Test
@@ -197,7 +208,8 @@ class WebAuthServiceTest {
         WebOtpCode otp = validOtp("123456");
         WebCustomer existing = WebCustomer.builder()
                 .phone(PHONE).name("Ali").verifiedAt(Instant.now().minusSeconds(100))
-                .tenantId(TENANT_ID).build();
+                .customerCode("WC-00007").tenantId(TENANT_ID).build();
+        existing.setId(7L);
         when(otpRepository.findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(TENANT_ID, PHONE))
                 .thenReturn(Optional.of(otp));
         when(otpRepository.save(any(WebOtpCode.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -219,6 +231,26 @@ class WebAuthServiceTest {
 
         assertThrows(UnauthorizedException.class,
                 () -> service.requireCustomer("Bearer bad"));
+    }
+
+    @Test
+    void getProfile_returnsCustomerCodeAndTenantSlugForWalletQr() {
+        WebCustomer customer = WebCustomer.builder()
+                .phone(PHONE).name("Ali").customerCode("WC-00042").tenantId(TENANT_ID).build();
+        customer.setId(42L);
+        when(tokenService.parse("good")).thenReturn(Optional.of(
+                new WebCustomerTokenService.WebCustomerPrincipal(42L, TENANT_ID, PHONE)));
+        when(webCustomerRepository.findByIdAndTenantId(42L, TENANT_ID))
+                .thenReturn(Optional.of(customer));
+        Tenant tenant = Tenant.builder().name("Hisobnoma").code("hisobnoma").build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+
+        var profile = service.getProfile("Bearer good");
+
+        assertEquals(PHONE, profile.get("phone"));
+        assertEquals("Ali", profile.get("name"));
+        assertEquals("WC-00042", profile.get("customerCode"));
+        assertEquals("hisobnoma", profile.get("tenantSlug"));
     }
 
     @Test

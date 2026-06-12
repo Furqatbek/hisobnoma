@@ -3784,10 +3784,21 @@ X-Tenant-ID: 1
 ```json
 {
   "success": true,
-  "data": { "phone": "+998901234567", "name": "Ali Valiyev" },
+  "data": {
+    "phone": "+998901234567",
+    "name": "Ali Valiyev",
+    "customerCode": "WC-00042",
+    "tenantSlug": "hisobnoma"
+  },
   "timestamp": "2026-06-11T12:00:00Z"
 }
 ```
+
+`customerCode` is a stable public identity code assigned on first verification
+(globally unique, never PII). `tenantSlug` is the tenant's short code. Together
+they back the in-app wallet QR, which encodes `{base}/{tenantSlug}/{customerCode}`
+(e.g. `https://hisobnoma.uz/w/hisobnoma/WC-00042`). Both are always present;
+older accounts are backfilled.
 
 ### GET /web/me/orders
 Paged list of the customer's own orders (matched by verified phone), newest first.

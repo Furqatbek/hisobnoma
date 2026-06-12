@@ -1,7 +1,9 @@
 package com.hisobnoma.platform.web.service;
 
+import com.hisobnoma.platform.common.entity.Tenant;
 import com.hisobnoma.platform.common.exception.UnauthorizedException;
 import com.hisobnoma.platform.common.exception.ValidationException;
+import com.hisobnoma.platform.common.repository.TenantRepository;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.sms.service.SmsService;
 import com.hisobnoma.platform.web.dto.PublicOrderDto;
@@ -31,6 +33,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Phone + SMS OTP login for online shop customers, and the token-scoped
@@ -51,6 +55,7 @@ public class WebAuthService {
 
     private final WebOtpCodeRepository otpRepository;
     private final WebCustomerRepository webCustomerRepository;
+    private final TenantRepository tenantRepository;
     private final WebOrderRepository orderRepository;
     private final WebCustomerTokenService tokenService;
     private final CheckoutRateLimiter rateLimiter;
@@ -141,6 +146,12 @@ public class WebAuthService {
         boolean isNew = customer.getId() == null;
         customer = webCustomerRepository.save(customer);
 
+        // Assign the stable public identity code once the PK is known.
+        if (customer.getCustomerCode() == null) {
+            customer.setCustomerCode(String.format("WC-%05d", customer.getId()));
+            customer = webCustomerRepository.save(customer);
+        }
+
         if (isNew && referralCode != null && !referralCode.isBlank()) {
             try {
                 referralService.applyCode(tenantId, customer.getId(), referralCode);
@@ -168,6 +179,26 @@ public class WebAuthService {
         return webCustomerRepository.findByIdAndTenantId(
                         principal.webCustomerId(), principal.tenantId())
                 .orElseThrow(() -> new UnauthorizedException("Unknown customer"));
+    }
+
+    /**
+     * The customer's own profile for the mobile app's {@code /me} screen.
+     * Includes {@code customerCode} + {@code tenantSlug} so the app can render
+     * a real, scannable wallet QR ({base}/{tenantSlug}/{customerCode}).
+     */
+    @Transactional(readOnly = true)
+    public Map<String, String> getProfile(String bearerToken) {
+        WebCustomer customer = requireCustomer(bearerToken);
+        String tenantSlug = tenantRepository.findById(customer.getTenantId())
+                .map(Tenant::getCode)
+                .orElse("");
+        Map<String, String> profile = new LinkedHashMap<>();
+        profile.put("phone", customer.getPhone());
+        profile.put("name", customer.getName() != null ? customer.getName() : "");
+        profile.put("customerCode",
+                customer.getCustomerCode() != null ? customer.getCustomerCode() : "");
+        profile.put("tenantSlug", tenantSlug);
+        return profile;
     }
 
     @Transactional(readOnly = true)

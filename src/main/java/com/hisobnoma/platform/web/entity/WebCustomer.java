@@ -50,6 +50,13 @@ public class WebCustomer extends TenantAwareEntity {
     @Builder.Default
     private boolean smsOptOut = false;
 
+    /**
+     * Stable public identity code (e.g. {@code WC-00042}) assigned on first
+     * verification. Encoded in the in-app wallet QR and used for POS lookup.
+     */
+    @Column(name = "customer_code", length = 20)
+    private String customerCode;
+
     @Column(name = "referral_code", length = 12)
     private String referralCode;
 

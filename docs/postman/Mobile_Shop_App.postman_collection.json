@@ -259,7 +259,8 @@
               { "key": "X-Tenant-ID", "value": "{{tenantId}}" },
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
-            "url": { "raw": "{{baseUrl}}/web/me", "host": [ "{{baseUrl}}" ], "path": [ "web", "me" ] }
+            "url": { "raw": "{{baseUrl}}/web/me", "host": [ "{{baseUrl}}" ], "path": [ "web", "me" ] },
+            "description": "Returns phone, name, customerCode (e.g. WC-00042) and tenantSlug. customerCode + tenantSlug back the in-app wallet QR ({base}/{tenantSlug}/{customerCode})."
           }
         },
         {

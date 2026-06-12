@@ -72,10 +72,7 @@ public class WebAuthPublicController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<Map<String, String>>> me(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
-        WebCustomer customer = authService.requireCustomer(authorization);
-        return ResponseEntity.ok(ApiResponse.success(Map.of(
-                "phone", customer.getPhone(),
-                "name", customer.getName() != null ? customer.getName() : "")));
+        return ResponseEntity.ok(ApiResponse.success(authService.getProfile(authorization)));
     }
 
     @GetMapping("/me/orders")
