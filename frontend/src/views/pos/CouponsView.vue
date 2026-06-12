@@ -1,15 +1,18 @@
 <script setup>
 import { formatDate, formatCurrency } from '@/utils/format'
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { couponsApi, promotionsApi, unwrapData } from '@/services/api'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
   XMarkIcon, TicketIcon, ArrowPathIcon, ChevronDownIcon,
-  ChevronUpIcon, NoSymbolIcon, BoltIcon, FunnelIcon
+  ChevronUpIcon, NoSymbolIcon, BoltIcon, FunnelIcon,
+  ClipboardDocumentIcon, ArrowDownTrayIcon, CheckIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
+const route = useRoute()
 
 const coupons = ref([])
 const loading = ref(true)
@@ -28,6 +31,13 @@ const editingCoupon = ref(null)
 const saving = ref(false)
 
 const showGenerateModal = ref(false)
+
+// Generated-codes result panel
+const showGeneratedModal = ref(false)
+const generatedCoupons = ref([])
+
+// Copied-code feedback (id of the code just copied)
+const copiedCode = ref('')
 
 const showDeleteConfirm = ref(false)
 const deletingCoupon = ref(null)
@@ -106,7 +116,17 @@ async function filterByPromotion() {
   } finally { loading.value = false }
 }
 
-onMounted(() => { fetchCoupons(0); fetchPromotionsList() })
+onMounted(async () => {
+  await fetchPromotionsList()
+  // Deep-link from PromotionsView: /pos/coupons?promotionId=42
+  const pid = route.query.promotionId
+  if (pid) {
+    selectedPromotionFilter.value = Number(pid)
+    filterByPromotion()
+  } else {
+    fetchCoupons(0)
+  }
+})
 
 function switchTab(tab) { activeTab.value = tab; search.value = ''; fetchCoupons(0) }
 
@@ -182,12 +202,44 @@ async function generateCoupons() {
     const { promotionId, count, ...data } = generateForm
     const payload = { ...data }
     Object.keys(payload).forEach(k => { if (payload[k] === '' || payload[k] === null) delete payload[k] })
-    await couponsApi.generate(promotionId, count, payload)
+    const res = await couponsApi.generate(promotionId, count, payload)
+    const generated = unwrapData(res)
+    generatedCoupons.value = Array.isArray(generated) ? generated : (generated?.content || [])
     successMsg.value = t('pos.coupons.generateSuccess', { count: generateForm.count })
     showGenerateModal.value = false
+    if (generatedCoupons.value.length) showGeneratedModal.value = true
     fetchCoupons(0)
   } catch (e) { error.value = e.response?.data?.message || t('errorOccurred')
   } finally { saving.value = false }
+}
+
+// ---------- Clipboard / export ----------
+
+async function copyCode(code) {
+  try {
+    await navigator.clipboard.writeText(code)
+    copiedCode.value = code
+    setTimeout(() => { if (copiedCode.value === code) copiedCode.value = '' }, 1500)
+  } catch (e) { /* clipboard blocked — ignore */ }
+}
+
+async function copyAllGenerated() {
+  const text = generatedCoupons.value.map(c => c.code).join('\n')
+  try { await navigator.clipboard.writeText(text); copiedCode.value = 'ALL'; setTimeout(() => { copiedCode.value = '' }, 1500) } catch (e) { /* ignore */ }
+}
+
+function exportGeneratedCsv() {
+  const header = 'code,promotion,maxUses,maxUsesPerCustomer,startDate,endDate'
+  const rows = generatedCoupons.value.map(c =>
+    [c.code, c.promotionName || c.promotionCode || c.promotionId || '', c.maxUses ?? '', c.maxUsesPerCustomer ?? '', c.startDate || '', c.endDate || ''].join(','))
+  const csv = [header, ...rows].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `coupons-${new Date().toISOString().substring(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 // ---------- Status actions ----------
@@ -360,7 +412,15 @@ const tabs = computed(() =>
                     <ChevronUpIcon v-else class="h-4 w-4" />
                   </button>
                 </td>
-                <td><code class="font-mono font-medium text-sm">{{ coupon.code }}</code></td>
+                <td>
+                  <div class="flex items-center gap-1.5">
+                    <code class="font-mono font-medium text-sm">{{ coupon.code }}</code>
+                    <button @click="copyCode(coupon.code)" class="p-1 text-gray-300 hover:text-primary-600 rounded" :title="$t('copy')">
+                      <CheckIcon v-if="copiedCode === coupon.code" class="h-3.5 w-3.5 text-green-600" />
+                      <ClipboardDocumentIcon v-else class="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </td>
                 <td class="text-sm">{{ promotionName(coupon) }}</td>
                 <td class="text-right text-sm">{{ coupon.maxUses ?? '-' }}</td>
                 <td class="text-right text-sm">{{ coupon.currentUses ?? coupon.redemptionCount ?? 0 }}</td>
@@ -594,6 +654,48 @@ const tabs = computed(() =>
               <button @click="generateCoupons" :disabled="saving" class="btn-primary">
                 <BoltIcon class="h-5 w-5 mr-2" />{{ saving ? $t('saving') : $t('pos.coupons.generateBtn') }}
               </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- ========== Generated Codes Result Modal ========== -->
+    <Teleport to="body">
+      <div v-if="showGeneratedModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showGeneratedModal = false"></div>
+          <div class="relative bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-medium text-gray-900">
+                {{ $t('pos.coupons.generatedTitle', { count: generatedCoupons.length }) }}
+              </h3>
+              <button @click="showGeneratedModal = false" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg"><XMarkIcon class="h-5 w-5" /></button>
+            </div>
+
+            <div class="flex gap-2 mb-3">
+              <button @click="copyAllGenerated" class="btn-secondary text-sm flex-1">
+                <CheckIcon v-if="copiedCode === 'ALL'" class="h-4 w-4 mr-1 text-green-600" />
+                <ClipboardDocumentIcon v-else class="h-4 w-4 mr-1" />
+                {{ copiedCode === 'ALL' ? $t('copied') : $t('copyAll') }}
+              </button>
+              <button @click="exportGeneratedCsv" class="btn-secondary text-sm flex-1">
+                <ArrowDownTrayIcon class="h-4 w-4 mr-1" />{{ $t('pos.coupons.exportCsv') }}
+              </button>
+            </div>
+
+            <div class="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-72 overflow-y-auto">
+              <div v-for="c in generatedCoupons" :key="c.id || c.code" class="flex items-center justify-between px-3 py-2">
+                <code class="font-mono text-sm">{{ c.code }}</code>
+                <button @click="copyCode(c.code)" class="p-1 text-gray-300 hover:text-primary-600 rounded" :title="$t('copy')">
+                  <CheckIcon v-if="copiedCode === c.code" class="h-4 w-4 text-green-600" />
+                  <ClipboardDocumentIcon v-else class="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+              <button @click="showGeneratedModal = false" class="btn-primary">{{ $t('close') }}</button>
             </div>
           </div>
         </div>

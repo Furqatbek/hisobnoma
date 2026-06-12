@@ -1,14 +1,20 @@
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { promotionsApi, unwrapData } from '@/services/api'
+import {
+  promotionsApi, productsApi, categoriesApi, brandsApi, unwrapData, unwrapList
+} from '@/services/api'
 import { formatDate, formatCurrency } from '@/utils/format'
+import EntityPicker from '@/components/EntityPicker.vue'
 import {
   PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon,
-  XMarkIcon, TagIcon, EyeIcon, ChevronDownIcon, ChevronUpIcon
+  XMarkIcon, TagIcon, ChevronDownIcon, ChevronUpIcon,
+  DocumentDuplicateIcon, TicketIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
+const router = useRouter()
 
 const promotions = ref([])
 const loading = ref(true)
@@ -267,7 +273,7 @@ async function reloadDetail() {
 
 // ---------- Conditions ----------
 
-function openConditionModal() { Object.assign(conditionForm, defaultConditionForm()); showConditionModal.value = true }
+function openConditionModal() { Object.assign(conditionForm, defaultConditionForm()); loadEntityLists(); showConditionModal.value = true }
 
 async function addCondition() {
   if (!conditionForm.conditionType) return
@@ -291,7 +297,7 @@ async function removeCondition(conditionId) {
 
 // ---------- Actions ----------
 
-function openActionModal() { Object.assign(actionForm, defaultActionForm()); showActionModal.value = true }
+function openActionModal() { Object.assign(actionForm, defaultActionForm()); loadEntityLists(); showActionModal.value = true }
 
 async function addAction() {
   if (!actionForm.actionType) return
@@ -328,6 +334,67 @@ const tabs = computed(() => [
   { key: 'ALL', label: t('pos.promotions.filterAll') },
   { key: 'ACTIVE', label: t('pos.promotions.filterActive') }
 ])
+
+// ---------- Entity pickers (products / categories / brands) ----------
+
+const productOptions = ref([])
+const categoryOptions = ref([])
+const brandOptions = ref([])
+const entityListsLoaded = ref(false)
+const entityListsLoading = ref(false)
+
+async function loadEntityLists() {
+  if (entityListsLoaded.value || entityListsLoading.value) return
+  entityListsLoading.value = true
+  try {
+    const [prodRes, catRes, brandRes] = await Promise.all([
+      productsApi.getActive({ size: 500, sort: 'name,asc' }),
+      categoriesApi.getAll(),
+      brandsApi.getActive()
+    ])
+    const prodData = unwrapData(prodRes)
+    const products = Array.isArray(prodData) ? prodData : (prodData.content || [])
+    productOptions.value = products.map(p => ({ id: p.id, label: p.name, sublabel: p.sku }))
+    categoryOptions.value = unwrapList(catRes).map(c => ({ id: c.id, label: c.name, sublabel: c.code }))
+    brandOptions.value = unwrapList(brandRes).map(b => ({ id: b.id, label: b.name, sublabel: b.code }))
+    entityListsLoaded.value = true
+  } catch (e) {
+    // Pickers degrade to showing raw ids; non-fatal.
+  } finally {
+    entityListsLoading.value = false
+  }
+}
+
+// ---------- Status badge (scheduled / active / expired / inactive) ----------
+
+function promotionStatus(p) {
+  if (!p.active) return { key: 'inactive', label: t('inactive'), cls: 'badge-danger' }
+  const today = new Date().toISOString().substring(0, 10)
+  if (p.startDate && p.startDate > today) return { key: 'scheduled', label: t('pos.promotions.statusScheduled'), cls: 'badge-info' }
+  if (p.endDate && p.endDate < today) return { key: 'expired', label: t('pos.promotions.statusExpired'), cls: 'badge-warning' }
+  if (p.maxUses && (p.currentUses || 0) >= p.maxUses) return { key: 'depleted', label: t('pos.promotions.statusDepleted'), cls: 'badge-secondary' }
+  return { key: 'active', label: t('active'), cls: 'badge-success' }
+}
+
+// ---------- Clone ----------
+
+function clonePromotion(promotion) {
+  editingPromotion.value = null
+  Object.keys(defaultForm()).forEach(k => { form[k] = promotion[k] ?? defaultForm()[k] })
+  form.code = `${promotion.code || 'PROMO'}-COPY`
+  form.name = `${promotion.name || ''} (copy)`
+  form.active = false
+  form.startDate = promotion.startDate || ''
+  form.endDate = promotion.endDate || ''
+  loadEntityLists()
+  showModal.value = true
+}
+
+// ---------- Cross-link to coupons ----------
+
+function viewCoupons(promotion) {
+  router.push({ path: '/pos/coupons', query: { promotionId: promotion.id } })
+}
 </script>
 
 <template>
@@ -447,12 +514,18 @@ const tabs = computed(() => [
                   <span v-else>-</span>
                 </td>
                 <td>
-                  <button @click="toggleStatus(promotion)" :class="['badge cursor-pointer text-xs', promotion.active ? 'badge-success' : 'badge-danger']">
-                    {{ promotion.active ? $t('active') : $t('inactive') }}
+                  <button @click="toggleStatus(promotion)" :class="['badge cursor-pointer text-xs', promotionStatus(promotion).cls]" :title="$t('pos.promotions.toggleHint')">
+                    {{ promotionStatus(promotion).label }}
                   </button>
                 </td>
                 <td class="text-right">
                   <div class="flex items-center justify-end space-x-1">
+                    <button @click="viewCoupons(promotion)" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100" :title="$t('pos.promotions.viewCoupons')">
+                      <TicketIcon class="h-5 w-5" />
+                    </button>
+                    <button @click="clonePromotion(promotion)" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100" :title="$t('clone')">
+                      <DocumentDuplicateIcon class="h-5 w-5" />
+                    </button>
                     <button @click="openModal(promotion)" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100" :title="$t('edit')">
                       <PencilIcon class="h-5 w-5" />
                     </button>
@@ -472,7 +545,12 @@ const tabs = computed(() => [
                   <div v-else-if="expandedDetail" class="space-y-6">
                     <!-- Info grid -->
                     <div>
-                      <h4 class="text-sm font-semibold text-gray-900 mb-3">{{ $t('pos.promotions.promotionInfo') }}</h4>
+                      <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-sm font-semibold text-gray-900">{{ $t('pos.promotions.promotionInfo') }}</h4>
+                        <button v-if="expandedDetail.requiresCoupon || expandedDetail.couponCount" @click="viewCoupons(expandedDetail)" class="btn-secondary text-xs">
+                          <TicketIcon class="h-4 w-4 mr-1" />{{ $t('pos.promotions.manageCoupons') }}
+                        </button>
+                      </div>
                       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         <div><span class="text-gray-500">{{ $t('pos.promotions.type') }}:</span> <span class="ml-1 font-medium">{{ typeLabel(expandedDetail.type) }}</span></div>
                         <div><span class="text-gray-500">{{ $t('pos.promotions.scope') }}:</span> <span class="ml-1">{{ expandedDetail.scope || 'ORDER' }}</span></div>
@@ -764,17 +842,16 @@ const tabs = computed(() => [
                 </div>
               </div>
               <div v-if="conditionForm.conditionType === 'SPECIFIC_PRODUCTS'">
-                <label class="label">{{ $t('pos.promotions.productIds') }}</label>
-                <input v-model="conditionForm.productIds" type="text" class="input" placeholder="1,2,3" />
-                <p class="mt-1 text-xs text-gray-400">{{ $t('pos.promotions.commaSeparatedIds') }}</p>
+                <label class="label">{{ $t('pos.promotions.products') }}</label>
+                <EntityPicker v-model="conditionForm.productIds" :options="productOptions" :loading="entityListsLoading" :placeholder="$t('pos.promotions.searchProducts')" />
               </div>
               <div v-if="conditionForm.conditionType === 'CATEGORY'">
-                <label class="label">{{ $t('pos.promotions.categoryIds') }}</label>
-                <input v-model="conditionForm.categoryIds" type="text" class="input" placeholder="1,2" />
+                <label class="label">{{ $t('pos.promotions.categories') }}</label>
+                <EntityPicker v-model="conditionForm.categoryIds" :options="categoryOptions" :loading="entityListsLoading" :placeholder="$t('pos.promotions.searchCategories')" />
               </div>
               <div v-if="conditionForm.conditionType === 'BRAND'">
-                <label class="label">{{ $t('pos.promotions.brandIds') }}</label>
-                <input v-model="conditionForm.brandIds" type="text" class="input" placeholder="1,2" />
+                <label class="label">{{ $t('pos.promotions.brands') }}</label>
+                <EntityPicker v-model="conditionForm.brandIds" :options="brandOptions" :loading="entityListsLoading" :placeholder="$t('pos.promotions.searchBrands')" />
               </div>
               <div v-if="conditionForm.conditionType === 'CUSTOMER_GROUP'">
                 <label class="label">{{ $t('pos.promotions.customerGroups') }}</label>
@@ -835,8 +912,8 @@ const tabs = computed(() => [
               </div>
               <div v-if="actionForm.actionType === 'FREE_ITEM'" class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="label">{{ $t('pos.promotions.freeProductId') }}</label>
-                  <input v-model.number="actionForm.freeProductId" type="number" min="1" class="input" />
+                  <label class="label">{{ $t('pos.promotions.freeProduct') }}</label>
+                  <EntityPicker v-model="actionForm.freeProductId" :options="productOptions" :multiple="false" :loading="entityListsLoading" :placeholder="$t('pos.promotions.searchProducts')" />
                 </div>
                 <div>
                   <label class="label">{{ $t('pos.promotions.freeQuantity') }}</label>
@@ -844,9 +921,9 @@ const tabs = computed(() => [
                 </div>
               </div>
               <div>
-                <label class="label">{{ $t('pos.promotions.targetProductIds') }}</label>
-                <input v-model="actionForm.targetProductIds" type="text" class="input" placeholder="1,2,3" />
-                <p class="mt-1 text-xs text-gray-400">{{ $t('pos.promotions.commaSeparatedIds') }}</p>
+                <label class="label">{{ $t('pos.promotions.targetProducts') }}</label>
+                <EntityPicker v-model="actionForm.targetProductIds" :options="productOptions" :loading="entityListsLoading" :placeholder="$t('pos.promotions.searchProducts')" />
+                <p class="mt-1 text-xs text-gray-400">{{ $t('pos.promotions.targetProductsHint') }}</p>
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>

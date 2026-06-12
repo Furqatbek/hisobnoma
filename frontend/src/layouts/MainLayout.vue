@@ -39,7 +39,9 @@ import {
   AdjustmentsHorizontalIcon,
   InboxArrowDownIcon,
   GlobeAltIcon,
-  MegaphoneIcon
+  MegaphoneIcon,
+  TicketIcon,
+  ReceiptPercentIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -97,8 +99,8 @@ const navigation = computed(() => [
       { name: t('nav.cashRegister'), href: '/pos', icon: ShoppingCartIcon },
       { name: t('nav.salesHistory'), href: '/pos/transactions', icon: ClockIcon },
       { name: t('nav.shifts'), href: '/pos/shifts', icon: ClipboardDocumentListIcon },
-      { name: t('nav.promotions'), href: '/pos/promotions', icon: TagIcon },
-      { name: t('nav.coupons'), href: '/pos/coupons', icon: TagIcon },
+      { name: t('nav.promotions'), href: '/pos/promotions', icon: ReceiptPercentIcon },
+      { name: t('nav.coupons'), href: '/pos/coupons', icon: TicketIcon },
       { name: t('nav.priceLists'), href: '/pos/price-lists', icon: CurrencyDollarIcon }
     ]
   },
