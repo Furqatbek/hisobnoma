@@ -32,8 +32,8 @@ VALUES
     ('Manage Web Loyalty', 'WEB_LOYALTY_MANAGE', 'Manually adjust loyalty points', 'WEB', 'MANAGE', NOW(), NOW());
 
 -- Grant to ADMIN and SUPER_ADMIN roles
-INSERT INTO role_permissions (role_id, permission_id, created_at, updated_at)
-SELECT r.id, p.id, NOW(), NOW()
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permissions p
 WHERE r.code IN ('ADMIN', 'SUPER_ADMIN')
