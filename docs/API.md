@@ -3398,14 +3398,24 @@ Paged endpoints return a `content` array plus `page` metadata (no `success` enve
 installed apps cannot be force-updated. New fields may appear; existing fields never change
 meaning or disappear.
 
-**Errors.** Standard error envelope with HTTP status:
+**Errors.** Error envelope with HTTP status:
 ```json
-{ "success": false, "message": "Invalid coupon code",
-  "error": { "code": "VALIDATION_ERROR" }, "timestamp": "2026-06-11T12:00:00Z" }
+{ "success": false, "message": "Купон яроқсиз ёки муддати ўтган",
+  "error": { "code": "COUPON_INVALID" }, "timestamp": "2026-06-13T08:00:00Z" }
 ```
+`message` is **localized (Uzbek) and user-safe** — show it directly to the customer. Internal
+detail and stack traces are never exposed; unknown errors collapse to a generic localized
+message by status. `error.code` is for programmatic handling (it's stable; the `message`
+wording may change). If `message` is ever absent, fall back to a generic message by status.
+
 Common statuses: `400` validation/business error, `401` missing/invalid customer token,
 `404` not found (or hidden/draft item, or order whose phone doesn't match), `429` rate
-limited, `201` created (checkout only).
+limited, `503` payment provider not configured, `201` created (checkout only).
+
+Known `error.code` values: `VALIDATION_FAILED`, `COUPON_INVALID`, `PRODUCT_UNAVAILABLE`,
+`OTP_INVALID`, `OTP_EXPIRED`, `INVALID_PHONE`, `ORDER_ALREADY_PAID`, `ORDER_NOT_PAYABLE`,
+`INVALID_DELIVERY`, `NOT_FOUND`, `UNAUTHORIZED`, `TOO_MANY_REQUESTS`,
+`PAYMENT_NOT_CONFIGURED`, `INTERNAL_ERROR`.
 
 **Money & quantities.** All amounts are `UZS` decimals. `currency` is always `"UZS"`.
 Quantities allow up to 3 decimals (`0.001`–`10000`).
