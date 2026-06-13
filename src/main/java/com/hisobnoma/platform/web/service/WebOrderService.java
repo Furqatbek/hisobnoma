@@ -57,6 +57,7 @@ public class WebOrderService {
     private final WebLoyaltyService loyaltyService;
     private final WebPushService pushService;
     private final WebReferralService referralService;
+    private final com.hisobnoma.platform.web.repository.WebPaymentRepository paymentRepository;
 
     @Transactional(readOnly = true)
     public Page<WebOrderDto> getOrders(WebOrderStatus status, Pageable pageable) {
@@ -126,6 +127,30 @@ public class WebOrderService {
         notifyStatusChange(order, target);
 
         return result;
+    }
+
+    /**
+     * Staff confirmation that an online card payment was received (interim path
+     * until provider webhooks are wired). Flags the order — and its latest
+     * payment attempt — as PAID. Idempotent.
+     */
+    @Transactional
+    public WebOrderDto confirmPayment(Long id) {
+        WebOrder order = getOrderEntity(id);
+        if (order.getStatus() == WebOrderStatus.CANCELLED) {
+            throw new ValidationException("Cancelled orders cannot be marked paid");
+        }
+        order.setPaymentStatus(WebPaymentStatus.PAID);
+        paymentRepository
+                .findTopByWebOrderIdAndTenantIdOrderByCreatedAtDesc(order.getId(), order.getTenantId())
+                .filter(p -> p.getStatus() != WebPaymentStatus.PAID)
+                .ifPresent(p -> {
+                    p.setStatus(WebPaymentStatus.PAID);
+                    p.setPaidAt(java.time.Instant.now());
+                    paymentRepository.save(p);
+                });
+        log.info("Web order {} payment confirmed by staff", order.getOrderNumber());
+        return toDto(orderRepository.save(order));
     }
 
     /**

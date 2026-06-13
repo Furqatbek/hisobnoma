@@ -141,6 +141,25 @@ app:
     bot-token: ${TELEGRAM_BOT_TOKEN:}
     bot-username: ${TELEGRAM_BOT_USERNAME:hisobnoma_bot}
 
+  # Online card payment providers (shop). Disabled until a merchant account +
+  # sandbox credentials exist; while disabled the API returns 503 and never
+  # fakes a successful payment. Set <provider>.enabled=true with a merchant id.
+  payment:
+    payme:
+      enabled: ${PAYME_ENABLED:false}
+      merchant-id: ${PAYME_MERCHANT_ID:}
+      secret-key: ${PAYME_KEY:}
+      checkout-base-url: ${PAYME_CHECKOUT_URL:https://checkout.paycom.uz}
+    click:
+      enabled: ${CLICK_ENABLED:false}
+      merchant-id: ${CLICK_MERCHANT_ID:}
+      service-id: ${CLICK_SERVICE_ID:}
+      secret-key: ${CLICK_SECRET:}
+    uzum:
+      enabled: ${UZUM_ENABLED:false}
+      merchant-id: ${UZUM_MERCHANT_ID:}
+      secret-key: ${UZUM_SECRET:}
+
   # Security
   security:
     password-min-length: 8

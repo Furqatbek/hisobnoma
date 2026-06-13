@@ -3683,6 +3683,64 @@ X-Tenant-ID: 1
 **Response:** `200 OK` — same `PublicOrderDto` shape as checkout (current `status`,
 `paymentStatus`).
 
+### POST /web/orders/{orderNumber}/payment
+Start an online card payment for an existing order. Anonymous; the `phone` in the body must
+match the order (same guard as the status lookup) — no phone/order number in the polling URL.
+
+**Request:**
+```http
+POST /api/v1/web/orders/WO-000042/payment
+X-Tenant-ID: 1
+Content-Type: application/json
+
+{ "phone": "+998901234567", "provider": "PAYME", "returnUrl": "https://app.example/return" }
+```
+`provider` is `PAYME` | `CLICK` | `UZUM`. `returnUrl` is optional and **must be HTTPS**
+(anything else is dropped). The amount is taken from the order server-side — never the client.
+
+**Response:** `201 Created`
+```json
+{
+  "success": true,
+  "data": {
+    "id": "pay_4f3c2a1b9d8e7f60",
+    "paymentUrl": "https://checkout.paycom.uz/<base64>",
+    "status": "PENDING",
+    "provider": "PAYME",
+    "amount": 33000.0
+  },
+  "timestamp": "2026-06-13T08:00:00Z"
+}
+```
+- `id` — opaque token; poll it via `GET /web/payments/{id}`.
+- `paymentUrl` — always HTTPS; open it in a browser/WebView.
+- `503 PAYMENT_NOT_CONFIGURED` if the chosen provider has no merchant credentials in this
+  environment — the app should fall back (e.g. offer cash on delivery), not treat it as fatal.
+- `400` if the order is cancelled or already paid.
+
+### GET /web/payments/{id}
+Poll a payment's status by its opaque id. Anonymous (the id carries no PII).
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": { "id": "pay_4f3c2a1b9d8e7f60", "status": "PAID", "provider": "PAYME", "amount": 33000.0 },
+  "timestamp": "2026-06-13T08:01:00Z"
+}
+```
+`status`: `PENDING` (keep waiting) · `PAID` (success — show receipt; the order's
+`paymentStatus` also becomes `PAID`) · `FAILED` / `CANCELLED` (terminal — offer retry).
+
+> **Provider wiring status.** The redirect URL is built per each provider's documented
+> hosted-checkout method (Payme GET-init, Click pay-link, Uzum). Confirmation currently
+> arrives via the staff **confirm-payment** action (`POST /web-orders/{id}/confirm-payment`);
+> the asynchronous provider webhooks (Payme JSON-RPC, Click prepare/complete) plug into the
+> same `WebPaymentService.markPaid(...)` hook and are wired once a merchant account + sandbox
+> credentials are available. Every provider is **disabled by default** (`503`) until
+> `hisobnoma.payment.<provider>.enabled=true` with a merchant id, so no environment can ever
+> fake a successful payment.
+
 ### GET /web/delivery/regions
 Active delivery regions for the checkout form. Anonymous.
 
@@ -4278,6 +4336,8 @@ changes), staff endpoints authenticated with permissions.
 | POST | /web/cart/validate-coupon | Coupon check before checkout. Body: `{ code, lines: [{catalogItemId, quantity}] }` (the discount depends on the cart). Optional bearer token binds per-customer limits. **Strictly rate limited 5/min per IP** (429) — coupon codes are guessable. Returns `{ couponCode, valid, discount }`; every invalid reason (unknown / expired / depleted / wrong channel / below min order) produces the same generic `valid: false` so the endpoint can't probe codes |
 | POST | /web/orders | Checkout. Body: `{ customerName, phone, regionId?, villageId?, note?, couponCode?, pointsToSpend?, lines: [{catalogItemId, quantity}] }`. Max 50 lines, qty 0.001–10000, products must be LIVE. **Prices and discounts are always computed server-side**. An invalid `couponCode` rejects the checkout with 400 (never silently drops the discount). `pointsToSpend` redeems loyalty points (capped server-side). Rate limited per IP+phone (5/min → 429). Returns 201 with `{ orderNumber, status, deliveryFee, discountTotal, couponCode, couponDiscount, pointsSpent, totalAmount, lines }` |
 | GET | /web/orders/{orderNumber}?phone= | Order status lookup; the phone must match the order (404 otherwise). **Rate limited ≈5/10s per IP** (429) — enumerable order numbers. Includes `paymentMethod`, `paymentStatus`, `address`, `discountTotal`, `couponCode`, `couponDiscount` and `deliveryFee` |
+| POST | /web/orders/{orderNumber}/payment | Start a card payment. Body: `{ phone, provider (PAYME\|CLICK\|UZUM), returnUrl? }`. Phone must match the order. Returns `{ id, paymentUrl (HTTPS), status, provider, amount }`. `503` if the provider isn't configured |
+| GET | /web/payments/{id} | Poll payment status by opaque id. Returns `{ id, status (PENDING\|PAID\|FAILED\|CANCELLED), provider, amount }` |
 | GET | /web/delivery/regions | Active delivery regions for the checkout form (includes `deliveryFee`) |
 | GET | /web/delivery/villages?regionId= | Active villages, optionally filtered by region |
 

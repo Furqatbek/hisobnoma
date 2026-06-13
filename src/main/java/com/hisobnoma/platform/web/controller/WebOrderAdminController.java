@@ -62,4 +62,14 @@ public class WebOrderAdminController {
     public ResponseEntity<ApiResponse<WebOrderDto>> convertToInvoice(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(orderService.convertToInvoice(id)));
     }
+
+    /**
+     * Mark an online card payment as received (interim, until provider webhooks
+     * are wired). Sets the order's paymentStatus to PAID.
+     */
+    @PostMapping("/{id}/confirm-payment")
+    @RequiresPermission("WEB_ORDER_MANAGE")
+    public ResponseEntity<ApiResponse<WebOrderDto>> confirmPayment(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.confirmPayment(id)));
+    }
 }
