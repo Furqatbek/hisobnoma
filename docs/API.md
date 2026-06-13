@@ -3610,7 +3610,9 @@ Content-Type: application/json
   "phone": "+998901234567",
   "regionId": 2,
   "villageId": 14,
+  "address": "Chilonzor 5, dom 12, kv 3",
   "note": "Call on arrival",
+  "paymentMethod": "CARD",
   "couponCode": "SAVE10",
   "pointsToSpend": 5000,
   "lines": [
@@ -3619,7 +3621,10 @@ Content-Type: application/json
   ]
 }
 ```
-`regionId`, `villageId`, `note`, `couponCode`, `pointsToSpend` are all optional.
+`regionId`, `villageId`, `address`, `note`, `paymentMethod`, `couponCode`, `pointsToSpend`
+are all optional. `address` is the free-text delivery address (street/house/landmark) — the
+app makes it required in its UI; the backend stores it and shows it to fulfilment.
+`paymentMethod` is `"CASH"` (default) or `"CARD"`; anything else is treated as `CASH`.
 `pointsToSpend` redeems loyalty points (capped server-side by the shop's max-redeem-percent
 and the customer's balance; ignored if the loyalty program is off or the phone has no
 account). An invalid `couponCode` **rejects** the checkout with `400` (never silently drops
@@ -3632,6 +3637,9 @@ the discount).
   "data": {
     "orderNumber": "WEB-20260611-0007",
     "status": "NEW",
+    "paymentMethod": "CARD",
+    "paymentStatus": "PENDING",
+    "address": "Chilonzor 5, dom 12, kv 3",
     "deliveryFee": 10000.0,
     "discountTotal": 3600.0,
     "couponCode": "SAVE10",
@@ -3651,11 +3659,20 @@ the discount).
 Line `productName`/`unitPrice` are snapshotted **at full price**; promotion, coupon and
 points discounts live at order level:
 `totalAmount = Σ lineTotal − discountTotal − couponDiscount − pointsSpent + deliveryFee`.
+`discountTotal` is promotions only; the coupon discount is separate (`couponDiscount`) — do
+**not** add them twice.
 Order lifecycle: `NEW → CONFIRMED → DELIVERING → COMPLETED` (cancellable until completed).
+
+**Payment fields:** `paymentMethod` is `CASH` | `CARD`. `paymentStatus` is
+`NONE` | `PENDING` | `PAID` | `FAILED` | `CANCELLED` | `REFUNDED` — `NONE` for cash orders,
+`PENDING` for a fresh card order (until the card-payment flow confirms it), and `REFUNDED`
+when a paid order is later cancelled. Absent/empty → show no payment state (legacy-safe).
 
 ### GET /web/orders/{orderNumber}?phone=
 Order status lookup. Anonymous, but the `phone` must match the order (`404` otherwise) — this
-is the "track my order" screen for guests without an account.
+is the "track my order" screen for guests without an account. **Rate limited per IP** (≈5 /
+10s → `429`): order numbers are sequential and phone-only auth is weak, so this throttles
+enumeration while staying comfortable for one customer polling their order.
 
 **Request:**
 ```http
@@ -3663,7 +3680,8 @@ GET /api/v1/web/orders/WEB-20260611-0007?phone=+998901234567
 X-Tenant-ID: 1
 ```
 
-**Response:** `200 OK` — same `PublicOrderDto` shape as checkout (current `status`).
+**Response:** `200 OK` — same `PublicOrderDto` shape as checkout (current `status`,
+`paymentStatus`).
 
 ### GET /web/delivery/regions
 Active delivery regions for the checkout form. Anonymous.
@@ -4259,7 +4277,7 @@ changes), staff endpoints authenticated with permissions.
 | POST | /web/cart/price | Cart pricing preview with promotion discounts. Body: `{ lines: [{catalogItemId, quantity}] }` (max 50 lines). Optional `Authorization: Bearer <web-customer-token>` personalises customer-specific promotion conditions. Rate limited 5 calls / 10s per IP (429). Returns `{ lines: [{catalogItemId, productName, quantity, unitPrice, lineTotal}], subtotal, discountTotal, total, currency, appliedPromotions: ["10% off"] }` — promotion **names only**, never conditions or usage counters. Display-only: checkout recomputes everything |
 | POST | /web/cart/validate-coupon | Coupon check before checkout. Body: `{ code, lines: [{catalogItemId, quantity}] }` (the discount depends on the cart). Optional bearer token binds per-customer limits. **Strictly rate limited 5/min per IP** (429) — coupon codes are guessable. Returns `{ couponCode, valid, discount }`; every invalid reason (unknown / expired / depleted / wrong channel / below min order) produces the same generic `valid: false` so the endpoint can't probe codes |
 | POST | /web/orders | Checkout. Body: `{ customerName, phone, regionId?, villageId?, note?, couponCode?, pointsToSpend?, lines: [{catalogItemId, quantity}] }`. Max 50 lines, qty 0.001–10000, products must be LIVE. **Prices and discounts are always computed server-side**. An invalid `couponCode` rejects the checkout with 400 (never silently drops the discount). `pointsToSpend` redeems loyalty points (capped server-side). Rate limited per IP+phone (5/min → 429). Returns 201 with `{ orderNumber, status, deliveryFee, discountTotal, couponCode, couponDiscount, pointsSpent, totalAmount, lines }` |
-| GET | /web/orders/{orderNumber}?phone= | Order status lookup; the phone must match the order (404 otherwise). Includes `discountTotal`, `couponCode`, `couponDiscount` and `deliveryFee` |
+| GET | /web/orders/{orderNumber}?phone= | Order status lookup; the phone must match the order (404 otherwise). **Rate limited ≈5/10s per IP** (429) — enumerable order numbers. Includes `paymentMethod`, `paymentStatus`, `address`, `discountTotal`, `couponCode`, `couponDiscount` and `deliveryFee` |
 | GET | /web/delivery/regions | Active delivery regions for the checkout form (includes `deliveryFee`) |
 | GET | /web/delivery/villages?regionId= | Active villages, optionally filtered by region |
 

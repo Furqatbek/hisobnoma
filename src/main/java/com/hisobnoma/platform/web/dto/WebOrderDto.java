@@ -29,6 +29,9 @@ public class WebOrderDto {
     private Long deliveryVillageId;
     private String deliveryVillageName;
     private String customerNote;
+    private String deliveryAddress;
+    private String paymentMethod;
+    private String paymentStatus;
     private BigDecimal deliveryFee;
     private BigDecimal discountTotal;
     private String appliedPromotions;

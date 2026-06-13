@@ -117,6 +117,39 @@ class WebOrderPublicServiceTest {
     }
 
     @Test
+    void checkout_defaultsToCashWithNonePaymentStatus() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PublicOrderDto dto = service.checkout(checkoutRequest(BigDecimal.ONE), "1.2.3.4", null);
+
+        assertEquals("CASH", dto.getPaymentMethod());
+        assertEquals("NONE", dto.getPaymentStatus());
+    }
+
+    @Test
+    void checkout_cardOrderStartsPendingAndStoresAddress() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckoutRequest request = checkoutRequest(BigDecimal.ONE);
+        request.setPaymentMethod("CARD");
+        request.setAddress("Chilonzor 5, dom 12, kv 3");
+
+        PublicOrderDto dto = service.checkout(request, "1.2.3.4", null);
+
+        assertEquals("CARD", dto.getPaymentMethod());
+        assertEquals("PENDING", dto.getPaymentStatus());
+        assertEquals("Chilonzor 5, dom 12, kv 3", dto.getAddress());
+
+        ArgumentCaptor<WebOrder> captor = ArgumentCaptor.forClass(WebOrder.class);
+        verify(orderRepository, atLeastOnce()).save(captor.capture());
+        assertEquals("Chilonzor 5, dom 12, kv 3", captor.getValue().getDeliveryAddress());
+    }
+
+    @Test
     void checkout_appliesPromotionDiscountFromEngine() {
         when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
         when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));

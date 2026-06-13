@@ -58,6 +58,9 @@ public class WebOrderPublicService {
             throw new TooManyRequestsException("Too many checkout attempts, please try again later");
         }
 
+        WebPaymentMethod paymentMethod = "CARD".equals(request.getPaymentMethod())
+                ? WebPaymentMethod.CARD : WebPaymentMethod.CASH;
+
         WebOrder order = WebOrder.builder()
                 .tenantId(tenantId)
                 .orderNumber(generateOrderNumber(tenantId))
@@ -66,6 +69,11 @@ public class WebOrderPublicService {
                 .phone(request.getPhone().trim())
                 .phoneNormalized(normalizePhone(request.getPhone()))
                 .customerNote(request.getNote())
+                .deliveryAddress(request.getAddress() != null ? request.getAddress().trim() : null)
+                .paymentMethod(paymentMethod)
+                // Card orders await online payment; cash orders need none.
+                .paymentStatus(paymentMethod == WebPaymentMethod.CARD
+                        ? WebPaymentStatus.PENDING : WebPaymentStatus.NONE)
                 .sourceIp(sourceIp)
                 .userAgent(userAgent != null && userAgent.length() > 500
                         ? userAgent.substring(0, 500) : userAgent)
@@ -279,6 +287,9 @@ public class WebOrderPublicService {
         return PublicOrderDto.builder()
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus().name())
+                .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
+                .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null)
+                .address(order.getDeliveryAddress())
                 .deliveryFee(order.getDeliveryFee())
                 .discountTotal(order.getDiscountTotal())
                 .couponCode(order.getCouponCode())

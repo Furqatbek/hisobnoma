@@ -20,6 +20,9 @@ public class PublicOrderDto {
 
     private String orderNumber;
     private String status;
+    private String paymentMethod;
+    private String paymentStatus;
+    private String address;
     private BigDecimal deliveryFee;
     private BigDecimal discountTotal;
     private String couponCode;

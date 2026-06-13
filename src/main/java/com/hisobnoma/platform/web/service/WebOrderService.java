@@ -21,6 +21,7 @@ import com.hisobnoma.platform.web.dto.WebOrderDto;
 import com.hisobnoma.platform.web.entity.WebOrder;
 import com.hisobnoma.platform.web.entity.WebOrderLine;
 import com.hisobnoma.platform.web.entity.WebOrderStatus;
+import com.hisobnoma.platform.web.entity.WebPaymentStatus;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -112,6 +113,10 @@ public class WebOrderService {
                 adjustPromotionUsage(order, false);
                 reverseCouponRedemption(order, request.getReason());
                 reverseLoyaltyPoints(order);
+                // A previously-paid card order that is cancelled must be refunded.
+                if (order.getPaymentStatus() == WebPaymentStatus.PAID) {
+                    order.setPaymentStatus(WebPaymentStatus.REFUNDED);
+                }
             }
         }
 
@@ -417,6 +422,9 @@ public class WebOrderService {
                 .deliveryVillageId(order.getDeliveryVillageId())
                 .deliveryVillageName(order.getDeliveryVillageName())
                 .customerNote(order.getCustomerNote())
+                .deliveryAddress(order.getDeliveryAddress())
+                .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
+                .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null)
                 .deliveryFee(order.getDeliveryFee())
                 .discountTotal(order.getDiscountTotal())
                 .appliedPromotions(order.getAppliedPromotions())

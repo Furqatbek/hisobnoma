@@ -64,6 +64,30 @@ public class WebOrder extends TenantAwareEntity {
     private String customerNote;
 
     /**
+     * Free-text street / house / landmark captured at checkout (required by
+     * the mobile app's UI). Kept separate from {@link #customerNote}.
+     */
+    @Column(name = "delivery_address", length = 500)
+    private String deliveryAddress;
+
+    /**
+     * How the customer chose to pay. Defaults to cash on delivery.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false, length = 10)
+    @Builder.Default
+    private WebPaymentMethod paymentMethod = WebPaymentMethod.CASH;
+
+    /**
+     * Online payment state. {@code NONE} for cash orders; {@code PENDING}
+     * once a card payment is started.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 20)
+    @Builder.Default
+    private WebPaymentStatus paymentStatus = WebPaymentStatus.NONE;
+
+    /**
      * Delivery fee snapshotted from the region at checkout time.
      */
     @Column(name = "delivery_fee", precision = 18, scale = 4, nullable = false)

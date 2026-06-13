@@ -36,6 +36,19 @@ public class CheckoutRequest {
     @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
 
+    /**
+     * Free-text delivery address (street/house/landmark). Required by the app
+     * UI; kept optional here so older clients don't break.
+     */
+    @Size(max = 500, message = "Address cannot exceed 500 characters")
+    private String address;
+
+    /**
+     * "CASH" (default) or "CARD". Anything unrecognized is treated as CASH.
+     */
+    @Pattern(regexp = "CASH|CARD", message = "Payment method must be CASH or CARD")
+    private String paymentMethod;
+
     @Size(max = 50, message = "Coupon code cannot exceed 50 characters")
     private String couponCode;
 
