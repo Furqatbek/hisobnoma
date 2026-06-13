@@ -66,7 +66,9 @@ const form = reactive({
   allowNegativeStock: false,
   active: true,
   sellable: true,
-  purchasable: true
+  purchasable: true,
+  fractional: false,
+  orderStep: 1
 })
 
 const errors = reactive({})
@@ -1040,6 +1042,17 @@ async function handleSubmit() {
               <input v-model="form.purchasable" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
               <span class="ml-2 text-sm text-gray-700">{{ $t('inventory.productForm.purchasable') }}</span>
             </label>
+
+            <label class="flex items-center">
+              <input v-model="form.fractional" type="checkbox" class="h-4 w-4 text-primary-600 rounded" />
+              <span class="ml-2 text-sm text-gray-700">{{ $t('inventory.productForm.fractional') }}</span>
+            </label>
+          </div>
+
+          <div v-if="form.fractional" class="mt-3 max-w-xs">
+            <label class="label">{{ $t('inventory.productForm.orderStep') }}</label>
+            <input v-model.number="form.orderStep" type="number" step="0.001" min="0.001" class="input" />
+            <p class="mt-1 text-xs text-gray-400">{{ $t('inventory.productForm.orderStepHint') }}</p>
           </div>
         </div>
       </div>

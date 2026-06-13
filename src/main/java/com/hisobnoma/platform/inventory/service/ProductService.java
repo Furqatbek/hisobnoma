@@ -198,6 +198,9 @@ public class ProductService {
 
         Product product = productMapper.toEntity(request);
         product.setSku(sku);
+        if (product.getOrderStep() == null) {
+            product.setOrderStep(java.math.BigDecimal.ONE);
+        }
         product.setTenantId(tenantId);
 
         // Set category
@@ -321,6 +324,8 @@ public class ProductService {
         if (request.getPurchasable() != null) product.setPurchasable(request.getPurchasable());
         if (request.getTrackBatch() != null) product.setTrackBatch(request.getTrackBatch());
         if (request.getTrackSerial() != null) product.setTrackSerial(request.getTrackSerial());
+        if (request.getFractional() != null) product.setFractional(request.getFractional());
+        if (request.getOrderStep() != null) product.setOrderStep(request.getOrderStep());
 
         if (request.getWeight() != null) product.setWeight(request.getWeight());
         if (request.getWeightUnit() != null) product.setWeightUnit(request.getWeightUnit());

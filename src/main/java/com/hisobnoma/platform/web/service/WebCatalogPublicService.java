@@ -138,6 +138,8 @@ public class WebCatalogPublicService {
                 .brandName(p.getBrand() != null ? p.getBrand().getName() : null)
                 .unitName(p.getBaseUom() != null ? p.getBaseUom().getName() : null)
                 .inStock(inStock)
+                .fractional(p.isFractional())
+                .step(p.getOrderStep())
                 .imageUrl(primary)
                 .images(images)
                 .build();

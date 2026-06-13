@@ -111,6 +111,22 @@ public class Product extends TenantAwareEntity {
     @Builder.Default
     private boolean hasVariants = false;
 
+    /**
+     * Sold in fractional units (e.g. by weight/length). When true the shop app
+     * shows a decimal quantity stepper stepping by {@link #orderStep}.
+     */
+    @Column(name = "fractional", nullable = false)
+    @Builder.Default
+    private boolean fractional = false;
+
+    /**
+     * Ordering increment (e.g. {@code 0.5} kg). Defaults to whole units.
+     * Exposed to the shop app as {@code step}.
+     */
+    @Column(name = "order_step", precision = 18, scale = 4, nullable = false)
+    @Builder.Default
+    private BigDecimal orderStep = BigDecimal.ONE;
+
     @Column(name = "track_batch", nullable = false)
     @Builder.Default
     private boolean trackBatch = false;

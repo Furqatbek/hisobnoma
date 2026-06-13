@@ -47,6 +47,8 @@ public class ProductDto {
     private boolean sellable;
     private boolean purchasable;
     private boolean hasVariants;
+    private boolean fractional;
+    private BigDecimal orderStep;
     private boolean trackBatch;
     private boolean trackSerial;
 

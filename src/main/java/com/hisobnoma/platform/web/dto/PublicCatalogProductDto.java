@@ -41,6 +41,10 @@ public class PublicCatalogProductDto {
     private String brandName;
     private String unitName;
     private boolean inStock;
+    /** Sold in fractional units (weight/length) — app shows a decimal stepper. */
+    private boolean fractional;
+    /** Ordering increment, e.g. 0.5. Always 1 for whole-unit products. */
+    private BigDecimal step;
     private String imageUrl;
     private List<String> images;
 }

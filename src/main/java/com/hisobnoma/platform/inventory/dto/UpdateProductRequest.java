@@ -66,6 +66,8 @@ public class UpdateProductRequest {
     private Boolean purchasable;
     private Boolean trackBatch;
     private Boolean trackSerial;
+    private Boolean fractional;
+    private BigDecimal orderStep;
 
     @DecimalMin(value = "0", message = "Weight must be non-negative")
     private BigDecimal weight;

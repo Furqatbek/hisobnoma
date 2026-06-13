@@ -126,6 +126,26 @@ class WebCatalogPublicServiceTest {
     }
 
     @Test
+    void getProducts_exposesFractionalAndStep() {
+        Product whole = product(10L, "Cola", new BigDecimal("12000"), false);
+        Product byWeight = product(11L, "Apples", new BigDecimal("18000"), false);
+        byWeight.setFractional(true);
+        byWeight.setOrderStep(new BigDecimal("0.5"));
+        when(catalogRepository.findVisible(eq(DEFAULT_TENANT_ID), eq(WebCatalogStatus.LIVE), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(
+                        item(1L, whole, WebCatalogStatus.LIVE),
+                        item(2L, byWeight, WebCatalogStatus.LIVE))));
+        when(stockRepository.getTotalQuantitiesByTenant(DEFAULT_TENANT_ID)).thenReturn(List.of());
+
+        Page<PublicCatalogProductDto> page = service.getProducts(null, null, PageRequest.of(0, 20));
+
+        assertFalse(page.getContent().get(0).isFractional());
+        assertEquals(0, BigDecimal.ONE.compareTo(page.getContent().get(0).getStep()));
+        assertTrue(page.getContent().get(1).isFractional());
+        assertEquals(0, new BigDecimal("0.5").compareTo(page.getContent().get(1).getStep()));
+    }
+
+    @Test
     void getProducts_inStockReflectsStockQuantities() {
         Product tracked = product(10L, "Cola", new BigDecimal("12000"), true);
         Product trackedEmpty = product(11L, "Juice", new BigDecimal("8000"), true);

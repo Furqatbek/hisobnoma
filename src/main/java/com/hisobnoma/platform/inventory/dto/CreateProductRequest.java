@@ -81,6 +81,14 @@ public class CreateProductRequest {
     @Builder.Default
     private boolean purchasable = true;
 
+    /** Sold in fractional units (weight/length). */
+    @Builder.Default
+    private boolean fractional = false;
+
+    /** Ordering increment (e.g. 0.5). Defaults to whole units. */
+    @Builder.Default
+    private BigDecimal orderStep = java.math.BigDecimal.ONE;
+
     @Builder.Default
     private boolean trackBatch = false;
 

@@ -3454,6 +3454,8 @@ X-Tenant-ID: 1
       "brandName": "Coca-Cola",
       "unitName": "Pieces",
       "inStock": true,
+      "fractional": false,
+      "step": 1,
       "imageUrl": "/uploads/products/1/main.jpg",
       "images": ["/uploads/products/1/main.jpg"]
     }
@@ -3467,6 +3469,9 @@ promotion applies** (computed server-side, cached up to 60s). Show `salePrice` w
 original `price` struck through. The badge is a single-unit preview — the authoritative
 cart discount comes from `POST /web/cart/price` and from checkout. Cost/wholesale prices and
 exact stock quantities are **never** exposed — only the `inStock` flag.
+`fractional`/`step` describe how the item is ordered: when `fractional` is `true` the app
+shows a decimal quantity stepper incrementing by `step` (e.g. `0.5` kg); otherwise `step` is
+`1` (whole units). Order lines already accept decimal `quantity` (0.001–10000).
 
 ### GET /web/catalog/products/{id}
 Single LIVE item detail. Anonymous. Returns `404` for draft/hidden items.
