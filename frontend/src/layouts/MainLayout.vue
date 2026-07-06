@@ -187,6 +187,8 @@ const navigation = computed(() => [
     children: [
       { name: t('nav.distributionOrders'), href: '/distribution/orders', icon: ClipboardDocumentListIcon },
       { name: t('nav.distributionVanLoadouts'), href: '/distribution/van-loadouts', icon: TruckIcon },
+      { name: t('nav.distributionRoutes'), href: '/distribution/routes', icon: MapIcon },
+      { name: t('nav.distributionVisits'), href: '/distribution/visits', icon: MapPinIcon },
       { name: t('nav.distributionAgents'), href: '/distribution/agents', icon: UserGroupIcon }
     ]
   },

@@ -758,6 +758,24 @@ export const distributionVanLoadoutsApi = {
   cancel: (id) => api.post(`/distribution/van-loadouts/${id}/cancel`)
 }
 
+// Distribution Routes API - Backend: /api/v1/distribution/routes
+export const distributionRoutesApi = {
+  getAll: (params) => api.get('/distribution/routes', { params }),
+  search: (query, params) => api.get('/distribution/routes/search', { params: { q: query, ...params } }),
+  getById: (id) => api.get(`/distribution/routes/${id}`),
+  create: (data) => api.post('/distribution/routes', data),
+  update: (id, data) => api.put(`/distribution/routes/${id}`, data),
+  delete: (id) => api.delete(`/distribution/routes/${id}`)
+}
+
+// Distribution Visits API - Backend: /api/v1/distribution/visits
+export const distributionVisitsApi = {
+  getAll: (params) => api.get('/distribution/visits', { params }),
+  getById: (id) => api.get(`/distribution/visits/${id}`),
+  checkIn: (data) => api.post('/distribution/visits/check-in', data),
+  checkOut: (id, data) => api.post(`/distribution/visits/${id}/check-out`, data)
+}
+
 // Web Catalog API (online shop management) - Backend: /api/v1/web-catalog
 export const webCatalogApi = {
   getAll: (params) => api.get('/web-catalog', { params }),

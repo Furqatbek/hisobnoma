@@ -3525,6 +3525,45 @@ DRAFT ─▶ LOADED ─▶ RECONCILED        (or CANCELLED from DRAFT / LOADED)
 - Van sales in this model are cash sales settled through reconciliation; use the
   Distribution **Orders** flow instead when you need per-customer B2B orders + AR.
 
+## Distribution Module — Routes & Visits (Slice 4)
+
+Route plans (an agent's ordered customer stops) and GPS-stamped field visits.
+
+### Routes
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /distribution/routes | DISTRIBUTION_ROUTE_VIEW | List routes (paginated) |
+| GET | /distribution/routes/by-agent/{agentId} | DISTRIBUTION_ROUTE_VIEW | Routes for an agent |
+| GET | /distribution/routes/search?q= | DISTRIBUTION_ROUTE_VIEW | Search by name/code |
+| GET | /distribution/routes/{id} | DISTRIBUTION_ROUTE_VIEW | Get route by ID |
+| POST | /distribution/routes | DISTRIBUTION_ROUTE_MANAGE | Create route |
+| PUT | /distribution/routes/{id} | DISTRIBUTION_ROUTE_MANAGE | Update route (a non-null `stops` replaces the set) |
+| DELETE | /distribution/routes/{id} | DISTRIBUTION_ROUTE_MANAGE | Delete route |
+
+A route has `code`, `name`, optional `agentId` / `territoryRegionId` / `dayOfWeek`
+(`MONDAY`…`SUNDAY`), `status` (`DRAFT`|`ACTIVE`|`ARCHIVED`), and ordered `stops`
+(each: `customerId`, `sortOrder`, optional `visitWindowStart`/`visitWindowEnd` (HH:mm),
+`latitude`/`longitude`, `address`). Stop `customerName` is snapshotted server-side.
+
+### Visits
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /distribution/visits?agentId=&routeId=&date= | DISTRIBUTION_VISIT_VIEW | List visits (paginated; filter by agent, route, or day) |
+| GET | /distribution/visits/{id} | DISTRIBUTION_VISIT_VIEW | Get visit by ID |
+| POST | /distribution/visits/check-in | DISTRIBUTION_VISIT_MANAGE | Record a check-in |
+| POST | /distribution/visits/{id}/check-out | DISTRIBUTION_VISIT_MANAGE | Record the outcome + check-out |
+
+- **check-in** body: `{ agentId, customerId, routeId?, routeStopId?, visitType?, latitude?, longitude?, notes? }`.
+  `visitType` is `PLANNED`|`AD_HOC`|`RETURN_VISIT`; the visit starts `outcome=PENDING`,
+  `checkInAt=now`. `agentId`/`customerId`/`routeId` are tenant-validated; `routeStopId`
+  (if given) must belong to `routeId`.
+- **check-out** body: `{ outcome, latitude?, longitude?, distributionOrderId?, notes? }`.
+  `outcome` is `ORDER_PLACED`|`NO_ORDER`|`PAYMENT_COLLECTED`|`RESCHEDULED`|`CLOSED`.
+- GPS is captured on the mobile/agent side; the admin panel shows coordinates and an
+  "open in maps" link (no embedded map).
+
 ---
 
 # Mobile Shop App — Public API Reference

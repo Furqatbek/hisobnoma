@@ -67,5 +67,7 @@
   "distribution": "Дистрибуция",
   "distributionAgents": "Агентлар",
   "distributionOrders": "Буюртмалар",
-  "distributionVanLoadouts": "Фургон юкламалари"
+  "distributionVanLoadouts": "Фургон юкламалари",
+  "distributionRoutes": "Маршрутлар",
+  "distributionVisits": "Ташрифлар"
 }

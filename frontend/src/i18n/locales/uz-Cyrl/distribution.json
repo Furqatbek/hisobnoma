@@ -17,6 +17,75 @@
     "CASH": "Нақд",
     "MIXED": "Аралаш"
   },
+  "routeStatus": {
+    "DRAFT": "Лойиҳа",
+    "ACTIVE": "Фаол",
+    "ARCHIVED": "Архивланган"
+  },
+  "days": {
+    "MONDAY": "Душанба",
+    "TUESDAY": "Сешанба",
+    "WEDNESDAY": "Чоршанба",
+    "THURSDAY": "Пайшанба",
+    "FRIDAY": "Жума",
+    "SATURDAY": "Шанба",
+    "SUNDAY": "Якшанба"
+  },
+  "visitOutcome": {
+    "PENDING": "Кутилмоқда",
+    "ORDER_PLACED": "Буюртма берилди",
+    "NO_ORDER": "Буюртма йўқ",
+    "PAYMENT_COLLECTED": "Тўлов олинди",
+    "RESCHEDULED": "Қайта режалаштирилди",
+    "CLOSED": "Ёпилди"
+  },
+  "routes": {
+    "title": "Маршрутлар",
+    "subtitle": "Агентларнинг режалаштирилган ташриф маршрутлари",
+    "newRoute": "Янги маршрут",
+    "searchPlaceholder": "Ном ёки код бўйича қидириш",
+    "day": "Кун",
+    "stops": "Тўхташлар",
+    "noRoutes": "Маршрутлар топилмади",
+    "totalRoutes": "Жами маршрутлар",
+    "confirmDelete": "{name} маршрутини ўчирмоқчимисиз?",
+    "deleteError": "Маршрутни ўчириб бўлмади"
+  },
+  "routeForm": {
+    "newRoute": "Янги маршрут",
+    "editRoute": "Маршрутни таҳрирлаш",
+    "loadError": "Маршрутни юклаб бўлмади",
+    "saveError": "Маршрутни сақлаб бўлмади",
+    "codeRequired": "Код киритилиши шарт",
+    "nameRequired": "Ном киритилиши шарт",
+    "stopCustomerRequired": "Ҳар бир тўхташда мижоз танланиши шарт",
+    "agent": "Агент",
+    "region": "Ҳудуд",
+    "dayOfWeek": "Ҳафта куни",
+    "status": "Ҳолати",
+    "duration": "Тахминий давомийлик (дақиқа)",
+    "distance": "Масофа (км)",
+    "stops": "Тўхташлар",
+    "addStop": "Тўхташ қўшиш",
+    "customer": "Мижоз",
+    "address": "Манзил",
+    "window": "Вақт",
+    "notes": "Изоҳлар"
+  },
+  "visits": {
+    "title": "Дала ташрифлари",
+    "subtitle": "Агентларнинг мижозларга ташрифлари (GPS билан)",
+    "allAgents": "Барча агентлар",
+    "customer": "Мижоз",
+    "checkIn": "Кириш",
+    "checkOut": "Чиқиш",
+    "outcome": "Натижа",
+    "noVisits": "Ташрифлар топилмади",
+    "openMap": "Харитада очиш",
+    "checkOutAction": "Чиқишни қайд этиш",
+    "checkoutError": "Чиқишни қайд этиб бўлмади",
+    "notes": "Изоҳлар"
+  },
   "vanStatus": {
     "DRAFT": "Лойиҳа",
     "LOADED": "Юкланган",

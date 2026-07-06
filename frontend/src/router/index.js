@@ -459,6 +459,26 @@ const routes = [
             path: 'van-loadouts/:id',
             name: 'distribution-van-loadout-detail',
             component: () => import('@/views/distribution/VanLoadoutFormView.vue')
+          },
+          {
+            path: 'routes',
+            name: 'distribution-routes',
+            component: () => import('@/views/distribution/RoutesView.vue')
+          },
+          {
+            path: 'routes/new',
+            name: 'distribution-route-create',
+            component: () => import('@/views/distribution/RouteFormView.vue')
+          },
+          {
+            path: 'routes/:id/edit',
+            name: 'distribution-route-edit',
+            component: () => import('@/views/distribution/RouteFormView.vue')
+          },
+          {
+            path: 'visits',
+            name: 'distribution-visits',
+            component: () => import('@/views/distribution/VisitsView.vue')
           }
         ]
       },
