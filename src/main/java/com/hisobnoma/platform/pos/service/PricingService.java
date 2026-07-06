@@ -106,7 +106,18 @@ public class PricingService {
     @Transactional(readOnly = true)
     public BigDecimal getProductPrice(Long productId, Long variantId, BigDecimal quantity,
                                        Long customerId, Long locationId) {
-        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return getProductPrice(productId, variantId, quantity, customerId, locationId,
+                securityContextHelper.getCurrentTenantId());
+    }
+
+    /**
+     * Tenant-explicit variant of {@link #getProductPrice(Long, Long, BigDecimal, Long, Long)}
+     * for callers without a staff security context (e.g. public B2B endpoints where the tenant
+     * comes from {@code TenantContext}).
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal getProductPrice(Long productId, Long variantId, BigDecimal quantity,
+                                       Long customerId, Long locationId, Long tenantId) {
         LocalDate today = LocalDate.now();
 
         Product product = productRepository.findByIdAndTenantId(productId, tenantId).orElse(null);

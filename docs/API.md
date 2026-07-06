@@ -3602,6 +3602,70 @@ revenueAchievementPercent }`.
 
 ---
 
+# B2B Marketplace — Public API Reference (Slice 6)
+
+A **public, customer-facing** self-service ordering portal for wholesale (B2B) buyers,
+consumed by a separate buyer app/site (not the staff admin panel). Mirrors the mobile-shop
+public pattern: endpoints are anonymous at the Spring Security layer (whitelisted under
+`/api/v1/b2b/**`); the **tenant** comes from the `X-Tenant-ID` header and the **buyer identity**
+from a dedicated B2B JWT validated inside the services.
+
+## Conventions
+
+- **Base URL**: `/api/v1/b2b`
+- **Tenant**: every request must send `X-Tenant-ID: <tenantId>`.
+- **Auth**: after login, send `Authorization: Bearer <b2b-token>` on all other calls. The
+  token is a dedicated JWT (signed with a key derived from the staff secret so it can never
+  cross-validate as a staff or web-customer token); it carries the buyer's finance-customer id
+  and tenant. 30-day expiry.
+- The buyer is an existing finance **Customer** (with its price list, credit terms, currency).
+
+## Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | /b2b/auth/login | tenant only | Log in with `{ code, phone }` → `{ token, customerId, code, name, currency, availableCredit }` |
+| GET | /b2b/me | bearer | Buyer profile + credit info |
+| GET | /b2b/catalog?search=&categoryId=&page= | bearer | Active sellable products priced at the buyer's price list |
+| GET | /b2b/catalog/{productId} | bearer | Single product priced for the buyer |
+| GET | /b2b/orders | bearer | The buyer's own distribution orders (paginated) |
+| GET | /b2b/orders/{orderNumber} | bearer | One of the buyer's orders |
+| POST | /b2b/orders | bearer | Place an order → creates a **DRAFT** distribution order |
+
+### Login
+
+```
+POST /b2b/auth/login      (X-Tenant-ID: 1)
+{ "code": "C-00042", "phone": "+998 90 111-22-33" }
+```
+
+- Auth is **code + registered phone** (both required; phone matched on digits only). Unknown
+  code and wrong phone both return the same `401 Invalid code or phone` (no user enumeration).
+- *Note:* this is a shared-secret login suited to a first B2B release; it can be upgraded to
+  phone-OTP (reusing the web-shop OTP infrastructure) without changing the downstream contract.
+
+### Place order
+
+```
+POST /b2b/orders          (X-Tenant-ID: 1, Authorization: Bearer <token>)
+{
+  "deliveryAddress": "Chilonzor 5",
+  "notes": null,
+  "lines": [
+    { "productId": 10, "quantity": 3 },
+    { "productId": 11, "quantity": 2 }
+  ]
+}
+```
+
+- **Unit prices are resolved server-side** against the buyer's price list; the client sends
+  only `productId` + `quantity`. The order is created **DRAFT** (payment method `CREDIT`,
+  terms from the customer) for staff to review, confirm and fulfil via the Distribution
+  Orders flow (slice 2). Ordering is blocked (`CREDIT_HOLD`) while the account is on credit hold.
+- Buyers can only read their own orders (a foreign order number returns `404`).
+
+---
+
 # Mobile Shop App — Public API Reference
 
 This is the **complete, authoritative contract for the customer-facing shop mobile app**.

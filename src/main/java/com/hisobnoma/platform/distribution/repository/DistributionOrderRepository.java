@@ -37,6 +37,14 @@ public interface DistributionOrderRepository extends JpaRepository<DistributionO
     Page<DistributionOrder> searchByTenantId(@Param("tenantId") Long tenantId,
                                              @Param("search") String search, Pageable pageable);
 
+    @Query("SELECT o FROM DistributionOrder o WHERE o.tenantId = :tenantId AND o.customerId = :customerId")
+    Page<DistributionOrder> findByTenantIdAndCustomerId(@Param("tenantId") Long tenantId,
+                                                        @Param("customerId") Long customerId, Pageable pageable);
+
+    @Query("SELECT o FROM DistributionOrder o WHERE o.tenantId = :tenantId AND o.orderNumber = :orderNumber")
+    Optional<DistributionOrder> findByTenantIdAndOrderNumber(@Param("tenantId") Long tenantId,
+                                                             @Param("orderNumber") String orderNumber);
+
     boolean existsByTenantIdAndOrderNumber(Long tenantId, String orderNumber);
 
     @Query("SELECT MAX(o.orderNumber) FROM DistributionOrder o " +
