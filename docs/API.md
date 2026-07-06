@@ -3564,6 +3564,42 @@ A route has `code`, `name`, optional `agentId` / `territoryRegionId` / `dayOfWee
 - GPS is captured on the mobile/agent side; the admin panel shows coordinates and an
   "open in maps" link (no embedded map).
 
+## Distribution Module — Agent KPIs (Slice 5)
+
+Per-agent performance targets (stored) vs actuals (computed live from orders and visits),
+with a revenue leaderboard.
+
+### Targets
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /distribution/agent-targets/by-agent/{agentId} | DISTRIBUTION_KPI_VIEW | An agent's targets |
+| GET | /distribution/agent-targets/{id} | DISTRIBUTION_KPI_VIEW | Get target by ID |
+| POST | /distribution/agent-targets | DISTRIBUTION_KPI_MANAGE | Create a target |
+| PUT | /distribution/agent-targets/{id} | DISTRIBUTION_KPI_MANAGE | Update target values |
+| DELETE | /distribution/agent-targets/{id} | DISTRIBUTION_KPI_MANAGE | Delete target |
+
+A target is `{ agentId, periodType (DAILY|WEEKLY|MONTHLY), periodStart, periodEnd,
+targetRevenue, targetOrders, targetVisits, targetNewCustomers, targetCollection, notes }`.
+One target per agent per exact `(periodStart, periodEnd)` (unique).
+
+### Dashboard
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /distribution/kpi/dashboard?from=&to= | DISTRIBUTION_KPI_VIEW | Per-agent KPIs for the period, ordered by revenue (leaderboard) |
+
+Returns one row per agent (every agent, zeros if no activity):
+`{ agentId, agentName, revenue, orders, visits, cashCollected, customersReached,
+targetRevenue, targetOrders, targetVisits, targetNewCustomers, targetCollection,
+revenueAchievementPercent }`.
+
+- **Actuals** are computed live: revenue/orders/cash/distinct-customers from non-cancelled
+  distribution orders with `orderDate` in `[from, to]`; visits from check-ins in the same span.
+- The **target** block is attached only when a target exists for exactly `[from, to]`;
+  `revenueAchievementPercent = revenue / targetRevenue × 100` (null when no revenue target).
+- `from`/`to` are both inclusive dates.
+
 ---
 
 # Mobile Shop App — Public API Reference

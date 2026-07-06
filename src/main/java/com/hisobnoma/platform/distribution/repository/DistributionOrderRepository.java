@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -41,4 +42,18 @@ public interface DistributionOrderRepository extends JpaRepository<DistributionO
     @Query("SELECT MAX(o.orderNumber) FROM DistributionOrder o " +
            "WHERE o.tenantId = :tenantId AND o.orderNumber LIKE CONCAT(:prefix, '%')")
     String findMaxOrderNumberByPrefix(@Param("tenantId") Long tenantId, @Param("prefix") String prefix);
+
+    /**
+     * Per-agent order aggregates over a date range (non-cancelled orders only).
+     * Each row: [agentId, orderCount, revenue, cashCollected, distinctCustomers].
+     */
+    @Query("SELECT o.agentId, COUNT(o), COALESCE(SUM(o.totalAmount), 0), " +
+           "COALESCE(SUM(o.cashCollected), 0), COUNT(DISTINCT o.customerId) " +
+           "FROM DistributionOrder o WHERE o.tenantId = :tenantId AND o.agentId IS NOT NULL " +
+           "AND o.status <> :cancelled AND o.orderDate >= :from AND o.orderDate <= :to " +
+           "GROUP BY o.agentId")
+    List<Object[]> aggregateByAgent(@Param("tenantId") Long tenantId,
+                                    @Param("cancelled") DistributionOrderStatus cancelled,
+                                    @Param("from") java.time.LocalDate from,
+                                    @Param("to") java.time.LocalDate to);
 }

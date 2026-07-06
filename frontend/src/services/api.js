@@ -776,6 +776,17 @@ export const distributionVisitsApi = {
   checkOut: (id, data) => api.post(`/distribution/visits/${id}/check-out`, data)
 }
 
+// Distribution KPI + Targets API - Backend: /api/v1/distribution
+export const distributionKpiApi = {
+  dashboard: (from, to) => api.get('/distribution/kpi/dashboard', { params: { from, to } })
+}
+export const distributionAgentTargetsApi = {
+  byAgent: (agentId) => api.get(`/distribution/agent-targets/by-agent/${agentId}`),
+  create: (data) => api.post('/distribution/agent-targets', data),
+  update: (id, data) => api.put(`/distribution/agent-targets/${id}`, data),
+  delete: (id) => api.delete(`/distribution/agent-targets/${id}`)
+}
+
 // Web Catalog API (online shop management) - Backend: /api/v1/web-catalog
 export const webCatalogApi = {
   getAll: (params) => api.get('/web-catalog', { params }),

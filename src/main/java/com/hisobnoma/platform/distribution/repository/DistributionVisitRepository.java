@@ -33,4 +33,10 @@ public interface DistributionVisitRepository extends JpaRepository<DistributionV
     Page<DistributionVisit> findByTenantIdAndCheckInBetween(@Param("tenantId") Long tenantId,
                                                             @Param("from") Instant from,
                                                             @Param("to") Instant to, Pageable pageable);
+
+    /** Per-agent visit counts over a check-in range. Each row: [agentId, visitCount]. */
+    @Query("SELECT v.agentId, COUNT(v) FROM DistributionVisit v WHERE v.tenantId = :tenantId " +
+           "AND v.checkInAt >= :from AND v.checkInAt < :to GROUP BY v.agentId")
+    java.util.List<Object[]> countVisitsByAgent(@Param("tenantId") Long tenantId,
+                                                @Param("from") Instant from, @Param("to") Instant to);
 }

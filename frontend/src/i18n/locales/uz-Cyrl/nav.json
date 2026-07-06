@@ -69,5 +69,6 @@
   "distributionOrders": "Буюртмалар",
   "distributionVanLoadouts": "Фургон юкламалари",
   "distributionRoutes": "Маршрутлар",
-  "distributionVisits": "Ташрифлар"
+  "distributionVisits": "Ташрифлар",
+  "distributionKpi": "KPI кўрсаткичлари"
 }

@@ -479,6 +479,11 @@ const routes = [
             path: 'visits',
             name: 'distribution-visits',
             component: () => import('@/views/distribution/VisitsView.vue')
+          },
+          {
+            path: 'kpi',
+            name: 'distribution-kpi',
+            component: () => import('@/views/distribution/KpiDashboardView.vue')
           }
         ]
       },
