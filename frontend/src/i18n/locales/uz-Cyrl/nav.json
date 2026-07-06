@@ -63,5 +63,7 @@
   "webCatalog": "Онлайн каталог",
   "webOrders": "Онлайн буюртмалар",
   "webCustomers": "Онлайн мижозлар",
-  "webCampaigns": "SMS кампаниялар"
+  "webCampaigns": "SMS кампаниялар",
+  "distribution": "Дистрибуция",
+  "distributionAgents": "Агентлар"
 }

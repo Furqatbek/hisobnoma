@@ -3349,6 +3349,57 @@ POS transactions now accept optional `deliveryRegionId` and `deliveryVillageId` 
 
 ---
 
+## Distribution Module — Agents (Slice 1)
+
+Field sales / route / van-sales agents and their territory coverage. First slice of the
+wholesale distribution module (routing, mobile selling, KPIs, and B2B marketplace follow in
+later slices).
+
+### Endpoints
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /distribution/agents | DISTRIBUTION_AGENT_VIEW | List all agents |
+| GET | /distribution/agents/paginated | DISTRIBUTION_AGENT_VIEW | List agents (paginated) |
+| GET | /distribution/agents/active | DISTRIBUTION_AGENT_VIEW | List ACTIVE agents |
+| GET | /distribution/agents/search?q= | DISTRIBUTION_AGENT_VIEW | Search by name/code/phone (paginated) |
+| GET | /distribution/agents/{id} | DISTRIBUTION_AGENT_VIEW | Get agent by ID |
+| POST | /distribution/agents | DISTRIBUTION_AGENT_MANAGE | Create agent |
+| PUT | /distribution/agents/{id} | DISTRIBUTION_AGENT_MANAGE | Update agent (partial; `territories` replaces the set when present) |
+| DELETE | /distribution/agents/{id} | DISTRIBUTION_AGENT_MANAGE | Delete agent |
+
+### Create request
+
+```json
+{
+  "code": "AG-001",
+  "name": "Alisher Karimov",
+  "phone": "+998901112233",
+  "email": "alisher@example.uz",
+  "userId": null,
+  "employeeId": null,
+  "vehicleName": "Isuzu NPR",
+  "vehiclePlate": "01A123BC",
+  "commissionPercent": 3.5,
+  "status": "ACTIVE",
+  "hiredAt": "2026-01-15",
+  "notes": null,
+  "territories": [
+    { "regionId": 5, "villageId": null, "priority": 1, "exclusive": true, "active": true },
+    { "regionId": 6, "villageId": 60, "priority": 0, "exclusive": false, "active": true }
+  ]
+}
+```
+
+- `status` is one of `ACTIVE` | `SUSPENDED` | `TERMINATED` (defaults to `ACTIVE`).
+- `code` is immutable after creation and unique per tenant.
+- `territories[].regionId` / `villageId` reference `delivery_regions` / `delivery_villages`.
+  A null `villageId` means the whole region.
+- On update, omitting `territories` (null) leaves the existing set untouched; sending an array
+  (including `[]`) replaces it wholesale.
+
+---
+
 # Mobile Shop App — Public API Reference
 
 This is the **complete, authoritative contract for the customer-facing shop mobile app**.

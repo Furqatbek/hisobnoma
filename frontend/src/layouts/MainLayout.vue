@@ -181,6 +181,14 @@ const navigation = computed(() => [
     ]
   },
   {
+    name: t('nav.distribution'),
+    icon: TruckIcon,
+    key: 'distribution',
+    children: [
+      { name: t('nav.distributionAgents'), href: '/distribution/agents', icon: UserGroupIcon }
+    ]
+  },
+  {
     name: t('nav.reports'),
     icon: ChartBarIcon,
     key: 'reports',

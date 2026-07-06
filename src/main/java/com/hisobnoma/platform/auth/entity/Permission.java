@@ -50,7 +50,8 @@ public class Permission extends BaseEntity {
         MOBILE,
         HR,
         DELIVERY,
-        SMS
+        SMS,
+        DISTRIBUTION
     }
 
     public enum Action {

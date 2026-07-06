@@ -411,6 +411,27 @@ const routes = [
           }
         ]
       },
+      // Distribution
+      {
+        path: 'distribution',
+        children: [
+          {
+            path: 'agents',
+            name: 'distribution-agents',
+            component: () => import('@/views/distribution/AgentsView.vue')
+          },
+          {
+            path: 'agents/new',
+            name: 'distribution-agent-create',
+            component: () => import('@/views/distribution/AgentFormView.vue')
+          },
+          {
+            path: 'agents/:id/edit',
+            name: 'distribution-agent-edit',
+            component: () => import('@/views/distribution/AgentFormView.vue')
+          }
+        ]
+      },
       // Admin
       {
         path: 'admin',

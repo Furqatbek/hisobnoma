@@ -718,6 +718,18 @@ export const deliveryVillagesApi = {
   delete: (id) => api.delete(`/delivery/villages/${id}`)
 }
 
+// Distribution Agents API - Backend: /api/v1/distribution/agents
+export const distributionAgentsApi = {
+  getAll: () => api.get('/distribution/agents'),
+  getPaginated: (params) => api.get('/distribution/agents/paginated', { params }),
+  getActive: () => api.get('/distribution/agents/active'),
+  search: (query, params) => api.get('/distribution/agents/search', { params: { q: query, ...params } }),
+  getById: (id) => api.get(`/distribution/agents/${id}`),
+  create: (data) => api.post('/distribution/agents', data),
+  update: (id, data) => api.put(`/distribution/agents/${id}`, data),
+  delete: (id) => api.delete(`/distribution/agents/${id}`)
+}
+
 // Web Catalog API (online shop management) - Backend: /api/v1/web-catalog
 export const webCatalogApi = {
   getAll: (params) => api.get('/web-catalog', { params }),

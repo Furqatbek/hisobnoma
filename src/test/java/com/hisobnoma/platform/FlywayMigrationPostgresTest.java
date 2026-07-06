@@ -108,7 +108,8 @@ class FlywayMigrationPostgresTest {
         // TenantAwareEntity subclasses: + created_by, updated_by, tenant_id
         List<String> tenantTables = List.of(
                 "web_customers", "web_orders", "web_order_lines", "web_catalog_items",
-                "web_campaigns", "web_wishlist_items", "web_otp_codes", "web_payments");
+                "web_campaigns", "web_wishlist_items", "web_otp_codes", "web_payments",
+                "distribution_agents", "distribution_territories");
 
         Set<String> violations = new TreeSet<>();
         try (Connection conn = DriverManager.getConnection(

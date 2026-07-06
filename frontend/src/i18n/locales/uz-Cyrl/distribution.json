@@ -1,0 +1,44 @@
+{
+  "status": {
+    "ACTIVE": "Фаол",
+    "SUSPENDED": "Тўхтатилган",
+    "TERMINATED": "Ишдан бўшатилган"
+  },
+  "agents": {
+    "title": "Дистрибуция агентлари",
+    "subtitle": "Дала савдо, маршрут ва фургон савдоси агентлари",
+    "newAgent": "Янги агент",
+    "searchPlaceholder": "Исм, код ёки телефон бўйича қидириш",
+    "phone": "Телефон",
+    "territories": "Ҳудудлар",
+    "noAgents": "Агентлар топилмади",
+    "totalAgents": "Жами агентлар",
+    "confirmDelete": "{name} агентини ўчирмоқчимисиз?",
+    "deleteError": "Агентни ўчириб бўлмади"
+  },
+  "agentForm": {
+    "newAgent": "Янги агент",
+    "editAgent": "Агентни таҳрирлаш",
+    "status": "Ҳолати",
+    "email": "Электрон почта",
+    "hiredAt": "Ишга қабул санаси",
+    "vehicleName": "Транспорт номи",
+    "vehiclePlate": "Давлат рақами",
+    "commissionPercent": "Комиссия (%)",
+    "notes": "Изоҳлар",
+    "territoriesTitle": "Ҳудудлар",
+    "territoriesHint": "Агент хизмат кўрсатадиган ҳудудлар ва қишлоқлар",
+    "addTerritory": "Ҳудуд қўшиш",
+    "noTerritories": "Ҳали ҳудуд қўшилмаган",
+    "region": "Ҳудуд",
+    "village": "Қишлоқ",
+    "wholeRegion": "Бутун ҳудуд",
+    "priority": "Устувор",
+    "exclusive": "Якка тартибда",
+    "codeRequired": "Код киритилиши шарт",
+    "nameRequired": "Исм киритилиши шарт",
+    "regionRequired": "Ҳар бир ҳудуд учун ҳудуд танланиши шарт",
+    "loadError": "Агент маълумотларини юклаб бўлмади",
+    "saveError": "Агентни сақлаб бўлмади"
+  }
+}
