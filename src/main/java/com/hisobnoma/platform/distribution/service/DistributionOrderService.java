@@ -12,6 +12,8 @@ import com.hisobnoma.platform.distribution.entity.DistributionPaymentMethod;
 import com.hisobnoma.platform.distribution.mapper.DistributionOrderMapper;
 import com.hisobnoma.platform.distribution.repository.DistributionAgentRepository;
 import com.hisobnoma.platform.distribution.repository.DistributionOrderRepository;
+import com.hisobnoma.platform.distribution.repository.DistributionRouteRepository;
+import com.hisobnoma.platform.distribution.repository.DistributionVisitRepository;
 import com.hisobnoma.platform.finance.dto.ARInvoiceDto;
 import com.hisobnoma.platform.finance.dto.CreateARInvoiceLineRequest;
 import com.hisobnoma.platform.finance.dto.CreateARInvoiceRequest;
@@ -53,6 +55,8 @@ public class DistributionOrderService {
     private final DistributionOrderRepository orderRepository;
     private final DistributionOrderMapper orderMapper;
     private final DistributionAgentRepository agentRepository;
+    private final DistributionRouteRepository routeRepository;
+    private final DistributionVisitRepository visitRepository;
     private final SecurityContextHelper securityContextHelper;
     private final ProductRepository productRepository;
     private final CustomerRepository customerRepository;
@@ -102,13 +106,18 @@ public class DistributionOrderService {
         Customer customer = requireCustomer(request.getCustomerId(), tenantId);
         validateAgent(request.getAgentId(), tenantId);
         validateSourceLocation(request.getSourceLocationId(), tenantId);
+        validateVisit(request.getVisitId(), tenantId);
+        validateRoute(request.getRouteId(), tenantId);
 
         DistributionOrder order = DistributionOrder.builder()
                 .status(DistributionOrderStatus.DRAFT)
                 .agentId(request.getAgentId())
+                .visitId(request.getVisitId())
+                .routeId(request.getRouteId())
                 .customerId(customer.getId())
                 .customerName(customer.getName())
                 .sourceLocationId(request.getSourceLocationId())
+                .priceListId(customer.getPriceListId())
                 .orderDate(request.getOrderDate() != null ? request.getOrderDate() : LocalDate.now(ZoneOffset.UTC))
                 .expectedDeliveryDate(request.getExpectedDeliveryDate())
                 .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : DistributionPaymentMethod.CREDIT)
@@ -117,6 +126,8 @@ public class DistributionOrderService {
                 .taxAmount(nz(request.getTaxAmount()))
                 .deliveryFee(nz(request.getDeliveryFee()))
                 .deliveryAddress(request.getDeliveryAddress())
+                .deliveryLat(request.getDeliveryLat())
+                .deliveryLng(request.getDeliveryLng())
                 .notes(request.getNotes())
                 .internalNotes(request.getInternalNotes())
                 .currency(customer.getDefaultCurrency() != null ? customer.getDefaultCurrency() : "UZS")
@@ -283,6 +294,18 @@ public class DistributionOrderService {
     private void validateSourceLocation(Long locationId, Long tenantId) {
         if (locationId != null && locationRepository.findByIdAndTenantId(locationId, tenantId).isEmpty()) {
             throw new NotFoundException("Location", locationId);
+        }
+    }
+
+    private void validateVisit(Long visitId, Long tenantId) {
+        if (visitId != null && visitRepository.findByIdAndTenantId(visitId, tenantId).isEmpty()) {
+            throw new NotFoundException("DistributionVisit", visitId);
+        }
+    }
+
+    private void validateRoute(Long routeId, Long tenantId) {
+        if (routeId != null && routeRepository.findByIdAndTenantId(routeId, tenantId).isEmpty()) {
+            throw new NotFoundException("DistributionRoute", routeId);
         }
     }
 

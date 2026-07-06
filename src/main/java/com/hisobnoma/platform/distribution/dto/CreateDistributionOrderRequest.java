@@ -26,6 +26,11 @@ public class CreateDistributionOrderRequest {
 
     private Long agentId;
 
+    /** Originating field visit / route, if the order was taken during one. */
+    private Long visitId;
+
+    private Long routeId;
+
     private Long sourceLocationId;
 
     private LocalDate orderDate;
@@ -47,6 +52,10 @@ public class CreateDistributionOrderRequest {
 
     @Size(max = 500, message = "Delivery address must not exceed 500 characters")
     private String deliveryAddress;
+
+    private BigDecimal deliveryLat;
+
+    private BigDecimal deliveryLng;
 
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;

@@ -47,6 +47,14 @@ public class DistributionOrder extends TenantAwareEntity {
     @Column(name = "agent_id")
     private Long agentId;
 
+    /** Field visit this order was taken during, if any. */
+    @Column(name = "visit_id")
+    private Long visitId;
+
+    /** Route this order belongs to, if taken on a planned route. */
+    @Column(name = "route_id")
+    private Long routeId;
+
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
@@ -56,6 +64,10 @@ public class DistributionOrder extends TenantAwareEntity {
     /** Warehouse the order is fulfilled from. Resolved at confirmation if null. */
     @Column(name = "source_location_id")
     private Long sourceLocationId;
+
+    /** Pricing basis: the customer's price list at order time (snapshot). */
+    @Column(name = "price_list_id")
+    private Long priceListId;
 
     @Column(name = "order_date", nullable = false)
     private LocalDate orderDate;
@@ -115,6 +127,12 @@ public class DistributionOrder extends TenantAwareEntity {
 
     @Column(name = "delivery_address", length = 500)
     private String deliveryAddress;
+
+    @Column(name = "delivery_lat", precision = 10, scale = 7)
+    private BigDecimal deliveryLat;
+
+    @Column(name = "delivery_lng", precision = 10, scale = 7)
+    private BigDecimal deliveryLng;
 
     @Column(length = 3, nullable = false)
     @Builder.Default

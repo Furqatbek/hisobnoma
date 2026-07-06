@@ -21,9 +21,12 @@ public class DistributionOrderDto {
     private String orderNumber;
     private DistributionOrderStatus status;
     private Long agentId;
+    private Long visitId;
+    private Long routeId;
     private Long customerId;
     private String customerName;
     private Long sourceLocationId;
+    private Long priceListId;
     private LocalDate orderDate;
     private LocalDate expectedDeliveryDate;
     private Instant deliveredAt;
@@ -40,6 +43,8 @@ public class DistributionOrderDto {
     private Long arInvoiceId;
     private String arInvoiceNumber;
     private String deliveryAddress;
+    private BigDecimal deliveryLat;
+    private BigDecimal deliveryLng;
     private String currency;
     private String notes;
     private String internalNotes;

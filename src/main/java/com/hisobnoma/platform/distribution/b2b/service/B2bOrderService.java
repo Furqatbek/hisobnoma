@@ -55,6 +55,7 @@ public class B2bOrderService {
                 .status(DistributionOrderStatus.DRAFT)
                 .customerId(buyer.getId())
                 .customerName(buyer.getName())
+                .priceListId(buyer.getPriceListId())
                 .orderDate(LocalDate.now(ZoneOffset.UTC))
                 .paymentMethod(DistributionPaymentMethod.CREDIT)
                 .paymentTermsDays(buyer.getPaymentTermsDays())

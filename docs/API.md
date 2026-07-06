@@ -3449,6 +3449,8 @@ Stock operations are best-effort (they never block a status change); failures ar
 {
   "customerId": 100,
   "agentId": 5,
+  "visitId": null,
+  "routeId": null,
   "paymentMethod": "CREDIT",
   "paymentTermsDays": 14,
   "discountAmount": 0,
@@ -3456,6 +3458,8 @@ Stock operations are best-effort (they never block a status change); failures ar
   "deliveryFee": 15000,
   "expectedDeliveryDate": "2026-07-10",
   "deliveryAddress": "Chilonzor 12/34",
+  "deliveryLat": null,
+  "deliveryLng": null,
   "notes": null,
   "lines": [
     { "productId": 10, "quantity": 2, "discountPercent": 0 },
@@ -3463,6 +3467,10 @@ Stock operations are best-effort (they never block a status change); failures ar
   ]
 }
 ```
+
+- Optional `visitId` / `routeId` link the order to the field visit / route it was taken on
+  (both tenant-validated). The order snapshots the customer's `priceListId` (pricing basis) and
+  returns it on the DTO alongside `deliveryLat` / `deliveryLng`.
 
 - `paymentMethod` is one of `CASH` | `CREDIT` | `MIXED` (defaults to the codebase default `CREDIT`).
 - **Unit prices are resolved server-side** via the pricing engine (customer price lists →

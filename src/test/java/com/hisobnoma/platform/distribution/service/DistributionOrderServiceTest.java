@@ -47,6 +47,8 @@ class DistributionOrderServiceTest {
     @Mock private DistributionOrderRepository orderRepository;
     @Mock private DistributionOrderMapper orderMapper;
     @Mock private DistributionAgentRepository agentRepository;
+    @Mock private com.hisobnoma.platform.distribution.repository.DistributionRouteRepository routeRepository;
+    @Mock private com.hisobnoma.platform.distribution.repository.DistributionVisitRepository visitRepository;
     @Mock private SecurityContextHelper securityContextHelper;
     @Mock private ProductRepository productRepository;
     @Mock private CustomerRepository customerRepository;
@@ -67,7 +69,8 @@ class DistributionOrderServiceTest {
     }
 
     private Customer customer() {
-        Customer c = Customer.builder().code("C-1").name("Osiyo Savdo").paymentTermsDays(14).defaultCurrency("UZS").build();
+        Customer c = Customer.builder().code("C-1").name("Osiyo Savdo").paymentTermsDays(14)
+                .defaultCurrency("UZS").priceListId(77L).build();
         c.setId(100L);
         return c;
     }
@@ -141,6 +144,8 @@ class DistributionOrderServiceTest {
         assertEquals(0, new BigDecimal("46200").compareTo(saved.getTotalAmount()));
         // due date = orderDate + customer terms (14)
         assertEquals(LocalDate.of(2026, 7, 6).plusDays(14), saved.getDueDate());
+        // pricing basis snapshotted from the customer's price list
+        assertEquals(77L, saved.getPriceListId());
     }
 
     @Test
