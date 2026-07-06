@@ -531,6 +531,17 @@ public class StockService {
                 productId, locationId, referenceType, referenceId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Reservation not found"));
 
+        // Idempotency guard: a reservation that has already been cancelled or fulfilled
+        // no longer contributes to quantityReserved. Re-releasing it (e.g. a retried
+        // fulfilment or a cancel after a partial deliver) would double-subtract and drive
+        // quantityReserved negative, so treat it as a no-op.
+        if (reservation.getStatus() == StockReservation.ReservationStatus.CANCELLED
+                || reservation.getStatus() == StockReservation.ReservationStatus.COMPLETED) {
+            log.debug("Reservation for {} {} already {}, skipping release",
+                    referenceType, referenceId, reservation.getStatus());
+            return;
+        }
+
         Stock stock = stockRepository.findByProductIdAndLocationIdWithLock(productId, locationId, tenantId)
                 .orElseThrow(() -> new BusinessException("Stock record not found"));
 

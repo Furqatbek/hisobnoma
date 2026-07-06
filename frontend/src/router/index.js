@@ -429,6 +429,21 @@ const routes = [
             path: 'agents/:id/edit',
             name: 'distribution-agent-edit',
             component: () => import('@/views/distribution/AgentFormView.vue')
+          },
+          {
+            path: 'orders',
+            name: 'distribution-orders',
+            component: () => import('@/views/distribution/OrdersView.vue')
+          },
+          {
+            path: 'orders/new',
+            name: 'distribution-order-create',
+            component: () => import('@/views/distribution/OrderFormView.vue')
+          },
+          {
+            path: 'orders/:id/edit',
+            name: 'distribution-order-edit',
+            component: () => import('@/views/distribution/OrderFormView.vue')
           }
         ]
       },

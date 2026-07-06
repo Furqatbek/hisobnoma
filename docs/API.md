@@ -3398,6 +3398,79 @@ later slices).
 - On update, omitting `territories` (null) leaves the existing set untouched; sending an array
   (including `[]`) replaces it wholesale.
 
+## Distribution Module — Orders (Slice 2)
+
+B2B wholesale sales orders with a fulfilment lifecycle, server-side pricing, best-effort
+stock reservation/deduction, and AR-invoice conversion.
+
+### Lifecycle
+
+```
+DRAFT ─▶ CONFIRMED ─▶ PICKING ─▶ LOADED ─▶ IN_TRANSIT ─▶ DELIVERED ─▶ INVOICED
+  │          │           │          │           │
+  └──────────┴───────────┴──────────┴───────────┴──▶ CANCELLED
+```
+
+- **CONFIRMED** reserves stock at the order's source location (the tenant's default
+  warehouse if none is set).
+- **DELIVERED** releases the reservation, deducts stock (a `STOCK_OUT` movement with
+  reference type `DISTRIBUTION_ORDER`), stamps `deliveredAt`, and splits the total into
+  `cashCollected` vs `creditAmount`.
+- **INVOICED** raises a DRAFT AR invoice for the **credit portion** (`salesOrderId` links it
+  back; delivery fee and tax are added as explicit invoice lines so the invoice total equals
+  the order total). A **fully cash-settled order raises no AR invoice** — no phantom
+  receivable. Posting the invoice to the GL and recording the collected cash are
+  Finance-module actions.
+- **CANCELLED** releases any held reservation. `INVOICED` and `CANCELLED` are terminal.
+
+Stock operations are best-effort (they never block a status change); failures are logged.
+
+### Endpoints
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /distribution/orders?status=&agentId= | DISTRIBUTION_ORDER_VIEW | List orders (paginated; optional status/agent filter) |
+| GET | /distribution/orders/search?q= | DISTRIBUTION_ORDER_VIEW | Search by number/customer |
+| GET | /distribution/orders/{id} | DISTRIBUTION_ORDER_VIEW | Get order by ID |
+| POST | /distribution/orders | DISTRIBUTION_ORDER_CREATE | Create order (DRAFT) |
+| PUT | /distribution/orders/{id} | DISTRIBUTION_ORDER_MANAGE | Edit a DRAFT order |
+| DELETE | /distribution/orders/{id} | DISTRIBUTION_ORDER_MANAGE | Delete a DRAFT order |
+| POST | /distribution/orders/{id}/confirm | DISTRIBUTION_ORDER_MANAGE | DRAFT → CONFIRMED (reserve stock) |
+| POST | /distribution/orders/{id}/pick | DISTRIBUTION_ORDER_MANAGE | CONFIRMED → PICKING |
+| POST | /distribution/orders/{id}/load | DISTRIBUTION_ORDER_MANAGE | PICKING → LOADED |
+| POST | /distribution/orders/{id}/transit | DISTRIBUTION_ORDER_MANAGE | LOADED → IN_TRANSIT |
+| POST | /distribution/orders/{id}/deliver | DISTRIBUTION_ORDER_MANAGE | IN_TRANSIT → DELIVERED, body `{ cashCollected? }` |
+| POST | /distribution/orders/{id}/invoice | DISTRIBUTION_ORDER_MANAGE | DELIVERED → INVOICED (creates AR invoice) |
+| POST | /distribution/orders/{id}/cancel | DISTRIBUTION_ORDER_MANAGE | → CANCELLED, body `{ reason? }` |
+
+### Create request
+
+```json
+{
+  "customerId": 100,
+  "agentId": 5,
+  "paymentMethod": "CREDIT",
+  "paymentTermsDays": 14,
+  "discountAmount": 0,
+  "taxAmount": 0,
+  "deliveryFee": 15000,
+  "expectedDeliveryDate": "2026-07-10",
+  "deliveryAddress": "Chilonzor 12/34",
+  "notes": null,
+  "lines": [
+    { "productId": 10, "quantity": 2, "discountPercent": 0 },
+    { "productId": 11, "quantity": 1, "discountPercent": 10 }
+  ]
+}
+```
+
+- `paymentMethod` is one of `CASH` | `CREDIT` | `MIXED` (defaults to the codebase default `CREDIT`).
+- **Unit prices are resolved server-side** via the pricing engine (customer price lists →
+  location → base selling price). The client only sends `productId`, `quantity`, and an
+  optional per-line `discountPercent`; any client-sent price is ignored.
+- Totals are computed server-side: `subtotal − discountAmount + taxAmount + deliveryFee`.
+- Only `DRAFT` orders can be edited or deleted.
+
 ---
 
 # Mobile Shop App — Public API Reference

@@ -72,5 +72,10 @@ public enum MovementReferenceType {
     /**
      * From production order
      */
-    PRODUCTION_ORDER
+    PRODUCTION_ORDER,
+
+    /**
+     * From a distribution (B2B wholesale) order
+     */
+    DISTRIBUTION_ORDER
 }

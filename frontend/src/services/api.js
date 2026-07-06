@@ -730,6 +730,23 @@ export const distributionAgentsApi = {
   delete: (id) => api.delete(`/distribution/agents/${id}`)
 }
 
+// Distribution Orders API - Backend: /api/v1/distribution/orders
+export const distributionOrdersApi = {
+  getAll: (params) => api.get('/distribution/orders', { params }),
+  search: (query, params) => api.get('/distribution/orders/search', { params: { q: query, ...params } }),
+  getById: (id) => api.get(`/distribution/orders/${id}`),
+  create: (data) => api.post('/distribution/orders', data),
+  update: (id, data) => api.put(`/distribution/orders/${id}`, data),
+  delete: (id) => api.delete(`/distribution/orders/${id}`),
+  confirm: (id) => api.post(`/distribution/orders/${id}/confirm`),
+  pick: (id) => api.post(`/distribution/orders/${id}/pick`),
+  load: (id) => api.post(`/distribution/orders/${id}/load`),
+  transit: (id) => api.post(`/distribution/orders/${id}/transit`),
+  deliver: (id, data) => api.post(`/distribution/orders/${id}/deliver`, data || {}),
+  invoice: (id) => api.post(`/distribution/orders/${id}/invoice`),
+  cancel: (id, data) => api.post(`/distribution/orders/${id}/cancel`, data || {})
+}
+
 // Web Catalog API (online shop management) - Backend: /api/v1/web-catalog
 export const webCatalogApi = {
   getAll: (params) => api.get('/web-catalog', { params }),

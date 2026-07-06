@@ -109,7 +109,8 @@ class FlywayMigrationPostgresTest {
         List<String> tenantTables = List.of(
                 "web_customers", "web_orders", "web_order_lines", "web_catalog_items",
                 "web_campaigns", "web_wishlist_items", "web_otp_codes", "web_payments",
-                "distribution_agents", "distribution_territories");
+                "distribution_agents", "distribution_territories",
+                "distribution_orders", "distribution_order_lines");
 
         Set<String> violations = new TreeSet<>();
         try (Connection conn = DriverManager.getConnection(
