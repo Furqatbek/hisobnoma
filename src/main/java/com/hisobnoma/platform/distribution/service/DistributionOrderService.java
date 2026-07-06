@@ -419,8 +419,7 @@ public class DistributionOrderService {
                 stockService.reserveStock(line.getProductId(), locationId, line.getQuantity(),
                         MovementReferenceType.DISTRIBUTION_ORDER, order.getId(), order.getOrderNumber());
             } catch (Exception e) {
-                log.warn("Order {}: failed to reserve product {}: {}",
-                        order.getOrderNumber(), line.getProductId(), e.getMessage());
+                markStockUnsettled(order, line.getProductId(), "reserve", e);
             }
         }
     }
@@ -435,8 +434,7 @@ public class DistributionOrderService {
                 stockService.releaseReservation(line.getProductId(), locationId,
                         MovementReferenceType.DISTRIBUTION_ORDER, order.getId());
             } catch (Exception e) {
-                log.warn("Order {}: failed to release reservation for product {}: {}",
-                        order.getOrderNumber(), line.getProductId(), e.getMessage());
+                markStockUnsettled(order, line.getProductId(), "release-reservation", e);
             }
         }
     }
@@ -449,14 +447,25 @@ public class DistributionOrderService {
         }
         for (DistributionOrderLine line : order.getLines()) {
             try {
-                // Isolated (REQUIRES_NEW) so a deduct failure can't roll back the delivery.
+                // Isolated (REQUIRES_NEW) so a deduct failure can't roll back the delivery, but the
+                // failure is now surfaced (stockSettled=false) instead of silently dropped.
                 distributionStockService.deduct(line.getProductId(), locationId, line.getQuantity(),
                         order.getId(), order.getOrderNumber());
             } catch (Exception e) {
-                log.warn("Order {}: failed to deduct product {}: {}",
-                        order.getOrderNumber(), line.getProductId(), e.getMessage());
+                markStockUnsettled(order, line.getProductId(), "deduct", e);
             }
         }
+    }
+
+    /**
+     * Records a best-effort stock-movement failure durably on the order (queryable via
+     * {@code stock_settled = false}) and logs it at ERROR so it can be alerted/reconciled — a
+     * delivery still commits (the goods physically moved), but the stock gap is no longer silent.
+     */
+    private void markStockUnsettled(DistributionOrder order, Long productId, String op, Exception e) {
+        order.setStockSettled(false);
+        log.error("Order {}: stock {} FAILED for product {} — stock NOT settled, manual "
+                        + "reconciliation required: {}", order.getOrderNumber(), op, productId, e.getMessage());
     }
 
     private String generateOrderNumber(Long tenantId) {

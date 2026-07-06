@@ -48,7 +48,12 @@ Each item is written so it can be pasted into a GitHub issue as-is.
 - **Fix:** Derive tenant from the authenticated customer/B2B token (add a filter that sets
   `TenantContext` from the parsed token), validate the header against the token, and **remove the
   `1L` fallback (fail closed)**.
-- **Ownership:** The B2B slice inherits this via `B2bAuthService.resolveTenantId()`.
+- **Ownership:** The B2B slice inherited this via `B2bAuthService.resolveTenantId()`.
+- **✅ B2B portion FIXED (this branch):** `B2bAuthService.resolveTenantId()` no longer defaults to
+  tenant 1 — it throws `400 TENANT_REQUIRED` when `X-Tenant-ID` is absent. Post-login calls were
+  already token-bound (`requireCustomer` uses the token's `tenantId`, not the header). **The web
+  services' fallback (`WebCatalogPublicService`/`WebOrderPublicService`/etc.) is still open — that
+  is pre-existing platform code and remains an open item.**
 
 ### 3. Anonymous rate-limit bypass → SMS-cost bomb / OTP abuse  ·  HIGH  ·  confirmed
 - **Where:** `common/util/ClientIpResolver.java` (`app.security.trust-proxy-headers=true`, takes
@@ -85,6 +90,11 @@ Each item is written so it can be pasted into a GitHub issue as-is.
   movement with no reconciliation is not acceptable for a system of record.
 - **Fix:** Either make deduction fail loud (block the transition / surface an error), or record a
   durable "stock adjustment pending" marker for reconciliation. At minimum, alert on the swallow.
+- **✅ FIXED (this branch):** `distribution_orders.stock_settled` (V75) now flips to `FALSE` when any
+  reserve/release/deduct best-effort op fails, logged at ERROR ("manual reconciliation required")
+  and exposed on the order DTO (partial index `idx_dist_orders_stock_unsettled` for querying). The
+  delivery still commits (goods physically moved), but the stock gap is durable and queryable
+  instead of silently dropped.
 
 ### 6. POS → GL posts in `REQUIRES_NEW`, contradicting its own contract → phantom revenue  ·  HIGH
 - **Where:** `finance/service/GLIntegrationService.java:929` (`postPOSTransaction`), `:1072`
@@ -200,4 +210,5 @@ Each item is written so it can be pasted into a GitHub issue as-is.
 8. #12 — confirm CI green end-to-end.
 
 Items #2 (B2B fallback) and #5 (stock swallow) are in the distribution module built in this work
-stream; the rest are pre-existing platform code (finance/POS/web/config).
+stream and are **✅ FIXED on this branch** (see the fix notes under each). The rest are pre-existing
+platform code (finance/POS/web/config) and remain open.

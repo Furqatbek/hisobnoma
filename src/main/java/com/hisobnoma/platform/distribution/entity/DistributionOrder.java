@@ -147,6 +147,14 @@ public class DistributionOrder extends TenantAwareEntity {
     @Column(name = "cancellation_reason", length = 500)
     private String cancellationReason;
 
+    /**
+     * False when a best-effort stock movement (reserve/release/deduct) for this order failed and
+     * the order needs manual inventory reconciliation. True in the normal case.
+     */
+    @Column(name = "stock_settled", nullable = false)
+    @Builder.Default
+    private boolean stockSettled = true;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<DistributionOrderLine> lines = new ArrayList<>();

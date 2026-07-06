@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.distribution.b2b.service;
 
+import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.exception.UnauthorizedException;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.distribution.b2b.dto.B2bAuthResponse;
@@ -24,14 +25,21 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class B2bAuthService {
 
-    private static final Long DEFAULT_TENANT_ID = 1L;
-
     private final CustomerRepository customerRepository;
     private final B2bCustomerTokenService tokenService;
 
+    /**
+     * Tenant for a pre-auth login. Fails closed — a B2B buyer must declare their tenant via the
+     * {@code X-Tenant-ID} header; we never silently default to tenant 1 (which would let a
+     * headerless or spoofed request operate on the wrong tenant's data). After login every call
+     * is tenant-bound by the token itself (see {@link #requireCustomer}), not the header.
+     */
     Long resolveTenantId() {
         Long tenantId = TenantContext.getCurrentTenant();
-        return tenantId != null ? tenantId : DEFAULT_TENANT_ID;
+        if (tenantId == null) {
+            throw new BusinessException("X-Tenant-ID header is required", "TENANT_REQUIRED");
+        }
+        return tenantId;
     }
 
     @Transactional(readOnly = true)

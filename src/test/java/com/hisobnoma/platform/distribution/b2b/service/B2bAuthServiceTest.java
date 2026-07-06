@@ -1,11 +1,15 @@
 package com.hisobnoma.platform.distribution.b2b.service;
 
+import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.exception.UnauthorizedException;
+import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.distribution.b2b.dto.B2bAuthResponse;
 import com.hisobnoma.platform.distribution.b2b.dto.B2bLoginRequest;
 import com.hisobnoma.platform.distribution.b2b.security.B2bCustomerTokenService;
 import com.hisobnoma.platform.finance.entity.Customer;
 import com.hisobnoma.platform.finance.repository.CustomerRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,8 +30,18 @@ class B2bAuthServiceTest {
 
     @InjectMocks private B2bAuthService service;
 
-    // No TenantContext set in unit tests -> default tenant 1.
     private static final Long TENANT_ID = 1L;
+
+    @BeforeEach
+    void bindTenant() {
+        // Login resolves the tenant from TenantContext (set by the X-Tenant-ID filter in prod).
+        TenantContext.setCurrentTenant(TENANT_ID);
+    }
+
+    @AfterEach
+    void clearTenant() {
+        TenantContext.clear();
+    }
 
     private Customer customer() {
         Customer c = Customer.builder().code("C-1").name("Osiyo Savdo").phone("+998 90 111-22-33")
@@ -57,6 +71,13 @@ class B2bAuthServiceTest {
 
         assertThrows(UnauthorizedException.class,
                 () -> service.login(B2bLoginRequest.builder().code("C-1").phone("998900000000").build()));
+    }
+
+    @Test
+    void login_withoutTenantContext_failsClosed() {
+        TenantContext.clear(); // no X-Tenant-ID -> must NOT default to tenant 1
+        assertThrows(BusinessException.class,
+                () -> service.login(B2bLoginRequest.builder().code("C-1").phone("998901112233").build()));
     }
 
     @Test

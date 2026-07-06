@@ -49,5 +49,6 @@ public class DistributionOrderDto {
     private String notes;
     private String internalNotes;
     private String cancellationReason;
+    private boolean stockSettled;
     private List<DistributionOrderLineDto> lines;
 }

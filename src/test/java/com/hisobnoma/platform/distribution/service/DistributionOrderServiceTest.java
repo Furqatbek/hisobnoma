@@ -232,6 +232,21 @@ class DistributionOrderServiceTest {
     }
 
     @Test
+    void deliver_stockDeductFailure_marksUnsettledButStillDelivers() {
+        DistributionOrder order = orderInStatus(DistributionOrderStatus.IN_TRANSIT, 9L);
+        when(orderRepository.findByIdAndTenantId(50L, TENANT_ID)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(DistributionOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("insufficient van stock"))
+                .when(distributionStockService).deduct(any(), any(), any(), any(), any());
+
+        service.deliver(50L, DeliverDistributionOrderRequest.builder().build());
+
+        // Delivery still records (goods physically moved) but the stock gap is surfaced, not silent.
+        assertEquals(DistributionOrderStatus.DELIVERED, order.getStatus());
+        assertFalse(order.isStockSettled());
+    }
+
+    @Test
     void deliver_creditOrderCollectsNoCash() {
         DistributionOrder order = orderInStatus(DistributionOrderStatus.IN_TRANSIT, 9L);
         order.setPaymentMethod(DistributionPaymentMethod.CREDIT);
