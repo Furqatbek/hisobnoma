@@ -747,6 +747,17 @@ export const distributionOrdersApi = {
   cancel: (id, data) => api.post(`/distribution/orders/${id}/cancel`, data || {})
 }
 
+// Distribution Van Loadouts API - Backend: /api/v1/distribution/van-loadouts
+export const distributionVanLoadoutsApi = {
+  getAll: (params) => api.get('/distribution/van-loadouts', { params }),
+  getById: (id) => api.get(`/distribution/van-loadouts/${id}`),
+  create: (data) => api.post('/distribution/van-loadouts', data),
+  delete: (id) => api.delete(`/distribution/van-loadouts/${id}`),
+  load: (id) => api.post(`/distribution/van-loadouts/${id}/load`),
+  reconcile: (id, data) => api.post(`/distribution/van-loadouts/${id}/reconcile`, data),
+  cancel: (id) => api.post(`/distribution/van-loadouts/${id}/cancel`)
+}
+
 // Web Catalog API (online shop management) - Backend: /api/v1/web-catalog
 export const webCatalogApi = {
   getAll: (params) => api.get('/web-catalog', { params }),

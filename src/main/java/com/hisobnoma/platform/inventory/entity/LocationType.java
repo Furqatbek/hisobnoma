@@ -27,5 +27,11 @@ public enum LocationType {
     /**
      * Storage bin within a zone
      */
-    BIN
+    BIN,
+
+    /**
+     * A vehicle (van/truck) used for mobile/van sales — stock is loaded onto it,
+     * sold in the field, and reconciled back.
+     */
+    VEHICLE
 }

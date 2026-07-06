@@ -444,6 +444,21 @@ const routes = [
             path: 'orders/:id/edit',
             name: 'distribution-order-edit',
             component: () => import('@/views/distribution/OrderFormView.vue')
+          },
+          {
+            path: 'van-loadouts',
+            name: 'distribution-van-loadouts',
+            component: () => import('@/views/distribution/VanLoadoutsView.vue')
+          },
+          {
+            path: 'van-loadouts/new',
+            name: 'distribution-van-loadout-create',
+            component: () => import('@/views/distribution/VanLoadoutFormView.vue')
+          },
+          {
+            path: 'van-loadouts/:id',
+            name: 'distribution-van-loadout-detail',
+            component: () => import('@/views/distribution/VanLoadoutFormView.vue')
           }
         ]
       },

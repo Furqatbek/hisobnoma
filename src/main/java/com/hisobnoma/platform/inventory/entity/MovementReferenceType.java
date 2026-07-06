@@ -77,5 +77,10 @@ public enum MovementReferenceType {
     /**
      * From a distribution (B2B wholesale) order
      */
-    DISTRIBUTION_ORDER
+    DISTRIBUTION_ORDER,
+
+    /**
+     * From a van-sales loadout (load onto vehicle, sell, reconcile)
+     */
+    VAN_LOADOUT
 }

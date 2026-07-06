@@ -3471,6 +3471,60 @@ Stock operations are best-effort (they never block a status change); failures ar
 - Totals are computed server-side: `subtotal − discountAmount + taxAmount + deliveryFee`.
 - Only `DRAFT` orders can be edited or deleted.
 
+## Distribution Module — Van Loadouts (Slice 3)
+
+Van-sales (mobile selling): stock is loaded from a warehouse onto an agent's vehicle,
+sold in the field, then reconciled (returns / damages / cash) at end of day.
+
+### Lifecycle
+
+```
+DRAFT ─▶ LOADED ─▶ RECONCILED        (or CANCELLED from DRAFT / LOADED)
+```
+
+- Requires a `VEHICLE`-type inventory `Location` per vehicle (set up under Inventory →
+  Locations). The loadout targets that location.
+- **LOADED** transfers each line's quantity warehouse → vehicle. This is **atomic** — if any
+  line lacks stock the whole load fails and the loadout stays `DRAFT`.
+- **RECONCILED** takes per-line `returned` + `damaged`; `sold = loaded − returned − damaged`.
+  Returns are transferred back to the warehouse; sold and damaged are issued out of the
+  vehicle (movement ref `VAN_LOADOUT`). All reconcile stock moves are **atomic** with the
+  status change (a failed move aborts the whole reconciliation, leaving it `LOADED` to retry
+  safely). `expectedCash = Σ(sold × unitPrice)`, `cashDifference = actualCash − expectedCash`.
+- **CANCELLED** from `LOADED` returns the entire load to the warehouse. `RECONCILED` /
+  `CANCELLED` are terminal.
+
+### Endpoints
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /distribution/van-loadouts?status=&agentId= | DISTRIBUTION_VAN_VIEW | List loadouts (paginated) |
+| GET | /distribution/van-loadouts/{id} | DISTRIBUTION_VAN_VIEW | Get loadout by ID |
+| POST | /distribution/van-loadouts | DISTRIBUTION_VAN_MANAGE | Create loadout (DRAFT) |
+| DELETE | /distribution/van-loadouts/{id} | DISTRIBUTION_VAN_MANAGE | Delete a DRAFT loadout |
+| POST | /distribution/van-loadouts/{id}/load | DISTRIBUTION_VAN_MANAGE | DRAFT → LOADED (transfer to vehicle) |
+| POST | /distribution/van-loadouts/{id}/reconcile | DISTRIBUTION_VAN_MANAGE | LOADED → RECONCILED, body `{ actualCash, lines:[{lineId, quantityReturned, quantityDamaged}] }` |
+| POST | /distribution/van-loadouts/{id}/cancel | DISTRIBUTION_VAN_MANAGE | → CANCELLED |
+
+### Create request
+
+```json
+{
+  "agentId": 5,
+  "vehicleLocationId": 20,
+  "sourceLocationId": 10,
+  "loadoutDate": "2026-07-06",
+  "lines": [
+    { "productId": 100, "quantityLoaded": 24 },
+    { "productId": 101, "quantityLoaded": 12 }
+  ]
+}
+```
+
+- Unit cost and selling price are snapshotted from the product at create time.
+- Van sales in this model are cash sales settled through reconciliation; use the
+  Distribution **Orders** flow instead when you need per-customer B2B orders + AR.
+
 ---
 
 # Mobile Shop App — Public API Reference
