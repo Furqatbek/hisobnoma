@@ -2,6 +2,7 @@ package com.hisobnoma.platform.mobile.controller;
 
 import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.common.dto.PageResponse;
+import com.hisobnoma.platform.mobile.dto.ProductLookupDto;
 import com.hisobnoma.platform.mobile.dto.QuickSaleRequest;
 import com.hisobnoma.platform.mobile.dto.QuickStockCountRequest;
 import com.hisobnoma.platform.mobile.service.MobileQuickActionService;
@@ -70,22 +71,22 @@ public class MobileQuickActionController {
     @GetMapping("/inventory/search")
     @PreAuthorize("hasAnyAuthority('INVENTORY_PRODUCT_READ', 'POS_SALE_CREATE')")
     @Operation(summary = "Search products", description = "Search products by name, SKU, or barcode")
-    public ResponseEntity<ApiResponse<PageResponse<Map<String, Object>>>> searchProducts(
+    public ResponseEntity<ApiResponse<PageResponse<ProductLookupDto>>> searchProducts(
             @Parameter(description = "Search query") @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Page<Map<String, Object>> results = quickActionService.searchProducts(query, page, size);
+        Page<ProductLookupDto> results = quickActionService.searchProducts(query, page, size);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(results)));
     }
 
     @GetMapping("/products/search")
     @PreAuthorize("hasAnyAuthority('INVENTORY_PRODUCT_READ', 'POS_SALE_CREATE')")
     @Operation(summary = "Search products by query", description = "Search products by name, SKU, or barcode (alias endpoint)")
-    public ResponseEntity<ApiResponse<PageResponse<Map<String, Object>>>> searchProductsByQuery(
+    public ResponseEntity<ApiResponse<PageResponse<ProductLookupDto>>> searchProductsByQuery(
             @Parameter(description = "Search query") @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Page<Map<String, Object>> results = quickActionService.searchProducts(query, page, size);
+        Page<ProductLookupDto> results = quickActionService.searchProducts(query, page, size);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(results)));
     }
 }

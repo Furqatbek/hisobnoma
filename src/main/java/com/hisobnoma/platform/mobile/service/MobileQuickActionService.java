@@ -9,8 +9,11 @@ import com.hisobnoma.platform.inventory.entity.Product;
 import com.hisobnoma.platform.inventory.entity.Stock;
 import com.hisobnoma.platform.inventory.repository.ProductRepository;
 import com.hisobnoma.platform.inventory.repository.StockRepository;
+import com.hisobnoma.platform.mobile.dto.ProductLookupDto;
 import com.hisobnoma.platform.mobile.dto.QuickSaleRequest;
 import com.hisobnoma.platform.mobile.dto.QuickStockCountRequest;
+import com.hisobnoma.platform.mobile.entity.MobileQuickSaleIdempotency;
+import com.hisobnoma.platform.mobile.repository.MobileQuickSaleIdempotencyRepository;
 import com.hisobnoma.platform.pos.dto.AddLineRequest;
 import com.hisobnoma.platform.pos.dto.AddPaymentRequest;
 import com.hisobnoma.platform.pos.dto.CreateTransactionRequest;
@@ -46,6 +49,7 @@ public class MobileQuickActionService {
     private final CustomerRepository customerRepository;
     private final POSTransactionService posTransactionService;
     private final POSPaymentService posPaymentService;
+    private final MobileQuickSaleIdempotencyRepository idempotencyRepository;
 
     /**
      * Lookup product by barcode.
@@ -137,6 +141,18 @@ public class MobileQuickActionService {
     public POSTransactionDto performQuickSale(QuickSaleRequest request) {
         Long tenantId = securityContextHelper.getRequiredTenantId();
 
+        // Idempotency: a retried sale (same clientRequestId) returns the original transaction
+        // instead of creating a duplicate.
+        String clientRequestId = request.getClientRequestId() != null ? request.getClientRequestId().trim() : null;
+        if (clientRequestId != null && !clientRequestId.isEmpty()) {
+            var existing = idempotencyRepository.findByTenantIdAndClientRequestId(tenantId, clientRequestId);
+            if (existing.isPresent()) {
+                log.info("Quick-sale idempotent replay for clientRequestId {} -> transaction {}",
+                        clientRequestId, existing.get().getTransactionId());
+                return posTransactionService.findById(existing.get().getTransactionId());
+            }
+        }
+
         // Validate items
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new ValidationException("At least one item is required for a sale");
@@ -189,7 +205,19 @@ public class MobileQuickActionService {
         posPaymentService.addPayment(transaction.getId(), paymentRequest);
 
         // Complete transaction
-        return posTransactionService.completeTransaction(transaction.getId());
+        POSTransactionDto completed = posTransactionService.completeTransaction(transaction.getId());
+
+        // Record the idempotency mapping so a later retry with the same key returns this sale.
+        // The unique (tenant_id, client_request_id) constraint prevents a concurrent duplicate from
+        // persisting (the racing second sale rolls back; the client's next retry replays the first).
+        if (clientRequestId != null && !clientRequestId.isEmpty()) {
+            idempotencyRepository.save(MobileQuickSaleIdempotency.builder()
+                    .clientRequestId(clientRequestId)
+                    .transactionId(completed.getId())
+                    .tenantId(tenantId)
+                    .build());
+        }
+        return completed;
     }
 
     /**
@@ -217,19 +245,38 @@ public class MobileQuickActionService {
      * Search products for mobile.
      */
     @Transactional(readOnly = true)
-    public Page<Map<String, Object>> searchProducts(String query, int page, int size) {
+    public Page<ProductLookupDto> searchProducts(String query, int page, int size) {
         Long tenantId = securityContextHelper.getRequiredTenantId();
 
-        return productRepository.searchByNameOrSkuOrBarcode(tenantId, query, PageRequest.of(page, size))
-                .map(p -> {
-                    Map<String, Object> result = new HashMap<>();
-                    result.put("id", p.getId());
-                    result.put("sku", p.getSku());
-                    result.put("barcode", p.getBarcode());
-                    result.put("name", p.getName());
-                    result.put("sellingPrice", p.getSellingPrice());
-                    result.put("category", p.getCategory() != null ? p.getCategory().getName() : null);
-                    return result;
-                });
+        Page<Product> products = productRepository.searchByNameOrSkuOrBarcode(
+                tenantId, query, PageRequest.of(page, size));
+
+        // Total on-hand per product for the tenant, resolved once for the page.
+        Map<Long, BigDecimal> stockByProduct = new HashMap<>();
+        for (Object[] row : stockRepository.getTotalQuantitiesByTenant(tenantId)) {
+            stockByProduct.put((Long) row[0], toBigDecimal(row[1]));
+        }
+
+        return products.map(p -> ProductLookupDto.builder()
+                .id(p.getId())
+                .name(p.getName())
+                .sku(p.getSku())
+                .barcode(p.getBarcode())
+                .sellingPrice(p.getSellingPrice())
+                .minSellingPrice(p.getMinSellingPrice())
+                .categoryName(p.getCategory() != null ? p.getCategory().getName() : null)
+                .stockQuantity(stockByProduct.getOrDefault(p.getId(), BigDecimal.ZERO))
+                .active(p.isActive())
+                .trackInventory(p.isTrackInventory())
+                .baseUomName(p.getBaseUom() != null ? p.getBaseUom().getName() : null)
+                .baseUomCode(p.getBaseUom() != null ? p.getBaseUom().getCode() : null)
+                .build());
+    }
+
+    private static BigDecimal toBigDecimal(Object value) {
+        if (value == null) {
+            return BigDecimal.ZERO;
+        }
+        return value instanceof BigDecimal bd ? bd : new BigDecimal(value.toString());
     }
 }

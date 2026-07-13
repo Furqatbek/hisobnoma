@@ -680,6 +680,7 @@ POST /pos/quick-sale
   ],
   "paymentType": "CASH",
   "tenderedAmount": 50000.00,
+  "clientRequestId": "b3f1c2a0-6d7e-4c1a-9f2b-1e2d3c4b5a60",
   "notes": "Walk-in customer"
 }
 ```
@@ -695,9 +696,22 @@ POST /pos/quick-sale
 | items[].quantity | BigDecimal | Yes | Quantity |
 | items[].unitPrice | BigDecimal | No | Unit price override |
 | items[].discountAmount | BigDecimal | No | Discount amount |
-| paymentType | string | Yes | Payment type (e.g., `CASH`, `CARD`) |
-| tenderedAmount | BigDecimal | No | Tendered amount |
+| paymentType | string | Yes | One of `CASH`, `CARD`, `CREDIT`, `GIFT_CARD`, `MOBILE_PAYMENT`, `CHECK`, `OTHER` (case-insensitive). See note. |
+| tenderedAmount | BigDecimal | No | Cash tendered — used only to compute **change for `CASH`**; ignored for other types. |
+| clientRequestId | string(≤100) | No | Idempotency key (see note). |
 | notes | string | No | Optional notes |
+
+**Idempotency (safe retry):** send a client-generated UUID as `clientRequestId`. If a request with
+the same `(tenant, clientRequestId)` was already processed, the server returns the **original**
+transaction instead of creating a duplicate — so a sale whose response was lost can be retried
+safely. Omit the field to keep the legacy (non-idempotent) behaviour. (A concurrent duplicate with
+the same key is rejected by a unique constraint — the racing second sale rolls back; the client's
+next retry replays the first.)
+
+**Debt / on-account sales:** use `paymentType: "CREDIT"` — this records the sale against the
+customer's AR account (creates an AR invoice for the amount). There is **no `DEBT` value**; an
+unknown `paymentType` currently falls back to `CASH` (which would wrongly mark it paid). For a
+`CREDIT` sale, `tenderedAmount` is not used to settle anything, so send `0` (or omit it).
 
 **Response:** `200 OK`
 ```json
@@ -724,12 +738,55 @@ GET /inventory/search
 
 **Required Permissions:** `INVENTORY_PRODUCT_READ` or `POS_SALE_CREATE`
 
+Aliased at `GET /products/search` (identical behaviour/response).
+
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | query | string | Search by name, SKU, or barcode |
 | page | int | Page number (0-based, default: 0) |
-| size | int | Page size (default: 20) |
+| size | int | Page size (default: 20). **No server cap** — page past the first page (or raise `size`) to reach any item. |
+
+**Response:** `200 OK` — `ApiResponse<PageResponse<ProductLookupDto>>`. Each item carries the full
+cart-relevant field set (matching what `/inventory/products` exposes), so a product from search maps
+into the sale cart identically to one from the inventory list:
+
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": 123,
+        "name": "Cola 1L",
+        "sku": "SKU-001",
+        "barcode": "1234567890",
+        "sellingPrice": 12000.00,
+        "minSellingPrice": 10000.00,
+        "categoryName": "Drinks",
+        "stockQuantity": 42.0,
+        "active": true,
+        "trackInventory": true,
+        "baseUomName": "Pieces",
+        "baseUomCode": "PCS"
+      }
+    ],
+    "page": { "number": 0, "size": 20, "totalElements": 1, "totalPages": 1 }
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | long | Product id — use as the sale-line `productId` and cart key |
+| name / sku / barcode | string | shown / searchable |
+| sellingPrice | BigDecimal | default price |
+| minSellingPrice | BigDecimal | price floor for discount enforcement |
+| categoryName | string | shown in the product tile |
+| stockQuantity | BigDecimal | total on-hand across the tenant's locations (stock badge) |
+| active | bool | filter |
+| trackInventory | bool | stock-badge behaviour |
+| baseUomName / baseUomCode | string | unit display |
 
 ### Search Customers
 

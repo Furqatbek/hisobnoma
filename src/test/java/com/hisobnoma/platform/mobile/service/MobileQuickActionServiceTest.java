@@ -9,8 +9,12 @@ import com.hisobnoma.platform.inventory.entity.Product;
 import com.hisobnoma.platform.inventory.entity.Stock;
 import com.hisobnoma.platform.inventory.repository.ProductRepository;
 import com.hisobnoma.platform.inventory.repository.StockRepository;
+import com.hisobnoma.platform.inventory.entity.UnitOfMeasure;
+import com.hisobnoma.platform.mobile.dto.ProductLookupDto;
 import com.hisobnoma.platform.mobile.dto.QuickSaleRequest;
 import com.hisobnoma.platform.mobile.dto.QuickStockCountRequest;
+import com.hisobnoma.platform.mobile.entity.MobileQuickSaleIdempotency;
+import com.hisobnoma.platform.mobile.repository.MobileQuickSaleIdempotencyRepository;
 import com.hisobnoma.platform.pos.dto.POSTransactionDto;
 import com.hisobnoma.platform.pos.service.POSPaymentService;
 import com.hisobnoma.platform.pos.service.POSTransactionService;
@@ -54,6 +58,9 @@ class MobileQuickActionServiceTest {
 
     @Mock
     private POSPaymentService posPaymentService;
+
+    @Mock
+    private MobileQuickSaleIdempotencyRepository idempotencyRepository;
 
     @InjectMocks
     private MobileQuickActionService mobileQuickActionService;
@@ -302,27 +309,64 @@ class MobileQuickActionServiceTest {
     // ====== searchProducts ======
 
     @Test
-    void searchProducts_returnsPagedResults() {
-        // Given
+    void searchProducts_returnsEnrichedLookupWithStockPriceFloorAndUom() {
+        // Given — full cart-relevant field set
         when(product.getId()).thenReturn(100L);
         when(product.getSku()).thenReturn("SKU-001");
         when(product.getBarcode()).thenReturn("1234567890");
         when(product.getName()).thenReturn("Test Product");
         when(product.getSellingPrice()).thenReturn(new BigDecimal("15000.00"));
+        when(product.getMinSellingPrice()).thenReturn(new BigDecimal("12000.00"));
+        when(product.isActive()).thenReturn(true);
+        when(product.isTrackInventory()).thenReturn(true);
         when(product.getCategory()).thenReturn(null);
+        when(product.getBaseUom()).thenReturn(UnitOfMeasure.builder().code("PCS").name("Pieces").build());
 
         Page<Product> page = new PageImpl<>(List.of(product), PageRequest.of(0, 10), 1);
         when(securityContextHelper.getRequiredTenantId()).thenReturn(TENANT_ID);
         when(productRepository.searchByNameOrSkuOrBarcode(eq(TENANT_ID), eq("Test"), any()))
                 .thenReturn(page);
+        when(stockRepository.getTotalQuantitiesByTenant(TENANT_ID))
+                .thenReturn(List.<Object[]>of(new Object[]{100L, new BigDecimal("42")}));
 
         // When
-        Page<Map<String, Object>> result = mobileQuickActionService.searchProducts("Test", 0, 10);
+        Page<ProductLookupDto> result = mobileQuickActionService.searchProducts("Test", 0, 10);
 
         // Then
-        assertNotNull(result);
         assertEquals(1, result.getContent().size());
-        assertEquals("Test Product", result.getContent().get(0).get("name"));
-        assertEquals("SKU-001", result.getContent().get(0).get("sku"));
+        ProductLookupDto dto = result.getContent().get(0);
+        assertEquals(100L, dto.getId());
+        assertEquals("Test Product", dto.getName());
+        assertEquals("SKU-001", dto.getSku());
+        assertEquals("1234567890", dto.getBarcode());
+        assertEquals(0, new BigDecimal("15000.00").compareTo(dto.getSellingPrice()));
+        assertEquals(0, new BigDecimal("12000.00").compareTo(dto.getMinSellingPrice())); // price floor, missing before
+        assertEquals(0, new BigDecimal("42").compareTo(dto.getStockQuantity()));
+        assertTrue(dto.isActive());
+        assertTrue(dto.isTrackInventory());
+        assertEquals("Pieces", dto.getBaseUomName());
+        assertEquals("PCS", dto.getBaseUomCode());
+    }
+
+    // ====== idempotency ======
+
+    @Test
+    void performQuickSale_knownClientRequestId_replaysOriginalWithoutNewSale() {
+        when(securityContextHelper.getRequiredTenantId()).thenReturn(TENANT_ID);
+        MobileQuickSaleIdempotency record = MobileQuickSaleIdempotency.builder()
+                .clientRequestId("uuid-1").transactionId(500L).tenantId(TENANT_ID).build();
+        when(idempotencyRepository.findByTenantIdAndClientRequestId(TENANT_ID, "uuid-1"))
+                .thenReturn(Optional.of(record));
+        POSTransactionDto original = new POSTransactionDto();
+        original.setId(500L);
+        when(posTransactionService.findById(500L)).thenReturn(original);
+
+        POSTransactionDto result = mobileQuickActionService.performQuickSale(
+                QuickSaleRequest.builder().terminalId(1L).paymentType("CASH").clientRequestId("uuid-1").build());
+
+        assertEquals(500L, result.getId());
+        verify(posTransactionService).findById(500L);
+        verify(posTransactionService, never()).createTransaction(any());
+        verify(idempotencyRepository, never()).save(any());
     }
 }

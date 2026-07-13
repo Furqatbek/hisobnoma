@@ -33,6 +33,14 @@ public class QuickSaleRequest {
     private String customerName;
     private String notes;
 
+    /**
+     * Optional client-generated idempotency key (a UUID). Send the same value when safe-retrying a
+     * sale whose response was lost: the server returns the original transaction instead of creating
+     * a duplicate. Omit it to keep the legacy (non-idempotent) behaviour.
+     */
+    @jakarta.validation.constraints.Size(max = 100, message = "clientRequestId must not exceed 100 characters")
+    private String clientRequestId;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

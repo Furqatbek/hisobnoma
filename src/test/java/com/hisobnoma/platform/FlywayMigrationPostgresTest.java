@@ -113,7 +113,7 @@ class FlywayMigrationPostgresTest {
                 "distribution_orders", "distribution_order_lines",
                 "distribution_van_loadouts", "distribution_van_loadout_lines",
                 "distribution_routes", "distribution_route_stops", "distribution_visits",
-                "distribution_agent_targets");
+                "distribution_agent_targets", "mobile_quick_sale_idempotency");
 
         Set<String> violations = new TreeSet<>();
         try (Connection conn = DriverManager.getConnection(
