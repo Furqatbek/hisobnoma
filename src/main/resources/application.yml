@@ -160,6 +160,17 @@ app:
       merchant-id: ${UZUM_MERCHANT_ID:}
       secret-key: ${UZUM_SECRET:}
 
+  # APNs push notifications (mobile app). Disabled until an Apple .p8 auth key,
+  # team id, and key id exist; while disabled the send API skips every recipient
+  # and never fakes a delivery. Set enabled=true with the credentials below.
+  push:
+    apns:
+      enabled: ${APNS_ENABLED:false}
+      team-id: ${APNS_TEAM_ID:}
+      key-id: ${APNS_KEY_ID:}
+      bundle-id: ${APNS_BUNDLE_ID:com.hisobnoma.admin}
+      private-key: ${APNS_PRIVATE_KEY:}
+
   # Security
   security:
     password-min-length: 8
