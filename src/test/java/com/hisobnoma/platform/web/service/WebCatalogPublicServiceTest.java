@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.web.service;
 
 import com.hisobnoma.platform.common.exception.NotFoundException;
+import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.inventory.entity.Product;
 import com.hisobnoma.platform.inventory.repository.StockRepository;
 import com.hisobnoma.platform.web.dto.PublicCatalogProductDto;
@@ -8,6 +9,8 @@ import com.hisobnoma.platform.web.dto.PublicCategoryDto;
 import com.hisobnoma.platform.web.entity.WebCatalogItem;
 import com.hisobnoma.platform.web.entity.WebCatalogStatus;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -42,8 +45,18 @@ class WebCatalogPublicServiceTest {
     @InjectMocks
     private WebCatalogPublicService service;
 
-    // No TenantContext set in unit tests, so the service falls back to the default tenant.
+    // The service now fails closed without a tenant; simulate TenantFilter having set it.
     private static final Long DEFAULT_TENANT_ID = 1L;
+
+    @BeforeEach
+    void setTenant() {
+        TenantContext.setCurrentTenant(DEFAULT_TENANT_ID);
+    }
+
+    @AfterEach
+    void clearTenant() {
+        TenantContext.clear();
+    }
 
     private Product product(Long id, String name, BigDecimal sellingPrice, boolean trackInventory) {
         Product p = Product.builder()

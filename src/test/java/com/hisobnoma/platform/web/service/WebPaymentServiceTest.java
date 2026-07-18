@@ -15,6 +15,8 @@ import com.hisobnoma.platform.web.payment.PaymentProviderRegistry;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
 import com.hisobnoma.platform.web.repository.WebPaymentRepository;
 import org.junit.jupiter.api.BeforeEach;
+import com.hisobnoma.platform.common.tenant.TenantContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -47,6 +49,7 @@ class WebPaymentServiceTest {
 
     @BeforeEach
     void setUp() {
+        TenantContext.setCurrentTenant(TENANT_ID); // service fails closed without a tenant
         order = WebOrder.builder()
                 .tenantId(TENANT_ID).orderNumber(ORDER_NUMBER).phone(PHONE)
                 .status(WebOrderStatus.NEW)
@@ -54,6 +57,11 @@ class WebPaymentServiceTest {
                 .currency("UZS")
                 .build();
         order.setId(5L);
+    }
+
+    @AfterEach
+    void clearTenant() {
+        TenantContext.clear();
     }
 
     private CreatePaymentRequest request(String provider) {

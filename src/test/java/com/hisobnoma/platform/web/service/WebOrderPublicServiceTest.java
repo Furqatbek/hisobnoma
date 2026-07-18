@@ -15,6 +15,8 @@ import com.hisobnoma.platform.web.entity.WebOrderStatus;
 import com.hisobnoma.platform.web.exception.TooManyRequestsException;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
+import com.hisobnoma.platform.common.tenant.TenantContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +55,17 @@ class WebOrderPublicServiceTest {
     private static final Long TENANT_ID = 1L;
 
     private WebCatalogItem liveItem;
+
+    @BeforeEach
+    void setTenant() {
+        // The service now fails closed without a tenant; simulate TenantFilter having set it.
+        TenantContext.setCurrentTenant(TENANT_ID);
+    }
+
+    @AfterEach
+    void clearTenant() {
+        TenantContext.clear();
+    }
 
     @BeforeEach
     void setUp() {
@@ -271,6 +284,17 @@ class WebOrderPublicServiceTest {
 
         assertThrows(ValidationException.class,
                 () -> service.checkout(checkoutRequest(BigDecimal.ONE), "1.2.3.4", null));
+    }
+
+    @Test
+    void checkout_failsClosedWhenNoTenant() {
+        // No X-Tenant-ID → TenantContext empty → must reject, never fall back to tenant 1.
+        TenantContext.clear();
+        com.hisobnoma.platform.common.exception.BusinessException ex =
+                assertThrows(com.hisobnoma.platform.common.exception.BusinessException.class,
+                        () -> service.checkout(checkoutRequest(BigDecimal.ONE), "1.2.3.4", null));
+        assertEquals("TENANT_REQUIRED", ex.getCode());
+        verify(orderRepository, never()).save(any());
     }
 
     @Test

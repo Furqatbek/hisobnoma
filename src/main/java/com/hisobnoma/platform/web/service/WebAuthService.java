@@ -4,6 +4,7 @@ import com.hisobnoma.platform.common.entity.Tenant;
 import com.hisobnoma.platform.common.exception.UnauthorizedException;
 import com.hisobnoma.platform.common.exception.ValidationException;
 import com.hisobnoma.platform.common.repository.TenantRepository;
+import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.sms.service.SmsService;
 import com.hisobnoma.platform.web.dto.PublicOrderDto;
@@ -46,8 +47,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class WebAuthService {
-
-    private static final Long DEFAULT_TENANT_ID = 1L;
     private static final Duration CODE_TTL = Duration.ofMinutes(5);
     private static final Duration RESEND_COOLDOWN = Duration.ofSeconds(60);
     private static final int MAX_CODES_PER_DAY = 5;
@@ -213,7 +212,12 @@ public class WebAuthService {
 
     private Long resolveTenantId() {
         Long tenantId = TenantContext.getCurrentTenant();
-        return tenantId != null ? tenantId : DEFAULT_TENANT_ID;
+        if (tenantId == null) {
+            // Fail closed: never silently authenticate against tenant 1 / spend tenant 1's SMS
+            // budget. The caller must supply X-Tenant-ID (or a customer token carrying the tenant).
+            throw new BusinessException("X-Tenant-ID header is required", "TENANT_REQUIRED");
+        }
+        return tenantId;
     }
 
     static String normalizePhone(String phone) {

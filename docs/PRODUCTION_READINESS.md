@@ -57,6 +57,14 @@ Each item is written so it can be pasted into a GitHub issue as-is.
   already token-bound (`requireCustomer` uses the token's `tenantId`, not the header). **The web
   services' fallback (`WebCatalogPublicService`/`WebOrderPublicService`/etc.) is still open — that
   is pre-existing platform code and remains an open item.**
+- **✅ WEB PORTION FIXED (this branch):** `WebCatalogPublicService`, `WebOrderPublicService`,
+  `WebAuthService`, `WebPaymentService`, and `WebCartPublicController` no longer fall back to
+  `DEFAULT_TENANT_ID = 1L` — each now throws `400 TENANT_REQUIRED` when neither a customer token
+  nor `X-Tenant-ID` sets the tenant (fail closed), matching the B2B fix. Authenticated customers
+  are unaffected (TenantFilter derives the tenant from the token). **Client requirement:** anonymous
+  storefront calls (catalog, checkout, cart price, OTP) MUST send `X-Tenant-ID`; single-tenant
+  deployments must set it too. `SmsTemplateService`/`ExpenseRecordController` fallbacks are separate
+  non-storefront paths and remain open.
 
 ### 3. Anonymous rate-limit bypass → SMS-cost bomb / OTP abuse  ·  HIGH  ·  confirmed
 - **Where:** `common/util/ClientIpResolver.java` (`app.security.trust-proxy-headers=true`, takes

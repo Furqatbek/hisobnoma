@@ -4,6 +4,7 @@ import com.hisobnoma.platform.common.entity.Tenant;
 import com.hisobnoma.platform.common.exception.UnauthorizedException;
 import com.hisobnoma.platform.common.exception.ValidationException;
 import com.hisobnoma.platform.common.repository.TenantRepository;
+import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.sms.service.SmsService;
 import com.hisobnoma.platform.web.dto.WebAuthResponse;
 import com.hisobnoma.platform.web.entity.WebCustomer;
@@ -13,6 +14,7 @@ import com.hisobnoma.platform.web.repository.WebCustomerRepository;
 import com.hisobnoma.platform.web.repository.WebOrderRepository;
 import com.hisobnoma.platform.web.repository.WebOtpCodeRepository;
 import com.hisobnoma.platform.web.security.WebCustomerTokenService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +48,16 @@ class WebAuthServiceTest {
 
     private static final Long TENANT_ID = 1L;
     private static final String PHONE = "998901234567";
+
+    @BeforeEach
+    void setTenant() {
+        TenantContext.setCurrentTenant(TENANT_ID); // service fails closed without a tenant
+    }
+
+    @AfterEach
+    void clearTenant() {
+        TenantContext.clear();
+    }
 
     // ---- requestOtp ----
 

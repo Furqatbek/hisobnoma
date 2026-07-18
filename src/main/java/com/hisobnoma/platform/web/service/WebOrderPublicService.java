@@ -2,6 +2,7 @@ package com.hisobnoma.platform.web.service;
 
 import com.hisobnoma.platform.common.exception.NotFoundException;
 import com.hisobnoma.platform.common.exception.ValidationException;
+import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.delivery.entity.DeliveryRegion;
 import com.hisobnoma.platform.delivery.entity.DeliveryVillage;
@@ -33,14 +34,13 @@ import java.util.List;
 
 /**
  * Anonymous checkout and order-status lookup for the online shop.
- * Tenant comes from the X-Tenant-ID header via TenantContext (default 1).
+ * Tenant comes from the X-Tenant-ID header via TenantContext and is required
+ * (fail closed) — a request without it is rejected, never attributed to tenant 1.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class WebOrderPublicService {
-
-    private static final Long DEFAULT_TENANT_ID = 1L;
 
     private final WebOrderRepository orderRepository;
     private final WebCatalogItemRepository catalogRepository;
@@ -153,7 +153,13 @@ public class WebOrderPublicService {
 
     private Long resolveTenantId() {
         Long tenantId = TenantContext.getCurrentTenant();
-        return tenantId != null ? tenantId : DEFAULT_TENANT_ID;
+        if (tenantId == null) {
+            // Fail closed: never silently write/charge tenant 1. The storefront must identify the
+            // tenant via X-Tenant-ID (or an authenticated customer token, from which TenantFilter
+            // derives it).
+            throw new BusinessException("X-Tenant-ID header is required", "TENANT_REQUIRED");
+        }
+        return tenantId;
     }
 
     /**

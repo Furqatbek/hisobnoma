@@ -2,6 +2,7 @@ package com.hisobnoma.platform.web.service;
 
 import com.hisobnoma.platform.common.exception.NotFoundException;
 import com.hisobnoma.platform.common.exception.ValidationException;
+import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.web.dto.CreatePaymentRequest;
 import com.hisobnoma.platform.web.dto.PaymentDto;
@@ -36,8 +37,6 @@ import java.util.HexFormat;
 @RequiredArgsConstructor
 @Slf4j
 public class WebPaymentService {
-
-    private static final Long DEFAULT_TENANT_ID = 1L;
 
     private final WebPaymentRepository paymentRepository;
     private final WebOrderRepository orderRepository;
@@ -159,7 +158,11 @@ public class WebPaymentService {
 
     private Long resolveTenantId() {
         Long tenantId = TenantContext.getCurrentTenant();
-        return tenantId != null ? tenantId : DEFAULT_TENANT_ID;
+        if (tenantId == null) {
+            // Fail closed: never silently attribute a payment to tenant 1.
+            throw new BusinessException("X-Tenant-ID header is required", "TENANT_REQUIRED");
+        }
+        return tenantId;
     }
 
     /** Only HTTPS return URLs are honoured; anything else is dropped. */

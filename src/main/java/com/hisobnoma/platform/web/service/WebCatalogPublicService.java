@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.web.service;
 
 import com.hisobnoma.platform.common.exception.NotFoundException;
+import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.inventory.entity.Product;
 import com.hisobnoma.platform.inventory.entity.ProductImage;
@@ -24,15 +25,13 @@ import java.util.Map;
 
 /**
  * Anonymous (customer-facing) read access to the live web catalog.
- * Tenant is resolved from the X-Tenant-ID header via TenantContext,
- * defaulting to tenant 1 (same pattern as other public endpoints).
+ * Tenant is resolved from the X-Tenant-ID header via TenantContext and is
+ * required — requests without it are rejected (fail closed), never served tenant 1.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class WebCatalogPublicService {
-
-    private static final Long DEFAULT_TENANT_ID = 1L;
     private static final String CURRENCY = "UZS";
 
     private final WebCatalogItemRepository catalogRepository;
@@ -82,7 +81,12 @@ public class WebCatalogPublicService {
 
     private Long resolveTenantId() {
         Long tenantId = TenantContext.getCurrentTenant();
-        return tenantId != null ? tenantId : DEFAULT_TENANT_ID;
+        if (tenantId == null) {
+            // Fail closed: never silently serve tenant 1. The storefront must identify the tenant
+            // via X-Tenant-ID (or an authenticated customer token, from which TenantFilter derives it).
+            throw new BusinessException("X-Tenant-ID header is required", "TENANT_REQUIRED");
+        }
+        return tenantId;
     }
 
     private Map<Long, BigDecimal> loadStockMap(Long tenantId) {

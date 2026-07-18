@@ -29,8 +29,6 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class WebCartPublicController {
 
-    private static final Long DEFAULT_TENANT_ID = 1L;
-
     private final ClientIpResolver clientIpResolver;
     private final WebPricingService pricingService;
     private final WebCouponService couponService;
@@ -51,8 +49,7 @@ public class WebCartPublicController {
             throw new TooManyRequestsException("Too many price requests, please try again later");
         }
 
-        Long tenantId = TenantContext.getCurrentTenant() != null
-                ? TenantContext.getCurrentTenant() : DEFAULT_TENANT_ID;
+        Long tenantId = requireTenantId();
         String phone = phoneFromToken(authorization);
 
         WebPricingService.CartPrice price = pricingService.price(request.getLines(), tenantId, phone);
@@ -74,8 +71,7 @@ public class WebCartPublicController {
             throw new TooManyRequestsException("Too many coupon attempts, please try again later");
         }
 
-        Long tenantId = TenantContext.getCurrentTenant() != null
-                ? TenantContext.getCurrentTenant() : DEFAULT_TENANT_ID;
+        Long tenantId = requireTenantId();
         String phone = phoneFromToken(authorization);
 
         WebPricingService.CartPrice price = pricingService.price(request.getLines(), tenantId, phone);
@@ -87,6 +83,16 @@ public class WebCartPublicController {
                 .valid(outcome.valid())
                 .discount(outcome.discount())
                 .build()));
+    }
+
+    /** Fail closed: the storefront must identify the tenant via X-Tenant-ID (or a customer token). */
+    private Long requireTenantId() {
+        Long tenantId = TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            throw new com.hisobnoma.platform.common.exception.BusinessException(
+                    "X-Tenant-ID header is required", "TENANT_REQUIRED");
+        }
+        return tenantId;
     }
 
     private String phoneFromToken(String authorization) {
