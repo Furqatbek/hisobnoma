@@ -104,8 +104,23 @@ public class POSPaymentService {
             validateCreditPayment(transaction, request.getAmount());
         }
 
-        // Auto-approve the payment (in a real system, card payments would go through a gateway)
-        payment.approve();
+        // Approve the tender. Electronic tenders (CARD/MOBILE_PAYMENT) have no gateway integration
+        // yet, so unless a gateway reference was supplied they are approved as MANUAL — the money is
+        // confirmed out-of-band (standalone terminal) rather than authorized online. Flagging keeps
+        // the "no real authorization happened" gap explicit and reconcilable instead of silently
+        // marking an unverified card charge APPROVED like a gateway-authorized one.
+        boolean electronicTender = request.getPaymentType() == POSPaymentType.CARD
+                || request.getPaymentType() == POSPaymentType.MOBILE_PAYMENT;
+        boolean gatewayVerified = request.getGatewayReference() != null
+                && !request.getGatewayReference().isBlank();
+        if (electronicTender && !gatewayVerified) {
+            payment.approveManually();
+            log.warn("Manually approving {} payment on transaction {} — no gateway authorization; "
+                    + "reconcile against the terminal settlement report",
+                    request.getPaymentType(), transaction.getTransactionNumber());
+        } else {
+            payment.approve();
+        }
         payment.setProcessedBy(userId);
 
         // Persist payment explicitly first to avoid TransientObjectException

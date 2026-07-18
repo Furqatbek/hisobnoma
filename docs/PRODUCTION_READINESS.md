@@ -151,6 +151,12 @@ Each item is written so it can be pasted into a GitHub issue as-is.
   staff user (internal-fraud gap, not anonymous). Overpayment/credit-limit checks bound it.
 - **Fix:** Integrate a real card gateway, or add an explicit "manual / unverified" tender flag and
   keep it out of the auto-approve path until then.
+- **✅ FIXED (this branch):** `POSPayment` gains a `manually_approved` flag (V79). A CARD/
+  MOBILE_PAYMENT tender approved without a `gatewayReference` is now approved via `approveManually()`
+  (flag set, WARN logged) instead of the blind `approve()`, so an unverified card charge is
+  explicitly distinguishable from a gateway auth and reconcilable against the terminal settlement
+  report. The sale still completes (the money is confirmed out-of-band at a standalone terminal);
+  when a real gateway is wired it supplies `gatewayReference` and the tender is not flagged.
 
 ---
 

@@ -190,6 +190,55 @@ class POSPaymentServiceTest {
     }
 
     @Test
+    void addPayment_cardWithoutGateway_isApprovedButFlaggedManual() {
+        AddPaymentRequest request = AddPaymentRequest.builder()
+                .paymentType(POSPaymentType.CARD)
+                .amount(new BigDecimal("10000"))
+                .cardLastFour("4242")
+                .authCode("staff-typed")
+                .build();
+
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
+        when(transactionRepository.findByIdAndTenantIdForUpdate(1L, TENANT_ID)).thenReturn(Optional.of(transaction));
+        when(paymentRepository.findMaxPaymentNumberByTransactionId(1L)).thenReturn(null);
+        when(paymentRepository.save(any(POSPayment.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(transactionRepository.save(any(POSTransaction.class))).thenReturn(transaction);
+        when(paymentMapper.toDto(any(POSPayment.class))).thenReturn(paymentDto);
+
+        posPaymentService.addPayment(1L, request);
+
+        org.mockito.ArgumentCaptor<POSPayment> captor = org.mockito.ArgumentCaptor.forClass(POSPayment.class);
+        verify(paymentRepository).save(captor.capture());
+        POSPayment saved = captor.getValue();
+        assertEquals(POSPaymentStatus.APPROVED, saved.getStatus(), "sale still completes");
+        assertTrue(saved.isManuallyApproved(), "unverified card charge flagged as manual");
+    }
+
+    @Test
+    void addPayment_cardWithGatewayReference_isNotFlaggedManual() {
+        AddPaymentRequest request = AddPaymentRequest.builder()
+                .paymentType(POSPaymentType.CARD)
+                .amount(new BigDecimal("10000"))
+                .gatewayReference("AUTH-123456")
+                .build();
+
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
+        when(transactionRepository.findByIdAndTenantIdForUpdate(1L, TENANT_ID)).thenReturn(Optional.of(transaction));
+        when(paymentRepository.findMaxPaymentNumberByTransactionId(1L)).thenReturn(null);
+        when(paymentRepository.save(any(POSPayment.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(transactionRepository.save(any(POSTransaction.class))).thenReturn(transaction);
+        when(paymentMapper.toDto(any(POSPayment.class))).thenReturn(paymentDto);
+
+        posPaymentService.addPayment(1L, request);
+
+        org.mockito.ArgumentCaptor<POSPayment> captor = org.mockito.ArgumentCaptor.forClass(POSPayment.class);
+        verify(paymentRepository).save(captor.capture());
+        assertFalse(captor.getValue().isManuallyApproved(), "gateway-verified card is not manual");
+    }
+
+    @Test
     void addPayment_transactionNotFound_throwsNotFoundException() {
         // Given
         AddPaymentRequest request = AddPaymentRequest.builder()

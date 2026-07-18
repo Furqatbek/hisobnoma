@@ -133,6 +133,16 @@ public class POSPayment extends BaseEntity {
     @Column(length = 500)
     private String notes;
 
+    /**
+     * True when the tender was approved on staff-entered details (e.g. a CARD tender confirmed via a
+     * standalone terminal) rather than an online gateway authorization. Makes the "no real
+     * authorization happened" gap explicit and auditable — these should be reconciled against the
+     * card terminal's settlement report.
+     */
+    @Column(name = "manually_approved", nullable = false)
+    @Builder.Default
+    private boolean manuallyApproved = false;
+
     public void calculateChange() {
         if (paymentType == POSPaymentType.CASH && tenderedAmount != null) {
             if (tenderedAmount.compareTo(amount) > 0) {
@@ -146,6 +156,15 @@ public class POSPayment extends BaseEntity {
     public void approve() {
         this.status = POSPaymentStatus.APPROVED;
         this.processedAt = Instant.now();
+    }
+
+    /**
+     * Approve a tender that was NOT authorized by a payment gateway (staff-confirmed). Flags it so
+     * reports/reconciliation can tell it apart from a real gateway auth.
+     */
+    public void approveManually() {
+        approve();
+        this.manuallyApproved = true;
     }
 
     public void decline() {

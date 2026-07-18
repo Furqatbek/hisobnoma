@@ -41,5 +41,7 @@ public class POSPaymentDto {
     private BigDecimal refundAmount;
     private String refundReason;
     private String notes;
+    /** True when approved on staff-entered details without a gateway authorization (e.g. CARD). */
+    private boolean manuallyApproved;
     private Instant createdAt;
 }
