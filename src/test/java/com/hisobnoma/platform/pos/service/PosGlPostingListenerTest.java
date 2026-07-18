@@ -39,10 +39,10 @@ class PosGlPostingListenerTest {
     @Test
     void postsGlAndFlagsTransaction() {
         POSTransaction t = tx(false);
-        when(transactionRepository.findById(5L)).thenReturn(Optional.of(t));
+        when(transactionRepository.findByIdAndTenantId(5L, 3L)).thenReturn(Optional.of(t));
         when(glIntegrationService.postPOSTransaction(t)).thenReturn(900L);
 
-        listener.onSaleCompleted(new PosSaleCompletedEvent(5L));
+        listener.onSaleCompleted(new PosSaleCompletedEvent(5L, 3L));
 
         assertTrue(t.isGlPosted());
         assertEquals(900L, t.getGlJournalEntryId());
@@ -51,9 +51,9 @@ class PosGlPostingListenerTest {
 
     @Test
     void skipsWhenAlreadyPosted() {
-        when(transactionRepository.findById(5L)).thenReturn(Optional.of(tx(true)));
+        when(transactionRepository.findByIdAndTenantId(5L, 3L)).thenReturn(Optional.of(tx(true)));
 
-        listener.onSaleCompleted(new PosSaleCompletedEvent(5L));
+        listener.onSaleCompleted(new PosSaleCompletedEvent(5L, 3L));
 
         verify(glIntegrationService, never()).postPOSTransaction(any());
         verify(transactionRepository, never()).save(any());
@@ -62,11 +62,11 @@ class PosGlPostingListenerTest {
     @Test
     void glFailureIsSwallowedSoTheSaleIsUnaffected() {
         POSTransaction t = tx(false);
-        when(transactionRepository.findById(5L)).thenReturn(Optional.of(t));
+        when(transactionRepository.findByIdAndTenantId(5L, 3L)).thenReturn(Optional.of(t));
         when(glIntegrationService.postPOSTransaction(t)).thenThrow(new RuntimeException("GL down"));
 
         // Must not propagate — the sale is already committed; the retry scheduler will handle it.
-        assertDoesNotThrow(() -> listener.onSaleCompleted(new PosSaleCompletedEvent(5L)));
+        assertDoesNotThrow(() -> listener.onSaleCompleted(new PosSaleCompletedEvent(5L, 3L)));
         assertFalse(t.isGlPosted());
     }
 }

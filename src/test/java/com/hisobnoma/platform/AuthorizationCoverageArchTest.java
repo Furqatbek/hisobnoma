@@ -47,10 +47,22 @@ class AuthorizationCoverageArchTest {
             "WebAuthPublicController",
             "WebOrderPublicController",
             "WebCartPublicController",
+            // Anonymous online-shop payment: the customer pays for their own
+            // order, identified by order number + phone (no staff permission)
+            "WebPaymentPublicController",
+            // B2B storefront: authenticated by the B2B customer token
+            // (B2bCustomerTokenService), not by staff permissions. login is
+            // anonymous; the rest are scoped to the caller's own token/tenant
+            "B2bAuthController",
+            "B2bCatalogController",
+            "B2bOrderController",
             // Login/refresh are anonymous; the rest operate only on the
             // caller's own account (id from their token)
             "AuthController",
             "MobileAuthController",
+            // Self-service: an authenticated mobile user registers/removes
+            // their own device's push token (no special permission)
+            "MobilePushTokenController",
             // Self-service: links/unlinks the caller's own Telegram account
             "TelegramController",
             // Authenticated-only via an explicit SecurityConfig matcher

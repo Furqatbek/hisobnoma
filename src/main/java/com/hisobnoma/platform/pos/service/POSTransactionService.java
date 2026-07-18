@@ -638,7 +638,7 @@ public class POSTransactionService {
         log.info("Completed transaction {}", transaction.getTransactionNumber());
 
         // Fires only if this transaction commits → GL is posted for committed sales only.
-        eventPublisher.publishEvent(new PosSaleCompletedEvent(transaction.getId()));
+        eventPublisher.publishEvent(new PosSaleCompletedEvent(transaction.getId(), transaction.getTenantId()));
 
         return transactionMapper.toDto(transaction);
     }

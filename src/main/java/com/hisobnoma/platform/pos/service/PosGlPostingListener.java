@@ -34,7 +34,8 @@ public class PosGlPostingListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onSaleCompleted(PosSaleCompletedEvent event) {
         try {
-            POSTransaction transaction = transactionRepository.findById(event.transactionId()).orElse(null);
+            POSTransaction transaction = transactionRepository
+                    .findByIdAndTenantId(event.transactionId(), event.tenantId()).orElse(null);
             if (transaction == null || transaction.isGlPosted()) {
                 return; // already posted (or gone) — nothing to do
             }
