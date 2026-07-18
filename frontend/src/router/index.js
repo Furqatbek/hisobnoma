@@ -418,72 +418,86 @@ const routes = [
           {
             path: 'agents',
             name: 'distribution-agents',
-            component: () => import('@/views/distribution/AgentsView.vue')
+            component: () => import('@/views/distribution/AgentsView.vue'),
+            meta: { permission: 'DISTRIBUTION_AGENT_VIEW' }
           },
           {
             path: 'agents/new',
             name: 'distribution-agent-create',
-            component: () => import('@/views/distribution/AgentFormView.vue')
+            component: () => import('@/views/distribution/AgentFormView.vue'),
+            meta: { permission: 'DISTRIBUTION_AGENT_MANAGE' }
           },
           {
             path: 'agents/:id/edit',
             name: 'distribution-agent-edit',
-            component: () => import('@/views/distribution/AgentFormView.vue')
+            component: () => import('@/views/distribution/AgentFormView.vue'),
+            meta: { permission: 'DISTRIBUTION_AGENT_MANAGE' }
           },
           {
             path: 'orders',
             name: 'distribution-orders',
-            component: () => import('@/views/distribution/OrdersView.vue')
+            component: () => import('@/views/distribution/OrdersView.vue'),
+            meta: { permission: 'DISTRIBUTION_ORDER_VIEW' }
           },
           {
             path: 'orders/new',
             name: 'distribution-order-create',
-            component: () => import('@/views/distribution/OrderFormView.vue')
+            component: () => import('@/views/distribution/OrderFormView.vue'),
+            meta: { permission: 'DISTRIBUTION_ORDER_CREATE' }
           },
           {
             path: 'orders/:id/edit',
             name: 'distribution-order-edit',
-            component: () => import('@/views/distribution/OrderFormView.vue')
+            component: () => import('@/views/distribution/OrderFormView.vue'),
+            meta: { permission: 'DISTRIBUTION_ORDER_MANAGE' }
           },
           {
             path: 'van-loadouts',
             name: 'distribution-van-loadouts',
-            component: () => import('@/views/distribution/VanLoadoutsView.vue')
+            component: () => import('@/views/distribution/VanLoadoutsView.vue'),
+            meta: { permission: 'DISTRIBUTION_VAN_VIEW' }
           },
           {
             path: 'van-loadouts/new',
             name: 'distribution-van-loadout-create',
-            component: () => import('@/views/distribution/VanLoadoutFormView.vue')
+            component: () => import('@/views/distribution/VanLoadoutFormView.vue'),
+            meta: { permission: 'DISTRIBUTION_VAN_MANAGE' }
           },
           {
             path: 'van-loadouts/:id',
             name: 'distribution-van-loadout-detail',
-            component: () => import('@/views/distribution/VanLoadoutFormView.vue')
+            component: () => import('@/views/distribution/VanLoadoutFormView.vue'),
+            meta: { permission: 'DISTRIBUTION_VAN_VIEW' }
           },
           {
             path: 'routes',
             name: 'distribution-routes',
-            component: () => import('@/views/distribution/RoutesView.vue')
+            component: () => import('@/views/distribution/RoutesView.vue'),
+            meta: { permission: 'DISTRIBUTION_ROUTE_VIEW' }
           },
           {
             path: 'routes/new',
             name: 'distribution-route-create',
-            component: () => import('@/views/distribution/RouteFormView.vue')
+            component: () => import('@/views/distribution/RouteFormView.vue'),
+            meta: { permission: 'DISTRIBUTION_ROUTE_MANAGE' }
           },
           {
             path: 'routes/:id/edit',
             name: 'distribution-route-edit',
-            component: () => import('@/views/distribution/RouteFormView.vue')
+            component: () => import('@/views/distribution/RouteFormView.vue'),
+            meta: { permission: 'DISTRIBUTION_ROUTE_MANAGE' }
           },
           {
             path: 'visits',
             name: 'distribution-visits',
-            component: () => import('@/views/distribution/VisitsView.vue')
+            component: () => import('@/views/distribution/VisitsView.vue'),
+            meta: { permission: 'DISTRIBUTION_VISIT_VIEW' }
           },
           {
             path: 'kpi',
             name: 'distribution-kpi',
-            component: () => import('@/views/distribution/KpiDashboardView.vue')
+            component: () => import('@/views/distribution/KpiDashboardView.vue'),
+            meta: { permission: 'DISTRIBUTION_KPI_VIEW' }
           }
         ]
       },
