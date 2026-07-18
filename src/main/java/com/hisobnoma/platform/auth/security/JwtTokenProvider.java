@@ -58,6 +58,9 @@ public class JwtTokenProvider {
         this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
+    /** Profiles under which a weak/placeholder JWT secret is tolerated (local development / tests). */
+    private static final Set<String> SAFE_PROFILES = Set.of("dev", "test", "local");
+
     private void validateSecret() {
         boolean isDefault = DEFAULT_PLACEHOLDER_SECRET.equals(jwtSecret);
         boolean tooShort = jwtSecret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES;
@@ -67,11 +70,19 @@ public class JwtTokenProvider {
         String problem = isDefault
                 ? "JWT secret is the published default placeholder"
                 : "JWT secret is shorter than " + MIN_SECRET_BYTES + " bytes (512 bits)";
-        boolean prod = Arrays.asList(environment.getActiveProfiles()).contains("prod");
-        if (prod) {
+
+        // Fail closed for ANY non-development context — not just the literal "prod" profile. A weak
+        // secret is only tolerated with no profile at all (local dev) or when every active profile is
+        // a recognised dev/test one; a server booting "prod", "staging", "production", or a typo'd
+        // profile must refuse to start rather than silently run on a forgeable secret.
+        String[] active = environment.getActiveProfiles();
+        boolean safeContext = active.length == 0
+                || Arrays.stream(active).allMatch(SAFE_PROFILES::contains);
+        if (!safeContext) {
             throw new IllegalStateException(problem
-                    + " — refusing to start with the prod profile. Set the JWT_SECRET"
-                    + " environment variable to a random string of at least 64 characters.");
+                    + " — refusing to start with profile(s) " + Arrays.toString(active)
+                    + ". Set the JWT_SECRET environment variable to a random string of at least"
+                    + " 64 characters.");
         }
         log.warn("{} — acceptable for dev/test only. Set JWT_SECRET (>= 64 chars) before"
                 + " deploying to production.", problem);

@@ -444,11 +444,13 @@ public class ARInvoiceService {
         List<ARInvoiceLine> lines = new ArrayList<>();
         BigDecimal transactionTotal = transaction.getTotalAmount();
         BigDecimal creditRatio = creditAmount.divide(transactionTotal, 6, RoundingMode.HALF_UP);
+        BigDecimal allocatedTotal = BigDecimal.ZERO; // track to correct rounding residue below
         int lineNumber = 1;
 
         for (POSTransactionLine txLine : transaction.getLines()) {
             // Calculate proportional amount for this line based on credit ratio
             BigDecimal lineAmount = txLine.getLineTotal().multiply(creditRatio).setScale(4, RoundingMode.HALF_UP);
+            allocatedTotal = allocatedTotal.add(lineAmount);
 
             ARInvoiceLine line = new ARInvoiceLine();
             line.setArInvoice(invoice);
@@ -474,6 +476,17 @@ public class ARInvoiceService {
             }
 
             lines.add(line);
+        }
+
+        // Correct the rounding residue: independent per-line rounding can make Σ line totals drift
+        // from the invoice header (creditAmount) by a few minor units. Push the difference onto the
+        // last line so the header exactly equals the sum of its lines.
+        if (!lines.isEmpty()) {
+            BigDecimal residue = creditAmount.subtract(allocatedTotal);
+            if (residue.compareTo(BigDecimal.ZERO) != 0) {
+                ARInvoiceLine lastLine = lines.get(lines.size() - 1);
+                lastLine.setLineTotal(lastLine.getLineTotal().add(residue));
+            }
         }
 
         invoice.setLines(lines);

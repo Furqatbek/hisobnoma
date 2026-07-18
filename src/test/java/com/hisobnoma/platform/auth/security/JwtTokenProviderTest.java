@@ -92,6 +92,32 @@ class JwtTokenProviderTest {
         assertDoesNotThrow(provider::init);
     }
 
+    @Test
+    void init_defaultPlaceholderSecret_stagingProfile_failsStartup() {
+        // Any non-dev/test profile (not just literal "prod") must fail closed on a weak secret.
+        JwtTokenProvider provider = buildProvider(JwtTokenProvider.DEFAULT_PLACEHOLDER_SECRET, "staging");
+        assertThrows(IllegalStateException.class, provider::init);
+    }
+
+    @Test
+    void init_defaultPlaceholderSecret_productionProfile_failsStartup() {
+        JwtTokenProvider provider = buildProvider(JwtTokenProvider.DEFAULT_PLACEHOLDER_SECRET, "production");
+        assertThrows(IllegalStateException.class, provider::init);
+    }
+
+    @Test
+    void init_defaultPlaceholderSecret_noProfile_startsAsLocalDev() {
+        JwtTokenProvider provider = buildProvider(JwtTokenProvider.DEFAULT_PLACEHOLDER_SECRET);
+        assertDoesNotThrow(provider::init);
+    }
+
+    @Test
+    void init_defaultPlaceholderSecret_prodPlusDev_failsStartup() {
+        // If any active profile is non-safe, fail closed even alongside a dev profile.
+        JwtTokenProvider provider = buildProvider(JwtTokenProvider.DEFAULT_PLACEHOLDER_SECRET, "dev", "prod");
+        assertThrows(IllegalStateException.class, provider::init);
+    }
+
     // ---- generateAccessToken ----
 
     @Test

@@ -213,6 +213,8 @@ Each item is written so it can be pasted into a GitHub issue as-is.
 - **POS→AR proportional line allocation rounding residue** — `finance/service/ARInvoiceService.java:441-462`:
   per-line `creditRatio` at 4dp with no largest-remainder correction, so invoice header ≠ Σlines.
   Not re-posted to GL, so books stay balanced. Cosmetic.
+  - **✅ FIXED (this branch):** the per-line rounding residue is now pushed onto the last line, so
+    the AR invoice header (`creditAmount`) exactly equals the sum of its lines.
 - **GL-integration path skips fiscal-period-close / account-active checks** —
   `finance/service/JournalEntryService.java:318-381` (`createAndPostEntry`) never calls
   `validatePostingAllowed` / `account.isActive()`, unlike the manual `createJournalEntry` path
@@ -224,9 +226,19 @@ Each item is written so it can be pasted into a GitHub issue as-is.
     accounts) are unaffected.
 - **`/uploads/**` is anonymous static serving** — `config/SecurityConfig.java` PUBLIC_ENDPOINTS.
   Not confirmed vulnerable; flag for a follow-up IDOR / filename-guessability check.
-- **JWT enforcement is keyed on the literal `prod` profile** — a deployment that boots a non-prod
-  profile would silently run on the published placeholder secret (forgeable JWTs). Deployment
-  discipline, not a code bug. (`Dockerfile.prod` / `docker-compose.prod.yml` correctly set `prod`.)
+  - **✅ REVIEWED — not a vulnerability (this branch):** the only writer is `ProductImageService`,
+    which stores files at `tenant-{id}/products/{productId}/{random-UUID}.ext`. Filenames are random
+    UUIDs, so the guessable tenant/product path segments are not enough to construct a URL; the
+    content is **product images, public by design** (rendered to anonymous storefront customers); and
+    Spring's `ResourceHttpRequestHandler` (backing `addResourceHandler`) blocks path traversal. No
+    sensitive files are written under `uploads/` (CSV imports parse in memory). No code change needed.
+- **JWT enforcement was keyed on the literal `prod` profile** — a deployment that boots a non-prod
+  profile would silently run on the published placeholder secret (forgeable JWTs).
+  - **✅ FIXED (this branch):** `JwtTokenProvider.validateSecret` now fails closed under **any**
+    profile that isn't a recognised dev/test one (`dev`/`test`/`local`, or no profile = local dev).
+    A server booting `prod`, `staging`, `production`, or a typo'd profile with a weak/placeholder
+    secret now refuses to start instead of only the literal `prod`. Tests cover staging/production/
+    mixed profiles.
 
 ---
 
