@@ -142,8 +142,8 @@ class DistributionOrderServiceTest {
         // subtotal 31200 + deliveryFee 15000 = 46200
         assertEquals(0, new BigDecimal("31200").compareTo(saved.getSubtotal()));
         assertEquals(0, new BigDecimal("46200").compareTo(saved.getTotalAmount()));
-        // due date = orderDate + customer terms (14)
-        assertEquals(LocalDate.of(2026, 7, 6).plusDays(14), saved.getDueDate());
+        // due date = orderDate (today) + customer terms (14)
+        assertEquals(LocalDate.now().plusDays(14), saved.getDueDate());
         // pricing basis snapshotted from the customer's price list
         assertEquals(77L, saved.getPriceListId());
     }
