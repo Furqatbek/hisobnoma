@@ -117,6 +117,30 @@ class PushSendServiceTest {
     }
 
     @Test
+    void notifyTenant_broadcastsToAllTenantTokensAndPrunesDead() {
+        DevicePushToken good = token(10L, "good", PushEnvironment.PRODUCTION);
+        DevicePushToken dead = token(11L, "dead", PushEnvironment.SANDBOX);
+        when(repository.findByTenantId(TENANT_ID)).thenReturn(List.of(good, dead));
+        when(apnsClient.send(eq("good"), any(), any())).thenReturn(ApnsResult.ok());
+        when(apnsClient.send(eq("dead"), any(), any())).thenReturn(ApnsResult.dead(410, "Unregistered"));
+
+        // System-triggered path: no security context is touched (checkout is anonymous).
+        service.notifyTenant(TENANT_ID, new ApnsPayload("New order", "WO-1", null, "new_order", 5L, null));
+
+        verify(repository).findByTenantId(TENANT_ID);
+        verify(repository).deleteAllById(List.of(11L));
+        verifyNoInteractions(securityContextHelper);
+    }
+
+    @Test
+    void notifyTenant_swallowsErrorsSoItNeverBreaksTheCaller() {
+        when(repository.findByTenantId(TENANT_ID)).thenThrow(new RuntimeException("db down"));
+
+        // Must not propagate — the triggering operation (checkout) cannot be broken by a push failure.
+        service.notifyTenant(TENANT_ID, new ApnsPayload("t", "b", null, null, null, null));
+    }
+
+    @Test
     void send_apnsNotConfigured_reportsSkippedWithoutFakingDelivery() {
         when(securityContextHelper.getRequiredTenantId()).thenReturn(TENANT_ID);
         when(repository.findByTenantId(TENANT_ID)).thenReturn(List.of(token(10L, "t", PushEnvironment.PRODUCTION)));

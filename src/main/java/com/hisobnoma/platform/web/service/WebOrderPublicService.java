@@ -9,6 +9,8 @@ import com.hisobnoma.platform.delivery.repository.DeliveryRegionRepository;
 import com.hisobnoma.platform.delivery.repository.DeliveryVillageRepository;
 import com.hisobnoma.platform.inventory.entity.Product;
 import com.hisobnoma.platform.mobile.entity.MobileAlert;
+import com.hisobnoma.platform.mobile.push.apns.ApnsPayload;
+import com.hisobnoma.platform.mobile.push.service.PushSendService;
 import com.hisobnoma.platform.telegram.service.TelegramNotificationService;
 import com.hisobnoma.platform.web.dto.CheckoutRequest;
 import com.hisobnoma.platform.web.dto.PublicOrderDto;
@@ -45,6 +47,7 @@ public class WebOrderPublicService {
     private final DeliveryVillageRepository villageRepository;
     private final CheckoutRateLimiter rateLimiter;
     private final TelegramNotificationService telegramNotificationService;
+    private final PushSendService pushSendService;
     private final WebPricingService pricingService;
     private final WebCouponService couponService;
     private final WebLoyaltyService loyaltyService;
@@ -58,9 +61,8 @@ public class WebOrderPublicService {
             throw new TooManyRequestsException("Too many checkout attempts, please try again later");
         }
 
-        WebPaymentMethod paymentMethod = "CARD".equals(request.getPaymentMethod())
-                ? WebPaymentMethod.CARD : WebPaymentMethod.CASH;
-
+        // Payment is cash-on-delivery only for now. Any payment method the client sends is ignored
+        // so no order is stranded in PENDING awaiting an online-payment flow that isn't wired.
         WebOrder order = WebOrder.builder()
                 .tenantId(tenantId)
                 .orderNumber(generateOrderNumber(tenantId))
@@ -70,10 +72,8 @@ public class WebOrderPublicService {
                 .phoneNormalized(normalizePhone(request.getPhone()))
                 .customerNote(request.getNote())
                 .deliveryAddress(request.getAddress() != null ? request.getAddress().trim() : null)
-                .paymentMethod(paymentMethod)
-                // Card orders await online payment; cash orders need none.
-                .paymentStatus(paymentMethod == WebPaymentMethod.CARD
-                        ? WebPaymentStatus.PENDING : WebPaymentStatus.NONE)
+                .paymentMethod(WebPaymentMethod.CASH)
+                .paymentStatus(WebPaymentStatus.NONE)
                 .sourceIp(sourceIp)
                 .userAgent(userAgent != null && userAgent.length() > 500
                         ? userAgent.substring(0, 500) : userAgent)
@@ -255,17 +255,34 @@ public class WebOrderPublicService {
         return number;
     }
 
+    /**
+     * Notifies the tenant's staff of a new online order over two channels — a Telegram broadcast
+     * (to staff who linked Telegram) and an APNs push to every registered admin device. Each channel
+     * is isolated: a failure in one must never break checkout or suppress the other.
+     */
     private void notifyStaff(WebOrder order) {
+        String title = "Янги онлайн буюртма";
+        String total = order.getTotalAmount().stripTrailingZeros().toPlainString();
+
         try {
             String message = String.format("%s — %s%nТелефон: %s%nСумма: %s %s",
                     order.getOrderNumber(), order.getCustomerName(),
-                    order.getPhone(), order.getTotalAmount().stripTrailingZeros().toPlainString(),
-                    order.getCurrency());
+                    order.getPhone(), total, order.getCurrency());
             telegramNotificationService.sendBroadcastAlert(order.getTenantId(),
-                    MobileAlert.AlertType.ORDER_PLACED, "Янги онлайн буюртма", message);
+                    MobileAlert.AlertType.ORDER_PLACED, title, message);
         } catch (Exception e) {
-            // Notification failures must never break checkout.
-            log.warn("Failed to send new-order notification for {}: {}",
+            log.warn("Failed to send Telegram new-order alert for {}: {}",
+                    order.getOrderNumber(), e.getMessage());
+        }
+
+        try {
+            String body = String.format("%s · %s · %s %s",
+                    order.getOrderNumber(), order.getCustomerName(), total, order.getCurrency());
+            // type/id let the admin app deep-link to the order; push is async and self-isolating.
+            ApnsPayload payload = new ApnsPayload(title, body, null, "new_order", order.getId(), null);
+            pushSendService.notifyTenant(order.getTenantId(), payload);
+        } catch (Exception e) {
+            log.warn("Failed to send APNs new-order push for {}: {}",
                     order.getOrderNumber(), e.getMessage());
         }
     }

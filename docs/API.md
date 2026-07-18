@@ -3952,7 +3952,6 @@ Content-Type: application/json
   "villageId": 14,
   "address": "Chilonzor 5, dom 12, kv 3",
   "note": "Call on arrival",
-  "paymentMethod": "CARD",
   "couponCode": "SAVE10",
   "pointsToSpend": 5000,
   "lines": [
@@ -3961,14 +3960,19 @@ Content-Type: application/json
   ]
 }
 ```
-`regionId`, `villageId`, `address`, `note`, `paymentMethod`, `couponCode`, `pointsToSpend`
+`regionId`, `villageId`, `address`, `note`, `couponCode`, `pointsToSpend`
 are all optional. `address` is the free-text delivery address (street/house/landmark) — the
 app makes it required in its UI; the backend stores it and shows it to fulfilment.
-`paymentMethod` is `"CASH"` (default) or `"CARD"`; anything else is treated as `CASH`.
-`pointsToSpend` redeems loyalty points (capped server-side by the shop's max-redeem-percent
-and the customer's balance; ignored if the loyalty program is off or the phone has no
-account). An invalid `couponCode` **rejects** the checkout with `400` (never silently drops
-the discount).
+**Payment is cash-on-delivery only for now**: every order is created `CASH` / payment status
+`NONE`. Any `paymentMethod` field sent by the client is ignored (no order is parked awaiting an
+online-payment flow). `pointsToSpend` redeems loyalty points (capped server-side by the shop's
+max-redeem-percent and the customer's balance; ignored if the loyalty program is off or the
+phone has no account). An invalid `couponCode` **rejects** the checkout with `400` (never
+silently drops the discount).
+
+On a successful order the tenant's staff are notified over two channels: a Telegram broadcast
+(to staff who linked Telegram) and an APNs push to every registered admin device
+(`type: "new_order"`, `id`: the order id). Notification failures never affect the checkout result.
 
 **Response:** `201 Created`
 ```json
@@ -3977,8 +3981,8 @@ the discount).
   "data": {
     "orderNumber": "WEB-20260611-0007",
     "status": "NEW",
-    "paymentMethod": "CARD",
-    "paymentStatus": "PENDING",
+    "paymentMethod": "CASH",
+    "paymentStatus": "NONE",
     "address": "Chilonzor 5, dom 12, kv 3",
     "deliveryFee": 10000.0,
     "discountTotal": 3600.0,

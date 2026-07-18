@@ -11,6 +11,7 @@ import com.hisobnoma.platform.mobile.push.entity.DevicePushToken;
 import com.hisobnoma.platform.mobile.push.repository.DevicePushTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -48,6 +49,25 @@ public class PushSendService {
                 request.getTitle(), request.getBody(), request.getBadge(),
                 request.getType(), request.getId(), request.getRoute());
 
+        return dispatch(tenantId, tokens, payload);
+    }
+
+    /**
+     * System-triggered broadcast to every admin device of a tenant — for events raised outside a
+     * staff request (e.g. a customer placing an online order), where there is no security context
+     * to read the tenant from. Runs async and swallows its own errors so it can never block or
+     * break the triggering operation (checkout, etc.).
+     */
+    @Async
+    public void notifyTenant(Long tenantId, ApnsPayload payload) {
+        try {
+            dispatch(tenantId, repository.findByTenantId(tenantId), payload);
+        } catch (Exception e) {
+            log.warn("APNs tenant broadcast failed for tenant {}: {}", tenantId, e.getMessage());
+        }
+    }
+
+    private PushSendResult dispatch(Long tenantId, List<DevicePushToken> tokens, ApnsPayload payload) {
         int sent = 0, failed = 0;
         List<Long> deadIds = new ArrayList<>();
         for (DevicePushToken token : tokens) {

@@ -40,6 +40,7 @@ class WebOrderPublicServiceTest {
     @Mock private DeliveryVillageRepository villageRepository;
     @Mock private CheckoutRateLimiter rateLimiter;
     @Mock private TelegramNotificationService telegramNotificationService;
+    @Mock private com.hisobnoma.platform.mobile.push.service.PushSendService pushSendService;
     @Mock private WebPricingService pricingService;
     @Mock private WebCouponService couponService;
     @Mock private WebLoyaltyService loyaltyService;
@@ -129,7 +130,9 @@ class WebOrderPublicServiceTest {
     }
 
     @Test
-    void checkout_cardOrderStartsPendingAndStoresAddress() {
+    void checkout_ignoresCardRequestAndForcesCash() {
+        // Payment is cash-only for now: a client CARD request must be coerced to CASH/NONE so the
+        // order is never stranded awaiting an unwired online-payment flow.
         when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
         when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
         when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -140,8 +143,8 @@ class WebOrderPublicServiceTest {
 
         PublicOrderDto dto = service.checkout(request, "1.2.3.4", null);
 
-        assertEquals("CARD", dto.getPaymentMethod());
-        assertEquals("PENDING", dto.getPaymentStatus());
+        assertEquals("CASH", dto.getPaymentMethod(), "card request is ignored");
+        assertEquals("NONE", dto.getPaymentStatus(), "no pending online payment");
         assertEquals("Chilonzor 5, dom 12, kv 3", dto.getAddress());
 
         ArgumentCaptor<WebOrder> captor = ArgumentCaptor.forClass(WebOrder.class);
@@ -301,6 +304,38 @@ class WebOrderPublicServiceTest {
         PublicOrderDto dto = service.checkout(checkoutRequest(BigDecimal.ONE), "1.2.3.4", null);
 
         assertNotNull(dto.getOrderNumber());
+    }
+
+    @Test
+    void checkout_broadcastsApnsPushToTenantAdmins() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.checkout(checkoutRequest(BigDecimal.ONE), "1.2.3.4", null);
+
+        ArgumentCaptor<com.hisobnoma.platform.mobile.push.apns.ApnsPayload> payload =
+                ArgumentCaptor.forClass(com.hisobnoma.platform.mobile.push.apns.ApnsPayload.class);
+        verify(pushSendService, times(1)).notifyTenant(eq(TENANT_ID), payload.capture());
+        assertEquals("new_order", payload.getValue().type());
+        assertNotNull(payload.getValue().title());
+        assertNotNull(payload.getValue().body());
+    }
+
+    @Test
+    void checkout_pushFailureDoesNotBreakCheckoutAndStillFiresTelegram() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("apns boom")).when(pushSendService)
+                .notifyTenant(any(), any());
+
+        PublicOrderDto dto = service.checkout(checkoutRequest(BigDecimal.ONE), "1.2.3.4", null);
+
+        assertNotNull(dto.getOrderNumber());
+        // Telegram still fired despite the push channel throwing — channels are isolated.
+        verify(telegramNotificationService, times(1))
+                .sendBroadcastAlert(eq(TENANT_ID), any(), anyString(), anyString());
     }
 
     @Test
