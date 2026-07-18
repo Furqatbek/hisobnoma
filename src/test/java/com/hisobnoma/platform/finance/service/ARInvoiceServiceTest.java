@@ -247,6 +247,7 @@ class ARInvoiceServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(arInvoiceRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(invoice));
         when(arInvoiceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(glIntegrationService.postARInvoice(invoice)).thenReturn(777L);
         when(arInvoiceMapper.toDto(any(ARInvoice.class))).thenReturn(
                 ARInvoiceDto.builder()
                         .id(1L)
@@ -262,6 +263,10 @@ class ARInvoiceServiceTest {
         assertEquals(ARInvoiceStatus.PENDING, result.getStatus());
         verify(glIntegrationService).postARInvoice(invoice);
         verify(customerService).updateCustomerBalance(any(Customer.class), any());
+        // The journal-entry id must be captured so a later cancel can actually reverse it.
+        assertEquals(777L, invoice.getGlJournalEntryId());
+        assertTrue(invoice.isGlPosted());
+        assertNotNull(invoice.getGlPostedAt());
     }
 
     @Test

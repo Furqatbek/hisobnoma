@@ -65,6 +65,7 @@ public class GLIntegrationService {
     private static final String SALES_REVENUE_ACCOUNT = "4100"; // Revenue: Sales Revenue
     private static final String CASH_ACCOUNT = "1110";       // Asset: Cash
     private static final String ACCOUNTS_RECEIVABLE = "1130"; // Asset: Accounts Receivable
+    private static final String VAT_PAYABLE_ACCOUNT = "2130"; // Liability: Output VAT/QQS payable
     private static final String ACCOUNTS_PAYABLE = "2110";   // Liability: Accounts Payable
     private static final String PURCHASE_EXPENSE = "5200";   // Expense: Purchases
     private static final String PURCHASE_DISCOUNTS_ACCOUNT = "4300"; // Revenue: Purchase Discounts
@@ -683,18 +684,37 @@ public class GLIntegrationService {
                 .description("Receivable from " + invoice.getCustomer().getName())
                 .build());
 
-        // Credit Revenue accounts from invoice lines
+        // Credit Revenue (net of output VAT) + the VAT liability. Revenue is derived from the
+        // invoice total (which already reflects any header-level discount) minus the line tax, so
+        // the entry ALWAYS balances against the AR debit. Previously each line's gross total (tax
+        // included) was credited to revenue: a header discount left the entry unbalanced — it could
+        // never post — and line tax was booked as revenue instead of an output-VAT liability.
+        BigDecimal taxTotal = BigDecimal.ZERO;
         for (ARInvoiceLine line : invoice.getLines()) {
-            Long revenueAccountId = resolveAccountId(SALES_REVENUE_ACCOUNT, tenantId);
+            if (line.getTaxAmount() != null) {
+                taxTotal = taxTotal.add(line.getTaxAmount());
+            }
+        }
+        BigDecimal netRevenue = invoice.getTotalAmount().subtract(taxTotal);
 
+        lines.add(CreateJournalLineRequest.builder()
+                .accountId(resolveAccountId(SALES_REVENUE_ACCOUNT, tenantId))
+                .debitAmount(BigDecimal.ZERO)
+                .creditAmount(netRevenue)
+                .description("Sales revenue: " + invoice.getInvoiceNumber())
+                .build());
+
+        if (taxTotal.compareTo(BigDecimal.ZERO) > 0) {
             lines.add(CreateJournalLineRequest.builder()
-                    .accountId(revenueAccountId)
+                    .accountId(resolveAccountId(VAT_PAYABLE_ACCOUNT, tenantId))
                     .debitAmount(BigDecimal.ZERO)
-                    .creditAmount(line.getLineTotal())
-                    .description("Sales: " + line.getDescription())
+                    .creditAmount(taxTotal)
+                    .description("Output VAT: " + invoice.getInvoiceNumber())
                     .build());
+        }
 
-            // If cost is tracked, record COGS
+        // Record COGS / relieve inventory per line where cost is tracked (self-balancing).
+        for (ARInvoiceLine line : invoice.getLines()) {
             if (line.getUnitCost() != null && line.getUnitCost().compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal totalCost = line.getUnitCost().multiply(line.getQuantity());
                 Long cogsAccountId = resolveAccountId(COGS_ACCOUNT, tenantId);

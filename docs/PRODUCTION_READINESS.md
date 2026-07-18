@@ -30,6 +30,9 @@ Each item is written so it can be pasted into a GitHub issue as-is.
   omission, not a design choice.
 - **Fix:** In `ARInvoiceService.postInvoice` / `ARPaymentService.completePayment`, capture the returned
   entry id and set `glJournalEntryId` + `glPosted` on the entity (mirror the AP path).
+- **✅ FIXED (this branch):** both call sites now capture the journal-entry id and set
+  `glJournalEntryId` + `glPosted` + `glPostedAt`, so `reverseARInvoice`/`reverseARPayment` actually
+  reverse the GL entry on cancel/void instead of no-opping. Regression tests assert the id is stored.
 
 ### 2. Multi-tenancy rests on a spoofable header + silent `tenant = 1` fallback  ·  HIGH  ·  confirmed
 - **Where:** `common/tenant/TenantFilter.java:45-65`; fallback in `web/service/WebCatalogPublicService.java:85`,
@@ -77,6 +80,10 @@ Each item is written so it can be pasted into a GitHub issue as-is.
   → the invoice can never post. A **discounted distribution order becomes an uninvoiceable order.**
 - **Fix:** Post the header discount as its own line (contra-revenue/discount account) so debits =
   credits, or reduce the revenue credit by the discount.
+- **✅ FIXED (this branch):** `postARInvoice` now credits revenue as `totalAmount − Σ line tax`
+  (the total already nets the header discount) instead of summing gross line totals, so the entry
+  always balances against the AR debit regardless of discount. Tests assert a discounted invoice
+  posts balanced.
 
 ### 5. Distribution stock deduction is best-effort and swallows failures → silent inventory loss  ·  HIGH  ·  (this module)
 - **Where:** `distribution/service/DistributionStockService.java:29` (`REQUIRES_NEW`);
@@ -103,6 +110,16 @@ Each item is written so it can be pasted into a GitHub issue as-is.
 - **What:** If the outer POS transaction rolls back **after** the GL post commits in its own tx →
   a committed GL sales entry for a sale that no longer exists (phantom revenue/COGS).
 - **Fix:** Post in the caller's transaction (`REQUIRED`), per the module's own stated contract.
+- **⚠️ ASSESSED — deliberately NOT changed (this branch):** the POS path is intentionally
+  non-atomic: `completeTransaction` wraps `postPOSTransaction` in a try/catch that swallows GL
+  failures ("POS must work even if GL accounts aren't configured"), with `findFailedGlPostings`,
+  a `retryGlPosting` endpoint, and `POSRetryScheduler` to post later. Flipping to `REQUIRED` would
+  make a transient GL failure mark the shared transaction rollback-only — the swallowed exception
+  no longer saves it, so the **entire sale rolls back** (`UnexpectedRollbackException`), losing the
+  sale. The correct fix is a transactional outbox (post GL only for committed sales), a larger
+  change tracked separately. The narrow phantom-revenue window (GL commits, then the sale rolls back
+  on a later step) remains, but is preferable to losing sales on every GL hiccup. AR/AP correctly
+  use `REQUIRED` and are unaffected.
 
 ### 7. Line tax credited entirely to Sales Revenue; no VAT/QQS liability line  ·  HIGH (VAT jurisdiction)
 - **Where:** `finance/service/GLIntegrationService.java:693` — `lineTotal` includes tax, credited to
@@ -110,6 +127,10 @@ Each item is written so it can be pasted into a GitHub issue as-is.
 - **What:** Revenue overstated, output VAT never booked. Balances (AR debit also includes tax) so it
   posts — money in the wrong account.
 - **Fix:** Split the tax portion into a VAT-payable liability credit.
+- **✅ FIXED (this branch):** `postARInvoice` now credits `Σ line tax` to `2130 VAT Payable`
+  (liability) and revenue only net of tax. `V78__seed_vat_payable_account.sql` guarantees the `2130`
+  account exists for every tenant (idempotent), matching the code-based default chart. Tests assert
+  output VAT lands in the liability account, not revenue.
 
 ### 8. POS card payments auto-approve with no gateway  ·  MEDIUM/HIGH (financial integrity)
 - **Where:** `pos/service/POSPaymentService.java:107-108` — `payment.approve()` for **all** payment

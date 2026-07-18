@@ -222,6 +222,91 @@ class GLIntegrationServiceTest {
         verify(journalEntryService).createAndPostEntry(any(CreateJournalEntryRequest.class), eq(TENANT_ID));
     }
 
+    @Test
+    void postARInvoice_withHeaderDiscount_postsBalancedEntry() {
+        Customer customer = Customer.builder().id(1L).code("C").name("Cust").build();
+        // Two lines gross 10000; header discount 1500 → total owed 8500, no tax.
+        ARInvoiceLine line = ARInvoiceLine.builder()
+                .description("Sale").lineTotal(new BigDecimal("10000.00"))
+                .quantity(new BigDecimal("1")).unitPrice(new BigDecimal("10000.00"))
+                .taxAmount(BigDecimal.ZERO).build();
+        ARInvoice invoice = ARInvoice.builder()
+                .id(1L).tenantId(TENANT_ID).invoiceNumber("AR-D1").customer(customer)
+                .invoiceDate(LocalDate.of(2024, 1, 15))
+                .discountAmount(new BigDecimal("1500.00"))
+                .totalAmount(new BigDecimal("8500.00"))
+                .lines(new ArrayList<>(List.of(line))).build();
+        stubAccountLookup("1130", 10L);
+        stubAccountLookup("4100", 20L);
+        when(journalEntryService.createAndPostEntry(any(CreateJournalEntryRequest.class), eq(TENANT_ID)))
+                .thenReturn(postedEntry);
+
+        glIntegrationService.postARInvoice(invoice);
+
+        CreateJournalEntryRequest req = captureEntry();
+        assertBalanced(req);
+        // AR debit 8500 == revenue credit 8500 (net of the discount already baked into the total).
+        assertEquals(0, new BigDecimal("8500.00").compareTo(totalDebits(req)));
+    }
+
+    @Test
+    void postARInvoice_withLineTax_segregatesOutputVatFromRevenue() {
+        Customer customer = Customer.builder().id(1L).code("C").name("Cust").build();
+        // lineTotal 11200 includes 1200 tax; total owed 11200.
+        ARInvoiceLine line = ARInvoiceLine.builder()
+                .description("Sale").lineTotal(new BigDecimal("11200.00"))
+                .quantity(new BigDecimal("1")).unitPrice(new BigDecimal("10000.00"))
+                .taxAmount(new BigDecimal("1200.00")).build();
+        ARInvoice invoice = ARInvoice.builder()
+                .id(1L).tenantId(TENANT_ID).invoiceNumber("AR-T1").customer(customer)
+                .invoiceDate(LocalDate.of(2024, 1, 15))
+                .totalAmount(new BigDecimal("11200.00"))
+                .lines(new ArrayList<>(List.of(line))).build();
+        stubAccountLookup("1130", 10L);
+        stubAccountLookup("4100", 20L);
+        stubAccountLookup("2130", 25L); // VAT Payable
+        when(journalEntryService.createAndPostEntry(any(CreateJournalEntryRequest.class), eq(TENANT_ID)))
+                .thenReturn(postedEntry);
+
+        glIntegrationService.postARInvoice(invoice);
+
+        CreateJournalEntryRequest req = captureEntry();
+        assertBalanced(req);
+        // Revenue is net of tax (10000), VAT (1200) credited to the liability account 25.
+        BigDecimal revenueCredit = creditToAccount(req, 20L);
+        BigDecimal vatCredit = creditToAccount(req, 25L);
+        assertEquals(0, new BigDecimal("10000.00").compareTo(revenueCredit));
+        assertEquals(0, new BigDecimal("1200.00").compareTo(vatCredit));
+    }
+
+    private CreateJournalEntryRequest captureEntry() {
+        org.mockito.ArgumentCaptor<CreateJournalEntryRequest> captor =
+                org.mockito.ArgumentCaptor.forClass(CreateJournalEntryRequest.class);
+        verify(journalEntryService).createAndPostEntry(captor.capture(), eq(TENANT_ID));
+        return captor.getValue();
+    }
+
+    private BigDecimal totalDebits(CreateJournalEntryRequest req) {
+        return req.getLines().stream().map(l -> l.getDebitAmount() != null ? l.getDebitAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal totalCredits(CreateJournalEntryRequest req) {
+        return req.getLines().stream().map(l -> l.getCreditAmount() != null ? l.getCreditAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void assertBalanced(CreateJournalEntryRequest req) {
+        assertEquals(0, totalDebits(req).compareTo(totalCredits(req)),
+                "journal entry must balance: debits=" + totalDebits(req) + " credits=" + totalCredits(req));
+    }
+
+    private BigDecimal creditToAccount(CreateJournalEntryRequest req, Long accountId) {
+        return req.getLines().stream().filter(l -> accountId.equals(l.getAccountId()))
+                .map(l -> l.getCreditAmount() != null ? l.getCreditAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     // ==================== reverseEntry (reverseAPInvoice / reverseARInvoice) ====================
 
     @Test

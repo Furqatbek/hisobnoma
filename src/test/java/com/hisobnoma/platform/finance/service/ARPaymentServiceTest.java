@@ -339,6 +339,7 @@ class ARPaymentServiceTest {
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(arPaymentRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(payment));
         when(arPaymentRepository.save(any())).thenReturn(payment);
+        when(glIntegrationService.postARPayment(payment)).thenReturn(888L);
         when(arPaymentMapper.toDto(any(ARPayment.class))).thenReturn(
                 ARPaymentDto.builder().id(1L).status(ARPaymentStatus.COMPLETED).build());
 
@@ -350,6 +351,10 @@ class ARPaymentServiceTest {
         assertEquals(ARPaymentStatus.COMPLETED, result.getStatus());
         verify(glIntegrationService).postARPayment(payment);
         verify(customerService).updateCustomerBalance(any(Customer.class), any());
+        // The journal-entry id must be captured so a later void can actually reverse it.
+        assertEquals(888L, payment.getGlJournalEntryId());
+        assertTrue(payment.isGlPosted());
+        assertNotNull(payment.getGlPostedAt());
     }
 
     @Test

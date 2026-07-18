@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -250,8 +251,12 @@ public class ARInvoiceService {
             throw new BusinessException("Only draft invoices can be posted");
         }
 
-        // Post to GL
-        glIntegrationService.postARInvoice(invoice);
+        // Post to GL and record the journal entry so a later cancel/void can actually reverse it.
+        // (Without capturing this, reverseARInvoice() no-ops and AR/Revenue overstate forever.)
+        Long journalEntryId = glIntegrationService.postARInvoice(invoice);
+        invoice.setGlJournalEntryId(journalEntryId);
+        invoice.setGlPosted(true);
+        invoice.setGlPostedAt(Instant.now());
 
         invoice.setStatus(ARInvoiceStatus.PENDING);
         invoice = arInvoiceRepository.save(invoice);

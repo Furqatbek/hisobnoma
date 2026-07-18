@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -138,8 +139,11 @@ public class ARPaymentService {
             throw new BusinessException("Only pending payments can be completed");
         }
 
-        // Post to GL
-        glIntegrationService.postARPayment(payment);
+        // Post to GL and record the journal entry so a later void can actually reverse it.
+        Long journalEntryId = glIntegrationService.postARPayment(payment);
+        payment.setGlJournalEntryId(journalEntryId);
+        payment.setGlPosted(true);
+        payment.setGlPostedAt(Instant.now());
 
         // Apply allocations to invoices
         if (payment.getAllocations() != null) {
