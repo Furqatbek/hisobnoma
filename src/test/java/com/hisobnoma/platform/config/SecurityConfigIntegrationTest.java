@@ -43,23 +43,31 @@ class SecurityConfigIntegrationTest {
 
     @Test
     void publicEndpoint_webCatalog_accessibleWithoutToken() throws Exception {
-        // /api/v1/web/** is whitelisted for the online shop (mobile app);
-        // the catalog list must be readable anonymously.
-        mockMvc.perform(get("/api/v1/web/catalog/products"))
+        // /api/v1/web/** is whitelisted for the online shop (mobile app); the catalog list must be
+        // readable anonymously. The storefront now requires X-Tenant-ID (it fails closed rather than
+        // defaulting to tenant 1), so the anonymous request still carries the tenant header.
+        mockMvc.perform(get("/api/v1/web/catalog/products").header("X-Tenant-ID", "1"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void publicEndpoint_webCatalogCategories_accessibleWithoutToken() throws Exception {
-        mockMvc.perform(get("/api/v1/web/catalog/categories"))
+        mockMvc.perform(get("/api/v1/web/catalog/categories").header("X-Tenant-ID", "1"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void publicEndpoint_webDeliveryRegions_accessibleWithoutToken() throws Exception {
         // Checkout in the mobile app needs delivery regions without a login
-        mockMvc.perform(get("/api/v1/web/delivery/regions"))
+        mockMvc.perform(get("/api/v1/web/delivery/regions").header("X-Tenant-ID", "1"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void publicEndpoint_webCatalog_noTenantHeader_failsClosed() throws Exception {
+        // Without a tenant the storefront must reject (400), never silently serve tenant 1.
+        mockMvc.perform(get("/api/v1/web/catalog/products"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
