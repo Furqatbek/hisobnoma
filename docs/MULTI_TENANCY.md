@@ -173,3 +173,96 @@ Either can be added without changing the data model or existing queries.
 | Reading the current tenant in a service | Staff: `securityContextHelper.getRequiredTenantId()`. Public: `TenantContext.getCurrentTenant()` (already validated non-null by the fail-closed resolvers). |
 | Building a public (anonymous) endpoint | Require `X-Tenant-ID`; fail closed if absent — do **not** default to a tenant. |
 | Adding shared reference data | Only then may `tenant_id` be NULL (visible to all). Owner data must never be NULL. |
+
+---
+
+## 9. Target architecture: subscription SaaS ("multi-tenancy + subscription & entitlements")
+
+> **Status: roadmap / not yet implemented.** This section is the intended direction, not current
+> behaviour. It exists so the team designs new code with this end-state in mind.
+
+The product goal is to offer the platform as **subscription-based SaaS**: each warehouse owner is a
+paying account, on a plan, billed on a recurring cycle. The multi-tenancy described above is the
+**foundation** (it gives us the isolated account boundary); the SaaS model adds three layers on top:
+
+```
+Subscription SaaS  =  Multi-tenancy            (data isolation — DONE, this document)
+                   +  Subscription & billing   (plans, lifecycle, recurring payment)
+                   +  Entitlements & metering  (what a plan may use, and how much)
+```
+
+So the "+ something" the platform will look like is a **subscription & entitlement layer keyed on
+the existing `tenant_id`** — the tenant becomes the *billable subscriber*, and what that tenant can
+do is governed by its plan.
+
+### 9.1 Core concepts
+
+| Concept | Meaning | Suggested home |
+|---|---|---|
+| **Tenant = Account** | The existing tenant row becomes the billable account of record. | `tenants` (extend) |
+| **Plan** | A named tier (e.g. Free / Starter / Business / Enterprise): a bundle of enabled modules + numeric limits + price + billing interval. | new `subscription_plans` (global, `tenant_id` NULL) |
+| **Subscription** | Binds one tenant to one plan, with a lifecycle **status** and current billing period. | new `subscriptions` (per tenant) |
+| **Entitlements** | The concrete rules derived from the plan: **feature flags** (which modules are on) and **quotas** (max users, products, warehouses, monthly orders, SMS/month, storage). Plans define defaults; per-tenant overrides allow custom deals. | `plan_entitlements` + optional `tenant_entitlement_overrides` |
+| **Usage / metering** | Live counters used to enforce quotas and to bill metered items. | `tenant_usage` (counters), or computed |
+| **Invoices & payments** | Recurring charges, receipts, dunning. | new `subscription_invoices` + a recurring payment provider |
+
+### 9.2 Subscription lifecycle
+
+A subscription moves through states, and each state changes what the tenant may do. Enforce this in
+one place (see §9.3) rather than scattering checks.
+
+```
+trialing ──▶ active ──▶ past_due ──▶ suspended ──▶ cancelled
+   │            ▲           │             │
+   └── convert ─┘           └── pay ──────┘  (recover)
+```
+
+| Status | What the tenant can do (suggested policy) |
+|---|---|
+| `trialing` | Full plan features until the trial ends; nagging to convert. |
+| `active` | Full plan features within quotas. |
+| `past_due` | Grace period — still usable; payment retried; banners shown. |
+| `suspended` | **Read-only** (can log in and export, cannot create/modify) after grace expires. |
+| `cancelled` | Access blocked; data retained for a retention window, then purged. |
+
+### 9.3 Enforcement points (how a plan actually gates behaviour)
+
+Entitlements should be resolved **once per request** (alongside `TenantContext`) into a small
+`TenantEntitlements` object, then checked at these layers:
+
+1. **Request filter** — after `TenantFilter` resolves the tenant, load its subscription + entitlements
+   into a `SubscriptionContext` (cache per tenant with a short TTL; don't hit the DB every request).
+   Reject calls from `suspended`/`cancelled` tenants early (allow read-only where the policy permits).
+2. **Feature gate (module on/off)** — a method/endpoint annotation or guard, e.g.
+   `@RequiresFeature("DISTRIBUTION")`, that 402/403s when the tenant's plan doesn't include the
+   module. This is **orthogonal to RBAC**: RBAC = "is this *user* allowed?", entitlement = "does this
+   *tenant's plan* include it?". Both must pass.
+3. **Quota gate (limits)** — at create endpoints, check the live counter against the plan cap before
+   allowing (e.g. "Starter allows 1 000 products" → block the 1 001st with a clear upgrade prompt).
+   Increment/decrement `tenant_usage` on create/delete.
+4. **UI** — the frontend hides/greys modules and shows upgrade prompts based on the same entitlements,
+   returned from a `/api/v1/subscription/me` endpoint. (UX only; the server is the source of truth.)
+
+### 9.4 What already carries over (and what's new)
+
+- **Reuse as-is:** the `tenant_id` boundary, `TenantContext`/`TenantFilter`, fail-closed tenant
+  resolution, and the isolation guardrails — the whole of §1–§6. Subscriptions do **not** change how
+  data is isolated; they add a *policy* layer above it.
+- **New to build:** the `subscription_plans` / `subscriptions` / `plan_entitlements` tables, a
+  `SubscriptionService` + per-request `SubscriptionContext`, the feature/quota guards in §9.3, a
+  recurring billing integration (provider webhooks that flip lifecycle status), a tenant self-service
+  "billing & plan" area, and a super-admin console to manage plans and per-tenant overrides.
+
+### 9.5 Design guidance
+
+- **Keep RBAC and entitlements separate.** A user can have permission for a module (RBAC) that the
+  tenant's plan does not include (entitlement) — the request must fail the entitlement check. Never
+  fold plan limits into permissions.
+- **Plans are global reference data** (`tenant_id` NULL, per §6.2); a tenant's *subscription* and
+  *usage* are tenant-scoped rows like everything else.
+- **Fail closed on billing too:** an unknown/expired subscription should degrade to the most
+  restrictive safe state (read-only or blocked), never silently grant full access.
+- **Bill and enforce off the same entitlement source** so what a customer pays for and what they can
+  use never drift apart.
+- Consider Postgres RLS (§7.1) *before* onboarding paying third parties — a subscription platform
+  raises the cost of a cross-tenant leak from "bug" to "breach of contract".
