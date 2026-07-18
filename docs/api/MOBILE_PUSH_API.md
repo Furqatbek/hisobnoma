@@ -21,7 +21,9 @@ team id, and key id set, the send API skips every recipient and never fakes a de
 (`apnsConfigured: false` in the response). Registration still works so tokens accumulate
 before go-live.
 
-Enable in production by setting:
+Enable by setting the vars below — either as real environment variables (production) or in a
+local `.env` file at the repo root (loaded at startup by `DotenvEnvironmentPostProcessor`; real
+env vars override the file). See `.env.example` for the full list and the one-line `.p8` format.
 
 | Env var | Meaning |
 |---|---|
