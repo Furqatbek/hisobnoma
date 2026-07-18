@@ -290,19 +290,16 @@ class SmsTemplateServiceTest {
         assertEquals("Welcome to Hisobnoma!", result);
     }
 
-    // ====== TenantContext fallback ======
+    // ====== TenantContext: fail closed ======
 
     @Test
-    void getAllTemplates_noTenantContext_usesDefaultTenantId() {
-        // Given
+    void getAllTemplates_noTenantContext_failsClosed() {
+        // No tenant in context → must reject, never read tenant 1's templates.
         TenantContext.clear();
-        when(templateRepository.findByTenantIdOrderByNameAsc(1L)).thenReturn(List.of(template));
-
-        // When
-        List<SmsTemplateDto> result = smsTemplateService.getAllTemplates();
-
-        // Then
-        assertNotNull(result);
-        verify(templateRepository).findByTenantIdOrderByNameAsc(1L);
+        com.hisobnoma.platform.common.exception.BusinessException ex =
+                assertThrows(com.hisobnoma.platform.common.exception.BusinessException.class,
+                        () -> smsTemplateService.getAllTemplates());
+        assertEquals("TENANT_REQUIRED", ex.getCode());
+        verify(templateRepository, never()).findByTenantIdOrderByNameAsc(any());
     }
 }

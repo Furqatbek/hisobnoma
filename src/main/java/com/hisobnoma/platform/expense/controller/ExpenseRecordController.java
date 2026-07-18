@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.expense.controller;
 
 import com.hisobnoma.platform.common.dto.PageResponse;
+import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import com.hisobnoma.platform.expense.entity.ExpenseRecord;
 import com.hisobnoma.platform.expense.repository.ExpenseRecordRepository;
@@ -30,8 +31,6 @@ import java.util.Map;
 @RequestMapping("/api/v1/web/expenses")
 @RequiredArgsConstructor
 public class ExpenseRecordController {
-
-    private static final Long DEFAULT_TENANT_ID = 1L;
 
     private final ExpenseRecordRepository repository;
 
@@ -96,13 +95,13 @@ public class ExpenseRecordController {
     }
 
     /**
-     * Resolves tenant ID from context, defaulting to 1 if not available.
+     * Resolves the tenant from context. Fails closed — never defaults to tenant 1, which would
+     * read/write another tenant's expense records.
      */
     private Long resolveTenantId() {
         Long tenantId = TenantContext.getCurrentTenant();
         if (tenantId == null) {
-            log.debug("No tenant in context, defaulting to tenant {}", DEFAULT_TENANT_ID);
-            return DEFAULT_TENANT_ID;
+            throw new BusinessException("Tenant context is required", "TENANT_REQUIRED");
         }
         return tenantId;
     }

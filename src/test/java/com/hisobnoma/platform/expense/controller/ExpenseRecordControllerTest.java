@@ -48,7 +48,7 @@ class ExpenseRecordControllerTest {
         when(repository.findByTenantIdOrTenantIdIsNull(any(), any()))
                 .thenReturn(new PageImpl<>(List.of()));
 
-        mockMvc.perform(get("/api/v1/web/expenses"))
+        mockMvc.perform(get("/api/v1/web/expenses").header("X-Tenant-ID", "1"))
                 .andExpect(status().isOk());
     }
 
@@ -65,7 +65,7 @@ class ExpenseRecordControllerTest {
     void getTotal_authenticated_returns200() throws Exception {
         when(repository.sumTotalByTenantIdOrNull(any())).thenReturn(new BigDecimal("5000.00"));
 
-        mockMvc.perform(get("/api/v1/web/expenses/summary/total"))
+        mockMvc.perform(get("/api/v1/web/expenses/summary/total").header("X-Tenant-ID", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(5000.00));
     }
@@ -97,6 +97,7 @@ class ExpenseRecordControllerTest {
                 """;
 
         mockMvc.perform(post("/api/v1/web/expenses")
+                        .header("X-Tenant-ID", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
@@ -119,7 +120,7 @@ class ExpenseRecordControllerTest {
         ExpenseRecord record = ExpenseRecord.builder().id(1L).tenantId(1L).build();
         when(repository.findById(1L)).thenReturn(Optional.of(record));
 
-        mockMvc.perform(delete("/api/v1/web/expenses/1"))
+        mockMvc.perform(delete("/api/v1/web/expenses/1").header("X-Tenant-ID", "1"))
                 .andExpect(status().isNoContent());
     }
 

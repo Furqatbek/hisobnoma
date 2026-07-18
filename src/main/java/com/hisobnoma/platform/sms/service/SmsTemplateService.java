@@ -4,6 +4,7 @@ import com.hisobnoma.platform.sms.dto.SmsTemplateDto;
 import com.hisobnoma.platform.sms.dto.SmsTemplateRequest;
 import com.hisobnoma.platform.sms.entity.SmsTemplate;
 import com.hisobnoma.platform.sms.repository.SmsTemplateRepository;
+import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,14 +22,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SmsTemplateService {
 
-    private static final Long DEFAULT_TENANT_ID = 1L;
     private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\{(\\w+)}");
 
     private final SmsTemplateRepository templateRepository;
 
     private Long resolveTenantId() {
         Long tenantId = TenantContext.getCurrentTenant();
-        return tenantId != null ? tenantId : DEFAULT_TENANT_ID;
+        if (tenantId == null) {
+            // Fail closed: never read/write another tenant's SMS templates as tenant 1.
+            throw new BusinessException("Tenant context is required", "TENANT_REQUIRED");
+        }
+        return tenantId;
     }
 
     public List<SmsTemplateDto> getAllTemplates() {
