@@ -4,7 +4,9 @@
 > mobile team. This Flutter project is kept as a **working reference implementation** of
 > the public shop API (catalog with sale badges, cart price preview, checkout, order
 > status, SMS-OTP auth, order history) — every public endpoint is exercised here with
-> tests. The contract to build against is `../docs/API.md`; public `/api/v1/web/**`
+> tests. The full customer API — every endpoint with request/response shapes and a runnable
+> demo walkthrough — is documented in **[`../docs/api/MOBILE_SHOP_API.md`](../docs/api/MOBILE_SHOP_API.md)**
+> (the broader platform contract is also in `../docs/API.md`); public `/api/v1/web/**`
 > endpoints only change additively, so installed apps never break.
 
 Flutter app for the store's customers: browse the curated **live item list** published from the
