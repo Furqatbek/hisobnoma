@@ -51,6 +51,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.enabled = true ORDER BY u.firstName, u.username")
     List<User> findAllActiveUsers();
 
+    @Query("SELECT u.id FROM User u WHERE u.tenantId = :tenantId AND u.enabled = true")
+    List<Long> findActiveUserIdsByTenantId(@Param("tenantId") Long tenantId);
+
     Optional<User> findByTelegramChatId(Long telegramChatId);
 
     List<User> findAllByTelegramChatId(Long telegramChatId);

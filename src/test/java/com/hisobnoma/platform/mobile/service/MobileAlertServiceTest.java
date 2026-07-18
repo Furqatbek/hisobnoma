@@ -57,6 +57,9 @@ class MobileAlertServiceTest {
     @Mock
     private TelegramNotificationService telegramNotificationService;
 
+    @Mock
+    private com.hisobnoma.platform.auth.repository.UserRepository userRepository;
+
     @InjectMocks
     private MobileAlertService mobileAlertService;
 
@@ -433,6 +436,43 @@ class MobileAlertServiceTest {
         // Then
         verify(preferenceRepository, times(MobileAlert.AlertType.values().length - 1))
                 .save(any(AlertPreference.class));
+    }
+
+    // ====== createStaffBroadcast ======
+
+    @Test
+    void createStaffBroadcast_persistsOneAlertPerActiveStaffMember() {
+        when(userRepository.findActiveUserIdsByTenantId(1L)).thenReturn(List.of(10L, 20L, 30L));
+
+        int count = mobileAlertService.createStaffBroadcast(1L, MobileAlert.AlertType.ORDER_PLACED,
+                "Янги буюртма", "WO-1", MobileAlert.AlertPriority.HIGH, "WEB_ORDER", 99L);
+
+        assertEquals(3, count);
+        org.mockito.ArgumentCaptor<List<MobileAlert>> captor =
+                org.mockito.ArgumentCaptor.forClass(List.class);
+        verify(alertRepository).saveAll(captor.capture());
+        List<MobileAlert> saved = captor.getValue();
+        assertEquals(3, saved.size());
+        assertEquals(List.of(10L, 20L, 30L), saved.stream().map(MobileAlert::getUserId).toList());
+        MobileAlert first = saved.get(0);
+        assertEquals(1L, first.getTenantId());
+        assertEquals(MobileAlert.AlertType.ORDER_PLACED, first.getAlertType());
+        assertEquals(MobileAlert.AlertPriority.HIGH, first.getPriority());
+        assertEquals("WEB_ORDER", first.getEntityType());
+        assertEquals(99L, first.getEntityId());
+        assertFalse(first.isRead());
+        // This channel does not push or Telegram — those are delivered separately by the caller.
+        verifyNoInteractions(pushNotificationService);
+    }
+
+    @Test
+    void createStaffBroadcast_noActiveStaff_savesEmptyAndReturnsZero() {
+        when(userRepository.findActiveUserIdsByTenantId(1L)).thenReturn(List.of());
+
+        int count = mobileAlertService.createStaffBroadcast(1L, MobileAlert.AlertType.ORDER_PLACED,
+                "t", "m", MobileAlert.AlertPriority.NORMAL, "WEB_ORDER", 1L);
+
+        assertEquals(0, count);
     }
 
     // ====== cleanupExpiredAlerts ======

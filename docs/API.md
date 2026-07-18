@@ -3970,9 +3970,12 @@ max-redeem-percent and the customer's balance; ignored if the loyalty program is
 phone has no account). An invalid `couponCode` **rejects** the checkout with `400` (never
 silently drops the discount).
 
-On a successful order the tenant's staff are notified over two channels: a Telegram broadcast
-(to staff who linked Telegram) and an APNs push to every registered admin device
-(`type: "new_order"`, `id`: the order id). Notification failures never affect the checkout result.
+On a successful order the tenant's staff are notified over three isolated channels: a durable
+in-app alert (`ORDER_PLACED`, priority `HIGH`, `entityType: "WEB_ORDER"`, `entityId`: the order
+id) for every active staff member — visible in the admin app's alerts feed and unread count,
+surviving a missed push; a Telegram broadcast (to staff who linked Telegram); and an APNs push to
+every registered admin device (`type: "new_order"`, `id`: the order id). Notification failures on
+any channel never affect the checkout result or the other channels.
 
 **Response:** `201 Created`
 ```json

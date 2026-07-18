@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.mobile.service;
 
+import com.hisobnoma.platform.auth.repository.UserRepository;
 import com.hisobnoma.platform.auth.security.SecurityContextHelper;
 import com.hisobnoma.platform.common.exception.NotFoundException;
 import com.hisobnoma.platform.mobile.dto.AlertPreferenceDTO;
@@ -37,6 +38,7 @@ public class MobileAlertService {
     private final AlertPreferenceMapper preferenceMapper;
     private final SecurityContextHelper securityContextHelper;
     private final PushNotificationService pushNotificationService;
+    private final UserRepository userRepository;
 
     @Autowired(required = false)
     private TelegramNotificationService telegramNotificationService;
@@ -155,6 +157,41 @@ public class MobileAlertService {
         for (Long userId : userIds) {
             createAlert(userId, tenantId, alertType, title, message, priority, null, null, null);
         }
+    }
+
+    /**
+     * Persist a durable in-app alert for EVERY active staff user of a tenant — used for
+     * system-raised events (e.g. a new online order) that staff must see in the app's alerts feed
+     * regardless of their per-type push/Telegram opt-in. Runs in its own transaction so a failure
+     * here can never roll back or break the operation that triggered it (checkout, etc.); the push
+     * and Telegram channels are delivered separately by the caller, so this does no push/Telegram.
+     *
+     * @return the number of staff alerted.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public int createStaffBroadcast(Long tenantId, MobileAlert.AlertType alertType, String title,
+                                    String message, MobileAlert.AlertPriority priority,
+                                    String entityType, Long entityId) {
+        List<Long> userIds = userRepository.findActiveUserIdsByTenantId(tenantId);
+        List<MobileAlert> alerts = userIds.stream()
+                .map(userId -> {
+                    MobileAlert alert = MobileAlert.builder()
+                            .userId(userId)
+                            .alertType(alertType)
+                            .title(title)
+                            .message(message)
+                            .priority(priority)
+                            .entityType(entityType)
+                            .entityId(entityId)
+                            .read(false)
+                            .sentViaPush(false)
+                            .build();
+                    alert.setTenantId(tenantId);
+                    return alert;
+                })
+                .toList();
+        alertRepository.saveAll(alerts);
+        return alerts.size();
     }
 
     /**

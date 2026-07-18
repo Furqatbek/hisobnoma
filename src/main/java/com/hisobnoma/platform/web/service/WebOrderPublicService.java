@@ -11,6 +11,7 @@ import com.hisobnoma.platform.inventory.entity.Product;
 import com.hisobnoma.platform.mobile.entity.MobileAlert;
 import com.hisobnoma.platform.mobile.push.apns.ApnsPayload;
 import com.hisobnoma.platform.mobile.push.service.PushSendService;
+import com.hisobnoma.platform.mobile.service.MobileAlertService;
 import com.hisobnoma.platform.telegram.service.TelegramNotificationService;
 import com.hisobnoma.platform.web.dto.CheckoutRequest;
 import com.hisobnoma.platform.web.dto.PublicOrderDto;
@@ -48,6 +49,7 @@ public class WebOrderPublicService {
     private final CheckoutRateLimiter rateLimiter;
     private final TelegramNotificationService telegramNotificationService;
     private final PushSendService pushSendService;
+    private final MobileAlertService mobileAlertService;
     private final WebPricingService pricingService;
     private final WebCouponService couponService;
     private final WebLoyaltyService loyaltyService;
@@ -256,18 +258,29 @@ public class WebOrderPublicService {
     }
 
     /**
-     * Notifies the tenant's staff of a new online order over two channels — a Telegram broadcast
-     * (to staff who linked Telegram) and an APNs push to every registered admin device. Each channel
-     * is isolated: a failure in one must never break checkout or suppress the other.
+     * Notifies the tenant's staff of a new online order over three isolated channels: a durable
+     * in-app alert for every active staff member (survives a missed push), a Telegram broadcast (to
+     * staff who linked Telegram), and an APNs push to every registered admin device. A failure in
+     * any one channel must never break checkout or suppress the others.
      */
     private void notifyStaff(WebOrder order) {
         String title = "Янги онлайн буюртма";
         String total = order.getTotalAmount().stripTrailingZeros().toPlainString();
+        String message = String.format("%s — %s%nТелефон: %s%nСумма: %s %s",
+                order.getOrderNumber(), order.getCustomerName(),
+                order.getPhone(), total, order.getCurrency());
 
         try {
-            String message = String.format("%s — %s%nТелефон: %s%nСумма: %s %s",
-                    order.getOrderNumber(), order.getCustomerName(),
-                    order.getPhone(), total, order.getCurrency());
+            // Durable feed entry per active staff user, in its own transaction (REQUIRES_NEW).
+            mobileAlertService.createStaffBroadcast(order.getTenantId(),
+                    MobileAlert.AlertType.ORDER_PLACED, title, message,
+                    MobileAlert.AlertPriority.HIGH, "WEB_ORDER", order.getId());
+        } catch (Exception e) {
+            log.warn("Failed to create in-app new-order alerts for {}: {}",
+                    order.getOrderNumber(), e.getMessage());
+        }
+
+        try {
             telegramNotificationService.sendBroadcastAlert(order.getTenantId(),
                     MobileAlert.AlertType.ORDER_PLACED, title, message);
         } catch (Exception e) {

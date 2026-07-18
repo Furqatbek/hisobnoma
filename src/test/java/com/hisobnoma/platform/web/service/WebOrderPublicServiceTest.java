@@ -41,6 +41,7 @@ class WebOrderPublicServiceTest {
     @Mock private CheckoutRateLimiter rateLimiter;
     @Mock private TelegramNotificationService telegramNotificationService;
     @Mock private com.hisobnoma.platform.mobile.push.service.PushSendService pushSendService;
+    @Mock private com.hisobnoma.platform.mobile.service.MobileAlertService mobileAlertService;
     @Mock private WebPricingService pricingService;
     @Mock private WebCouponService couponService;
     @Mock private WebLoyaltyService loyaltyService;
@@ -304,6 +305,38 @@ class WebOrderPublicServiceTest {
         PublicOrderDto dto = service.checkout(checkoutRequest(BigDecimal.ONE), "1.2.3.4", null);
 
         assertNotNull(dto.getOrderNumber());
+    }
+
+    @Test
+    void checkout_createsDurableInAppAlertForStaff() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.checkout(checkoutRequest(BigDecimal.ONE), "1.2.3.4", null);
+
+        verify(mobileAlertService, times(1)).createStaffBroadcast(
+                eq(TENANT_ID),
+                eq(com.hisobnoma.platform.mobile.entity.MobileAlert.AlertType.ORDER_PLACED),
+                anyString(), anyString(),
+                eq(com.hisobnoma.platform.mobile.entity.MobileAlert.AlertPriority.HIGH),
+                eq("WEB_ORDER"), any());
+    }
+
+    @Test
+    void checkout_inAppAlertFailureDoesNotBreakCheckoutOrOtherChannels() {
+        when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
+        when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("alert db down")).when(mobileAlertService)
+                .createStaffBroadcast(any(), any(), anyString(), anyString(), any(), anyString(), any());
+
+        PublicOrderDto dto = service.checkout(checkoutRequest(BigDecimal.ONE), "1.2.3.4", null);
+
+        assertNotNull(dto.getOrderNumber());
+        verify(telegramNotificationService, times(1))
+                .sendBroadcastAlert(eq(TENANT_ID), any(), anyString(), anyString());
+        verify(pushSendService, times(1)).notifyTenant(eq(TENANT_ID), any());
     }
 
     @Test
