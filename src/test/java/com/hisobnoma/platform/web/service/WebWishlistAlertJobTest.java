@@ -2,10 +2,13 @@ package com.hisobnoma.platform.web.service;
 
 import com.hisobnoma.platform.admin.service.TenantSettingService;
 import com.hisobnoma.platform.inventory.entity.Product;
+import com.hisobnoma.platform.sms.service.SmsService;
 import com.hisobnoma.platform.web.entity.WebCatalogItem;
 import com.hisobnoma.platform.web.entity.WebCatalogStatus;
+import com.hisobnoma.platform.web.entity.WebCustomer;
 import com.hisobnoma.platform.web.entity.WebWishlistItem;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
+import com.hisobnoma.platform.web.repository.WebCustomerRepository;
 import com.hisobnoma.platform.web.repository.WebDeviceTokenRepository;
 import com.hisobnoma.platform.web.repository.WebWishlistItemRepository;
 import org.junit.jupiter.api.Test;
@@ -35,10 +38,18 @@ class WebWishlistAlertJobTest {
     @Mock private WebPushService pushService;
     @Mock private WebPromotionBadgeService badgeService;
     @Mock private WebDeviceTokenRepository deviceTokenRepository;
+    @Mock private WebCustomerRepository webCustomerRepository;
+    @Mock private SmsService smsService;
     @Mock private TenantSettingService tenantSettingService;
 
     @InjectMocks
     private WebWishlistAlertJob job;
+
+    private WebCustomer customerWithPhone(String phone) {
+        WebCustomer c = WebCustomer.builder().tenantId(TENANT).phone(phone).build();
+        c.setId(CUSTOMER);
+        return c;
+    }
 
     @Test
     void discountAlert_sentWhenSalePriceAppears() {
@@ -150,12 +161,38 @@ class WebWishlistAlertJobTest {
         when(deviceTokenRepository.existsByTenantIdAndWebCustomerId(TENANT, CUSTOMER)).thenReturn(false);
         when(tenantSettingService.getSettingValue(TENANT, "wishlist.sms_alerts_enabled")).thenReturn("true");
         when(tenantSettingService.getSettingValue(TENANT, "wishlist.max_sms_per_day")).thenReturn("2");
+        when(webCustomerRepository.findByIdAndTenantId(CUSTOMER, TENANT))
+                .thenReturn(Optional.of(customerWithPhone("998901234567")));
         when(wishlistRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         job.processAlertsForTenant(TENANT);
 
         verify(pushService, never()).sendToCustomer(any(), any(), any(), any(), any());
+        // Real SMS is sent to the customer's phone (prefixed with +), not a placeholder log.
+        // This scenario is a restock alert (no sale price), so the body says "яна мавжуд".
+        verify(smsService).sendSmsAsync(eq("+998901234567"), contains("яна мавжуд"));
         assertNotNull(wi.getNotifiedAt());
+    }
+
+    @Test
+    void smsFallback_noSmsWhenCustomerHasNoPhone() {
+        WebWishlistItem wi = buildWishlistItem(false, null);
+        WebCatalogItem catalogItem = buildCatalogItem();
+
+        when(wishlistRepository.findDistinctCatalogItemIdsByTenantId(TENANT)).thenReturn(List.of(ITEM_ID));
+        when(catalogRepository.findByIdAndTenantId(ITEM_ID, TENANT)).thenReturn(Optional.of(catalogItem));
+        when(wishlistService.isAvailable(ITEM_ID, TENANT)).thenReturn(true);
+        when(badgeService.badgeFor(eq(TENANT), eq(ITEM_ID), any(), any())).thenReturn(Optional.empty());
+        when(wishlistRepository.findByTenantIdAndCatalogItemId(TENANT, ITEM_ID)).thenReturn(List.of(wi));
+        when(deviceTokenRepository.existsByTenantIdAndWebCustomerId(TENANT, CUSTOMER)).thenReturn(false);
+        when(tenantSettingService.getSettingValue(TENANT, "wishlist.sms_alerts_enabled")).thenReturn("true");
+        when(webCustomerRepository.findByIdAndTenantId(CUSTOMER, TENANT))
+                .thenReturn(Optional.of(customerWithPhone(null)));
+        when(wishlistRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        job.processAlertsForTenant(TENANT);
+
+        verify(smsService, never()).sendSmsAsync(any(), any());
     }
 
     @Test
@@ -176,6 +213,7 @@ class WebWishlistAlertJobTest {
         job.processAlertsForTenant(TENANT);
 
         verify(pushService, never()).sendToCustomer(any(), any(), any(), any(), any());
+        verify(smsService, never()).sendSmsAsync(any(), any());
     }
 
     @Test

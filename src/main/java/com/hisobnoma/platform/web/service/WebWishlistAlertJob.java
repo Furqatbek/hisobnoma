@@ -1,9 +1,12 @@
 package com.hisobnoma.platform.web.service;
 
 import com.hisobnoma.platform.admin.service.TenantSettingService;
+import com.hisobnoma.platform.sms.service.SmsService;
 import com.hisobnoma.platform.web.entity.WebCatalogItem;
+import com.hisobnoma.platform.web.entity.WebCustomer;
 import com.hisobnoma.platform.web.entity.WebWishlistItem;
 import com.hisobnoma.platform.web.repository.WebCatalogItemRepository;
+import com.hisobnoma.platform.web.repository.WebCustomerRepository;
 import com.hisobnoma.platform.web.repository.WebDeviceTokenRepository;
 import com.hisobnoma.platform.web.repository.WebWishlistItemRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +37,8 @@ public class WebWishlistAlertJob {
     private final WebPushService pushService;
     private final WebPromotionBadgeService badgeService;
     private final WebDeviceTokenRepository deviceTokenRepository;
+    private final WebCustomerRepository webCustomerRepository;
+    private final SmsService smsService;
     private final TenantSettingService tenantSettingService;
 
     /**
@@ -150,22 +155,30 @@ public class WebWishlistAlertJob {
         }
 
         if (!pushed && isSmsAlertsEnabled(tenantId)) {
-            int maxPerDay = getMaxSmsPerDay(tenantId);
-            String dailyKey = tenantId + ":" + customerId + ":" +
-                    Instant.now().truncatedTo(ChronoUnit.DAYS);
-            // Atomic check-and-increment so concurrent sends can't exceed the cap
-            java.util.concurrent.atomic.AtomicBoolean underCap = new java.util.concurrent.atomic.AtomicBoolean(false);
-            smsDailyCount.compute(dailyKey, (k, v) -> {
-                int current = v == null ? 0 : v;
-                if (current < maxPerDay) {
-                    underCap.set(true);
-                    return current + 1;
+            String phone = webCustomerRepository.findByIdAndTenantId(customerId, tenantId)
+                    .map(WebCustomer::getPhone).orElse(null);
+            // No push token AND no phone → nothing to reach the customer with; don't consume the cap.
+            if (phone != null && !phone.isBlank()) {
+                int maxPerDay = getMaxSmsPerDay(tenantId);
+                String dailyKey = tenantId + ":" + customerId + ":" +
+                        Instant.now().truncatedTo(ChronoUnit.DAYS);
+                // Atomic check-and-increment so concurrent sends can't exceed the cap
+                java.util.concurrent.atomic.AtomicBoolean underCap = new java.util.concurrent.atomic.AtomicBoolean(false);
+                smsDailyCount.compute(dailyKey, (k, v) -> {
+                    int current = v == null ? 0 : v;
+                    if (current < maxPerDay) {
+                        underCap.set(true);
+                        return current + 1;
+                    }
+                    return v;
+                });
+                if (underCap.get()) {
+                    try {
+                        smsService.sendSmsAsync("+" + phone, body);
+                    } catch (Exception e) {
+                        log.warn("Wishlist SMS failed for customer {}: {}", customerId, e.getMessage());
+                    }
                 }
-                return v;
-            });
-            if (underCap.get()) {
-                log.info("Wishlist SMS alert (placeholder): tenant={}, customer={}, product={}",
-                        tenantId, customerId, productName);
             }
         }
 
