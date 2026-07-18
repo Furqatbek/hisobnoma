@@ -22,6 +22,7 @@ import com.hisobnoma.platform.delivery.repository.DeliveryRegionRepository;
 import com.hisobnoma.platform.delivery.repository.DeliveryVillageRepository;
 import com.hisobnoma.platform.pos.dto.*;
 import com.hisobnoma.platform.pos.entity.*;
+import com.hisobnoma.platform.pos.event.PosSaleCompletedEvent;
 import com.hisobnoma.platform.pos.mapper.POSTransactionMapper;
 import com.hisobnoma.platform.pos.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +61,7 @@ public class POSTransactionService {
     private final StockService stockService;
     private final TaxCalculationService taxCalculationService;
     private final GLIntegrationService glIntegrationService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     private final ARInvoiceService arInvoiceService;
     private final ShiftService shiftService;
     private final POSReturnService posReturnService;
@@ -612,17 +614,9 @@ public class POSTransactionService {
             transaction.setStockDeducted(true);
         }
 
-        // Post to GL (non-blocking — POS must work even if GL accounts aren't configured)
-        if (!transaction.isGlPosted()) {
-            try {
-                Long journalEntryId = glIntegrationService.postPOSTransaction(transaction);
-                transaction.setGlJournalEntryId(journalEntryId);
-                transaction.setGlPosted(true);
-            } catch (Exception e) {
-                log.error("Failed to post transaction {} to GL: {}. Retry via POST /api/v1/pos/transactions/{}/retry-gl",
-                        transaction.getTransactionNumber(), e.getMessage(), transaction.getId());
-            }
-        }
+        // GL posting is deferred to a PosSaleCompletedEvent handled AFTER this transaction commits
+        // (see PosGlPostingListener), so the GL entry is only ever created for a sale that actually
+        // committed — no phantom revenue if a later step here rolls the sale back.
 
         // Create AR Invoice for credit sales BEFORE marking COMPLETED.
         // A credit sale without an AR invoice means the debt is untracked — this must be atomic.
@@ -642,6 +636,9 @@ public class POSTransactionService {
         shiftService.recalculateShiftTotals(transaction.getShift().getId());
 
         log.info("Completed transaction {}", transaction.getTransactionNumber());
+
+        // Fires only if this transaction commits → GL is posted for committed sales only.
+        eventPublisher.publishEvent(new PosSaleCompletedEvent(transaction.getId()));
 
         return transactionMapper.toDto(transaction);
     }

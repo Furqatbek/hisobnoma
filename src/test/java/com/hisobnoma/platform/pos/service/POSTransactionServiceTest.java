@@ -82,6 +82,8 @@ class POSTransactionServiceTest {
     private ARInvoiceService arInvoiceService;
     @Mock
     private ShiftService shiftService;
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private POSTransactionService transactionService;
@@ -575,6 +577,9 @@ class POSTransactionServiceTest {
         assertEquals(TransactionStatus.COMPLETED, result.getStatus());
         verify(stockService).deductStock(eq(product.getId()), eq(location.getId()),
                 eq(BigDecimal.ONE), eq("POS_SALE"), eq(1L), any());
+        // GL is not posted inline anymore — a PosSaleCompletedEvent defers it to after commit.
+        verify(glIntegrationService, never()).postPOSTransaction(any());
+        verify(eventPublisher).publishEvent(any(com.hisobnoma.platform.pos.event.PosSaleCompletedEvent.class));
     }
 
     @Test

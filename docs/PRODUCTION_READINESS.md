@@ -121,16 +121,15 @@ Each item is written so it can be pasted into a GitHub issue as-is.
 - **What:** If the outer POS transaction rolls back **after** the GL post commits in its own tx →
   a committed GL sales entry for a sale that no longer exists (phantom revenue/COGS).
 - **Fix:** Post in the caller's transaction (`REQUIRED`), per the module's own stated contract.
-- **⚠️ ASSESSED — deliberately NOT changed (this branch):** the POS path is intentionally
-  non-atomic: `completeTransaction` wraps `postPOSTransaction` in a try/catch that swallows GL
-  failures ("POS must work even if GL accounts aren't configured"), with `findFailedGlPostings`,
-  a `retryGlPosting` endpoint, and `POSRetryScheduler` to post later. Flipping to `REQUIRED` would
-  make a transient GL failure mark the shared transaction rollback-only — the swallowed exception
-  no longer saves it, so the **entire sale rolls back** (`UnexpectedRollbackException`), losing the
-  sale. The correct fix is a transactional outbox (post GL only for committed sales), a larger
-  change tracked separately. The narrow phantom-revenue window (GL commits, then the sale rolls back
-  on a later step) remains, but is preferable to losing sales on every GL hiccup. AR/AP correctly
-  use `REQUIRED` and are unaffected.
+- **✅ FIXED (this branch):** the phantom window is closed with an outbox-style event.
+  `completeTransaction` no longer posts GL inline; it publishes a `PosSaleCompletedEvent`, and
+  `PosGlPostingListener` (`@TransactionalEventListener(AFTER_COMMIT)` + `REQUIRES_NEW`) posts the GL
+  entry only after the sale's transaction commits — so a sale that rolls back can never leave an
+  orphan GL entry. It runs synchronously on the completing thread (the security/tenant context
+  `postPOSTransaction` needs is present) and swallows failures, leaving `glPosted=false` for the
+  existing `POSRetryScheduler` to retry — the sale is never blocked by a GL hiccup. Flipping to
+  `REQUIRED` (the audit's literal suggestion) was rejected: it would roll the whole sale back on a
+  transient GL failure. AR/AP already use `REQUIRED` and are unchanged.
 
 ### 7. Line tax credited entirely to Sales Revenue; no VAT/QQS liability line  ·  HIGH (VAT jurisdiction)
 - **Where:** `finance/service/GLIntegrationService.java:693` — `lineTotal` includes tax, credited to
@@ -271,15 +270,11 @@ missing tenant), #3 (client IP prefers X-Real-IP / rightmost XFF), #4 (discounte
 balanced), #5 (distribution stock settle flag), #7 (output VAT segregated to 2130 + V78 seed),
 #9 (real FlywayMigrationStrategy repair), #11 (CORS credentials-off invariant + wildcard warning).
 
-**⏳ Still open (need a decision or larger effort):**
-- **#6 — POS→GL `REQUIRES_NEW`:** deliberately NOT changed; the audit fix would roll back whole
-  sales on a transient GL failure. Proper fix = transactional outbox (larger).
-- **#8 — POS card auto-approve:** needs a product decision — integrate a real gateway, or add an
-  explicit "manual/unverified" tender flag and keep it out of the auto-approve path. Internal-fraud
-  gap only (authenticated staff), bounded by overpayment/credit-limit checks.
-- **#10 — Rate limiter in-memory:** move to the provisioned Redis so limits hold across pods
-  (compounds #3). Meaningful infra change; single-instance is unaffected today.
-- **#2 residue** — `SmsTemplateService` / `ExpenseRecordController` tenant-1 fallbacks (non-storefront).
+Also fixed after the first pass: **#6** (POS→GL phantom window — outbox via `AFTER_COMMIT` event),
+**#8** (POS card manual-approval flag), **#10** (Redis rate limiter), **#2 residue**
+(`SmsTemplateService`/`ExpenseRecordController` fail closed).
+
+**⏳ Still open:**
 - **#12 — CI green end-to-end**, incl. the Docker-gated Postgres migration test.
 - Lower priority: POS→AR rounding residue, fiscal-period-close checks on the GL-integration path,
   `/uploads/**` IDOR review, JWT-profile-keying deployment discipline.
