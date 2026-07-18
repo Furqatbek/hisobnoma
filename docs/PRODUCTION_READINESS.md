@@ -218,6 +218,10 @@ Each item is written so it can be pasted into a GitHub issue as-is.
   `validatePostingAllowed` / `account.isActive()`, unlike the manual `createJournalEntry` path
   (`:98,131-136`). AR/AP/POS can post into a **closed period** or to inactive accounts. (MEDIUM if
   period-close is used operationally.)
+  - **✅ FIXED (this branch):** `createAndPostEntry` now rejects a closed period
+    (`fiscalPeriod.allowsPosting()`) and rejects inactive / non-direct-posting accounts, mirroring
+    the manual path. Tests cover both. Existing full-flow suites (open period, active system
+    accounts) are unaffected.
 - **`/uploads/**` is anonymous static serving** — `config/SecurityConfig.java` PUBLIC_ENDPOINTS.
   Not confirmed vulnerable; flag for a follow-up IDOR / filename-guessability check.
 - **JWT enforcement is keyed on the literal `prod` profile** — a deployment that boots a non-prod

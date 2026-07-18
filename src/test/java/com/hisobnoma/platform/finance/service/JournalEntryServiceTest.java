@@ -512,6 +512,60 @@ class JournalEntryServiceTest {
         assertTrue(ex.getMessage().contains("not active"));
     }
 
+    // ==================== createAndPostEntry (AR/AP/POS integration path) ====================
+
+    @Test
+    void createAndPostEntry_closedPeriod_throwsBusinessException() {
+        FiscalPeriod closed = FiscalPeriod.builder()
+                .id(2L).tenantId(TENANT_ID).name("December 2023").periodNumber(12)
+                .fiscalYear(com.hisobnoma.platform.finance.entity.FiscalYear.builder().year(2023).build())
+                .startDate(LocalDate.of(2023, 12, 1)).endDate(LocalDate.of(2023, 12, 31))
+                .status(PeriodStatus.CLOSED).build();
+
+        CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
+                .entryDate(LocalDate.of(2023, 12, 15))
+                .lines(List.of(
+                        CreateJournalLineRequest.builder().accountId(1L).debitAmount(new BigDecimal("1000.00")).build(),
+                        CreateJournalLineRequest.builder().accountId(2L).creditAmount(new BigDecimal("1000.00")).build()))
+                .build();
+
+        when(fiscalPeriodService.getPeriodEntityByDate(any(LocalDate.class))).thenReturn(closed);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> journalEntryService.createAndPostEntry(request, TENANT_ID));
+        assertTrue(ex.getMessage().contains("Posting is not allowed"));
+        verify(journalEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void createAndPostEntry_inactiveAccount_throwsBusinessException() {
+        Account inactiveAccount = Account.builder()
+                .id(3L).code("1200").name("Inactive").active(false).allowsDirectPosting(true).build();
+
+        CreateJournalEntryRequest request = CreateJournalEntryRequest.builder()
+                .entryDate(LocalDate.of(2024, 1, 15))
+                .lines(List.of(
+                        CreateJournalLineRequest.builder().accountId(3L).debitAmount(new BigDecimal("1000.00")).build(),
+                        CreateJournalLineRequest.builder().accountId(2L).creditAmount(new BigDecimal("1000.00")).build()))
+                .build();
+
+        JournalEntry mappedEntry = JournalEntry.builder()
+                .entryDate(LocalDate.of(2024, 1, 15)).lines(new ArrayList<>()).exchangeRate(BigDecimal.ONE).build();
+        JournalLine mappedLine = JournalLine.builder()
+                .debitAmount(new BigDecimal("1000.00")).creditAmount(BigDecimal.ZERO).build();
+
+        when(fiscalPeriodService.getPeriodEntityByDate(any(LocalDate.class))).thenReturn(fiscalPeriod);
+        when(journalEntryRepository.findMaxEntryNumberForPrefix(any(), eq(TENANT_ID))).thenReturn(null);
+        when(journalEntryMapper.toEntity(request)).thenReturn(mappedEntry);
+        when(journalLineMapper.toEntity(request.getLines().get(0))).thenReturn(mappedLine);
+        when(accountService.getAccountEntity(3L)).thenReturn(inactiveAccount);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> journalEntryService.createAndPostEntry(request, TENANT_ID));
+        assertTrue(ex.getMessage().contains("not active"));
+        verify(journalEntryRepository, never()).save(any());
+    }
+
     // ==================== postJournalEntry ====================
 
     @Test

@@ -317,8 +317,13 @@ public class JournalEntryService {
      */
     @Transactional
     public JournalEntry createAndPostEntry(CreateJournalEntryRequest request, Long tenantId) {
-        // Get the fiscal period for the entry date
+        // Get the fiscal period for the entry date, and refuse to post into a closed period —
+        // AR/AP/POS posting funnels through here and must respect period-close like the manual path.
         FiscalPeriod fiscalPeriod = fiscalPeriodService.getPeriodEntityByDate(request.getEntryDate());
+        if (!fiscalPeriod.allowsPosting()) {
+            throw new BusinessException("Posting is not allowed for period: " + fiscalPeriod.getDisplayName()
+                    + ". Period status: " + fiscalPeriod.getStatus());
+        }
 
         // Generate entry number
         String entryNumber = generateEntryNumber(request.getEntryDate(), tenantId);
@@ -343,6 +348,12 @@ public class JournalEntryService {
             line.setTenantId(tenantId);
 
             Account account = accountService.getAccountEntity(lineRequest.getAccountId());
+            if (!account.isActive()) {
+                throw new BusinessException("Account '" + account.getCode() + "' is not active");
+            }
+            if (!account.isAllowsDirectPosting()) {
+                throw new BusinessException("Account '" + account.getCode() + "' does not allow direct posting");
+            }
             line.setAccount(account);
 
             if (line.getDebitAmount() == null) {
