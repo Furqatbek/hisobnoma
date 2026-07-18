@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watchEffect, onMounted, onUnmounted } from 'vue'
-import { RouterView, RouterLink, useRoute } from 'vue-router'
+import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { webOrdersApi } from '@/services/api'
@@ -47,6 +47,7 @@ import {
 const { t } = useI18n()
 const authStore = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 
 const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(false)
@@ -224,6 +225,36 @@ const navigation = computed(() => [
   }
 ])
 
+// A nav link is visible unless the route it points to declares a meta.permission
+// the current user lacks. This keeps the sidebar in sync with the router guards
+// (single source of truth) — links with no permission requirement always show,
+// and SUPER_ADMIN/ADMIN (who hold every permission) see everything.
+function canAccessHref(href) {
+  if (!href) return true
+  let resolved
+  try {
+    resolved = router.resolve(href)
+  } catch (e) {
+    return true
+  }
+  const guarded = [...resolved.matched].reverse().find(r => r.meta && r.meta.permission)
+  return !guarded || authStore.hasPermission(guarded.meta.permission)
+}
+
+// Navigation with items/groups the user cannot access removed. A group is kept
+// only if at least one of its children remains visible.
+const visibleNavigation = computed(() =>
+  navigation.value
+    .map(item => {
+      if (!item.children) {
+        return canAccessHref(item.href) ? item : null
+      }
+      const children = item.children.filter(child => canAccessHref(child.href))
+      return children.length ? { ...item, children } : null
+    })
+    .filter(Boolean)
+)
+
 function toggleMenu(key) {
   if (expandedMenus.value.includes(key)) {
     expandedMenus.value = []
@@ -242,7 +273,7 @@ function isChildActive(children) {
 
 // Auto-expand the menu containing the active route
 watchEffect(() => {
-  const activeGroup = navigation.value.find(
+  const activeGroup = visibleNavigation.value.find(
     item => item.children && isChildActive(item.children)
   )
   if (activeGroup) {
@@ -286,7 +317,7 @@ watchEffect(() => {
 
       <!-- Navigation -->
       <nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
-        <template v-for="item in navigation" :key="item.name">
+        <template v-for="item in visibleNavigation" :key="item.name">
           <!-- Simple link -->
           <RouterLink
             v-if="!item.children"
