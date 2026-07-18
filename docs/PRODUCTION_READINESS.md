@@ -250,3 +250,25 @@ Each item is written so it can be pasted into a GitHub issue as-is.
 Items #2 (B2B fallback) and #5 (stock swallow) are in the distribution module built in this work
 stream and are **✅ FIXED on this branch** (see the fix notes under each). The rest are pre-existing
 platform code (finance/POS/web/config) and remain open.
+
+---
+
+## Progress on this branch (follow-up work stream)
+
+**✅ Fixed:** #1 (AR GL id captured → reversals work), #2 web portion (storefront fails closed on
+missing tenant), #3 (client IP prefers X-Real-IP / rightmost XFF), #4 (discounted AR posts
+balanced), #5 (distribution stock settle flag), #7 (output VAT segregated to 2130 + V78 seed),
+#9 (real FlywayMigrationStrategy repair), #11 (CORS credentials-off invariant + wildcard warning).
+
+**⏳ Still open (need a decision or larger effort):**
+- **#6 — POS→GL `REQUIRES_NEW`:** deliberately NOT changed; the audit fix would roll back whole
+  sales on a transient GL failure. Proper fix = transactional outbox (larger).
+- **#8 — POS card auto-approve:** needs a product decision — integrate a real gateway, or add an
+  explicit "manual/unverified" tender flag and keep it out of the auto-approve path. Internal-fraud
+  gap only (authenticated staff), bounded by overpayment/credit-limit checks.
+- **#10 — Rate limiter in-memory:** move to the provisioned Redis so limits hold across pods
+  (compounds #3). Meaningful infra change; single-instance is unaffected today.
+- **#2 residue** — `SmsTemplateService` / `ExpenseRecordController` tenant-1 fallbacks (non-storefront).
+- **#12 — CI green end-to-end**, incl. the Docker-gated Postgres migration test.
+- Lower priority: POS→AR rounding residue, fiscal-period-close checks on the GL-integration path,
+  `/uploads/**` IDOR review, JWT-profile-keying deployment discipline.
