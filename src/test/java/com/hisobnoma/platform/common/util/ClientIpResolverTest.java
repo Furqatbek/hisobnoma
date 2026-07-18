@@ -8,11 +8,24 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ClientIpResolverTest {
 
     @Test
-    void trustingProxy_usesFirstForwardedAddress() {
+    void trustingProxy_prefersXRealIp() {
         ClientIpResolver resolver = new ClientIpResolver(true);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRemoteAddr("10.0.0.5");
-        request.addHeader("X-Forwarded-For", "203.0.113.7, 10.0.0.5");
+        request.addHeader("X-Real-IP", "203.0.113.7");
+        // Client tried to forge an origin at the front of XFF — X-Real-IP wins.
+        request.addHeader("X-Forwarded-For", "1.2.3.4, 203.0.113.7, 10.0.0.5");
+
+        assertEquals("203.0.113.7", resolver.resolve(request));
+    }
+
+    @Test
+    void trustingProxy_noRealIp_usesRightmostForwardedEntryNotSpoofableLeftmost() {
+        ClientIpResolver resolver = new ClientIpResolver(true);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("10.0.0.5");
+        // Attacker prepends a fake IP; nginx appends the real peer at the end.
+        request.addHeader("X-Forwarded-For", "1.2.3.4, 203.0.113.7");
 
         assertEquals("203.0.113.7", resolver.resolve(request));
     }

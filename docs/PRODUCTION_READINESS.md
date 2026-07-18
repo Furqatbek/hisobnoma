@@ -70,6 +70,9 @@ Each item is written so it can be pasted into a GitHub issue as-is.
   cap (5/phone/day, 60s cooldown) survives. Also corrupts audit-log and login-attempt IPs.
 - **Fix:** Use nginx `X-Real-IP` (already set at `default.conf:73`) or take the rightmost/Nth-from-edge
   XFF value instead of the appendable leftmost.
+- **✅ FIXED (this branch):** `ClientIpResolver` now prefers `X-Real-IP` (nginx-set, overwrites any
+  client value), then falls back to the **rightmost** non-empty `X-Forwarded-For` entry (the real
+  peer nginx appends) instead of the spoofable leftmost. Tests cover both.
 
 ### 4. Discounted AR invoices post UNBALANCED → hard fail; reaches distribution  ·  HIGH  ·  confirmed
 - **Where:** `finance/service/GLIntegrationService.java:681` (debit AR = `totalAmount` = Σlines −
@@ -155,6 +158,9 @@ Each item is written so it can be pasted into a GitHub issue as-is.
 - **Fix:** Remove the fake `repair-on-migrate`; add a real `FlywayMigrationStrategy` that calls
   `repair()` then `migrate()`, or accept that a mismatch requires manual `flyway repair`. Confirm
   V62/V63 were never applied at their earlier checksums before the next deploy.
+- **✅ FIXED (this branch):** removed the fake `repair-on-migrate` property; added `FlywayConfig`
+  with a real `FlywayMigrationStrategy` bean that runs `flyway.repair()` before `migrate()`, so a
+  content-edited migration's checksum drift self-heals on boot instead of failing validation.
 
 ### 10. Rate limiter is in-memory / per-instance  ·  MEDIUM (compounds #3)
 - **Where:** `web/service/InMemoryCheckoutRateLimiter.java` (`ConcurrentHashMap` in JVM heap). Redis
@@ -170,6 +176,9 @@ Each item is written so it can be pasted into a GitHub issue as-is.
   header (not cookies), so a wildcard origin can't ride a victim's credentials.
 - **Fix:** Pin `CORS_ALLOWED_ORIGINS` in prod. Add a guard that forbids `*` patterns if credentials
   are ever enabled (would become CRITICAL).
+- **✅ FIXED (this branch):** `corsConfigurationSource` now sets `setAllowCredentials(false)`
+  explicitly (making the no-cookies invariant enforced, not incidental) and logs a startup warning
+  when a wildcard origin is configured. Pinning `CORS_ALLOWED_ORIGINS` in prod remains an ops step.
 
 ### 12. Full test suite not verified green; Postgres migration test Docker-gated  ·  process
 - **What:** 402 test classes / 203 full-context `@SpringBootTest`. The distribution module (90 tests)

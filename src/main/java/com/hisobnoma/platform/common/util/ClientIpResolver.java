@@ -27,9 +27,24 @@ public class ClientIpResolver {
 
     public String resolve(HttpServletRequest request) {
         if (trustProxyHeaders) {
+            // nginx sets X-Real-IP to the actual connecting peer ($remote_addr), overwriting any
+            // client-supplied value, so it is trustworthy. Prefer it.
+            String realIp = request.getHeader("X-Real-IP");
+            if (realIp != null && !realIp.isBlank()) {
+                return realIp.trim();
+            }
+            // Fall back to the RIGHTMOST X-Forwarded-For entry. nginx appends the real peer at the
+            // end ($proxy_add_x_forwarded_for); the leftmost entries are client-supplied and
+            // spoofable, so taking the leftmost let a caller forge their IP and bypass per-IP limits.
             String forwarded = request.getHeader("X-Forwarded-For");
             if (forwarded != null && !forwarded.isBlank()) {
-                return forwarded.split(",")[0].trim();
+                String[] parts = forwarded.split(",");
+                for (int i = parts.length - 1; i >= 0; i--) {
+                    String candidate = parts[i].trim();
+                    if (!candidate.isEmpty()) {
+                        return candidate;
+                    }
+                }
             }
         }
         return request.getRemoteAddr();

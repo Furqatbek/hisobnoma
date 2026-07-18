@@ -22,12 +22,13 @@ spring:
     show-sql: false
 
   # Flyway Configuration
+  # Checksum repair is done by a real FlywayMigrationStrategy bean (FlywayConfig), which calls
+  # flyway.repair() before migrate(). ("repair-on-migrate" is NOT a real Flyway/Spring property.)
   flyway:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
     validate-on-migrate: true
-    repair-on-migrate: true
     out-of-order: true
 
   # Jackson Configuration

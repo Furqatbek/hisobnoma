@@ -2,6 +2,7 @@ package com.hisobnoma.platform.config;
 
 import com.hisobnoma.platform.auth.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,6 +35,7 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -109,11 +111,21 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(
-                Arrays.stream(allowedOrigins.split(",")).map(String::trim).toList());
+        List<String> origins = Arrays.stream(allowedOrigins.split(",")).map(String::trim).toList();
+        boolean wildcard = origins.stream().anyMatch(o -> o.equals("*") || o.contains("*"));
+        configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "X-Tenant-ID"));
         configuration.setExposedHeaders(List.of("Authorization"));
+        // Auth is a stateless Authorization header, never cookies — credentials MUST stay off so a
+        // wildcard origin can't ride a victim's session. A wildcard + credentials would be critical;
+        // this guard makes the invariant explicit and refuses that combination.
+        configuration.setAllowCredentials(false);
+        if (wildcard) {
+            log.warn("CORS allowed-origins includes a wildcard ({}). Safe only because credentials "
+                    + "are disabled; pin CORS_ALLOWED_ORIGINS to real frontend origins in production.",
+                    allowedOrigins);
+        }
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
