@@ -44,6 +44,11 @@ spring:
     livereload:
       enabled: false
 
+# Rate limiting — use the distributed Redis limiter in production (multi-instance safe).
+hisobnoma:
+  ratelimit:
+    redis-enabled: ${RATELIMIT_REDIS:true}
+
 # Server - Production settings
 server:
   tomcat:

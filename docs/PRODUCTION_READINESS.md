@@ -182,6 +182,11 @@ Each item is written so it can be pasted into a GitHub issue as-is.
 - **What:** N pods = N× every limit (load-balancer dependent). At scale the OTP/checkout throttle is
   near-decorative.
 - **Fix:** Move rate limiting to the already-present Redis.
+- **✅ FIXED (this branch):** added `RedisCheckoutRateLimiter` (atomic INCR + PEXPIRE Lua script)
+  behind the existing `CheckoutRateLimiter` interface, `@Primary` and gated on
+  `hisobnoma.ratelimit.redis-enabled` (prod profile sets it true; dev/test stay in-memory, no Redis
+  needed). It fails **open** on a Redis outage so a blip can't take down checkout — the DB-level caps
+  (5 OTP/phone/day, etc.) still bound the expensive paths. Callers are unchanged.
 
 ### 11. CORS defaults to `*`  ·  LOW/MEDIUM
 - **Where:** `config/SecurityConfig.java:47,112` — `app.cors.allowed-origins` defaults to `*` via

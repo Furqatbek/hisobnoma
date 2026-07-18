@@ -172,6 +172,12 @@ app:
       bundle-id: ${APNS_BUNDLE_ID:com.hisobnoma.admin}
       private-key: ${APNS_PRIVATE_KEY:}
 
+  # Rate limiting. In-memory by default (per-instance — fine for a single pod). Set redis-enabled
+  # true (prod profile does) to use the distributed Redis limiter so per-IP/phone limits hold across
+  # all instances.
+  ratelimit:
+    redis-enabled: ${RATELIMIT_REDIS:false}
+
   # Security
   security:
     password-min-length: 8
