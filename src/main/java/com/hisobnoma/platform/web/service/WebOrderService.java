@@ -119,6 +119,11 @@ public class WebOrderService {
                     order.setPaymentStatus(WebPaymentStatus.REFUNDED);
                 }
             }
+        } else if (previous == WebOrderStatus.NEW && target == WebOrderStatus.CANCELLED) {
+            // Loyalty points are SPENT at checkout, while the order is still NEW — a NEW order
+            // that gets cancelled must refund them too. (Stock/promotions/coupons need no
+            // reversal here: they are only recorded on CONFIRMED.)
+            reverseLoyaltyPoints(order);
         }
 
         log.info("Web order {} status changed to {}", order.getOrderNumber(), target);

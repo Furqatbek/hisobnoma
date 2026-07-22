@@ -357,6 +357,17 @@ class WebOrderServiceTest {
         verify(stockService, never()).releaseReservation(any(), any(), any(), any());
     }
 
+    @Test
+    void cancelFromNew_refundsSpentLoyaltyPoints() {
+        // Points are spent at checkout while the order is NEW — cancelling a NEW order must
+        // refund them (previously the reversal only ran when cancelling from CONFIRMED+).
+        when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.updateStatus(1L, statusRequest(WebOrderStatus.CANCELLED, "Бекор"));
+
+        verify(loyaltyService).reverseOrder(order);
+    }
+
     // ---- delivery fee ----
 
     @Test
