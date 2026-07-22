@@ -81,11 +81,13 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
            "AND (c.startDate IS NULL OR c.startDate <= :date) " +
            "AND (c.endDate IS NULL OR c.endDate >= :date) " +
            "AND (c.maxUses IS NULL OR c.currentUses < c.maxUses) " +
-           "AND (c.customerId IS NULL OR c.customerId = :customerId) " +
+           "AND ((c.customerId IS NULL AND c.webCustomerId IS NULL) " +
+           "     OR c.customerId = :customerId OR c.webCustomerId = :webCustomerId) " +
            "AND (p.channel = 'WEB' OR p.channel = 'ALL') " +
            "AND p.active = true " +
            "ORDER BY c.endDate ASC NULLS LAST")
     List<Coupon> findAvailableForWebCustomer(@Param("tenantId") Long tenantId,
                                               @Param("customerId") Long customerId,
+                                              @Param("webCustomerId") Long webCustomerId,
                                               @Param("date") LocalDate date);
 }

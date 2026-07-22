@@ -815,6 +815,11 @@ export const webOrdersApi = {
 // Web Customers API (online shop accounts) - Backend: /api/v1/web-customers
 export const webCustomersApi = {
   getAll: (params) => api.get('/web-customers', { params }),
+  getSegments: (params) => api.get('/web-customers/segments', { params }),
+  getSegmentCustomers: (segment, params) => api.get(`/web-customers/segments/${segment}/customers`, { params }),
+  issueCoupon: (id, data) => api.post(`/web-customers/${id}/coupons`, data),
+  issueSegmentCoupons: (segment, param, data) =>
+    api.post(`/web-customers/segments/${segment}/coupons`, data, { params: { param } }),
   getById: (id) => api.get(`/web-customers/${id}`),
   linkCustomer: (id, customerId) => api.post(`/web-customers/${id}/link-customer`, { customerId }),
   unlinkCustomer: (id) => api.post(`/web-customers/${id}/unlink-customer`),

@@ -187,6 +187,12 @@ const routes = [
         component: () => import('@/views/web/LoyaltySettingsView.vue'),
         meta: { permission: 'TENANT_SETTINGS_MANAGE' }
       },
+      {
+        path: 'web-customer-segments',
+        name: 'web-customer-segments',
+        component: () => import('@/views/web/CustomerSegmentsView.vue'),
+        meta: { permission: 'WEB_CUSTOMER_VIEW' }
+      },
       // Customers
       {
         path: 'customers',

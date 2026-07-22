@@ -32,7 +32,7 @@ public class WebCouponListService {
         Long lookupCustomerId = arCustomerId != null ? arCustomerId : -1L;
 
         List<Coupon> coupons = couponRepository.findAvailableForWebCustomer(
-                tenantId, lookupCustomerId, LocalDate.now());
+                tenantId, lookupCustomerId, webCustomerId, LocalDate.now());
 
         return coupons.stream()
                 .filter(c -> {

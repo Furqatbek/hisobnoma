@@ -31,6 +31,7 @@ public class WebCustomerService {
     private final CustomerRepository customerRepository;
     private final SecurityContextHelper securityContextHelper;
     private final WebPushService pushService;
+    private final WebCouponIssueService couponIssueService;
     private final WebReferralService referralService;
     private final WebWishlistItemRepository wishlistRepository;
     private final WebWishlistService wishlistService;
@@ -87,6 +88,39 @@ public class WebCustomerService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         return webCustomerRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Web customer not found: " + id));
+    }
+
+    /**
+     * Recency buckets for the segmentation dashboard. active = ordered within activeDays;
+     * atRisk = last order between activeDays and lostDays ago; lost = quiet for lostDays+;
+     * neverOrdered = registered but no orders. Opted-out customers excluded (same rule as campaigns).
+     */
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Long> getSegmentCounts(int activeDays, int lostDays) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        java.time.Instant activeCutoff = java.time.Instant.now().minus(activeDays, java.time.temporal.ChronoUnit.DAYS);
+        java.time.Instant lostCutoff = java.time.Instant.now().minus(lostDays, java.time.temporal.ChronoUnit.DAYS);
+        long all = webCustomerRepository.countSegmentAll(tenantId);
+        long active = webCustomerRepository.countSegmentOrderedSince(tenantId, activeCutoff);
+        long quietSinceActive = webCustomerRepository.countSegmentNoOrderSince(tenantId, activeCutoff);
+        long lost = webCustomerRepository.countSegmentNoOrderSince(tenantId, lostCutoff);
+        long neverOrdered = webCustomerRepository.countSegmentNeverOrdered(tenantId);
+        java.util.Map<String, Long> counts = new java.util.LinkedHashMap<>();
+        counts.put("all", all);
+        counts.put("active", active);
+        counts.put("atRisk", Math.max(0, quietSinceActive - lost)); // quiet 30-90d
+        counts.put("lost", lost);
+        counts.put("neverOrdered", neverOrdered);
+        return counts;
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<WebCustomerDto> getSegmentCustomers(
+            com.hisobnoma.platform.web.entity.WebSegmentType segment, Integer param) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return couponIssueService.resolveSegment(tenantId, segment, param).stream()
+                .map(this::toDto)
+                .toList();
     }
 
     private WebCustomerDto toDto(WebCustomer webCustomer) {

@@ -31,6 +31,7 @@ public class WebCustomerAdminController {
     private final WebCustomerService customerService;
     private final WebLoyaltyService loyaltyService;
     private final WebWishlistService wishlistService;
+    private final com.hisobnoma.platform.web.service.WebCouponIssueService couponIssueService;
 
     @GetMapping
     @RequiresPermission("WEB_CUSTOMER_VIEW")
@@ -89,5 +90,50 @@ public class WebCustomerAdminController {
     public ResponseEntity<ApiResponse<LoyaltyBalanceDto>> adjustLoyalty(
             @PathVariable Long id, @Valid @RequestBody LoyaltyAdjustRequest request) {
         return ResponseEntity.ok(ApiResponse.success(loyaltyService.adjust(id, request)));
+    }
+
+    // ---- segmentation ----
+
+    /** Per-segment customer counts: active = ordered within activeDays; lost = quiet for lostDays+. */
+    @GetMapping("/segments")
+    @RequiresPermission("WEB_CUSTOMER_VIEW")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Long>>> segmentCounts(
+            @RequestParam(defaultValue = "30") int activeDays,
+            @RequestParam(defaultValue = "90") int lostDays) {
+        return ResponseEntity.ok(ApiResponse.success(
+                customerService.getSegmentCounts(activeDays, lostDays)));
+    }
+
+    /** Customers of one segment (param = days for the N-days segments, min amount for MIN_TOTAL_SPENT). */
+    @GetMapping("/segments/{segment}/customers")
+    @RequiresPermission("WEB_CUSTOMER_VIEW")
+    public ResponseEntity<ApiResponse<java.util.List<WebCustomerDto>>> segmentCustomers(
+            @PathVariable com.hisobnoma.platform.web.entity.WebSegmentType segment,
+            @RequestParam(required = false) Integer param) {
+        return ResponseEntity.ok(ApiResponse.success(
+                customerService.getSegmentCustomers(segment, param)));
+    }
+
+    // ---- personal coupons ----
+
+    @PostMapping("/{id}/coupons")
+    @RequiresPermission("POS_COUPON_CREATE")
+    public ResponseEntity<ApiResponse<com.hisobnoma.platform.pos.dto.CouponDto>> issueCoupon(
+            @PathVariable Long id,
+            @Valid @RequestBody com.hisobnoma.platform.web.dto.IssueCouponRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                couponIssueService.issueToCustomer(id, request), "Coupon issued"));
+    }
+
+    /** Issues one personal single-use coupon to every customer in the segment. */
+    @PostMapping("/segments/{segment}/coupons")
+    @RequiresPermission("POS_COUPON_CREATE")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Integer>>> issueCouponsToSegment(
+            @PathVariable com.hisobnoma.platform.web.entity.WebSegmentType segment,
+            @RequestParam(required = false) Integer param,
+            @Valid @RequestBody com.hisobnoma.platform.web.dto.IssueCouponRequest request) {
+        int issued = couponIssueService.issueToSegment(segment, param, request);
+        return ResponseEntity.ok(ApiResponse.success(
+                java.util.Map.of("issued", issued), "Coupons issued"));
     }
 }

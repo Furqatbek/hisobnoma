@@ -1,6 +1,7 @@
 <script setup>
 import { formatPrice } from '@/utils/format'
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { promotionsApi, smsApi, unwrapData, unwrapList, webCampaignsApi } from '@/services/api'
 import { MegaphoneIcon, PlusIcon, PaperAirplaneIcon, EyeIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline'
@@ -61,7 +62,16 @@ async function fetchAll() {
   }
 }
 
-onMounted(fetchAll)
+const route = useRoute()
+onMounted(() => {
+  fetchAll()
+  // Prefill from the segmentation view: /web-campaigns?segment=NO_ORDER_IN_N_DAYS&param=60
+  if (route.query.segment) {
+    openCreate()
+    form.segmentType = String(route.query.segment)
+    form.segmentParam = route.query.param ? Number(route.query.param) : null
+  }
+})
 
 function openCreate() {
   editingId.value = null

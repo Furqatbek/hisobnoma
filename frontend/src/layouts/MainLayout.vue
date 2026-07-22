@@ -126,6 +126,12 @@ const navigation = computed(() => [
     current: route.path === '/web-customers'
   },
   {
+    name: t('nav.customerSegments'),
+    href: '/web-customer-segments',
+    icon: ChartBarIcon,
+    current: route.path === '/web-customer-segments'
+  },
+  {
     name: t('nav.webCampaigns'),
     href: '/web-campaigns',
     icon: MegaphoneIcon,

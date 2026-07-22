@@ -81,6 +81,10 @@ public class Coupon extends TenantAwareEntity {
     @Column(name = "customer_email", length = 255)
     private String customerEmail;
 
+    /** Binds this coupon to ONE online-shop (web) customer; null = not web-customer-bound. */
+    @Column(name = "web_customer_id")
+    private Long webCustomerId;
+
     /**
      * First used at timestamp
      */

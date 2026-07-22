@@ -60,6 +60,26 @@ public interface WebCustomerRepository extends JpaRepository<WebCustomer, Long> 
            "AND NOT EXISTS (SELECT 1 FROM WebOrder o WHERE o.tenantId = c.tenantId AND o.phoneNormalized = c.phone)")
     List<WebCustomer> segmentNeverOrdered(@Param("tenantId") Long tenantId);
 
+    // ---- segment counts (same predicates as the list queries above) ----
+
+    @Query("SELECT COUNT(c) FROM WebCustomer c WHERE c.tenantId = :tenantId AND c.smsOptOut = false")
+    long countSegmentAll(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT COUNT(DISTINCT c) FROM WebCustomer c WHERE c.tenantId = :tenantId AND c.smsOptOut = false " +
+           "AND EXISTS (SELECT 1 FROM WebOrder o WHERE o.tenantId = :tenantId " +
+           "AND o.phoneNormalized = c.phone AND o.createdAt >= :cutoff)")
+    long countSegmentOrderedSince(@Param("tenantId") Long tenantId, @Param("cutoff") java.time.Instant cutoff);
+
+    @Query("SELECT COUNT(DISTINCT c) FROM WebCustomer c WHERE c.tenantId = :tenantId AND c.smsOptOut = false " +
+           "AND EXISTS (SELECT 1 FROM WebOrder o WHERE o.tenantId = :tenantId AND o.phoneNormalized = c.phone) " +
+           "AND NOT EXISTS (SELECT 1 FROM WebOrder o2 WHERE o2.tenantId = :tenantId " +
+           "AND o2.phoneNormalized = c.phone AND o2.createdAt >= :cutoff)")
+    long countSegmentNoOrderSince(@Param("tenantId") Long tenantId, @Param("cutoff") java.time.Instant cutoff);
+
+    @Query("SELECT COUNT(c) FROM WebCustomer c WHERE c.tenantId = :tenantId AND c.smsOptOut = false " +
+           "AND NOT EXISTS (SELECT 1 FROM WebOrder o WHERE o.tenantId = :tenantId AND o.phoneNormalized = c.phone)")
+    long countSegmentNeverOrdered(@Param("tenantId") Long tenantId);
+
     @Query("SELECT c FROM WebCustomer c WHERE c.tenantId = :tenantId AND c.smsOptOut = false " +
            "AND (SELECT COALESCE(SUM(o.totalAmount), 0) FROM WebOrder o WHERE o.tenantId = c.tenantId " +
            "     AND o.phoneNormalized = c.phone " +
