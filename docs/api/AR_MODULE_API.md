@@ -309,7 +309,7 @@ POST /ar-payments
 ### Allocate Payment to Invoice
 
 ```http
-POST /ar-payments/{paymentId}/allocate
+POST /ar-payments/{id}/allocations
 ```
 
 **Request Body:**
@@ -333,7 +333,7 @@ Posts payment to GL.
 ### Deposit Payment
 
 ```http
-POST /ar-payments/{id}/deposit?depositReference={reference}
+POST /ar-payments/{id}/deposit?bankReference={reference}
 ```
 
 ### Cancel Payment
@@ -459,7 +459,7 @@ GET /ar-reports/customer-balance
 ### Single Customer Balance
 
 ```http
-GET /ar-reports/customer/{customerId}/balance
+GET /ar-reports/customer-balance/{customerId}
 ```
 
 ---
@@ -509,10 +509,15 @@ GET /ar-reports/customer/{customerId}/balance
 The AR module automatically creates GL journal entries for:
 
 1. **Invoice Posting** (FINANCE_AR_APPROVE required)
-   - Debit: Accounts Receivable
-   - Credit: Revenue accounts (per line item)
+   - Debit: Accounts Receivable (invoice total)
+   - Credit: Sales Revenue — net of tax; the total already reflects any header discount, so the
+     entry always balances
+   - Credit: VAT Payable, account 2130 (the Σ of line tax amounts, when > 0)
    - Debit: Cost of Goods Sold (if cost tracked)
    - Credit: Inventory (if cost tracked)
+
+   Posting records the journal-entry id on the invoice (`glJournalEntryId`/`glPosted`), so a later
+   cancel/void reverses the GL entry.
 
 2. **Payment Completion**
    - Debit: Cash/Bank

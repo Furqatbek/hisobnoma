@@ -477,6 +477,7 @@ GET /transactions/number/{transactionNumber}
         "amount": 540000.0000,
         "tenderedAmount": 600000.0000,
         "changeAmount": 60000.0000,
+        "manuallyApproved": false,
         "processedAt": "2026-01-04T10:14:55Z"
       }
     ]
@@ -676,7 +677,7 @@ Completes the transaction:
     "transactionNumber": "TX20260104-00001",
     "status": "COMPLETED",
     "completedAt": "2026-01-04T10:15:00Z",
-    "glPosted": true,
+    "glPosted": false,
     "stockDeducted": true
   }
 }
@@ -1000,11 +1001,24 @@ Processes a refund for an approved payment on a completed transaction.
 - When a transaction is completed, reservations are converted to actual stock deductions
 - When a transaction is voided, all reservations are released
 
-### GL/AR Retry Scheduler
-- If GL posting or AR invoice creation fails during transaction completion, the transaction is still completed
-- A background scheduler runs every 15 minutes to retry failed GL postings and AR invoice creation
-- Each retry is isolated so that individual transaction failures don't affect other retries
+### GL Posting & Retry
+- GL posting is **deferred until after the sale's transaction commits** (an after-commit event), so
+  the complete-transaction response returns `glPosted: false`; it flips to `true` moments later once
+  the ledger entry is posted. This guarantees a rolled-back sale can never leave a GL entry.
+- If GL posting or AR invoice creation fails, the transaction is still completed; a background
+  scheduler retries every 15 minutes (each retry isolated per transaction).
+- Manual inspection/retry endpoints (permission `POS_SALE_CREATE`):
+  - `GET /api/v1/pos/transactions/failed-gl` — completed transactions not yet posted to GL
+  - `GET /api/v1/pos/transactions/failed-ar-invoice` — credit sales missing their AR invoice
+  - `POST /api/v1/pos/transactions/{id}/retry-gl`
+  - `POST /api/v1/pos/transactions/{id}/retry-ar-invoice`
 - The `glPosted` and `arInvoiceId` fields on the transaction indicate the status of these integrations
+
+### Card / mobile tenders without a gateway
+- `CARD` and `MOBILE_PAYMENT` tenders approved **without** a `gatewayReference` are flagged
+  `manuallyApproved: true` in the payment response — the money was confirmed out-of-band (standalone
+  terminal), not authorized online. Reconcile these against the terminal settlement report. A tender
+  submitted with a `gatewayReference` is not flagged.
 
 ### Accounts Receivable Integration (Credit Sales)
 - When a transaction is completed with a **CREDIT** payment type, an **AR Invoice** is automatically created
@@ -1036,7 +1050,7 @@ POST /transactions/1/complete
     "transactionNumber": "TX20260104-00001",
     "status": "COMPLETED",
     "arInvoiceId": 15,  // Auto-created AR Invoice
-    "glPosted": true,
+    "glPosted": false,
     "stockDeducted": true
   }
 }
