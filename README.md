@@ -26,6 +26,7 @@ Tests: `./mvnw test` (H2; the Postgres migration test runs in CI/Docker). Swagge
 |---|---|
 | **Launch locally (dev)** | [`docs/LAUNCH_LOCAL.md`](docs/LAUNCH_LOCAL.md) |
 | **Launch in production** | [`docs/LAUNCH_PRODUCTION.md`](docs/LAUNCH_PRODUCTION.md) |
+| **Onboard a new tenant** | [`docs/TENANT_ONBOARDING.md`](docs/TENANT_ONBOARDING.md) |
 | Platform API contract | [`docs/API.md`](docs/API.md) |
 | Module APIs (AP, AR, Banking/Tax, Delivery, POS, Reports) | [`docs/api/`](docs/api/) |
 | Customer shop API (+ demo walkthrough) | [`docs/api/MOBILE_SHOP_API.md`](docs/api/MOBILE_SHOP_API.md) |
