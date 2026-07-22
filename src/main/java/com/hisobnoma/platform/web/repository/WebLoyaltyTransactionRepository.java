@@ -15,12 +15,14 @@ import java.util.Optional;
 
 public interface WebLoyaltyTransactionRepository extends JpaRepository<WebLoyaltyTransaction, Long> {
 
+    // Balance is a plain SUM of the append-only ledger. Expiry is applied ONLY by the nightly
+    // job writing explicit EXPIRE debits (clamped to the unspent remainder) — filtering earns out
+    // by expiresAt here double-counted once the job also wrote its debit, and worse, expired
+    // points that were ALREADY SPENT, driving balances negative.
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM WebLoyaltyTransaction t " +
-           "WHERE t.tenantId = :tenantId AND t.webCustomerId = :customerId " +
-           "AND (t.expiresAt IS NULL OR t.expiresAt > :now)")
+           "WHERE t.tenantId = :tenantId AND t.webCustomerId = :customerId")
     BigDecimal balanceByCustomer(@Param("tenantId") Long tenantId,
-                                 @Param("customerId") Long customerId,
-                                 @Param("now") Instant now);
+                                 @Param("customerId") Long customerId);
 
     @Query("SELECT t FROM WebLoyaltyTransaction t " +
            "WHERE t.tenantId = :tenantId AND t.webCustomerId = :customerId " +
@@ -40,10 +42,8 @@ public interface WebLoyaltyTransactionRepository extends JpaRepository<WebLoyalt
     List<WebLoyaltyTransaction> findExpiredEarns(@Param("now") Instant now);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM WebLoyaltyTransaction t " +
-           "WHERE t.tenantId = :tenantId " +
-           "AND (t.expiresAt IS NULL OR t.expiresAt > :now)")
-    BigDecimal totalLiability(@Param("tenantId") Long tenantId,
-                              @Param("now") Instant now);
+           "WHERE t.tenantId = :tenantId")
+    BigDecimal totalLiability(@Param("tenantId") Long tenantId);
 
     boolean existsByTenantIdAndWebCustomerIdAndTypeAndNote(
             Long tenantId, Long webCustomerId, WebLoyaltyTransactionType type, String note);

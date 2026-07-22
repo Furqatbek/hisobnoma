@@ -238,12 +238,12 @@ class WebReferralFullFlowTest {
         // Check loyalty ledger for customer A (referrer) — should have ADJUST
         String normalizedA = phoneA.replaceAll("[^0-9]", "");
         WebCustomer customerA = customerRepository.findByTenantIdAndPhone(tenant.getId(), normalizedA).orElseThrow();
-        BigDecimal balanceA = loyaltyRepository.balanceByCustomer(tenant.getId(), customerA.getId(), java.time.Instant.now());
+        BigDecimal balanceA = loyaltyRepository.balanceByCustomer(tenant.getId(), customerA.getId());
         assertTrue(balanceA.compareTo(BigDecimal.ZERO) > 0, "Referrer should have loyalty points");
 
         // Check loyalty ledger for customer B (referred)
         WebCustomer customerB = customerRepository.findByTenantIdAndPhone(tenant.getId(), normalizedB).orElseThrow();
-        BigDecimal balanceB = loyaltyRepository.balanceByCustomer(tenant.getId(), customerB.getId(), java.time.Instant.now());
+        BigDecimal balanceB = loyaltyRepository.balanceByCustomer(tenant.getId(), customerB.getId());
         assertTrue(balanceB.compareTo(BigDecimal.ZERO) > 0, "Referred should have loyalty points");
 
         // B's second order should NOT add more referral rewards
@@ -265,7 +265,7 @@ class WebReferralFullFlowTest {
                         .content("{\"status\":\"COMPLETED\"}"))
                 .andExpect(status().isOk());
 
-        BigDecimal balanceA2 = loyaltyRepository.balanceByCustomer(tenant.getId(), customerA.getId(), java.time.Instant.now());
+        BigDecimal balanceA2 = loyaltyRepository.balanceByCustomer(tenant.getId(), customerA.getId());
         assertEquals(0, balanceA.compareTo(balanceA2), "Referrer balance should not change on second order");
     }
 

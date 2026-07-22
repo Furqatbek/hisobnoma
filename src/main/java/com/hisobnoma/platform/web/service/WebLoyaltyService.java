@@ -51,7 +51,7 @@ public class WebLoyaltyService {
     public LoyaltyBalanceDto getBalance(Long tenantId, Long webCustomerId) {
         boolean enabled = isEnabled(tenantId);
         BigDecimal balance = enabled
-                ? loyaltyRepository.balanceByCustomer(tenantId, webCustomerId, Instant.now())
+                ? loyaltyRepository.balanceByCustomer(tenantId, webCustomerId)
                 : BigDecimal.ZERO;
 
         Page<WebLoyaltyTransaction> entries = loyaltyRepository.findByCustomer(
@@ -94,7 +94,7 @@ public class WebLoyaltyService {
             return BigDecimal.ZERO;
         }
 
-        BigDecimal balance = loyaltyRepository.balanceByCustomer(tenantId, webCustomerId, Instant.now());
+        BigDecimal balance = loyaltyRepository.balanceByCustomer(tenantId, webCustomerId);
         BigDecimal minRedeem = getMinRedeem(tenantId);
         int maxPercent = getMaxRedeemPercent(tenantId);
 
@@ -250,7 +250,7 @@ public class WebLoyaltyService {
     @Transactional(readOnly = true)
     public BigDecimal getTotalLiability(Long tenantId) {
         try {
-            return loyaltyRepository.totalLiability(tenantId, Instant.now());
+            return loyaltyRepository.totalLiability(tenantId);
         } catch (Exception e) {
             log.warn("Failed to get loyalty liability: {}", e.getMessage());
             return BigDecimal.ZERO;
@@ -259,25 +259,39 @@ public class WebLoyaltyService {
 
     // ---- scheduled: expire old earns ----
 
+    /**
+     * Sole expiry mechanism: writes an explicit EXPIRE debit for each overdue EARN, clamped to the
+     * customer's current positive balance so already-spent points are never expired a second time
+     * and the balance can never go negative. The processed earn keeps its amount (ledger history)
+     * but its expiresAt is cleared so it is not picked up again.
+     */
     @Scheduled(cron = "0 0 2 * * *")
     @Transactional
     public void expirePoints() {
         Instant now = Instant.now();
         List<WebLoyaltyTransaction> expired = loyaltyRepository.findExpiredEarns(now);
+        int expiredCount = 0;
         for (WebLoyaltyTransaction earn : expired) {
-            loyaltyRepository.save(WebLoyaltyTransaction.builder()
-                    .tenantId(earn.getTenantId())
-                    .webCustomerId(earn.getWebCustomerId())
-                    .webOrderId(earn.getWebOrderId())
-                    .type(WebLoyaltyTransactionType.EXPIRE)
-                    .amount(earn.getAmount().negate())
-                    .note("Муддати ўтди")
-                    .build());
-            earn.setAmount(BigDecimal.ZERO);
+            BigDecimal balance = loyaltyRepository
+                    .balanceByCustomer(earn.getTenantId(), earn.getWebCustomerId());
+            BigDecimal toExpire = earn.getAmount().min(balance.max(BigDecimal.ZERO));
+            if (toExpire.compareTo(BigDecimal.ZERO) > 0) {
+                loyaltyRepository.save(WebLoyaltyTransaction.builder()
+                        .tenantId(earn.getTenantId())
+                        .webCustomerId(earn.getWebCustomerId())
+                        .webOrderId(earn.getWebOrderId())
+                        .type(WebLoyaltyTransactionType.EXPIRE)
+                        .amount(toExpire.negate())
+                        .note("Муддати ўтди")
+                        .build());
+                expiredCount++;
+            }
+            earn.setExpiresAt(null); // processed — keep the amount for ledger history
             loyaltyRepository.save(earn);
         }
         if (!expired.isEmpty()) {
-            log.info("Loyalty: expired {} earn batches", expired.size());
+            log.info("Loyalty: processed {} overdue earns, {} expire debits written",
+                    expired.size(), expiredCount);
         }
     }
 

@@ -63,7 +63,7 @@ class WebLoyaltyServiceTest {
 
     @Test
     void getBalance_enabled_returnsBalance() {
-        when(loyaltyRepository.balanceByCustomer(eq(TENANT_ID), eq(CUSTOMER_ID), any()))
+        when(loyaltyRepository.balanceByCustomer(TENANT_ID, CUSTOMER_ID))
                 .thenReturn(new BigDecimal("15000"));
         when(loyaltyRepository.findByCustomer(eq(TENANT_ID), eq(CUSTOMER_ID), any()))
                 .thenReturn(new PageImpl<>(Collections.emptyList()));
@@ -93,7 +93,7 @@ class WebLoyaltyServiceTest {
 
     @Test
     void spend_clampsToBalanceAndPercent() {
-        when(loyaltyRepository.balanceByCustomer(eq(TENANT_ID), eq(CUSTOMER_ID), any()))
+        when(loyaltyRepository.balanceByCustomer(TENANT_ID, CUSTOMER_ID))
                 .thenReturn(new BigDecimal("30000"));
         when(loyaltyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -111,7 +111,7 @@ class WebLoyaltyServiceTest {
 
     @Test
     void spend_belowMinRedeem_returnsZero() {
-        when(loyaltyRepository.balanceByCustomer(eq(TENANT_ID), eq(CUSTOMER_ID), any()))
+        when(loyaltyRepository.balanceByCustomer(TENANT_ID, CUSTOMER_ID))
                 .thenReturn(new BigDecimal("3000"));
 
         BigDecimal spent = service.spend(TENANT_ID, CUSTOMER_ID, ORDER_ID,
@@ -244,7 +244,7 @@ class WebLoyaltyServiceTest {
         when(webCustomerRepository.findByIdAndTenantId(CUSTOMER_ID, TENANT_ID))
                 .thenReturn(Optional.of(customer));
         when(loyaltyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(loyaltyRepository.balanceByCustomer(eq(TENANT_ID), eq(CUSTOMER_ID), any()))
+        when(loyaltyRepository.balanceByCustomer(TENANT_ID, CUSTOMER_ID))
                 .thenReturn(new BigDecimal("5000"));
         when(loyaltyRepository.findByCustomer(eq(TENANT_ID), eq(CUSTOMER_ID), any()))
                 .thenReturn(new PageImpl<>(Collections.emptyList()));
@@ -275,5 +275,51 @@ class WebLoyaltyServiceTest {
                 .deliveryFee(deliveryFee)
                 .pointsSpent(pointsSpent)
                 .build();
+    }
+
+    // ====== expirePoints (sole expiry mechanism, clamped to unspent remainder) ======
+
+    @org.junit.jupiter.api.Test
+    void expirePoints_clampsToCurrentBalance_neverNegative() {
+        // Earn 100 expired, but customer already spent 60 → only the unspent 40 may expire.
+        WebLoyaltyTransaction earn = WebLoyaltyTransaction.builder()
+                .tenantId(TENANT_ID).webCustomerId(CUSTOMER_ID).webOrderId(9L)
+                .type(WebLoyaltyTransactionType.EARN)
+                .amount(new BigDecimal("100"))
+                .expiresAt(java.time.Instant.now().minusSeconds(60)).build();
+        when(loyaltyRepository.findExpiredEarns(any())).thenReturn(java.util.List.of(earn));
+        when(loyaltyRepository.balanceByCustomer(TENANT_ID, CUSTOMER_ID)).thenReturn(new BigDecimal("40"));
+        when(loyaltyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.expirePoints();
+
+        org.mockito.ArgumentCaptor<WebLoyaltyTransaction> captor =
+                org.mockito.ArgumentCaptor.forClass(WebLoyaltyTransaction.class);
+        verify(loyaltyRepository, times(2)).save(captor.capture());
+        WebLoyaltyTransaction expire = captor.getAllValues().get(0);
+        assertEquals(WebLoyaltyTransactionType.EXPIRE, expire.getType());
+        assertEquals(0, new BigDecimal("-40").compareTo(expire.getAmount()), "clamped to unspent 40");
+        // Processed earn keeps its amount for history but is never re-picked.
+        WebLoyaltyTransaction processed = captor.getAllValues().get(1);
+        assertEquals(0, new BigDecimal("100").compareTo(processed.getAmount()));
+        assertNull(processed.getExpiresAt());
+    }
+
+    @org.junit.jupiter.api.Test
+    void expirePoints_zeroBalance_writesNoDebitButMarksProcessed() {
+        WebLoyaltyTransaction earn = WebLoyaltyTransaction.builder()
+                .tenantId(TENANT_ID).webCustomerId(CUSTOMER_ID)
+                .type(WebLoyaltyTransactionType.EARN)
+                .amount(new BigDecimal("100"))
+                .expiresAt(java.time.Instant.now().minusSeconds(60)).build();
+        when(loyaltyRepository.findExpiredEarns(any())).thenReturn(java.util.List.of(earn));
+        when(loyaltyRepository.balanceByCustomer(TENANT_ID, CUSTOMER_ID)).thenReturn(BigDecimal.ZERO);
+        when(loyaltyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.expirePoints();
+
+        // Only the processed-earn save; no EXPIRE debit (all points already spent).
+        verify(loyaltyRepository, times(1)).save(any());
+        assertNull(earn.getExpiresAt());
     }
 }
