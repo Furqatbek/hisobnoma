@@ -38,6 +38,9 @@ public class WebLoyaltyService {
     static final String SETTING_EXPIRY_DAYS = "loyalty.expiry_days";
     static final String SETTING_MIN_REDEEM = "loyalty.min_redeem";
     static final String SETTING_MAX_REDEEM_PERCENT = "loyalty.max_redeem_percent_of_order";
+    static final String SETTING_SIGNUP_BONUS = "loyalty.signup_bonus";
+    /** Stable ledger note — doubles as the idempotency key for the one-time signup bonus. */
+    static final String SIGNUP_BONUS_NOTE = "Рўйхатдан ўтиш бонуси";
 
     private final WebLoyaltyTransactionRepository loyaltyRepository;
     private final WebCustomerRepository webCustomerRepository;
@@ -128,6 +131,37 @@ public class WebLoyaltyService {
         log.info("Loyalty: customer {} spent {} points on order {} (tenant {})",
                 webCustomerId, clamped, orderId, tenantId);
         return clamped;
+    }
+
+    // ---- first sign-in: welcome bonus ----
+
+    /**
+     * Credits the one-time signup bonus (tenant setting {@code loyalty.signup_bonus}) to a newly
+     * registered customer. No-op when loyalty is disabled or the bonus is 0. Idempotent via the
+     * stable ledger note, so a concurrent double first-login cannot credit twice.
+     */
+    @Transactional
+    public void grantSignupBonus(Long tenantId, Long webCustomerId) {
+        if (!isEnabled(tenantId)) {
+            return;
+        }
+        BigDecimal bonus = getSignupBonus(tenantId);
+        if (bonus.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        if (loyaltyRepository.existsByTenantIdAndWebCustomerIdAndTypeAndNote(
+                tenantId, webCustomerId, WebLoyaltyTransactionType.ADJUST, SIGNUP_BONUS_NOTE)) {
+            return; // already granted
+        }
+        loyaltyRepository.save(WebLoyaltyTransaction.builder()
+                .tenantId(tenantId)
+                .webCustomerId(webCustomerId)
+                .type(WebLoyaltyTransactionType.ADJUST)
+                .amount(bonus)
+                .note(SIGNUP_BONUS_NOTE)
+                .build());
+        log.info("Loyalty: signup bonus {} credited to customer {} (tenant {})",
+                bonus, webCustomerId, tenantId);
     }
 
     // ---- order completion: earn points ----
@@ -323,6 +357,12 @@ public class WebLoyaltyService {
         String val = tenantSettingService.getSettingValue(tenantId, SETTING_MIN_REDEEM);
         if (val == null) return BigDecimal.valueOf(5000);
         try { return new BigDecimal(val); } catch (NumberFormatException e) { return BigDecimal.valueOf(5000); }
+    }
+
+    BigDecimal getSignupBonus(Long tenantId) {
+        String val = tenantSettingService.getSettingValue(tenantId, SETTING_SIGNUP_BONUS);
+        if (val == null) return BigDecimal.ZERO;
+        try { return new BigDecimal(val); } catch (NumberFormatException e) { return BigDecimal.ZERO; }
     }
 
     int getMaxRedeemPercent(Long tenantId) {

@@ -17,6 +17,7 @@ const KEYS = {
   expiryDays: 'loyalty.expiry_days',
   minRedeem: 'loyalty.min_redeem',
   maxRedeemPercent: 'loyalty.max_redeem_percent_of_order',
+  signupBonus: 'loyalty.signup_bonus',
   referralEnabled: 'referral.enabled',
   rewardReferrer: 'referral.reward_referrer',
   rewardReferred: 'referral.reward_referred',
@@ -29,6 +30,7 @@ const form = ref({
   expiryDays: 180,
   minRedeem: 5000,
   maxRedeemPercent: 50,
+  signupBonus: 0,
   referralEnabled: false,
   rewardReferrer: 10000,
   rewardReferred: 5000,
@@ -54,6 +56,7 @@ async function load() {
       expiryDays: num('expiryDays', 180),
       minRedeem: num('minRedeem', 5000),
       maxRedeemPercent: num('maxRedeemPercent', 50),
+      signupBonus: num('signupBonus', 0),
       referralEnabled: map[KEYS.referralEnabled] === 'true',
       rewardReferrer: num('rewardReferrer', 10000),
       rewardReferred: num('rewardReferred', 5000),
@@ -81,6 +84,7 @@ async function save() {
   form.value.maxRedeemPercent = clamp(form.value.maxRedeemPercent, 0, 100)
   form.value.expiryDays = clamp(form.value.expiryDays, 0, 3650)
   form.value.minRedeem = clamp(form.value.minRedeem, 0, 100000000)
+  form.value.signupBonus = clamp(form.value.signupBonus, 0, 100000000)
   form.value.rewardReferrer = clamp(form.value.rewardReferrer, 0, 100000000)
   form.value.rewardReferred = clamp(form.value.rewardReferred, 0, 100000000)
   form.value.monthlyCap = clamp(form.value.monthlyCap, 0, 100000)
@@ -91,6 +95,7 @@ async function save() {
     [KEYS.expiryDays]: String(form.value.expiryDays),
     [KEYS.minRedeem]: String(form.value.minRedeem),
     [KEYS.maxRedeemPercent]: String(form.value.maxRedeemPercent),
+    [KEYS.signupBonus]: String(form.value.signupBonus),
     [KEYS.referralEnabled]: String(form.value.referralEnabled),
     [KEYS.rewardReferrer]: String(form.value.rewardReferrer),
     [KEYS.rewardReferred]: String(form.value.rewardReferred),
@@ -166,6 +171,12 @@ onMounted(load)
             <input v-model.number="form.maxRedeemPercent" type="number" min="0" max="100" step="5"
                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
             <p class="mt-1 text-xs text-gray-500">{{ t('loyalty.maxRedeemPercentHint') }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">{{ t('loyalty.signupBonus') }}</label>
+            <input v-model.number="form.signupBonus" type="number" min="0" step="500"
+                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+            <p class="mt-1 text-xs text-gray-500">{{ t('loyalty.signupBonusHint') }}</p>
           </div>
         </div>
       </section>

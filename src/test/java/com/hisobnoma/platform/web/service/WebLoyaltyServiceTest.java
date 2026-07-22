@@ -326,4 +326,52 @@ class WebLoyaltyServiceTest {
         verify(loyaltyRepository, times(1)).save(any());
         assertNull(earn.getExpiresAt());
     }
+
+    // ====== grantSignupBonus ======
+
+    @org.junit.jupiter.api.Test
+    void grantSignupBonus_creditsConfiguredAmountOnce() {
+        when(tenantSettingService.getSettingValue(TENANT_ID, "loyalty.enabled")).thenReturn("true");
+        when(tenantSettingService.getSettingValue(TENANT_ID, "loyalty.signup_bonus")).thenReturn("7000");
+        when(loyaltyRepository.existsByTenantIdAndWebCustomerIdAndTypeAndNote(
+                TENANT_ID, CUSTOMER_ID, WebLoyaltyTransactionType.ADJUST,
+                WebLoyaltyService.SIGNUP_BONUS_NOTE)).thenReturn(false);
+        when(loyaltyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.grantSignupBonus(TENANT_ID, CUSTOMER_ID);
+
+        org.mockito.ArgumentCaptor<WebLoyaltyTransaction> captor =
+                org.mockito.ArgumentCaptor.forClass(WebLoyaltyTransaction.class);
+        verify(loyaltyRepository).save(captor.capture());
+        assertEquals(WebLoyaltyTransactionType.ADJUST, captor.getValue().getType());
+        assertEquals(0, new BigDecimal("7000").compareTo(captor.getValue().getAmount()));
+        assertEquals(WebLoyaltyService.SIGNUP_BONUS_NOTE, captor.getValue().getNote());
+    }
+
+    @org.junit.jupiter.api.Test
+    void grantSignupBonus_idempotent_skipsWhenAlreadyGranted() {
+        when(tenantSettingService.getSettingValue(TENANT_ID, "loyalty.enabled")).thenReturn("true");
+        when(tenantSettingService.getSettingValue(TENANT_ID, "loyalty.signup_bonus")).thenReturn("7000");
+        when(loyaltyRepository.existsByTenantIdAndWebCustomerIdAndTypeAndNote(
+                TENANT_ID, CUSTOMER_ID, WebLoyaltyTransactionType.ADJUST,
+                WebLoyaltyService.SIGNUP_BONUS_NOTE)).thenReturn(true);
+
+        service.grantSignupBonus(TENANT_ID, CUSTOMER_ID);
+
+        verify(loyaltyRepository, never()).save(any());
+    }
+
+    @org.junit.jupiter.api.Test
+    void grantSignupBonus_skipsWhenDisabledOrZero() {
+        // loyalty disabled
+        when(tenantSettingService.getSettingValue(TENANT_ID, "loyalty.enabled")).thenReturn("false");
+        service.grantSignupBonus(TENANT_ID, CUSTOMER_ID);
+
+        // enabled but bonus unset/zero
+        when(tenantSettingService.getSettingValue(TENANT_ID, "loyalty.enabled")).thenReturn("true");
+        when(tenantSettingService.getSettingValue(TENANT_ID, "loyalty.signup_bonus")).thenReturn("0");
+        service.grantSignupBonus(TENANT_ID, CUSTOMER_ID);
+
+        verify(loyaltyRepository, never()).save(any());
+    }
 }

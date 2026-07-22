@@ -60,6 +60,7 @@ public class WebAuthService {
     private final CheckoutRateLimiter rateLimiter;
     private final SmsService smsService;
     private final WebReferralService referralService;
+    private final WebLoyaltyService loyaltyService;
 
     private final SecureRandom random = new SecureRandom();
 
@@ -157,6 +158,16 @@ public class WebAuthService {
             } catch (Exception e) {
                 log.warn("Failed to apply referral code '{}' for customer {}: {}",
                         referralCode, customer.getId(), e.getMessage());
+            }
+        }
+
+        if (isNew) {
+            // One-time welcome bonus (loyalty.signup_bonus). Must never break login.
+            try {
+                loyaltyService.grantSignupBonus(tenantId, customer.getId());
+            } catch (Exception e) {
+                log.warn("Failed to grant signup bonus for customer {}: {}",
+                        customer.getId(), e.getMessage());
             }
         }
 

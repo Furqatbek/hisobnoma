@@ -42,6 +42,7 @@ class WebAuthServiceTest {
     @Mock private CheckoutRateLimiter rateLimiter;
     @Mock private SmsService smsService;
     @Mock private WebReferralService referralService;
+    @Mock private WebLoyaltyService loyaltyService;
 
     @InjectMocks
     private WebAuthService service;
@@ -275,5 +276,67 @@ class WebAuthServiceTest {
                 .thenReturn(Optional.of(customer));
 
         assertEquals(42L, service.requireCustomer("Bearer good").getId());
+    }
+
+    // ---- signup bonus on first sign-in ----
+
+    @Test
+    void verifyOtp_firstSignIn_grantsSignupBonus() {
+        WebOtpCode otp = validOtp("123456");
+        when(otpRepository.findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.of(otp));
+        when(otpRepository.save(any(WebOtpCode.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(webCustomerRepository.findByTenantIdAndPhone(TENANT_ID, PHONE))
+                .thenReturn(Optional.empty());
+        when(webCustomerRepository.save(any(WebCustomer.class))).thenAnswer(inv -> {
+            WebCustomer c = inv.getArgument(0);
+            if (c.getId() == null) c.setId(42L);
+            return c;
+        });
+        when(tokenService.generateToken(any(WebCustomer.class))).thenReturn("t");
+
+        service.verifyOtp(PHONE, "123456", "Ali", null);
+
+        verify(loyaltyService).grantSignupBonus(TENANT_ID, 42L);
+    }
+
+    @Test
+    void verifyOtp_returningCustomer_noSignupBonus() {
+        WebOtpCode otp = validOtp("123456");
+        WebCustomer existing = WebCustomer.builder()
+                .tenantId(TENANT_ID).phone(PHONE).customerCode("WC-00001").build();
+        existing.setId(42L);
+        when(otpRepository.findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.of(otp));
+        when(otpRepository.save(any(WebOtpCode.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(webCustomerRepository.findByTenantIdAndPhone(TENANT_ID, PHONE))
+                .thenReturn(Optional.of(existing));
+        when(webCustomerRepository.save(any(WebCustomer.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(tokenService.generateToken(any(WebCustomer.class))).thenReturn("t");
+
+        service.verifyOtp(PHONE, "123456", null, null);
+
+        verify(loyaltyService, never()).grantSignupBonus(any(), any());
+    }
+
+    @Test
+    void verifyOtp_signupBonusFailureNeverBreaksLogin() {
+        WebOtpCode otp = validOtp("123456");
+        when(otpRepository.findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(TENANT_ID, PHONE))
+                .thenReturn(Optional.of(otp));
+        when(otpRepository.save(any(WebOtpCode.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(webCustomerRepository.findByTenantIdAndPhone(TENANT_ID, PHONE))
+                .thenReturn(Optional.empty());
+        when(webCustomerRepository.save(any(WebCustomer.class))).thenAnswer(inv -> {
+            WebCustomer c = inv.getArgument(0);
+            if (c.getId() == null) c.setId(42L);
+            return c;
+        });
+        when(tokenService.generateToken(any(WebCustomer.class))).thenReturn("t");
+        doThrow(new RuntimeException("loyalty down")).when(loyaltyService).grantSignupBonus(any(), any());
+
+        WebAuthResponse response = service.verifyOtp(PHONE, "123456", "Ali", null);
+
+        assertEquals("t", response.getToken());
     }
 }
