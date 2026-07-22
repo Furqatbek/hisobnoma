@@ -1,5 +1,7 @@
 # Hisobnoma Platform - Deployment Guide
 
+> Looking for a step-by-step launch? Use the focused guides: [`LAUNCH_LOCAL.md`](LAUNCH_LOCAL.md) (development machine) and [`LAUNCH_PRODUCTION.md`](LAUNCH_PRODUCTION.md) (first production launch). This document is the deeper operations reference.
+
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
