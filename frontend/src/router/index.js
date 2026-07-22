@@ -554,6 +554,12 @@ const routes = [
             meta: { permission: 'TENANT_SETTINGS_MANAGE' }
           },
           {
+            path: 'subscription',
+            name: 'subscription',
+            component: () => import('@/views/admin/SubscriptionView.vue'),
+            meta: { permission: 'TENANT_SETTINGS_VIEW' }
+          },
+          {
             path: 'audit-logs',
             name: 'audit-logs',
             component: () => import('@/views/admin/AuditLogsView.vue'),

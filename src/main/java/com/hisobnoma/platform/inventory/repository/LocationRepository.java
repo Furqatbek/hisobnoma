@@ -21,6 +21,8 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
 
     List<Location> findByTenantIdOrderBySortOrderAsc(Long tenantId);
 
+    long countByTenantIdAndParentLocationIdIsNull(Long tenantId);
+
     List<Location> findByTenantIdAndActiveOrderBySortOrderAsc(Long tenantId, boolean active);
 
     List<Location> findByTenantIdAndLocationTypeOrderBySortOrderAsc(Long tenantId, LocationType locationType);

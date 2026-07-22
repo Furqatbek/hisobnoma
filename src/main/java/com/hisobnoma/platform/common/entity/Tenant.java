@@ -53,6 +53,11 @@ public class Tenant extends BaseEntity {
     private Instant subscriptionExpiresAt;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TenantPlan plan = TenantPlan.STARTER;
+
+    @Builder.Default
     @Column(nullable = false)
     private int maxUsers = 10;
 

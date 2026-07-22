@@ -23,6 +23,7 @@ import webCampaigns from './locales/uz-Cyrl/webCampaigns.json'
 import distribution from './locales/uz-Cyrl/distribution.json'
 import loyalty from './locales/uz-Cyrl/loyalty.json'
 import segments from './locales/uz-Cyrl/segments.json'
+import subscription from './locales/uz-Cyrl/subscription.json'
 
 const i18n = createI18n({
   legacy: false,
@@ -53,7 +54,8 @@ const i18n = createI18n({
       webCampaigns,
       distribution,
       ...loyalty,
-      ...segments
+      ...segments,
+      ...subscription
     }
   }
 })

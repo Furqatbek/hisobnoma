@@ -37,6 +37,7 @@ import {
   MapIcon,
   WrenchScrewdriverIcon,
   AdjustmentsHorizontalIcon,
+  CreditCardIcon,
   InboxArrowDownIcon,
   GlobeAltIcon,
   MegaphoneIcon,
@@ -233,6 +234,7 @@ const navigation = computed(() => [
       { name: t('nav.settings'), href: '/admin/settings', icon: Cog6ToothIcon },
       { name: t('nav.systemSettings'), href: '/admin/system-settings', icon: WrenchScrewdriverIcon },
       { name: t('nav.tenantSettings'), href: '/admin/tenant-settings', icon: AdjustmentsHorizontalIcon },
+      { name: t('nav.subscription'), href: '/admin/subscription', icon: CreditCardIcon },
       { name: t('nav.auditLog'), href: '/admin/audit-logs', icon: DocumentTextIcon }
     ]
   }

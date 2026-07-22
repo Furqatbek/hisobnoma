@@ -502,6 +502,12 @@ export const tenantSettingsApi = {
   getMap: () => api.get('/admin/settings/tenant/map')
 }
 
+// Subscription API - Backend: /api/v1/admin/subscription
+export const subscriptionApi = {
+  get: () => api.get('/admin/subscription'),
+  changePlan: (plan) => api.post('/admin/subscription/plan', { plan })
+}
+
 // Audit Logs API - Backend: /api/v1/admin/audit-logs
 export const auditLogsApi = {
   getAll: (params) => api.get('/admin/audit-logs', { params }),
