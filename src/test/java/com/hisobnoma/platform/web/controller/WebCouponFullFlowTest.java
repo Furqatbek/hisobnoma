@@ -81,6 +81,7 @@ class WebCouponFullFlowTest {
     @Autowired private PromotionRepository promotionRepository;
     @Autowired private CouponRepository couponRepository;
     @Autowired private CouponRedemptionRepository redemptionRepository;
+    @Autowired private com.hisobnoma.platform.web.service.WebCouponListService couponListService;
 
     private static final String VALIDATE_URL = "/api/v1/web/cart/validate-coupon";
     private static final String CHECKOUT_URL = "/api/v1/web/orders";
@@ -404,5 +405,110 @@ class WebCouponFullFlowTest {
         WebOrder order = orderRepository.findByIdAndTenantId(orderId, tenant.getId()).orElseThrow();
         assertEquals(0, new BigDecimal("31000.0000").compareTo(order.getTotalAmount()));
         assertNotNull(order.getArInvoiceId());
+    }
+
+    // ---- staff-issued personal coupons ----
+
+    private Promotion savePersonalPromotion() {
+        return promotionRepository.saveAndFlush(Promotion.builder()
+                .code("PERSONAL-PROMO").name("Personal 5k")
+                .type(PromotionType.FIXED_AMOUNT_OFF)
+                .discountValue(new BigDecimal("5000"))
+                .channel(PromotionChannel.WEB)
+                .requiresCoupon(true)
+                .tenantId(tenant.getId())
+                .build());
+    }
+
+    private WebCustomer saveWebCustomer(String phone, String name) {
+        return webCustomerRepository.saveAndFlush(WebCustomer.builder()
+                .tenantId(tenant.getId()).phone(phone).name(name).build());
+    }
+
+    private RequestPostProcessor authWith(String... permissions) {
+        UserPrincipal principal = new UserPrincipal(
+                adminUser.getId(), adminUser.getUsername(), "admin123", tenant.getId(),
+                true, true,
+                java.util.Arrays.stream(permissions)
+                        .map(SimpleGrantedAuthority::new)
+                        .map(a -> (org.springframework.security.core.GrantedAuthority) a)
+                        .toList());
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities());
+        return authentication(auth);
+    }
+
+    @Test
+    void staffIssuedPersonalCoupon_boundListedAndAppliesAtCheckout() throws Exception {
+        Promotion promo = savePersonalPromotion();
+        WebCustomer bound = saveWebCustomer("998901111111", "Bound");
+        WebCustomer other = saveWebCustomer("998902222222", "Other");
+
+        MvcResult result = mockMvc.perform(post("/api/v1/web-customers/" + bound.getId() + "/coupons")
+                        .with(authWith("POS_COUPON_CREATE"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                com.hisobnoma.platform.web.dto.IssueCouponRequest.builder()
+                                        .promotionId(promo.getId()).validityDays(10)
+                                        .sendSms(false).note("VIP").build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.code", not(emptyString())))
+                .andReturn();
+        String code = objectMapper.readTree(result.getResponse().getContentAsString())
+                .at("/data/code").asText();
+
+        Coupon coupon = couponRepository.findByCodeAndTenantId(code, tenant.getId()).orElseThrow();
+        assertEquals(bound.getId(), coupon.getWebCustomerId(), "Coupon must be web-bound to the target customer");
+        assertEquals(1, coupon.getMaxUses(), "Personal coupons are single-use");
+        assertEquals(java.time.LocalDate.now().plusDays(10), coupon.getEndDate());
+
+        // Visible only to the bound customer
+        List<String> boundCodes = couponListService
+                .getAvailableCoupons(tenant.getId(), bound.getId())
+                .stream().map(com.hisobnoma.platform.web.dto.PublicCouponDto::getCode).toList();
+        List<String> otherCodes = couponListService
+                .getAvailableCoupons(tenant.getId(), other.getId())
+                .stream().map(com.hisobnoma.platform.web.dto.PublicCouponDto::getCode).toList();
+        assertTrue(boundCodes.contains(code), "Bound customer should see the personal coupon");
+        assertFalse(otherCodes.contains(code), "Other customers must not see the personal coupon");
+
+        // And it works at checkout: 12000 - 5000
+        Long orderId = checkout("+998901111111", "1", code);
+        WebOrder order = orderRepository.findByIdAndTenantId(orderId, tenant.getId()).orElseThrow();
+        assertEquals(0, new BigDecimal("5000").compareTo(order.getCouponDiscount()));
+        assertEquals(0, new BigDecimal("7000.0000").compareTo(order.getTotalAmount()));
+    }
+
+    @Test
+    void staffIssuedSegmentCoupons_onePerCustomerInSegment() throws Exception {
+        Promotion promo = savePersonalPromotion();
+        WebCustomer first = saveWebCustomer("998903333333", "First");
+        WebCustomer second = saveWebCustomer("998904444444", "Second");
+
+        mockMvc.perform(post("/api/v1/web-customers/segments/NEVER_ORDERED/coupons")
+                        .with(authWith("POS_COUPON_CREATE"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                com.hisobnoma.platform.web.dto.IssueCouponRequest.builder()
+                                        .promotionId(promo.getId()).sendSms(false).build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.issued", is(2)));
+
+        assertEquals(1, couponListService.getAvailableCoupons(tenant.getId(), first.getId()).size());
+        assertEquals(1, couponListService.getAvailableCoupons(tenant.getId(), second.getId()).size());
+    }
+
+    @Test
+    void issueCoupon_requiresPosCouponCreatePermission() throws Exception {
+        Promotion promo = savePersonalPromotion();
+        WebCustomer bound = saveWebCustomer("998905555555", "NoPerm");
+
+        mockMvc.perform(post("/api/v1/web-customers/" + bound.getId() + "/coupons")
+                        .with(authWith("WEB_ORDER_VIEW"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                com.hisobnoma.platform.web.dto.IssueCouponRequest.builder()
+                                        .promotionId(promo.getId()).sendSms(false).build())))
+                .andExpect(status().isForbidden());
     }
 }
