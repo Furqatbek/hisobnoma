@@ -198,11 +198,30 @@ class AuthControllerFullFlowTest {
     // ---- GET /api/v1/auth/users/list ----
 
     @Test
-    void getActiveUsers_publicEndpoint_returnsUserList() throws Exception {
-        mockMvc.perform(get("/api/v1/auth/users/list"))
+    void getActiveUsers_withTenantHeader_returnsOnlyThatTenantsUsers() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/users/list")
+                        .header("X-Tenant-ID", tenant.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data[0].username").isNotEmpty());
+    }
+
+    @Test
+    void getActiveUsers_withoutTenant_failsClosed() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/users/list"))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void getActiveUsers_otherTenant_doesNotSeeThisTenantsUsers() throws Exception {
+        Tenant other = tenantRepository.saveAndFlush(Tenant.builder()
+                .name("Other Tenant").code("FULLFLOW_AUTH2").active(true)
+                .maxUsers(100).maxLocations(10).build());
+
+        mockMvc.perform(get("/api/v1/auth/users/list")
+                        .header("X-Tenant-ID", other.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.username=='authflowuser')]").isEmpty());
     }
 
     // ---- POST /api/v1/auth/refresh ----

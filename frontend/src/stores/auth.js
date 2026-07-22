@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/services/api'
-import { getAccessToken, setTokens, clearTokens, setRememberMe } from '@/services/tokenStorage'
+import { getAccessToken, setTokens, clearTokens, setRememberMe, setLastTenantId } from '@/services/tokenStorage'
 import router from '@/router'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -41,6 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { accessToken, refreshToken, user: userData } = response.data.data
 
       setTokens(accessToken, refreshToken)
+      setLastTenantId(userData?.tenantId)
       user.value = userData
 
       router.push('/dashboard')
@@ -64,6 +65,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { accessToken, refreshToken, user: userData } = response.data.data
 
       setTokens(accessToken, refreshToken)
+      setLastTenantId(userData?.tenantId)
       user.value = userData
 
       router.push('/dashboard')

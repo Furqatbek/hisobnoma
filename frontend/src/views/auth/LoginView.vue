@@ -45,6 +45,10 @@ onMounted(async () => {
   try {
     const res = await authApi.getUsersList()
     users.value = unwrapList(res)
+    if (!users.value.length) {
+      // No known tenant yet (first visit on this device) or no users — password login
+      step.value = 'password'
+    }
   } catch (error) {
     console.error('Failed to load users:', error)
     // Fall back to password login if user list fails

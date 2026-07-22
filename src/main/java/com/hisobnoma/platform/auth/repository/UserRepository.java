@@ -48,8 +48,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByTenantIdAndEnabledTrue(Long tenantId);
 
-    @Query("SELECT u FROM User u WHERE u.enabled = true ORDER BY u.firstName, u.username")
-    List<User> findAllActiveUsers();
+    @Query("SELECT u FROM User u WHERE u.tenantId = :tenantId AND u.enabled = true "
+            + "ORDER BY u.firstName, u.username")
+    List<User> findAllActiveUsersByTenantId(@Param("tenantId") Long tenantId);
 
     @Query("SELECT u.id FROM User u WHERE u.tenantId = :tenantId AND u.enabled = true")
     List<Long> findActiveUserIdsByTenantId(@Param("tenantId") Long tenantId);

@@ -39,3 +39,18 @@ export function clearTokens() {
   sessionStorage.removeItem('accessToken')
   sessionStorage.removeItem('refreshToken')
 }
+
+/**
+ * Tenant of the last successful login. Kept in localStorage (survives logout)
+ * so the pre-auth PIN login screen can request this tenant's user list —
+ * the backend requires X-Tenant-ID on /auth/users/list and fails closed.
+ */
+export function setLastTenantId(tenantId) {
+  if (tenantId != null) {
+    localStorage.setItem('lastTenantId', String(tenantId))
+  }
+}
+
+export function getLastTenantId() {
+  return localStorage.getItem('lastTenantId')
+}

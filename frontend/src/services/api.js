@@ -1,6 +1,6 @@
 import axios from 'axios'
 import router from '@/router'
-import { getAccessToken, getRefreshToken, setTokens, clearTokens } from '@/services/tokenStorage'
+import { getAccessToken, getRefreshToken, setTokens, clearTokens, getLastTenantId } from '@/services/tokenStorage'
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -111,7 +111,12 @@ export function unwrapPage(response) {
 export const authApi = {
   login: (credentials) => api.post('/auth/login', credentials),
   pinLogin: (credentials) => api.post('/auth/pin-login', credentials),
-  getUsersList: () => api.get('/auth/users/list'),
+  // Pre-auth PIN screen: the backend requires X-Tenant-ID here (fails closed),
+  // so send the tenant remembered from the last successful login.
+  getUsersList: () => {
+    const tenantId = getLastTenantId()
+    return api.get('/auth/users/list', tenantId ? { headers: { 'X-Tenant-ID': tenantId } } : {})
+  },
   setPin: (pin) => api.put('/auth/set-pin', { pin }),
   logout: () => api.post('/auth/logout'),
   refresh: (refreshToken) => api.post('/auth/refresh', { refreshToken }),

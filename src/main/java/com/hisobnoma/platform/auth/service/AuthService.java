@@ -15,6 +15,7 @@ import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.exception.UnauthorizedException;
 import com.hisobnoma.platform.common.exception.ValidationException;
 import com.hisobnoma.platform.common.repository.TenantRepository;
+import com.hisobnoma.platform.common.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -121,7 +122,13 @@ public class AuthService {
     }
 
     public List<UserListItem> getActiveUserList() {
-        return userRepository.findAllActiveUsers().stream()
+        // Pre-auth endpoint: tenant comes from the X-Tenant-ID header (or a still-valid
+        // JWT). Fail closed — without a tenant this would list every tenant's staff.
+        Long tenantId = TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            throw new BusinessException("X-Tenant-ID header is required", "TENANT_REQUIRED");
+        }
+        return userRepository.findAllActiveUsersByTenantId(tenantId).stream()
                 .map(u -> {
                     String initials = "";
                     if (u.getFirstName() != null && !u.getFirstName().isEmpty()) {
