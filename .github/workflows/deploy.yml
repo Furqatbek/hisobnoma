@@ -195,7 +195,9 @@ jobs:
     if: github.ref == 'refs/heads/main' || inputs.environment == 'staging'
     environment:
       name: staging
-      url: https://staging.hisobnoma.uz
+      # Override with a STAGING_URL repository variable; default matches the domain the
+      # bundled nginx config + TLS certs actually serve (temurmchj.uz).
+      url: ${{ vars.STAGING_URL || 'https://staging.temurmchj.uz' }}
 
     steps:
       - name: Checkout code
@@ -216,22 +218,27 @@ jobs:
             # Deploy with zero-downtime
             docker compose -f docker-compose.prod.yml up -d --no-deps app
 
-            # Wait for health check
-            timeout 120 bash -c 'until curl -sf http://localhost:8080/actuator/health; do sleep 5; done'
+            # Wait for the container to report healthy. The app publishes no host port
+            # (nginx reaches it on the compose network), so curl to localhost:8080 on the
+            # host can never succeed — use the image's own HEALTHCHECK status instead.
+            timeout 180 bash -c 'until [ -n "$(docker ps -q --filter label=com.docker.compose.service=app --filter health=healthy)" ]; do sleep 5; done'
 
             # Cleanup old images
             docker image prune -f
 
       - name: Run smoke tests
+        env:
+          BASE_URL: ${{ vars.STAGING_URL || 'https://staging.temurmchj.uz' }}
         run: |
           # Wait for deployment
           sleep 30
 
           # Test health endpoint
-          curl -sf https://staging.hisobnoma.uz/actuator/health || exit 1
+          curl -sf "$BASE_URL/actuator/health" || exit 1
 
-          # Test API endpoint
-          curl -sf https://staging.hisobnoma.uz/api/v1/health || exit 1
+          # Test the storefront through nginx (there is no /api/v1/health endpoint;
+          # authenticated API routes cannot be smoke-tested unauthenticated)
+          curl -sf "$BASE_URL/" -o /dev/null || exit 1
 
       - name: Notify on success
         if: success()
@@ -263,7 +270,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || inputs.environment == 'production'
     environment:
       name: production
-      url: https://hisobnoma.uz
+      # Override with a PRODUCTION_URL repository variable; default matches the domain the
+      # bundled nginx config + TLS certs actually serve (temurmchj.uz).
+      url: ${{ vars.PRODUCTION_URL || 'https://temurmchj.uz' }}
 
     steps:
       - name: Checkout code
@@ -291,14 +300,14 @@ jobs:
             # Pull latest images
             docker compose -f docker-compose.prod.yml pull
 
-            # Blue-green deployment
+            # Blue-green deployment (requires the app service to have NO pinned
+            # container_name — compose cannot scale a fixed-name service)
             docker compose -f docker-compose.prod.yml up -d --no-deps --scale app=2 app
 
-            # Wait for new instances
-            sleep 30
-
-            # Health check
-            timeout 120 bash -c 'until curl -sf http://localhost:8080/actuator/health; do sleep 5; done'
+            # Wait until BOTH instances report healthy. The app publishes no host port
+            # (nginx reaches it on the compose network), so curl to localhost:8080 on the
+            # host can never succeed — use the image's own HEALTHCHECK status instead.
+            timeout 240 bash -c 'until [ "$(docker ps -q --filter label=com.docker.compose.service=app --filter health=healthy | wc -l)" -ge 2 ]; do sleep 5; done'
 
             # Scale down to 1 instance
             docker compose -f docker-compose.prod.yml up -d --no-deps --scale app=1 app
@@ -307,15 +316,18 @@ jobs:
             docker image prune -f
 
       - name: Verify deployment
+        env:
+          BASE_URL: ${{ vars.PRODUCTION_URL || 'https://temurmchj.uz' }}
         run: |
           # Wait for deployment
           sleep 30
 
           # Test health endpoint
-          curl -sf https://hisobnoma.uz/actuator/health || exit 1
+          curl -sf "$BASE_URL/actuator/health" || exit 1
 
-          # Test API endpoints
-          curl -sf https://hisobnoma.uz/api/v1/health || exit 1
+          # Test the storefront through nginx (there is no /api/v1/health endpoint;
+          # authenticated API routes cannot be smoke-tested unauthenticated)
+          curl -sf "$BASE_URL/" -o /dev/null || exit 1
 
       - name: Create release notes
         if: startsWith(github.ref, 'refs/tags/v')
