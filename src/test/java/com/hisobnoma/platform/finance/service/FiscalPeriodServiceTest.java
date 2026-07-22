@@ -350,7 +350,7 @@ class FiscalPeriodServiceTest {
 
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
-        when(fiscalYearRepository.findByIdWithPeriods(1L)).thenReturn(Optional.of(fiscalYear));
+        when(fiscalYearRepository.findByIdWithPeriods(1L, TENANT_ID)).thenReturn(Optional.of(fiscalYear));
         when(fiscalYearRepository.save(any(FiscalYear.class))).thenReturn(fiscalYear);
         when(fiscalYearMapper.toDto(any(FiscalYear.class))).thenReturn(closedYearDto);
 
@@ -372,7 +372,7 @@ class FiscalPeriodServiceTest {
 
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
-        when(fiscalYearRepository.findByIdWithPeriods(1L)).thenReturn(Optional.of(fiscalYear));
+        when(fiscalYearRepository.findByIdWithPeriods(1L, TENANT_ID)).thenReturn(Optional.of(fiscalYear));
 
         // When/Then
         assertThrows(BusinessException.class, () -> fiscalPeriodService.closeFiscalYear(1L));
@@ -385,7 +385,7 @@ class FiscalPeriodServiceTest {
 
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
-        when(fiscalYearRepository.findByIdWithPeriods(1L)).thenReturn(Optional.of(fiscalYear));
+        when(fiscalYearRepository.findByIdWithPeriods(1L, TENANT_ID)).thenReturn(Optional.of(fiscalYear));
 
         // When/Then
         assertThrows(BusinessException.class, () -> fiscalPeriodService.closeFiscalYear(1L));

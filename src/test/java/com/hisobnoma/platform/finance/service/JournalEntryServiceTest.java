@@ -579,7 +579,7 @@ class JournalEntryServiceTest {
 
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
-        when(journalEntryRepository.findByIdWithLines(1L)).thenReturn(Optional.of(journalEntry));
+        when(journalEntryRepository.findByIdWithLines(1L, TENANT_ID)).thenReturn(Optional.of(journalEntry));
         doNothing().when(fiscalPeriodService).validatePostingAllowed(any(LocalDate.class));
         doNothing().when(accountService).updateAccountBalance(any(), any(), any());
         when(journalEntryRepository.save(any(JournalEntry.class))).thenReturn(journalEntry);
@@ -601,7 +601,7 @@ class JournalEntryServiceTest {
         journalEntry.setStatus(JournalStatus.POSTED);
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
-        when(journalEntryRepository.findByIdWithLines(1L)).thenReturn(Optional.of(journalEntry));
+        when(journalEntryRepository.findByIdWithLines(1L, TENANT_ID)).thenReturn(Optional.of(journalEntry));
 
         // When/Then
         BusinessException ex = assertThrows(BusinessException.class,
@@ -615,7 +615,7 @@ class JournalEntryServiceTest {
         journalEntry.setStatus(JournalStatus.REVERSED);
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
-        when(journalEntryRepository.findByIdWithLines(1L)).thenReturn(Optional.of(journalEntry));
+        when(journalEntryRepository.findByIdWithLines(1L, TENANT_ID)).thenReturn(Optional.of(journalEntry));
 
         // When/Then
         BusinessException ex = assertThrows(BusinessException.class,
@@ -628,7 +628,7 @@ class JournalEntryServiceTest {
         // Given
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
-        when(journalEntryRepository.findByIdWithLines(999L)).thenReturn(Optional.empty());
+        when(journalEntryRepository.findByIdWithLines(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class,
@@ -661,7 +661,7 @@ class JournalEntryServiceTest {
 
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
-        when(journalEntryRepository.findByIdWithLines(1L)).thenReturn(Optional.of(journalEntry));
+        when(journalEntryRepository.findByIdWithLines(1L, TENANT_ID)).thenReturn(Optional.of(journalEntry));
         doNothing().when(fiscalPeriodService).validatePostingAllowed(any(LocalDate.class));
         when(fiscalPeriodService.getPeriodEntityByDate(any(LocalDate.class))).thenReturn(fiscalPeriod);
         when(journalEntryRepository.findMaxEntryNumberForPrefix(any(), eq(TENANT_ID))).thenReturn(1);
@@ -692,7 +692,7 @@ class JournalEntryServiceTest {
         journalEntry.setStatus(JournalStatus.DRAFT);
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
-        when(journalEntryRepository.findByIdWithLines(1L)).thenReturn(Optional.of(journalEntry));
+        when(journalEntryRepository.findByIdWithLines(1L, TENANT_ID)).thenReturn(Optional.of(journalEntry));
 
         // When/Then
         BusinessException ex = assertThrows(BusinessException.class,
@@ -707,7 +707,7 @@ class JournalEntryServiceTest {
         journalEntry.setReversingEntryId(99L); // already has a reversing entry
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(securityContextHelper.getCurrentUserId()).thenReturn(USER_ID);
-        when(journalEntryRepository.findByIdWithLines(1L)).thenReturn(Optional.of(journalEntry));
+        when(journalEntryRepository.findByIdWithLines(1L, TENANT_ID)).thenReturn(Optional.of(journalEntry));
 
         // When/Then
         BusinessException ex = assertThrows(BusinessException.class,
@@ -803,7 +803,7 @@ class JournalEntryServiceTest {
     void getJournalEntryWithLines_found_returnsDtoWithLines() {
         // Given
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
-        when(journalEntryRepository.findByIdWithLines(1L)).thenReturn(Optional.of(journalEntry));
+        when(journalEntryRepository.findByIdWithLines(1L, TENANT_ID)).thenReturn(Optional.of(journalEntry));
         when(journalEntryMapper.toDto(journalEntry)).thenReturn(journalEntryDto);
 
         // When
@@ -818,7 +818,8 @@ class JournalEntryServiceTest {
     @Test
     void getJournalEntryWithLines_notFound_throwsNotFoundException() {
         // Given
-        when(journalEntryRepository.findByIdWithLines(999L)).thenReturn(Optional.empty());
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(journalEntryRepository.findByIdWithLines(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class,

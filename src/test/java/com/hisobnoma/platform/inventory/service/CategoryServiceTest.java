@@ -127,7 +127,7 @@ class CategoryServiceTest {
     @Test
     void getCategory_found_returnsDto() {
         // Given
-        when(categoryRepository.findByIdWithChildren(1L)).thenReturn(Optional.of(rootCategory));
+        when(categoryRepository.findByIdWithChildren(1L, TENANT_ID)).thenReturn(Optional.of(rootCategory));
         when(categoryMapper.toDtoWithChildren(rootCategory)).thenReturn(rootCategoryDto);
 
         // When
@@ -141,7 +141,7 @@ class CategoryServiceTest {
     @Test
     void getCategory_notFound_throwsNotFoundException() {
         // Given
-        when(categoryRepository.findByIdWithChildren(999L)).thenReturn(Optional.empty());
+        when(categoryRepository.findByIdWithChildren(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> categoryService.getCategory(999L));
@@ -292,7 +292,7 @@ class CategoryServiceTest {
                 .tenantId(TENANT_ID)
                 .build();
 
-        when(categoryRepository.findByIdWithChildren(3L)).thenReturn(Optional.of(leafCategory));
+        when(categoryRepository.findByIdWithChildren(3L, TENANT_ID)).thenReturn(Optional.of(leafCategory));
 
         // When
         categoryService.deleteCategory(3L);
@@ -304,7 +304,7 @@ class CategoryServiceTest {
     @Test
     void deleteCategory_hasChildren_throwsValidationException() {
         // Given
-        when(categoryRepository.findByIdWithChildren(1L)).thenReturn(Optional.of(rootCategory));
+        when(categoryRepository.findByIdWithChildren(1L, TENANT_ID)).thenReturn(Optional.of(rootCategory));
 
         // When/Then
         assertThrows(ValidationException.class, () -> categoryService.deleteCategory(1L));
@@ -314,7 +314,7 @@ class CategoryServiceTest {
     @Test
     void deleteCategory_notFound_throwsNotFoundException() {
         // Given
-        when(categoryRepository.findByIdWithChildren(999L)).thenReturn(Optional.empty());
+        when(categoryRepository.findByIdWithChildren(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> categoryService.deleteCategory(999L));

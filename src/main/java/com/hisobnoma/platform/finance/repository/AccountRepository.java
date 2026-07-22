@@ -48,8 +48,9 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     boolean existsByCodeAndTenantId(String code, Long tenantId);
 
-    @Query("SELECT a FROM Account a LEFT JOIN FETCH a.childAccounts WHERE a.id = :id")
-    Optional<Account> findByIdWithChildren(@Param("id") Long id);
+    @Query("SELECT a FROM Account a LEFT JOIN FETCH a.childAccounts "
+            + "WHERE a.id = :id AND a.tenantId = :tenantId")
+    Optional<Account> findByIdWithChildren(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     @Query("SELECT a FROM Account a WHERE a.tenantId = :tenantId AND a.controlAccount = true ORDER BY a.code")
     List<Account> findControlAccountsByTenantId(@Param("tenantId") Long tenantId);

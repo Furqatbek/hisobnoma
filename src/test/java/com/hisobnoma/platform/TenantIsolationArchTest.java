@@ -108,6 +108,91 @@ class TenantIsolationArchTest {
     }
 
     /**
+     * Call sites allowed to declare a tenant-less {@code @Query} on a
+     * tenant-scoped repository. Format: "RepositoryName.methodName". Add
+     * entries only with a justification comment — an unscoped JPQL query on a
+     * tenant-aware entity is the bug class behind the users-list leak,
+     * ProductService.getProduct and the role-code fallback.
+     */
+    private static final Set<String> QUERY_ALLOWLIST = Set.of(
+            // Login path — the tenant is not known until the user is resolved
+            "UserRepository.findByUsernameWithRolesAndPermissions",
+            "UserRepository.findByPhoneWithRolesAndPermissions",
+            // Self-lookup: the id comes from the caller's own JWT
+            "UserRepository.findByIdWithRolesAndPermissions",
+            "MobileAlertRepository.markAsRead",
+            // Global uniqueness probes — only isPresent() is used, no row data returned
+            "ProductRepository.findBySku",
+            "ProductRepository.findByBarcode",
+            "ProductVariantRepository.findBySku",
+            "ProductVariantRepository.findByBarcode",
+            // Scoped by a parent row the service already loaded via findByIdAndTenantId
+            "DeliveryVillageRepository.countByRegionId",
+            "FiscalPeriodRepository.countOpenPeriodsByFiscalYear",
+            "FiscalPeriodRepository.findByFiscalYearAndPeriodNumber",
+            "FiscalPeriodRepository.findByFiscalYearId",
+            "InventoryCountLineRepository.countCountedLinesByCountId",
+            "InventoryCountLineRepository.countTotalLinesByCountId",
+            "InventoryCountLineRepository.findMaxLineNumberByInventoryCountId",
+            "JournalLineRepository.findByJournalEntryId",
+            "ProductAttributeRepository.countByProductId",
+            "ProductImageRepository.clearPrimaryForProduct",
+            "ProductImageRepository.countByProductId",
+            "ProductImageRepository.findPrimaryImageUrlsByProductIds",
+            "ProductVariantRepository.countByProductId",
+            "PurchaseOrderLineRepository.findMaxLineNumberByPurchaseOrderId",
+            "ReceivingLineRepository.findMaxLineNumberByReceivingOrderId",
+            "ReceivingLineRepository.getTotalReceivedQuantityForPoLine",
+            "UnitOfMeasureRepository.findByBaseUomId",
+            // Cross-tenant by design: schedulers/system fan-out that use each row's own tenantId
+            "DeviceTokenRepository.deactivateDevice",
+            "DeviceTokenRepository.deactivateInactiveDevices",
+            "DeviceTokenRepository.findActiveByUserIds",
+            "DeviceTokenRepository.updateLastActiveAt",
+            "MobileAlertRepository.deleteExpiredAlerts",
+            "MobileAlertRepository.findUnsentPushAlerts",
+            "POSTransactionRepository.findAllCompletedCreditWithoutArInvoice",
+            "POSTransactionRepository.findAllCompletedWithoutGlPosting",
+            "ReportExecutionRepository.findStaleRunningExecutions",
+            "ReportExecutionRepository.updateCompletedExecution",
+            "ReportExecutionRepository.updateFailedExecution",
+            "ReportScheduleRepository.findSchedulesDueForExecution",
+            "ReportScheduleRepository.updateExecutionStatus",
+            "StockReservationRepository.expireReservations",
+            // Shared system rows (tenant_id IS NULL seeds)
+            "ReportDefinitionRepository.findAllSystemReports"
+    );
+
+    @Test
+    void jpqlQueries_onTenantScopedRepositories_scopeTenant() throws Exception {
+        Set<String> tenantScopedRepos = findTenantScopedRepositories();
+        Set<String> violations = new TreeSet<>();
+
+        for (String repoName : tenantScopedRepos) {
+            Class<?> repoClass = Class.forName(repoName);
+            for (var method : repoClass.getDeclaredMethods()) {
+                var query = method.getAnnotation(org.springframework.data.jpa.repository.Query.class);
+                if (query == null) {
+                    continue;
+                }
+                String jpql = query.value().toLowerCase();
+                if (jpql.contains("tenantid") || jpql.contains("tenant_id")) {
+                    continue;
+                }
+                String origin = repoClass.getSimpleName() + "." + method.getName();
+                if (!QUERY_ALLOWLIST.contains(origin)) {
+                    violations.add(origin);
+                }
+            }
+        }
+
+        assertTrue(violations.isEmpty(),
+                "@Query on a tenant-scoped repository without a tenantId predicate "
+                        + "(add the predicate, or allowlist with a justification):\n  "
+                        + String.join("\n  ", violations));
+    }
+
+    /**
      * Repository interfaces whose entity type extends TenantAwareEntity,
      * resolved from the real classpath via Spring's ResolvableType.
      */

@@ -51,7 +51,8 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserDto getUser(Long id) {
-        User user = userRepository.findByIdWithRolesAndPermissions(id)
+        User user = userRepository.findByIdAndTenantIdWithRolesAndPermissions(
+                        id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("User", id));
 
         return userMapper.toDto(user);
@@ -158,10 +159,9 @@ public class UserService {
 
     @Transactional
     public UserDto assignRoles(Long id, Set<String> roleCodes) {
-        User user = userRepository.findByIdWithRolesAndPermissions(id)
-                .orElseThrow(() -> new NotFoundException("User", id));
-
         Long tenantId = securityContextHelper.getCurrentTenantId();
+        User user = userRepository.findByIdAndTenantIdWithRolesAndPermissions(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("User", id));
 
         Set<Role> roles = new HashSet<>();
         for (String roleCode : roleCodes) {

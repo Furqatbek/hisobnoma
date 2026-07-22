@@ -62,7 +62,8 @@ public class FiscalPeriodService {
 
     @Transactional(readOnly = true)
     public FiscalYearDto getFiscalYearWithPeriods(Long id) {
-        FiscalYear fiscalYear = fiscalYearRepository.findByIdWithPeriods(id)
+        FiscalYear fiscalYear = fiscalYearRepository
+                .findByIdWithPeriods(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Fiscal year not found with id: " + id));
         return fiscalYearMapper.toDto(fiscalYear);
     }
@@ -272,7 +273,7 @@ public class FiscalPeriodService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Long userId = securityContextHelper.getCurrentUserId();
 
-        FiscalYear fiscalYear = fiscalYearRepository.findByIdWithPeriods(id)
+        FiscalYear fiscalYear = fiscalYearRepository.findByIdWithPeriods(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Fiscal year not found with id: " + id));
 
         if (fiscalYear.isClosed()) {

@@ -26,9 +26,6 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     @Query("SELECT v FROM ProductVariant v WHERE v.barcode = :barcode")
     Optional<ProductVariant> findByBarcode(@Param("barcode") String barcode);
 
-    @Query("SELECT v FROM ProductVariant v LEFT JOIN FETCH v.product WHERE v.id = :id")
-    Optional<ProductVariant> findByIdWithProduct(@Param("id") Long id);
-
     List<ProductVariant> findByProductIdAndActiveTrue(Long productId);
 
     boolean existsBySkuAndTenantId(String sku, Long tenantId);

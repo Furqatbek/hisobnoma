@@ -41,8 +41,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.roles r LEFT JOIN FETCH r.permissions WHERE u.phone = :phone")
     Optional<User> findByPhoneWithRolesAndPermissions(@Param("phone") String phone);
 
+    /** Self-lookup only (id from the caller's own JWT) — admin flows must use the tenant-scoped variant. */
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.roles r LEFT JOIN FETCH r.permissions WHERE u.id = :id")
     Optional<User> findByIdWithRolesAndPermissions(@Param("id") Long id);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.roles r LEFT JOIN FETCH r.permissions "
+            + "WHERE u.id = :id AND u.tenantId = :tenantId")
+    Optional<User> findByIdAndTenantIdWithRolesAndPermissions(
+            @Param("id") Long id, @Param("tenantId") Long tenantId);
 
     long countByTenantId(Long tenantId);
 

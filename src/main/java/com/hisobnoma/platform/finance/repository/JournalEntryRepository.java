@@ -41,8 +41,9 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, Long
     @Query("SELECT je FROM JournalEntry je WHERE je.tenantId = :tenantId AND je.referenceType = :referenceType AND je.referenceId = :referenceId")
     List<JournalEntry> findByReferenceAndTenantId(@Param("tenantId") Long tenantId, @Param("referenceType") String referenceType, @Param("referenceId") Long referenceId);
 
-    @Query("SELECT je FROM JournalEntry je LEFT JOIN FETCH je.lines WHERE je.id = :id")
-    Optional<JournalEntry> findByIdWithLines(@Param("id") Long id);
+    @Query("SELECT je FROM JournalEntry je LEFT JOIN FETCH je.lines "
+            + "WHERE je.id = :id AND je.tenantId = :tenantId")
+    Optional<JournalEntry> findByIdWithLines(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     @Query("SELECT je FROM JournalEntry je WHERE je.tenantId = :tenantId AND " +
            "(LOWER(je.description) LIKE LOWER(CONCAT('%', :search, '%')) OR je.entryNumber LIKE CONCAT('%', :search, '%'))")

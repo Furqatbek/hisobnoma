@@ -70,8 +70,7 @@ public class JournalEntryService {
     @Transactional(readOnly = true)
     public JournalEntryDto getJournalEntryWithLines(Long id) {
         Long tenantId = securityContextHelper.getCurrentTenantId();
-        JournalEntry entry = journalEntryRepository.findByIdWithLines(id)
-                .filter(e -> e.getTenantId().equals(tenantId))
+        JournalEntry entry = journalEntryRepository.findByIdWithLines(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Journal entry not found with id: " + id));
         return journalEntryMapper.toDto(entry);
     }
@@ -165,8 +164,7 @@ public class JournalEntryService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Long userId = securityContextHelper.getCurrentUserId();
 
-        JournalEntry entry = journalEntryRepository.findByIdWithLines(id)
-                .filter(e -> e.getTenantId().equals(tenantId))
+        JournalEntry entry = journalEntryRepository.findByIdWithLines(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Journal entry not found with id: " + id));
 
         if (!entry.canPost()) {
@@ -211,8 +209,7 @@ public class JournalEntryService {
         Long tenantId = securityContextHelper.getCurrentTenantId();
         Long userId = securityContextHelper.getCurrentUserId();
 
-        JournalEntry originalEntry = journalEntryRepository.findByIdWithLines(id)
-                .filter(e -> e.getTenantId().equals(tenantId))
+        JournalEntry originalEntry = journalEntryRepository.findByIdWithLines(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Journal entry not found with id: " + id));
 
         if (!originalEntry.canReverse()) {

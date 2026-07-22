@@ -133,11 +133,13 @@ class CategoryRepositoryTest {
         persistCategory("CHILD-WC", "Child", 1L, true, 0, root);
         em.clear();
 
-        Optional<Category> result = categoryRepository.findByIdWithChildren(root.getId());
+        Optional<Category> result = categoryRepository.findByIdWithChildren(root.getId(), 1L);
 
         assertTrue(result.isPresent());
         assertFalse(result.get().getChildren().isEmpty());
         assertEquals(1, result.get().getChildren().size());
+        assertTrue(categoryRepository.findByIdWithChildren(root.getId(), 2L).isEmpty(),
+                "Another tenant must not load this category by id");
     }
 
     @Test

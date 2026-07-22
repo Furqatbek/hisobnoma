@@ -119,7 +119,7 @@ class UserServiceTest {
     @Test
     void getUser_existingId_returnsUserDto() {
         // Given
-        when(userRepository.findByIdWithRolesAndPermissions(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantIdWithRolesAndPermissions(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
         when(userMapper.toDto(sampleUser)).thenReturn(sampleDto);
 
         // When
@@ -133,7 +133,7 @@ class UserServiceTest {
     @Test
     void getUser_nonExistentId_throwsNotFoundException() {
         // Given
-        when(userRepository.findByIdWithRolesAndPermissions(999L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndTenantIdWithRolesAndPermissions(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When / Then
         assertThrows(NotFoundException.class, () -> userService.getUser(999L));
@@ -293,7 +293,7 @@ class UserServiceTest {
         // Given
         Role cashier = Role.builder().code("CASHIER").build();
         Role manager = Role.builder().code("MANAGER").build();
-        when(userRepository.findByIdWithRolesAndPermissions(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantIdWithRolesAndPermissions(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(roleRepository.findByCodeAndTenantId("CASHIER", TENANT_ID)).thenReturn(Optional.of(cashier));
         when(roleRepository.findByCodeAndTenantId("MANAGER", TENANT_ID)).thenReturn(Optional.of(manager));
@@ -312,7 +312,7 @@ class UserServiceTest {
     @Test
     void assignRoles_invalidRoleCode_throwsNotFoundException() {
         // Given
-        when(userRepository.findByIdWithRolesAndPermissions(USER_ID)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByIdAndTenantIdWithRolesAndPermissions(USER_ID, TENANT_ID)).thenReturn(Optional.of(sampleUser));
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(roleRepository.findByCodeAndTenantId("INVALID_CODE", TENANT_ID)).thenReturn(Optional.empty());
         when(roleRepository.findSystemRoleByCode("INVALID_CODE")).thenReturn(Optional.empty());

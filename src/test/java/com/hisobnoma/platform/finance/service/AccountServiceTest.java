@@ -401,7 +401,8 @@ class AccountServiceTest {
                         .build()))
                 .build();
 
-        when(accountRepository.findByIdWithChildren(1L)).thenReturn(Optional.of(account));
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(accountRepository.findByIdWithChildren(1L, TENANT_ID)).thenReturn(Optional.of(account));
         when(accountMapper.toDtoWithChildren(account)).thenReturn(treeDto);
 
         // When
@@ -417,7 +418,8 @@ class AccountServiceTest {
     @Test
     void getAccountWithChildren_notFound_throwsNotFoundException() {
         // Given
-        when(accountRepository.findByIdWithChildren(999L)).thenReturn(Optional.empty());
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(accountRepository.findByIdWithChildren(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class,

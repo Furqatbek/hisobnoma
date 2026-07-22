@@ -52,7 +52,8 @@ public class CategoryService {
 
     @Transactional(readOnly = true)
     public CategoryDto getCategory(Long id) {
-        Category category = categoryRepository.findByIdWithChildren(id)
+        Category category = categoryRepository
+                .findByIdWithChildren(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Category", id));
         return categoryMapper.toDtoWithChildren(category);
     }
@@ -157,7 +158,8 @@ public class CategoryService {
 
     @Transactional
     public void deleteCategory(Long id) {
-        Category category = categoryRepository.findByIdWithChildren(id)
+        Category category = categoryRepository
+                .findByIdWithChildren(id, securityContextHelper.getCurrentTenantId())
                 .orElseThrow(() -> new NotFoundException("Category", id));
 
         if (category.hasChildren()) {

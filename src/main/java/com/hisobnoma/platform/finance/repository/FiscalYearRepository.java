@@ -33,8 +33,9 @@ public interface FiscalYearRepository extends JpaRepository<FiscalYear, Long> {
     @Query("SELECT fy FROM FiscalYear fy WHERE fy.tenantId = :tenantId AND :date BETWEEN fy.startDate AND fy.endDate")
     Optional<FiscalYear> findByDateAndTenantId(@Param("date") LocalDate date, @Param("tenantId") Long tenantId);
 
-    @Query("SELECT fy FROM FiscalYear fy LEFT JOIN FETCH fy.periods WHERE fy.id = :id")
-    Optional<FiscalYear> findByIdWithPeriods(@Param("id") Long id);
+    @Query("SELECT fy FROM FiscalYear fy LEFT JOIN FETCH fy.periods "
+            + "WHERE fy.id = :id AND fy.tenantId = :tenantId")
+    Optional<FiscalYear> findByIdWithPeriods(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     @Query("SELECT fy FROM FiscalYear fy WHERE fy.tenantId = :tenantId AND fy.closed = false ORDER BY fy.year DESC")
     List<FiscalYear> findOpenYearsByTenantId(@Param("tenantId") Long tenantId);

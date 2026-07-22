@@ -38,8 +38,9 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     @Query("SELECT COUNT(c) > 0 FROM Category c WHERE c.code = :code AND c.tenantId IS NULL")
     boolean existsByCodeAndTenantIdIsNull(@Param("code") String code);
 
-    @Query("SELECT c FROM Category c LEFT JOIN FETCH c.children WHERE c.id = :id")
-    Optional<Category> findByIdWithChildren(@Param("id") Long id);
+    @Query("SELECT c FROM Category c LEFT JOIN FETCH c.children "
+            + "WHERE c.id = :id AND (c.tenantId = :tenantId OR c.tenantId IS NULL)")
+    Optional<Category> findByIdWithChildren(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     @Query("SELECT c FROM Category c WHERE c.id = :id AND (c.tenantId = :tenantId OR c.tenantId IS NULL)")
     Optional<Category> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);

@@ -16,30 +16,6 @@ public interface ProductAttributeRepository extends JpaRepository<ProductAttribu
 
     List<ProductAttribute> findByProductIdAndVisibleTrueOrderBySortOrder(Long productId);
 
-    @Query("SELECT a FROM ProductAttribute a WHERE a.product.id = :productId AND a.attributeName = :attributeName")
-    Optional<ProductAttribute> findByProductIdAndAttributeName(
-            @Param("productId") Long productId,
-            @Param("attributeName") String attributeName);
-
-    @Query("SELECT a FROM ProductAttribute a WHERE a.product.id = :productId AND a.attributeGroup = :group ORDER BY a.sortOrder")
-    List<ProductAttribute> findByProductIdAndAttributeGroup(
-            @Param("productId") Long productId,
-            @Param("group") String group);
-
-    @Query("SELECT DISTINCT a.attributeGroup FROM ProductAttribute a WHERE a.product.id = :productId AND a.attributeGroup IS NOT NULL")
-    List<String> findDistinctGroupsByProductId(@Param("productId") Long productId);
-
-    @Query("SELECT a FROM ProductAttribute a WHERE a.searchable = true AND a.attributeName = :name AND a.attributeValue = :value")
-    List<ProductAttribute> findBySearchableAttribute(
-            @Param("name") String name,
-            @Param("value") String value);
-
-    @Query("SELECT DISTINCT a.attributeName FROM ProductAttribute a WHERE a.filterable = true")
-    List<String> findDistinctFilterableAttributeNames();
-
-    @Query("SELECT DISTINCT a.attributeValue FROM ProductAttribute a WHERE a.attributeName = :name AND a.filterable = true")
-    List<String> findDistinctFilterableValuesByAttributeName(@Param("name") String name);
-
     void deleteByProductId(Long productId);
 
     @Query("SELECT COUNT(a) FROM ProductAttribute a WHERE a.product.id = :productId")

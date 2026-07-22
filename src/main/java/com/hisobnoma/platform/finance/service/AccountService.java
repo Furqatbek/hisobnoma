@@ -72,7 +72,8 @@ public class AccountService {
 
     @Transactional(readOnly = true)
     public AccountDto getAccountWithChildren(Long id) {
-        Account account = accountRepository.findByIdWithChildren(id)
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        Account account = accountRepository.findByIdWithChildren(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Account not found with id: " + id));
         return accountMapper.toDtoWithChildren(account);
     }

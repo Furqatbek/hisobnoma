@@ -124,18 +124,6 @@ class ProductVariantRepositoryTest {
     }
 
     @Test
-    void findByIdWithProduct_loadsProduct() {
-        ProductVariant v = persistVariant("WP-V", "With Product", 1, true);
-        em.clear();
-
-        Optional<ProductVariant> result = productVariantRepository.findByIdWithProduct(v.getId());
-
-        assertTrue(result.isPresent());
-        assertNotNull(result.get().getProduct());
-        assertEquals("PARENT-SKU", result.get().getProduct().getSku());
-    }
-
-    @Test
     void findByProductIdAndActiveTrue_returnsOnlyActive() {
         persistVariant("ACTIVE-V", "Active", 1, true);
         persistVariant("INACTIVE-V", "Inactive", 2, false);
