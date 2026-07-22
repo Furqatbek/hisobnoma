@@ -537,12 +537,40 @@ For issues and support:
 
 ---
 
+## Production launch checklist (ops)
+
+Everything below is wired in `docker-compose.prod.yml` / `.github/workflows/deploy.yml`; these are
+the switches an operator must still set per environment:
+
+1. **GitHub repository variables** — `PRODUCTION_URL` and `STAGING_URL` (Settings → Variables).
+   The deploy workflow's environment links and smoke tests use them; defaults are
+   `https://temurmchj.uz` / `https://staging.temurmchj.uz` (the domain the bundled nginx config and
+   TLS certs serve). If you serve a different domain, also update
+   `docker/nginx/conf.d/default.conf` (`server_name` + cert paths) and re-issue certs.
+2. **Server `.env`** (in `/opt/hisobnoma`, next to the compose file) — required:
+   `DB_USERNAME`, `DB_PASSWORD`, `REDIS_PASSWORD`, `JWT_SECRET` (≥64 chars — the app refuses to
+   boot on a weak secret outside dev profiles), `GRAFANA_ADMIN_PASSWORD`.
+   Recommended: `CORS_ALLOWED_ORIGINS` (compose defaults it to the served domain — never `*`),
+   `SMS_ENABLED=true` + `SMS_API_TOKEN` (OTP login needs it), `TELEGRAM_*`, `APNS_*` when ready.
+3. **Alerting** — the `alertmanager` service substitutes `SMTP_HOST/PORT/FROM/USERNAME/PASSWORD`,
+   `ALERT_EMAIL`, `CRITICAL_ALERT_EMAIL`, `SLACK_WEBHOOK_URL` from `.env` at container start. It
+   boots with inert placeholders when unset — set them or alerts go nowhere.
+4. **Backups** — the `postgres-backup` sidecar dumps daily (`BACKUP_INTERVAL_SECONDS`, default
+   86400) into the `hisobnoma_postgres_backups` volume with `BACKUP_RETENTION_DAYS` (default 30)
+   retention. Verify a dump exists after first deploy: `docker compose -f docker-compose.prod.yml
+   exec postgres-backup ls -lh /backups`. Off-site copy (S3) still requires running
+   `scripts/backup.sh` with the `BACKUP_S3_BUCKET`/AWS vars (e.g. from host cron).
+5. **Logs** — Loki + promtail ship app/nginx/container logs; browse them in Grafana (the Loki
+   datasource is pre-provisioned).
+6. **Restore drill** — test `scripts/restore.sh` against a staging copy before you need it.
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2024-01 | Initial release |
+| 1.1.0 | 2026-07 | Alertmanager/Loki/promtail deployed; scheduled backup sidecar; scalable app service; domain-parameterized deploy verification; ops launch checklist |
 
 ---
 
-*Last updated: January 2024*
+*Last updated: July 2026*

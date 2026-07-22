@@ -36,7 +36,7 @@ services:
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
       # Pin CORS to the real frontend origin(s) in .env — the app-side default is '*'.
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://temurmchj.uz}
       TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
       RATELIMIT_REDIS: ${RATELIMIT_REDIS:-true}
       # SMS (OTP / alerts) — set SMS_ENABLED=true + token in .env to turn on.
@@ -92,7 +92,6 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
       - postgres_backups:/backups
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME:-hisobnoma}"]
@@ -142,6 +141,10 @@ services:
     image: hisobnoma/frontend:${APP_VERSION:-latest}
     container_name: hisobnoma-frontend
     restart: unless-stopped
+    environment:
+      # The frontend image's own /api fallback proxy (the edge nginx normally handles /api
+      # directly); the image default points at a non-existent "backend" host.
+      API_BACKEND_URL: http://app:8080
     networks:
       - hisobnoma-network
     deploy:
@@ -237,6 +240,131 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # ==================== Alertmanager ====================
+  # Receives alerts from Prometheus (alert_rules.yml). Alertmanager does not expand env vars
+  # natively, so an entrypoint substitutes the ${...} placeholders in alertmanager.yml with
+  # values from .env before starting. Boots with safe placeholders when SMTP/Slack are unset.
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: hisobnoma-alertmanager
+    restart: unless-stopped
+    environment:
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:-alerts@localhost}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/replace-me}
+      ALERT_EMAIL: ${ALERT_EMAIL:-ops@localhost}
+      CRITICAL_ALERT_EMAIL: ${CRITICAL_ALERT_EMAIL:-ops@localhost}
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        sed -e "s|\$${SMTP_HOST}|$${SMTP_HOST}|g" \
+            -e "s|\$${SMTP_PORT}|$${SMTP_PORT}|g" \
+            -e "s|\$${SMTP_FROM}|$${SMTP_FROM}|g" \
+            -e "s|\$${SMTP_USERNAME}|$${SMTP_USERNAME}|g" \
+            -e "s|\$${SMTP_PASSWORD}|$${SMTP_PASSWORD}|g" \
+            -e "s|\$${SLACK_WEBHOOK_URL}|$${SLACK_WEBHOOK_URL}|g" \
+            -e "s|\$${ALERT_EMAIL}|$${ALERT_EMAIL}|g" \
+            -e "s|\$${CRITICAL_ALERT_EMAIL}|$${CRITICAL_ALERT_EMAIL}|g" \
+            /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.yml
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
+    volumes:
+      - ./docker/alertmanager:/etc/alertmanager:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - hisobnoma-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  # ==================== Loki (log store) ====================
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: hisobnoma-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./docker/loki:/etc/loki:ro
+      - loki_data:/loki
+    networks:
+      - hisobnoma-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # ==================== Promtail (log shipper) ====================
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: hisobnoma-promtail
+    restart: unless-stopped
+    depends_on:
+      - loki
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./docker/promtail:/etc/promtail:ro
+      - app_logs:/var/log/app:ro
+      - nginx_logs:/var/log/nginx:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - hisobnoma-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  # ==================== Scheduled DB backups ====================
+  # Daily pg_dump into the postgres_backups volume with retention. scripts/backup.sh remains
+  # for host/manual/pre-deploy use; this sidecar covers the gap BETWEEN deploys. POSIX sh only
+  # (the postgres alpine image has no bash).
+  postgres-backup:
+    image: postgres:16-alpine
+    container_name: hisobnoma-postgres-backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-hisobnoma}
+      DB_USERNAME: ${DB_USERNAME}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "Scheduled backups: every $${BACKUP_INTERVAL_SECONDS}s, retention $${RETENTION_DAYS} days"
+        while true; do
+          ts=$$(date +%Y%m%d_%H%M%S)
+          f="/backups/hisobnoma_$${ts}.sql.gz"
+          if pg_dump -h postgres -U "$${DB_USERNAME}" -d "$${DB_NAME}" | gzip > "$$f"; then
+            echo "backup ok: $$f ($$(du -h $$f | cut -f1))"
+          else
+            echo "backup FAILED at $${ts}" >&2
+            rm -f "$$f"
+          fi
+          find /backups -name 'hisobnoma_*.sql.gz' -mtime +"$${RETENTION_DAYS}" -delete
+          sleep "$${BACKUP_INTERVAL_SECONDS}"
+        done
+    volumes:
+      - postgres_backups:/backups
+    networks:
+      - hisobnoma-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
 # ==================== Volumes ====================
 volumes:
   postgres_data:
@@ -255,6 +383,10 @@ volumes:
     name: hisobnoma_prometheus_data
   grafana_data:
     name: hisobnoma_grafana_data
+  loki_data:
+    name: hisobnoma_loki_data
+  alertmanager_data:
+    name: hisobnoma_alertmanager_data
   uploads_data:
     name: hisobnoma_uploads_data
   certbot_www:

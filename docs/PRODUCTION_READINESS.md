@@ -320,10 +320,16 @@ audit, found five launch blockers — **all fixed on this branch**:
   health-poll against an unpublished port (now waits on the Docker HEALTHCHECK), and a smoke test
   against the non-existent `/api/v1/health` (now the storefront root).
 
-**Still open from the ops audit (important, not deploy-blocking):** alertmanager/Loki configured
-but not deployed in prod compose (alerts fire into a void); no scheduled backups between deploys
-(`scripts/backup.sh` exists — add a cron/sidecar); pin `CORS_ALLOWED_ORIGINS` in the server's
-`.env`. Non-blocking code follow-ups: sequential admin push fan-out + shared default async pool
-(dedicated bounded executor recommended); staff notifications fire before checkout commits; GL
-double-post window lacks an idempotency check on `POS_SALE + referenceId`; wishlist SMS counters
-are per-JVM (bounded today by single-instance deploy).
+**Ops audit follow-ups — ✅ FIXED (this branch):** alertmanager, Loki and promtail are now
+deployed in prod compose (alertmanager's `${…}` placeholders substituted from `.env` at container
+start — it does not expand env vars natively); a `postgres-backup` sidecar dumps daily with
+retention into the backups volume (S3 off-site still via `scripts/backup.sh`);
+`CORS_ALLOWED_ORIGINS` defaults to the served domain instead of `*`; the stale
+`docker/postgres/init` mount was removed and the frontend's `API_BACKEND_URL` now points at the
+real app service. Operator switches (repo vars, `.env` values, restore drill) are collected in
+`DEPLOYMENT.md` → "Production launch checklist (ops)".
+
+**Non-blocking code follow-ups (still open):** sequential admin push fan-out + shared default
+async pool (dedicated bounded executor recommended); staff notifications fire before checkout
+commits; GL double-post window lacks an idempotency check on `POS_SALE + referenceId`; wishlist
+SMS counters are per-JVM (bounded today by single-instance deploy).
