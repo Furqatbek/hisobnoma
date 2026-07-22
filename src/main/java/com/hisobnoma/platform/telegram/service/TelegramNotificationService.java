@@ -34,7 +34,10 @@ public class TelegramNotificationService {
             return;
         }
 
-        var userOpt = userRepository.findById(userId);
+        // Tenant guard: never deliver one tenant's alert through a user of another tenant,
+        // even if a caller passes a mismatched (userId, tenantId) pair.
+        var userOpt = userRepository.findById(userId)
+                .filter(u -> tenantId != null && tenantId.equals(u.getTenantId()));
         if (userOpt.isEmpty() || userOpt.get().getTelegramChatId() == null) {
             return;
         }
@@ -51,7 +54,8 @@ public class TelegramNotificationService {
         List<Long> userIds = preferenceRepository.findUserIdsWithTelegramEnabledForType(tenantId, alertType);
 
         for (Long userId : userIds) {
-            var userOpt = userRepository.findById(userId);
+            var userOpt = userRepository.findById(userId)
+                    .filter(u -> tenantId != null && tenantId.equals(u.getTenantId()));
             if (userOpt.isPresent() && userOpt.get().getTelegramChatId() != null) {
                 sendFormattedMessage(userOpt.get().getTelegramChatId(), title, message, alertType);
             }

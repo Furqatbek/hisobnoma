@@ -1,6 +1,7 @@
 package com.hisobnoma.platform.telegram.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hisobnoma.platform.admin.service.SystemSettingService;
 import com.hisobnoma.platform.admin.service.TenantSettingService;
 import com.hisobnoma.platform.auth.entity.User;
 import com.hisobnoma.platform.auth.repository.UserRepository;
@@ -59,6 +60,9 @@ class TelegramAdminControllerTest {
     @MockBean
     private TenantSettingService tenantSettingService;
 
+    @MockBean
+    private SystemSettingService systemSettingService;
+
     // ==================== GET /api/v1/telegram/admin/info ====================
 
     @Test
@@ -66,6 +70,7 @@ class TelegramAdminControllerTest {
     void getBotInfo_authenticated_returns200() throws Exception {
         when(securityContextHelper.getRequiredTenantId()).thenReturn(1L);
         when(tenantSettingService.getSettingValue(anyString(), anyString())).thenReturn("false");
+        when(systemSettingService.getSettingValue(anyString(), anyString())).thenReturn("false");
         when(properties.isEnabled()).thenReturn(false);
         when(properties.getBotUsername()).thenReturn("test_bot");
         when(properties.getBotToken()).thenReturn("");
@@ -96,6 +101,7 @@ class TelegramAdminControllerTest {
     @WithMockUser(authorities = "ADMIN_SETTINGS_MANAGE")
     void getSettings_authenticated_returns200() throws Exception {
         when(tenantSettingService.getSettingValue(anyString(), anyString())).thenReturn("false");
+        when(systemSettingService.getSettingValue(anyString(), anyString())).thenReturn("false");
         when(properties.isEnabled()).thenReturn(false);
         when(properties.getBotToken()).thenReturn("");
         when(properties.getBotUsername()).thenReturn("test_bot");
@@ -123,7 +129,9 @@ class TelegramAdminControllerTest {
     @WithMockUser(authorities = "ADMIN_SETTINGS_MANAGE")
     void saveSettings_authenticated_returns200() throws Exception {
         doNothing().when(tenantSettingService).updateSettings(any());
+        doNothing().when(systemSettingService).updateSettings(any());
         when(tenantSettingService.getSettingValue(anyString(), anyString())).thenReturn("false");
+        when(systemSettingService.getSettingValue(anyString(), anyString())).thenReturn("false");
         when(properties.isEnabled()).thenReturn(false);
 
         String requestBody = """
@@ -324,6 +332,7 @@ class TelegramAdminControllerTest {
     @WithMockUser(authorities = "ADMIN_SETTINGS_MANAGE")
     void saveDailyReportSettings_authenticated_returns200() throws Exception {
         doNothing().when(tenantSettingService).updateSettings(any());
+        doNothing().when(systemSettingService).updateSettings(any());
 
         String requestBody = """
                 {

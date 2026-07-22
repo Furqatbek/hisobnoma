@@ -61,8 +61,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u.id FROM User u WHERE u.tenantId = :tenantId AND u.enabled = true")
     List<Long> findActiveUserIdsByTenantId(@Param("tenantId") Long tenantId);
 
-    Optional<User> findByTelegramChatId(Long telegramChatId);
-
     List<User> findAllByTelegramChatId(Long telegramChatId);
 
     @Query("SELECT u FROM User u WHERE u.telegramChatId IS NOT NULL AND u.tenantId = :tenantId")

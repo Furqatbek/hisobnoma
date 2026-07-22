@@ -1,5 +1,6 @@
 package com.hisobnoma.platform.telegram.controller;
 
+import com.hisobnoma.platform.admin.service.SystemSettingService;
 import com.hisobnoma.platform.admin.service.TenantSettingService;
 import com.hisobnoma.platform.auth.entity.User;
 import com.hisobnoma.platform.auth.repository.UserRepository;
@@ -40,6 +41,7 @@ public class TelegramAdminController {
     private final TelegramApiClient telegramApiClient;
     private final TelegramNotificationService notificationService;
     private final TenantSettingService tenantSettingService;
+    private final SystemSettingService systemSettingService;
 
     /**
      * Get bot info and statistics.
@@ -104,7 +106,10 @@ public class TelegramAdminController {
     @PostMapping("/settings")
     @PreAuthorize("hasAuthority('ADMIN_SETTINGS_MANAGE')")
     public ResponseEntity<Map<String, Object>> saveSettings(@Valid @RequestBody SaveSettingsRequest request) {
-        tenantSettingService.updateSettings(Map.of(
+        // PLATFORM-level (system settings): there is exactly one bot for the whole
+        // installation — the poller can only serve one token, and a per-tenant token
+        // would let one tenant reroute every other tenant's notifications.
+        systemSettingService.updateSettings(Map.of(
                 SETTING_ENABLED, String.valueOf(request.isEnabled()),
                 SETTING_BOT_USERNAME, request.getBotUsername() != null ? request.getBotUsername() : "hisobnoma_bot"
         ));
@@ -112,7 +117,7 @@ public class TelegramAdminController {
         // Only update token if a new one was provided (not masked)
         if (request.getBotToken() != null && !request.getBotToken().isBlank()
                 && !request.getBotToken().contains("****")) {
-            tenantSettingService.updateSettings(Map.of(SETTING_BOT_TOKEN, request.getBotToken()));
+            systemSettingService.updateSettings(Map.of(SETTING_BOT_TOKEN, request.getBotToken()));
         }
 
         // Reload properties from DB
@@ -229,13 +234,13 @@ public class TelegramAdminController {
     }
 
     /**
-     * Load Telegram settings from tenant_settings into TelegramProperties.
+     * Load platform-level Telegram settings (system_settings) into TelegramProperties.
      */
     private void loadSettingsFromDb() {
         try {
-            String enabled = tenantSettingService.getSettingValue(SETTING_ENABLED, "false");
-            String token = tenantSettingService.getSettingValue(SETTING_BOT_TOKEN, "");
-            String username = tenantSettingService.getSettingValue(SETTING_BOT_USERNAME, "hisobnoma_bot");
+            String enabled = systemSettingService.getSettingValue(SETTING_ENABLED, "false");
+            String token = systemSettingService.getSettingValue(SETTING_BOT_TOKEN, "");
+            String username = systemSettingService.getSettingValue(SETTING_BOT_USERNAME, "hisobnoma_bot");
 
             properties.setEnabled("true".equalsIgnoreCase(enabled));
             if (token != null && !token.isBlank()) {
