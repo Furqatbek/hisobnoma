@@ -47,7 +47,7 @@ class WebCouponIssueServiceTest {
     private void stubMint(long couponId, String code) {
         when(couponService.generateCoupons(eq(5L), eq(1), any(CreateCouponRequest.class)))
                 .thenReturn(List.of(CouponDto.builder().id(couponId).code(code).build()));
-        when(couponRepository.findById(couponId)).thenReturn(Optional.of(new Coupon()));
+        when(couponRepository.findByIdAndTenantId(eq(couponId), eq(TENANT))).thenReturn(Optional.of(new Coupon()));
         when(couponRepository.save(any(Coupon.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 

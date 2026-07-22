@@ -98,7 +98,7 @@ public class WebCouponIssueService {
         CouponDto dto = couponService.generateCoupons(request.getPromotionId(), 1, create).get(0);
 
         // Web binding: the coupon appears only in THIS customer's /me/coupons.
-        Coupon coupon = couponRepository.findById(dto.getId())
+        Coupon coupon = couponRepository.findByIdAndTenantId(dto.getId(), customer.getTenantId())
                 .orElseThrow(() -> new NotFoundException("Coupon not found after mint: " + dto.getId()));
         coupon.setWebCustomerId(customer.getId());
         couponRepository.save(coupon);
