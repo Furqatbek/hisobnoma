@@ -418,14 +418,19 @@ public class AccountService {
         // Revenue (4xxx)
         accounts.add(createAccount(tenantId, "4000", "Revenue", AccountType.REVENUE, null, false));
         accounts.add(createAccount(tenantId, "4100", "Sales Revenue", AccountType.REVENUE, "4000", true));
-        accounts.add(createAccount(tenantId, "4200", "Service Revenue", AccountType.REVENUE, "4000", true));
-        accounts.add(createAccount(tenantId, "4300", "Other Revenue", AccountType.REVENUE, "4000", true));
+        accounts.add(createAccount(tenantId, "4110", "Service Revenue", AccountType.REVENUE, "4000", true));
+        // 4200/4300 are resolved by code in GLIntegrationService (sales discounts debited,
+        // purchase discounts credited) — names/types must match the migration-seeded chart.
+        accounts.add(createAccount(tenantId, "4200", "Sales Discounts", AccountType.EXPENSE, "4000", true));
+        accounts.add(createAccount(tenantId, "4300", "Purchase Discounts", AccountType.REVENUE, "4000", true));
+        accounts.add(createAccount(tenantId, "4400", "Other Revenue", AccountType.REVENUE, "4000", true));
         accounts.add(createAccount(tenantId, "4900", "Sales Returns", AccountType.REVENUE, "4000", true));
 
         // Expenses (5xxx)
         accounts.add(createAccount(tenantId, "5000", "Expenses", AccountType.EXPENSE, null, false));
         accounts.add(createAccount(tenantId, "5100", "Cost of Goods Sold", AccountType.EXPENSE, "5000", true));
-        accounts.add(createAccount(tenantId, "5200", "Operating Expenses", AccountType.EXPENSE, "5000", false));
+        // GL posts purchases directly to 5200 (PURCHASE_EXPENSE) — it must allow direct posting.
+        accounts.add(createAccount(tenantId, "5200", "Purchase Expenses", AccountType.EXPENSE, "5000", true));
         accounts.add(createAccount(tenantId, "5210", "Salaries Expense", AccountType.EXPENSE, "5200", true));
         accounts.add(createAccount(tenantId, "5220", "Rent Expense", AccountType.EXPENSE, "5200", true));
         accounts.add(createAccount(tenantId, "5230", "Utilities Expense", AccountType.EXPENSE, "5200", true));
