@@ -175,6 +175,54 @@ class WebWishlistAlertJobTest {
     }
 
     @Test
+    void smsFallback_firesEvenWithPushToken_whenFcmNotConfigured() {
+        // The FCM stub "succeeds" without delivering; a device token must NOT suppress the SMS
+        // while push delivery is unconfigured — otherwise the customer gets neither channel.
+        WebWishlistItem wi = buildWishlistItem(false, null);
+        WebCatalogItem catalogItem = buildCatalogItem();
+
+        when(wishlistRepository.findDistinctCatalogItemIdsByTenantId(TENANT)).thenReturn(List.of(ITEM_ID));
+        when(catalogRepository.findByIdAndTenantId(ITEM_ID, TENANT)).thenReturn(Optional.of(catalogItem));
+        when(wishlistService.isAvailable(ITEM_ID, TENANT)).thenReturn(true);
+        when(badgeService.badgeFor(eq(TENANT), eq(ITEM_ID), any(), any())).thenReturn(Optional.empty());
+        when(wishlistRepository.findByTenantIdAndCatalogItemId(TENANT, ITEM_ID)).thenReturn(List.of(wi));
+        when(deviceTokenRepository.existsByTenantIdAndWebCustomerId(TENANT, CUSTOMER)).thenReturn(true);
+        when(pushService.isDeliveryEnabled()).thenReturn(false);
+        when(tenantSettingService.getSettingValue(TENANT, "wishlist.sms_alerts_enabled")).thenReturn("true");
+        when(tenantSettingService.getSettingValue(TENANT, "wishlist.max_sms_per_day")).thenReturn("2");
+        when(webCustomerRepository.findByIdAndTenantId(CUSTOMER, TENANT))
+                .thenReturn(Optional.of(customerWithPhone("998901234567")));
+        when(wishlistRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        job.processAlertsForTenant(TENANT);
+
+        // In-app notification still recorded via the push service…
+        verify(pushService).sendToCustomer(eq(TENANT), eq(CUSTOMER), any(), any(), any());
+        // …but the SMS fallback fires because no real push was delivered.
+        verify(smsService).sendSmsAsync(eq("+998901234567"), contains("яна мавжуд"));
+    }
+
+    @Test
+    void smsSuppressed_whenRealPushDelivered() {
+        WebWishlistItem wi = buildWishlistItem(false, null);
+        WebCatalogItem catalogItem = buildCatalogItem();
+
+        when(wishlistRepository.findDistinctCatalogItemIdsByTenantId(TENANT)).thenReturn(List.of(ITEM_ID));
+        when(catalogRepository.findByIdAndTenantId(ITEM_ID, TENANT)).thenReturn(Optional.of(catalogItem));
+        when(wishlistService.isAvailable(ITEM_ID, TENANT)).thenReturn(true);
+        when(badgeService.badgeFor(eq(TENANT), eq(ITEM_ID), any(), any())).thenReturn(Optional.empty());
+        when(wishlistRepository.findByTenantIdAndCatalogItemId(TENANT, ITEM_ID)).thenReturn(List.of(wi));
+        when(deviceTokenRepository.existsByTenantIdAndWebCustomerId(TENANT, CUSTOMER)).thenReturn(true);
+        when(pushService.isDeliveryEnabled()).thenReturn(true);
+        when(wishlistRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        job.processAlertsForTenant(TENANT);
+
+        verify(pushService).sendToCustomer(eq(TENANT), eq(CUSTOMER), any(), any(), any());
+        verify(smsService, never()).sendSmsAsync(any(), any());
+    }
+
+    @Test
     void smsFallback_noSmsWhenCustomerHasNoPhone() {
         WebWishlistItem wi = buildWishlistItem(false, null);
         WebCatalogItem catalogItem = buildCatalogItem();

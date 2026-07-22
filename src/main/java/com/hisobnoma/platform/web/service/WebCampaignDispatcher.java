@@ -35,8 +35,14 @@ public class WebCampaignDispatcher {
             int totalSent = 0;
             int totalFailed = 0;
 
-            // Push phase
+            // Push phase. sendToCustomer always records an in-app notification (a real delivery,
+            // counted below); the FCM push leg is a no-op until Firebase is configured — surface
+            // that loudly so "sent" isn't read as devices buzzing.
             if (pushCustomerIds != null && !pushCustomerIds.isEmpty()) {
+                if (!pushService.isDeliveryEnabled()) {
+                    log.warn("Campaign {}: FCM is not configured — {} push recipients receive "
+                            + "in-app notifications only, no device push", campaignId, pushCustomerIds.size());
+                }
                 String pushBody = messageTemplate != null ? messageTemplate : "";
                 for (Long customerId : pushCustomerIds) {
                     try {

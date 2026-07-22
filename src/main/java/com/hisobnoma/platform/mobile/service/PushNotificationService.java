@@ -73,6 +73,15 @@ public class PushNotificationService {
     }
 
     /**
+     * Whether FCM delivery is actually configured. While false, {@link #sendToDevice} is a logged
+     * no-op — callers that fall back to another channel (e.g. wishlist SMS) MUST check this instead
+     * of treating a non-throwing send as delivered.
+     */
+    public boolean isDeliveryEnabled() {
+        return firebaseEnabled;
+    }
+
+    /**
      * Send push notification directly to a device token.
      */
     public void sendToDevice(String fcmToken, String title, String body, Map<String, String> data) {

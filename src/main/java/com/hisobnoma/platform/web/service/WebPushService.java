@@ -108,6 +108,15 @@ public class WebPushService {
         });
     }
 
+    /**
+     * True only when FCM is actually configured. {@link #sendToCustomer} always records the in-app
+     * notification, but the push leg is a logged no-op while this is false — callers with a
+     * fallback channel (wishlist SMS) must not treat a non-throwing send as "customer reached".
+     */
+    public boolean isDeliveryEnabled() {
+        return pushNotificationService.isDeliveryEnabled();
+    }
+
     @Transactional(readOnly = true)
     public boolean hasPushToken(Long tenantId, Long webCustomerId) {
         return tokenRepository.existsByTenantIdAndWebCustomerId(tenantId, webCustomerId);

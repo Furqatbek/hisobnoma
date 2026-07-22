@@ -144,11 +144,15 @@ public class WebWishlistAlertJob {
                 "type", "WISHLIST_ALERT",
                 "catalogItemId", wi.getCatalogItemId().toString());
 
+        // The in-app notification is always recorded, but the customer only counts as REACHED by
+        // push when FCM delivery is actually configured — while the FCM integration is a logged
+        // no-op, a non-throwing send must not suppress the SMS fallback (otherwise customers with
+        // a device token get neither a real push nor an SMS).
         boolean pushed = false;
         if (deviceTokenRepository.existsByTenantIdAndWebCustomerId(tenantId, customerId)) {
             try {
                 pushService.sendToCustomer(tenantId, customerId, title, body, data);
-                pushed = true;
+                pushed = pushService.isDeliveryEnabled();
             } catch (Exception e) {
                 log.warn("Wishlist push failed for customer {}: {}", customerId, e.getMessage());
             }
