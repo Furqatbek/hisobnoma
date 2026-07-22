@@ -1,11 +1,6 @@
 package com.hisobnoma.platform.pos.service;
 
 import com.hisobnoma.platform.auth.security.UserPrincipal;
-import com.hisobnoma.platform.finance.dto.ARInvoiceDto;
-import com.hisobnoma.platform.finance.service.ARInvoiceService;
-import com.hisobnoma.platform.finance.service.GLIntegrationService;
-import com.hisobnoma.platform.pos.entity.POSPaymentStatus;
-import com.hisobnoma.platform.pos.entity.POSPaymentType;
 import com.hisobnoma.platform.pos.entity.POSTransaction;
 import com.hisobnoma.platform.pos.repository.POSTransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,9 +10,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -31,8 +24,7 @@ import java.util.List;
 public class POSRetryScheduler {
 
     private final POSTransactionRepository transactionRepository;
-    private final GLIntegrationService glIntegrationService;
-    private final ARInvoiceService arInvoiceService;
+    private final PosRetryOperations retryOperations;
 
     /**
      * Retry failed GL postings every 15 minutes.
@@ -50,7 +42,11 @@ public class POSRetryScheduler {
 
         for (POSTransaction transaction : failed) {
             try {
-                runAsSystemUser(transaction.getTenantId(), () -> retryGlForTransaction(transaction));
+                // Cross-bean call with ids only: PosRetryOperations reloads the entity inside its
+                // own transaction. (The previous self-invoked @Transactional never started one, and
+                // the detached entity's lazy payments made every retry die on LazyInitialization.)
+                runAsSystemUser(transaction.getTenantId(),
+                        () -> retryOperations.postGl(transaction.getId(), transaction.getTenantId()));
                 success++;
             } catch (Exception e) {
                 errors++;
@@ -78,7 +74,8 @@ public class POSRetryScheduler {
 
         for (POSTransaction transaction : failed) {
             try {
-                runAsSystemUser(transaction.getTenantId(), () -> retryArInvoiceForTransaction(transaction));
+                runAsSystemUser(transaction.getTenantId(),
+                        () -> retryOperations.createArInvoice(transaction.getId(), transaction.getTenantId()));
                 success++;
             } catch (Exception e) {
                 errors++;
@@ -88,35 +85,6 @@ public class POSRetryScheduler {
         }
 
         log.info("AR invoice retry complete: {} succeeded, {} failed", success, errors);
-    }
-
-    @Transactional
-    protected void retryGlForTransaction(POSTransaction transaction) {
-        Long journalEntryId = glIntegrationService.postPOSTransaction(transaction);
-        transaction.setGlJournalEntryId(journalEntryId);
-        transaction.setGlPosted(true);
-        transactionRepository.save(transaction);
-        log.info("GL retry succeeded for transaction {}", transaction.getTransactionNumber());
-    }
-
-    @Transactional
-    protected void retryArInvoiceForTransaction(POSTransaction transaction) {
-        boolean hasCredit = transaction.getPayments().stream()
-                .anyMatch(p -> p.getPaymentType() == POSPaymentType.CREDIT
-                        && p.getStatus() == POSPaymentStatus.APPROVED
-                        && p.getAmount().compareTo(BigDecimal.ZERO) > 0);
-
-        if (!hasCredit) {
-            log.warn("Transaction {} no longer has credit payments, skipping AR invoice retry",
-                    transaction.getTransactionNumber());
-            return;
-        }
-
-        ARInvoiceDto arInvoice = arInvoiceService.createFromPOSTransaction(transaction);
-        transaction.setArInvoiceId(arInvoice.getId());
-        transactionRepository.save(transaction);
-        log.info("AR invoice retry succeeded for transaction {} -> invoice {}",
-                transaction.getTransactionNumber(), arInvoice.getInvoiceNumber());
     }
 
     private void runAsSystemUser(Long tenantId, Runnable action) {
