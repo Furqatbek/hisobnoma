@@ -195,19 +195,23 @@ confirm_restore() {
     fi
 }
 
-# Stop application (optional)
+# Stop application (optional). Containers are addressed by their compose service label —
+# the app service has no pinned container_name (it must stay scalable), so names vary
+# (…-app-1, …-app-2).
 stop_application() {
     if command -v docker &> /dev/null; then
-        log_info "Stopping application container..."
-        docker stop hisobnoma-app 2>/dev/null || true
+        log_info "Stopping application container(s)..."
+        docker ps -q --filter "label=com.docker.compose.service=app" \
+            | xargs -r docker stop 2>/dev/null || true
     fi
 }
 
 # Start application (optional)
 start_application() {
     if command -v docker &> /dev/null; then
-        log_info "Starting application container..."
-        docker start hisobnoma-app 2>/dev/null || true
+        log_info "Starting application container(s)..."
+        docker ps -aq --filter "label=com.docker.compose.service=app" \
+            | xargs -r docker start 2>/dev/null || true
     fi
 }
 

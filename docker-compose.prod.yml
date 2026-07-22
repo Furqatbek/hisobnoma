@@ -10,7 +10,8 @@ services:
       context: .
       dockerfile: Dockerfile.prod
     image: hisobnoma/platform:${APP_VERSION:-latest}
-    container_name: hisobnoma-app
+    # No container_name: the deploy workflow scales this service (--scale app=2) for
+    # rolling updates, and Compose cannot scale a service with a pinned name.
     restart: unless-stopped
     depends_on:
       postgres:
@@ -29,8 +30,30 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      # The app reads JWT_ACCESS_EXPIRATION / JWT_REFRESH_EXPIRATION (JWT_EXPIRATION was a
+      # dead variable the app never read).
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-86400000}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+      # Pin CORS to the real frontend origin(s) in .env — the app-side default is '*'.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
+      RATELIMIT_REDIS: ${RATELIMIT_REDIS:-true}
+      # SMS (OTP / alerts) — set SMS_ENABLED=true + token in .env to turn on.
+      SMS_ENABLED: ${SMS_ENABLED:-false}
+      SMS_BASE_URL: ${SMS_BASE_URL:-https://devsms.uz/api}
+      SMS_API_TOKEN: ${SMS_API_TOKEN:-}
+      SMS_SENDER_ID: ${SMS_SENDER_ID:-}
+      # Telegram staff notifications
+      TELEGRAM_BOT_ENABLED: ${TELEGRAM_BOT_ENABLED:-false}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-hisobnoma_bot}
+      # APNs push for the admin mobile app
+      APNS_ENABLED: ${APNS_ENABLED:-false}
+      APNS_TEAM_ID: ${APNS_TEAM_ID:-}
+      APNS_KEY_ID: ${APNS_KEY_ID:-}
+      APNS_BUNDLE_ID: ${APNS_BUNDLE_ID:-com.hisobnoma.admin}
+      APNS_PRIVATE_KEY: ${APNS_PRIVATE_KEY:-}
     volumes:
       - app_logs:/app/logs
       - app_data:/app/data
