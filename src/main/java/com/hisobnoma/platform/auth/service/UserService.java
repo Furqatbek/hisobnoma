@@ -85,7 +85,7 @@ public class UserService {
             Set<Role> roles = new HashSet<>();
             for (String roleCode : request.getRoleCodes()) {
                 Role role = roleRepository.findByCodeAndTenantId(roleCode, tenantId)
-                        .or(() -> roleRepository.findByCode(roleCode)) // Try system role
+                        .or(() -> roleRepository.findSystemRoleByCode(roleCode)) // Try system role
                         .orElseThrow(() -> new NotFoundException("Role", "code", roleCode));
                 roles.add(role);
             }
@@ -129,7 +129,7 @@ public class UserService {
             Set<Role> roles = new HashSet<>();
             for (String roleCode : request.getRoleCodes()) {
                 Role role = roleRepository.findByCodeAndTenantId(roleCode, tenantId)
-                        .or(() -> roleRepository.findByCode(roleCode))
+                        .or(() -> roleRepository.findSystemRoleByCode(roleCode))
                         .orElseThrow(() -> new NotFoundException("Role", "code", roleCode));
                 roles.add(role);
             }
@@ -166,7 +166,7 @@ public class UserService {
         Set<Role> roles = new HashSet<>();
         for (String roleCode : roleCodes) {
             Role role = roleRepository.findByCodeAndTenantId(roleCode, tenantId)
-                    .or(() -> roleRepository.findByCode(roleCode))
+                    .or(() -> roleRepository.findSystemRoleByCode(roleCode))
                     .orElseThrow(() -> new NotFoundException("Role", "code", roleCode));
             roles.add(role);
         }

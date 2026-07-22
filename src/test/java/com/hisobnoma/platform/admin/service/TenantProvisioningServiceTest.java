@@ -53,7 +53,7 @@ class TenantProvisioningServiceTest {
         });
         when(accountService.generateDefaultChartOfAccounts(42L)).thenReturn(List.of());
         Role admin = new Role(); admin.setCode("ADMIN");
-        when(roleRepository.findByCode("ADMIN")).thenReturn(Optional.of(admin));
+        when(roleRepository.findSystemRoleByCode("ADMIN")).thenReturn(Optional.of(admin));
         when(passwordEncoder.encode("secret-pass")).thenReturn("{hash}");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0); u.setId(7L); return u;

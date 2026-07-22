@@ -69,7 +69,7 @@ public class TenantProvisioningService {
         int accounts = accountService.generateDefaultChartOfAccounts(tenantId).size();
 
         // 3. First ADMIN user
-        Role adminRole = roleRepository.findByCode("ADMIN")
+        Role adminRole = roleRepository.findSystemRoleByCode("ADMIN")
                 .orElseThrow(() -> new BusinessException("ADMIN role is not seeded"));
         User admin = User.builder()
                 .username(request.getAdminUsername().trim())

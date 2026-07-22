@@ -16,7 +16,13 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
 
     Optional<Role> findByIdAndTenantId(Long id, Long tenantId);
 
-    Optional<Role> findByCode(String code);
+    /**
+     * Shared system roles only (tenant_id IS NULL). Never use a bare code lookup:
+     * role codes are unique per tenant, so an unscoped query could return — and
+     * attach — another tenant's custom role.
+     */
+    @Query("SELECT r FROM Role r WHERE r.code = :code AND r.tenantId IS NULL AND r.systemRole = true")
+    Optional<Role> findSystemRoleByCode(@Param("code") String code);
 
     Optional<Role> findByCodeAndTenantId(String code, Long tenantId);
 
@@ -33,7 +39,4 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
 
     @Query("SELECT r FROM Role r LEFT JOIN FETCH r.permissions WHERE r.id = :id AND (r.tenantId = :tenantId OR r.tenantId IS NULL)")
     Optional<Role> findByIdWithPermissions(@Param("id") Long id, @Param("tenantId") Long tenantId);
-
-    @Query("SELECT r FROM Role r LEFT JOIN FETCH r.permissions WHERE r.code = :code")
-    Optional<Role> findByCodeWithPermissions(@Param("code") String code);
 }

@@ -315,7 +315,7 @@ class UserServiceTest {
         when(userRepository.findByIdWithRolesAndPermissions(USER_ID)).thenReturn(Optional.of(sampleUser));
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(roleRepository.findByCodeAndTenantId("INVALID_CODE", TENANT_ID)).thenReturn(Optional.empty());
-        when(roleRepository.findByCode("INVALID_CODE")).thenReturn(Optional.empty());
+        when(roleRepository.findSystemRoleByCode("INVALID_CODE")).thenReturn(Optional.empty());
 
         // When / Then
         assertThrows(NotFoundException.class, () ->

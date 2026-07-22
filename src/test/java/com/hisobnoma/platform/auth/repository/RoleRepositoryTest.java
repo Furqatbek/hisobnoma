@@ -35,12 +35,12 @@ class RoleRepositoryTest {
     }
 
     @Test
-    void findByCode_existingCode_returnsRole() {
+    void findSystemRoleByCode_systemRole_returnsRole() {
         // Given
         persistRole("ADMIN", "Administrator", null, true);
 
         // When
-        Optional<Role> result = roleRepository.findByCode("ADMIN");
+        Optional<Role> result = roleRepository.findSystemRoleByCode("ADMIN");
 
         // Then
         assertTrue(result.isPresent());
@@ -48,12 +48,21 @@ class RoleRepositoryTest {
     }
 
     @Test
-    void findByCode_nonExistentCode_returnsEmpty() {
+    void findSystemRoleByCode_nonExistentCode_returnsEmpty() {
         // When
-        Optional<Role> result = roleRepository.findByCode("NONEXISTENT");
+        Optional<Role> result = roleRepository.findSystemRoleByCode("NONEXISTENT");
 
         // Then
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findSystemRoleByCode_neverReturnsAnotherTenantsCustomRole() {
+        // A tenant-owned role with the same code must NOT satisfy the system fallback
+        persistRole("MANAGER2", "Tenant 2 Manager", 2L, false);
+
+        assertTrue(roleRepository.findSystemRoleByCode("MANAGER2").isEmpty(),
+                "Tenant-owned role must not be returned by the system-role lookup");
     }
 
     @Test
