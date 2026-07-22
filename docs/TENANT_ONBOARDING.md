@@ -81,8 +81,10 @@ POST /api/v1/fiscal-periods/years        { "year": 2026, "generatePeriods": true
    depends on them.
 2. **Catalog** — publish products to the web catalog (Веб-каталог): only **LIVE** items are
    visible to shoppers.
-3. **Tenant settings** — `PUT /api/v1/tenant-settings` (e.g. `wishlist.sms_alerts_enabled`,
-   `wishlist.max_sms_per_day`).
+3. **Loyalty & referral** — the admin UI's **Лояллик дастури** page (typed form: cashback %,
+   redeem caps, expiry, referral rewards). Defaults are seeded disabled (V82); enabling is a
+   toggle. Other tenant settings (e.g. `wishlist.sms_alerts_enabled`) via the generic settings
+   editor.
 4. **App build** — the customer Flutter app is built per shop with
    `--dart-define=SHOP_TENANT_ID=<id>` (plus the server URL); every storefront request sends
    that id as `X-Tenant-ID`. Without it the API answers `400 TENANT_REQUIRED`.

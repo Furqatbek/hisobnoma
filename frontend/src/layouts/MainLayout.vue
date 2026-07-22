@@ -41,7 +41,8 @@ import {
   GlobeAltIcon,
   MegaphoneIcon,
   TicketIcon,
-  ReceiptPercentIcon
+  ReceiptPercentIcon,
+  GiftIcon
 } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -129,6 +130,12 @@ const navigation = computed(() => [
     href: '/web-campaigns',
     icon: MegaphoneIcon,
     current: route.path === '/web-campaigns'
+  },
+  {
+    name: t('nav.loyaltySettings'),
+    href: '/web-loyalty-settings',
+    icon: GiftIcon,
+    current: route.path === '/web-loyalty-settings'
   },
   {
     name: t('nav.customers'),

@@ -181,6 +181,12 @@ const routes = [
         name: 'web-campaigns',
         component: () => import('@/views/web/WebCampaignsView.vue')
       },
+      {
+        path: 'web-loyalty-settings',
+        name: 'web-loyalty-settings',
+        component: () => import('@/views/web/LoyaltySettingsView.vue'),
+        meta: { permission: 'TENANT_SETTINGS_MANAGE' }
+      },
       // Customers
       {
         path: 'customers',
