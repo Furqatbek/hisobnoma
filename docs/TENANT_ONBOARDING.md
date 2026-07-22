@@ -3,10 +3,23 @@
 How to bring a new warehouse owner (tenant) onto a running platform. Isolation model:
 [`MULTI_TENANCY.md`](MULTI_TENANCY.md). Server setup: [`LAUNCH_PRODUCTION.md`](LAUNCH_PRODUCTION.md).
 
-> **Honest limitation:** there is **no tenant-creation API yet** — tenants are provisioned with
-> two SQL steps (1–2) run by the platform operator; everything after that is done through the
-> normal admin UI/API. (A self-service signup flow is part of the SaaS roadmap in
-> MULTI_TENANCY.md §9.)
+> **Preferred path — one API call.** Steps 1–4 below are automated by the provisioning endpoint
+> (permission `TENANT_PROVISION`, seeded to SUPER_ADMIN):
+>
+> ```
+> POST /api/v1/admin/tenants
+> {
+>   "name": "Acme Warehouse", "code": "ACME",
+>   "adminUsername": "acme-admin", "adminPassword": "<8+ chars>",
+>   "adminPhone": "+99890…", "fiscalYear": 2026
+> }
+> ```
+>
+> One transaction creates the tenant, seeds its default chart of accounts, creates the first
+> ADMIN user, and opens the fiscal year with 12 monthly periods — a half-provisioned tenant
+> cannot exist. The response returns the new `tenantId` (the storefront's `X-Tenant-ID`).
+> Continue at **step 5**. The manual steps below remain as the fallback/reference.
+> (Customer self-service signup is still a SaaS-roadmap item — MULTI_TENANCY.md §9.)
 
 ## 1. Create the tenant row (SQL, platform operator)
 

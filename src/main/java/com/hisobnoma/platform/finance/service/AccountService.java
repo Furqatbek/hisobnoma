@@ -373,8 +373,11 @@ public class AccountService {
      */
     @Transactional
     public List<AccountDto> generateDefaultChartOfAccounts() {
-        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return generateDefaultChartOfAccounts(securityContextHelper.getCurrentTenantId());
+    }
 
+    /** Tenant-parameterized variant for provisioning flows that run outside the tenant's own context. */
+    public List<AccountDto> generateDefaultChartOfAccounts(Long tenantId) {
         // Check if accounts already exist
         if (accountRepository.countByTenantId(tenantId) > 0) {
             throw new BusinessException("Cannot generate default accounts - accounts already exist");
