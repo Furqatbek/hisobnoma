@@ -269,6 +269,89 @@ class WebReferralFullFlowTest {
         assertEquals(0, balanceA.compareTo(balanceA2), "Referrer balance should not change on second order");
     }
 
+    // ---- referral stats + signup-bonus interplay ----
+
+    @Test
+    void referralStats_reflectInviteAndEarnings_withSignupBonus() throws Exception {
+        setSetting("loyalty.signup_bonus", "7000");
+
+        // Customer A gets a referral code
+        String phoneA = uniquePhone();
+        String tokenA = loginAndGetToken(phoneA, "Referrer A", null);
+
+        MvcResult codeResult = mockMvc.perform(get("/api/v1/web/me/referral-code")
+                        .header(H, tenant.getId())
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andReturn();
+        String refCode = objectMapper.readTree(codeResult.getResponse().getContentAsString())
+                .at("/data/code").asText();
+
+        // Customer B signs up with A's code — signup bonus lands immediately
+        String phoneB = uniquePhone();
+        loginAndGetToken(phoneB, "Referred B", refCode);
+
+        String normalizedB = phoneB.replaceAll("[^0-9]", "");
+        WebCustomer customerB = customerRepository
+                .findByTenantIdAndPhone(tenant.getId(), normalizedB).orElseThrow();
+        BigDecimal afterSignup = loyaltyRepository.balanceByCustomer(tenant.getId(), customerB.getId());
+        assertEquals(0, new BigDecimal("7000").compareTo(afterSignup),
+                "Referred customer should hold exactly the signup bonus after first sign-in");
+
+        // B's first completed order: 5% earn on 50000 + referred reward, referrer reward for A
+        WebOrder order = WebOrder.builder()
+                .orderNumber("WO-REF-03").status(WebOrderStatus.CONFIRMED)
+                .customerName("Referred B").phone(phoneB).phoneNormalized(normalizedB)
+                .totalAmount(new BigDecimal("50000")).tenantId(tenant.getId())
+                .build();
+        order.addLine(WebOrderLine.builder()
+                .productId(1L).productName("Test Item")
+                .quantity(BigDecimal.ONE).unitPrice(new BigDecimal("50000"))
+                .lineTotal(new BigDecimal("50000")).tenantId(tenant.getId())
+                .build());
+        order = orderRepository.saveAndFlush(order);
+
+        mockMvc.perform(post("/api/v1/web-orders/" + order.getId() + "/status")
+                        .with(staffAuth("WEB_ORDER_VIEW", "WEB_ORDER_MANAGE"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"COMPLETED\"}"))
+                .andExpect(status().isOk());
+
+        BigDecimal balanceB = loyaltyRepository.balanceByCustomer(tenant.getId(), customerB.getId());
+        assertEquals(0, new BigDecimal("14500").compareTo(balanceB),
+                "Referred: 7000 signup + 5000 referral + 2500 earn");
+
+        String normalizedA = phoneA.replaceAll("[^0-9]", "");
+        WebCustomer customerA = customerRepository
+                .findByTenantIdAndPhone(tenant.getId(), normalizedA).orElseThrow();
+        BigDecimal balanceA = loyaltyRepository.balanceByCustomer(tenant.getId(), customerA.getId());
+        assertEquals(0, new BigDecimal("17000").compareTo(balanceA),
+                "Referrer: 7000 own signup bonus + 10000 referrer reward");
+
+        // Stats endpoint for A reflects the invite and the earnings
+        MvcResult statsResult = mockMvc.perform(get("/api/v1/web/me/referral-stats")
+                        .header(H, tenant.getId())
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.code", is(refCode)))
+                .andExpect(jsonPath("$.data.enabled", is(true)))
+                .andExpect(jsonPath("$.data.invitedCount", is(1)))
+                .andReturn();
+        BigDecimal pointsEarned = new BigDecimal(objectMapper
+                .readTree(statsResult.getResponse().getContentAsString())
+                .at("/data/pointsEarned").asText());
+        assertEquals(0, new BigDecimal("10000").compareTo(pointsEarned),
+                "Stats pointsEarned should equal the referrer reward");
+    }
+
+    @Test
+    void referralStats_requiresAuth() throws Exception {
+        mockMvc.perform(get("/api/v1/web/me/referral-stats")
+                        .header(H, tenant.getId())
+                        .header("Authorization", "Bearer garbage"))
+                .andExpect(status().isUnauthorized());
+    }
+
     // ---- staff customer view with referral info ----
 
     @Test
