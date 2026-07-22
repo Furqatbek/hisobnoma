@@ -27,7 +27,7 @@ This plan is grounded in the current codebase:
 - Test conventions (352 existing test files): `@DataJpaTest` repository tests (H2, Flyway off),
   Mockito service/mapper unit tests, standalone-MockMvc controller tests, and
   `@SpringBootTest @AutoConfigureMockMvc @ActiveProfiles("test") @Transactional` full-flow tests.
-- Latest Flyway migration: **V53** — new ones start at V54.
+- Latest Flyway migration: **V53** — new ones start at V54. *(historical planning baseline — the tree has since moved on, V80+ at last update)*
 
 ---
 

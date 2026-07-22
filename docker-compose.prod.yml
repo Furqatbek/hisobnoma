@@ -169,6 +169,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # Grafana passthrough (nginx server block on 3000) — bound to localhost so it is
+      # reachable only via SSH tunnel: ssh -N -L 3000:localhost:3000 user@server
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro

@@ -16,6 +16,7 @@ All endpoints require JWT Bearer token authentication and appropriate RBAC permi
 - `MOBILE_SYNC_ACCESS` - Access offline sync data
 - `MOBILE_QUICK_SALE` - Create quick sales from mobile
 - `MOBILE_QUICK_COUNT` - Perform quick stock counts from mobile
+- `MOBILE_PUSH_SEND` - Broadcast APNs push notifications to app users (see [MOBILE_PUSH_API.md](MOBILE_PUSH_API.md))
 
 ## Base URL
 
@@ -146,6 +147,34 @@ POST /auth/logout
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | deviceId | string | Device ID to deactivate (optional) |
+
+---
+
+## POS Shifts (mobile)
+
+Shift management for cashiers working from the mobile app. Base path `/api/v1/mobile/shifts`;
+each endpoint accepts the POS shift permission **or** `MOBILE_SYNC_ACCESS`.
+
+| Method | Path | Permission | Purpose |
+|---|---|---|---|
+| GET | `/current` | `POS_SHIFT_READ` | The caller's current open shift |
+| GET | `/open` | `POS_SHIFT_READ` | All open shifts for the tenant |
+| POST | `/open` | `POS_SHIFT_OPEN` | Open a shift on a terminal → `201` + `ShiftDto` |
+| POST | `/{id}/close` | `POS_SHIFT_CLOSE` | Close an open shift (body: `CloseShiftRequest`) |
+| POST | `/{id}/cash-operation` | `POS_SHIFT_CASH_OPERATION` | Record `CASH_IN` / `CASH_OUT` on a shift |
+
+Request/response shapes are the POS module's (`OpenShiftRequest`, `CloseShiftRequest`,
+`CashOperationRequest`, `ShiftDto`) — see [POS_MODULE_API.md](POS_MODULE_API.md) for details.
+
+---
+
+## Push notifications (APNs)
+
+Device push-token registration (`/api/v1/mobile/devices/push-token`) and the staff broadcast
+endpoint (`/api/v1/admin/notifications/send`, permission `MOBILE_PUSH_SEND`) are a separate
+contract documented in [MOBILE_PUSH_API.md](MOBILE_PUSH_API.md). Note this is distinct from the
+FCM-shaped `POST /auth/register-device` below, which stores an `fcmToken` for the legacy
+placeholder push path.
 
 ---
 
@@ -439,10 +468,7 @@ GET /alerts
         "createdAt": "2026-01-15T09:30:00Z"
       }
     ],
-    "page": 0,
-    "size": 20,
-    "totalElements": 15,
-    "totalPages": 1
+    "page": { "number": 0, "size": 20, "totalElements": 15, "totalPages": 1 }
   }
 }
 ```

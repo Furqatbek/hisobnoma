@@ -14,8 +14,10 @@ Hisobnoma admin (“Веб-каталог” page), add products to a persistent
 (name + phone + delivery region/village). Orders land in the admin "Онлайн буюртмалар" inbox
 with a Telegram alert. See `../docs/WEB_SHOP_PLAN.md` for the roadmap.
 
-The app talks only to the public catalog API (`/api/v1/web/catalog/**`, anonymous,
-`X-Tenant-ID` header) documented in `../docs/API.md`. No login is required.
+The app talks to the public shop API (`/api/v1/web/**`, `X-Tenant-ID` header required):
+catalog browsing, cart price preview, checkout and order-status lookup are anonymous; the
+optional SMS-OTP login unlocks the `/me/**` account features (order history, loyalty,
+wishlist). Full contract: `../docs/api/MOBILE_SHOP_API.md`.
 
 ## Project layout
 

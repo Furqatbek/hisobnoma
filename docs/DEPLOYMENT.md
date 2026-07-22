@@ -59,13 +59,14 @@ Edit `.env` with your configuration:
 # Required Settings
 DB_USERNAME=hisobnoma
 DB_PASSWORD=<secure-password>
-JWT_SECRET=<256-bit-secret>
+JWT_SECRET=<512-bit-secret, at least 64 characters>
 REDIS_PASSWORD=<secure-password>
 
 # Optional Settings
 APP_VERSION=1.0.0
 DB_POOL_SIZE=20
-JWT_EXPIRATION=86400000
+JWT_ACCESS_EXPIRATION=86400000
+JWT_REFRESH_EXPIRATION=604800000
 ```
 
 ### 3. Generate Secrets
@@ -73,8 +74,9 @@ JWT_EXPIRATION=86400000
 Generate secure secrets for production:
 
 ```bash
-# Generate JWT secret (256-bit)
-openssl rand -base64 32
+# Generate JWT secret (512-bit — the app refuses to boot outside dev profiles with
+# a shorter/placeholder secret)
+openssl rand -base64 64
 
 # Generate database password
 openssl rand -base64 24
@@ -194,8 +196,10 @@ sudo certbot certonly --standalone -d yourdomain.com
 2. **Copy certificates:**
 
 ```bash
-sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem docker/nginx/ssl/
-sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem docker/nginx/ssl/
+# No copying needed: docker-compose.prod.yml mounts /etc/letsencrypt read-only into the
+# nginx container, and the certbot sidecar renews certificates every 12h. Just make sure
+# docker/nginx/conf.d/default.conf's ssl_certificate paths match your domain, e.g.:
+ls /etc/letsencrypt/live/<your-domain>/fullchain.pem
 ```
 
 3. **Update nginx configuration in `docker/nginx/conf.d/default.conf`**
@@ -235,9 +239,14 @@ The production compose file includes resource limits:
 | app | 2.0 | 2GB |
 | postgres | 1.0 | 1GB |
 | redis | 0.5 | 512MB |
-| nginx | 0.5 | 256MB |
 | prometheus | 0.5 | 512MB |
 | grafana | 0.5 | 256MB |
+| alertmanager | 0.25 | 128MB |
+| loki | 0.5 | 512MB |
+| promtail | 0.25 | 128MB |
+| postgres-backup | 0.25 | 128MB |
+
+(nginx runs without an explicit limit.)
 
 ### Docker Commands Reference
 
@@ -268,7 +277,9 @@ docker compose -f docker-compose.prod.yml up -d
 
 ### Prometheus
 
-Access Prometheus at `http://server:9090`
+Prometheus is **not published to the host** — query it through Grafana (the datasource is
+pre-provisioned) or from inside the compose network (`docker compose -f docker-compose.prod.yml
+exec app curl http://prometheus:9090/-/healthy`).
 
 **Key Metrics:**
 
@@ -281,7 +292,12 @@ Access Prometheus at `http://server:9090`
 
 ### Grafana
 
-Access Grafana at `http://server:3000`
+Grafana is reachable via the nginx passthrough bound to localhost on the server — open an SSH
+tunnel and browse locally:
+
+```bash
+ssh -N -L 3000:localhost:3000 user@server   # then open http://localhost:3000
+```
 
 **Default credentials:**
 - Username: `admin`
@@ -295,7 +311,8 @@ Access Grafana at `http://server:3000`
 
 ### Alertmanager
 
-Access Alertmanager at `http://server:9093`
+Alertmanager is internal-only (`alertmanager:9093` on the compose network); its state is
+visible in Grafana (datasource pre-provisioned). Alerts route per the table below.
 
 **Alert Routes:**
 - Critical alerts → Email + Slack (immediate)
@@ -391,7 +408,8 @@ export AWS_SECRET_ACCESS_KEY=<secret>
 1. **Enable WAL archiving in PostgreSQL:**
 
 ```yaml
-# docker/postgres/postgresql.conf
+# postgres runs on the image defaults; set WAL parameters via ALTER SYSTEM
+# (or mount a custom postgresql.conf into the postgres service):
 archive_mode = on
 archive_command = 'cp %p /backups/wal/%f'
 ```

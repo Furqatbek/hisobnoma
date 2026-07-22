@@ -1,5 +1,14 @@
 # Hisobnoma Platform API Documentation
 
+> **Coverage note.** This file is the platform-wide contract but does not duplicate every module.
+> Dedicated, more detailed module docs live in [`docs/api/`](api/):
+> AP (`AP_MODULE_API.md`), AR (`AR_MODULE_API.md`), Banking & Tax (`BANKING_TAX_MODULE_API.md`),
+> Delivery (`DELIVERY_MODULE_API.md`), POS (`POS_MODULE_API.md`), Reports (`REPORTS_MODULE_API.md`),
+> the staff mobile app (`MOBILE_MODULE_API.md`, incl. quick-sale idempotency and shifts), APNs push
+> (`MOBILE_PUSH_API.md`), and the customer shop (`MOBILE_SHOP_API.md`).
+> Not yet documented anywhere: the HR (`/api/v1/hr/**`), SMS (`/api/v1/sms`), Telegram
+> (`/api/v1/telegram`), and expense (`/api/v1/web/expenses`) endpoints — consult the controllers.
+
 ## Base URL
 ```
 http://localhost:8080/api/v1
@@ -3695,7 +3704,9 @@ header should still be sent.
 ```
 X-Tenant-ID: 1
 ```
-If the header is omitted, tenant `1` is assumed (single-shop installs).
+The header is **required** on anonymous shop calls: if neither it nor a customer token
+identifies the tenant, the request is rejected with `400 TENANT_REQUIRED` (fail closed —
+single-shop installs must send their tenant id too).
 
 **Response envelope.** Single-object endpoints wrap the payload in the standard envelope:
 ```json
@@ -3737,10 +3748,15 @@ Common statuses: `400` validation/business error, `401` missing/invalid customer
 `404` not found (or hidden/draft item, or order whose phone doesn't match), `429` rate
 limited, `503` payment provider not configured, `201` created (checkout only).
 
+> **Payments are cash-on-delivery only for now.** The card-payment endpoints below are
+> documented for when a provider (Payme/Click/Uzum) is enabled; until then
+> `POST /web/orders/{orderNumber}/payment` returns `503 PAYMENT_NOT_CONFIGURED` and checkout
+> always creates orders as `CASH`/`NONE`.
+
 Known `error.code` values: `VALIDATION_FAILED`, `COUPON_INVALID`, `PRODUCT_UNAVAILABLE`,
 `OTP_INVALID`, `OTP_EXPIRED`, `INVALID_PHONE`, `ORDER_ALREADY_PAID`, `ORDER_NOT_PAYABLE`,
 `INVALID_DELIVERY`, `NOT_FOUND`, `UNAUTHORIZED`, `TOO_MANY_REQUESTS`,
-`PAYMENT_NOT_CONFIGURED`, `INTERNAL_ERROR`.
+`PAYMENT_NOT_CONFIGURED`, `TENANT_REQUIRED`, `INTERNAL_ERROR`.
 
 **Money & quantities.** All amounts are `UZS` decimals. `currency` is always `"UZS"`.
 Quantities allow up to 3 decimals (`0.001`–`10000`).
@@ -3982,7 +3998,7 @@ any channel never affect the checkout result or the other channels.
 {
   "success": true,
   "data": {
-    "orderNumber": "WEB-20260611-0007",
+    "orderNumber": "WO-000007",
     "status": "NEW",
     "paymentMethod": "CASH",
     "paymentStatus": "NONE",
@@ -4023,7 +4039,7 @@ enumeration while staying comfortable for one customer polling their order.
 
 **Request:**
 ```http
-GET /api/v1/web/orders/WEB-20260611-0007?phone=+998901234567
+GET /api/v1/web/orders/WO-000007?phone=+998901234567
 X-Tenant-ID: 1
 ```
 
@@ -4238,7 +4254,7 @@ X-Tenant-ID: 1
 {
   "content": [
     {
-      "orderNumber": "WEB-20260611-0007", "status": "CONFIRMED",
+      "orderNumber": "WO-000007", "status": "CONFIRMED",
       "deliveryFee": 10000.0, "discountTotal": 3600.0,
       "couponCode": "SAVE10", "couponDiscount": 2400.0, "pointsSpent": 5000.0,
       "totalAmount": 27400.0, "currency": "UZS", "createdAt": "2026-06-11T12:00:00Z",
@@ -4272,9 +4288,9 @@ X-Tenant-ID: 1
     "minRedeem": 5000.0,
     "maxRedeemPercent": 30,
     "entries": [
-      { "id": 12, "type": "EARN", "amount": 1200.0, "orderNumber": "WEB-20260611-0007",
+      { "id": 12, "type": "EARN", "amount": 1200.0, "orderNumber": "WO-000007",
         "note": null, "expiresAt": "2026-12-08T00:00:00Z", "createdAt": "2026-06-11T12:05:00Z" },
-      { "id": 9, "type": "SPEND", "amount": -5000.0, "orderNumber": "WEB-20260611-0007",
+      { "id": 9, "type": "SPEND", "amount": -5000.0, "orderNumber": "WO-000007",
         "note": null, "expiresAt": null, "createdAt": "2026-06-11T12:00:00Z" }
     ]
   },

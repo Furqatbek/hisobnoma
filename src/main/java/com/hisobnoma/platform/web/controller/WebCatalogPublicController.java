@@ -17,7 +17,8 @@ import java.util.List;
 /**
  * Public (anonymous) catalog API for the online shop mobile app.
  * The /api/v1/web/** prefix is whitelisted in SecurityConfig;
- * tenant is resolved from the X-Tenant-ID header (default 1).
+ * tenant is resolved from the X-Tenant-ID header and is required — requests without it are
+ * rejected with 400 TENANT_REQUIRED (fail closed).
  */
 @RestController
 @RequestMapping("/api/v1/web/catalog")

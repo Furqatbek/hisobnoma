@@ -98,7 +98,7 @@ Abuse limits: 60s cooldown between codes, max 5 codes/phone/day, 5 wrong attempt
 ### Account (`/me`)  ·  requires `Authorization: Bearer`
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/me` | Current customer (`phone`, `name`) |
+| GET | `/me` | Current customer (`phone`, `name`, `customerCode`, `tenantSlug`) |
 | GET | `/me/orders?page=&size=` | Order history |
 | GET | `/me/loyalty` | Points balance + ledger |
 | GET | `/me/coupons` | Coupons available to the customer |
@@ -246,7 +246,7 @@ curl -s "$BASE/orders/WO-000042?phone=%2B998901234567" -H "$TENANT"
 
 ### 7. Account screens (logged-in)
 ```bash
-curl -s "$BASE/me"          -H "$TENANT" -H "$AUTH"   # { "phone": "998…", "name": "Ali" }
+curl -s "$BASE/me"          -H "$TENANT" -H "$AUTH"   # { "phone": "998…", "name": "Ali", "customerCode": "WC-00042", "tenantSlug": "…" }
 curl -s "$BASE/me/orders"   -H "$TENANT" -H "$AUTH"   # PageResponse<PublicOrderDto>
 curl -s "$BASE/me/loyalty"  -H "$TENANT" -H "$AUTH"
 ```
