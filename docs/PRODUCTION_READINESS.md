@@ -294,3 +294,36 @@ Also fixed after the first pass: **#6** (POS→GL phantom window — outbox via 
 - **#12 — CI green end-to-end**, incl. the Docker-gated Postgres migration test.
 - Lower priority: POS→AR rounding residue, fiscal-period-close checks on the GL-integration path,
   `/uploads/**` IDOR review, JWT-profile-keying deployment discipline.
+
+---
+
+## Second audit round (2026-07-22): fresh review of branch-new code + deployment
+
+A follow-up adversarial review of code added on this branch, plus a first-ever deployment/ops
+audit, found five launch blockers — **all fixed on this branch**:
+
+- **B1 — POS GL/AR retry was dead code:** self-invoked `@Transactional` (never applied) + detached
+  entities with lazy collections → `LazyInitializationException` on every 15-minute retry, forever.
+  Fixed via `PosRetryOperations` (REQUIRES_NEW, reloads by id+tenant, idempotent); the after-commit
+  listener and the scheduler now share one implementation.
+- **B2 — checkout order-number race:** `count(*)+1` inside the open transaction 500'd one of two
+  concurrent buyers on the unique index. Fixed with a per-tenant counter row (V80) allocated under
+  `PESSIMISTIC_WRITE` in its own transaction.
+- **B3 — wishlist push no-op suppressed the SMS fallback:** the unconfigured FCM stub "succeeded",
+  so token holders got neither push nor SMS. `isDeliveryEnabled()` now gates what counts as
+  "reached"; campaigns WARN when the push phase runs with FCM off.
+- **B4 — prod deploy step could not run:** `--scale app=2` with a pinned `container_name` errors.
+  Unpinned; restore.sh addresses containers by compose label; missing env pass-throughs added
+  (CORS, SMS, Telegram, APNs, RATELIMIT_REDIS; dead `JWT_EXPIRATION` → real access/refresh vars).
+- **B5 — deploy verification could never pass:** wrong domain (hisobnoma.uz vs the nginx/TLS
+  domain temurmchj.uz — now `vars.PRODUCTION_URL`/`vars.STAGING_URL` with correct defaults), host
+  health-poll against an unpublished port (now waits on the Docker HEALTHCHECK), and a smoke test
+  against the non-existent `/api/v1/health` (now the storefront root).
+
+**Still open from the ops audit (important, not deploy-blocking):** alertmanager/Loki configured
+but not deployed in prod compose (alerts fire into a void); no scheduled backups between deploys
+(`scripts/backup.sh` exists — add a cron/sidecar); pin `CORS_ALLOWED_ORIGINS` in the server's
+`.env`. Non-blocking code follow-ups: sequential admin push fan-out + shared default async pool
+(dedicated bounded executor recommended); staff notifications fire before checkout commits; GL
+double-post window lacks an idempotency check on `POS_SALE + referenceId`; wishlist SMS counters
+are per-JVM (bounded today by single-instance deploy).
