@@ -10,6 +10,7 @@ import com.hisobnoma.platform.common.exception.NotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -593,8 +594,8 @@ class SystemSettingServiceTest {
     }
 
     @Test
-    void updateSettings_mapWithOneInvalidKey_skipsInvalidKey() {
-        // Given — service uses ifPresent, so missing keys are silently skipped
+    void updateSettings_missingKey_isCreatedNotSkipped() {
+        // Upsert contract: a missing key must not make the save a silent no-op
         SystemSetting existing = SystemSetting.builder().settingKey("k1").settingValue("old").readonly(false).build();
         when(systemSettingRepository.findBySettingKey("k1")).thenReturn(Optional.of(existing));
         when(systemSettingRepository.findBySettingKey("missing.key")).thenReturn(Optional.empty());
@@ -606,7 +607,13 @@ class SystemSettingServiceTest {
 
         // Then
         assertEquals("new1", existing.getSettingValue());
-        verify(systemSettingRepository, times(1)).save(any());
+        ArgumentCaptor<SystemSetting> captor = ArgumentCaptor.forClass(SystemSetting.class);
+        verify(systemSettingRepository, times(2)).save(captor.capture());
+        SystemSetting created = captor.getAllValues().stream()
+                .filter(s -> "missing.key".equals(s.getSettingKey()))
+                .findFirst().orElseThrow();
+        assertEquals("value", created.getSettingValue());
+        assertEquals("MISSING", created.getCategory());
     }
 
     // ---- deleteSetting ----

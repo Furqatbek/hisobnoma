@@ -131,14 +131,22 @@ public class SystemSettingService {
     @CacheEvict(value = "systemSettings", allEntries = true)
     public void updateSettings(Map<String, String> settings) {
         for (Map.Entry<String, String> entry : settings.entrySet()) {
-            systemSettingRepository.findBySettingKey(entry.getKey())
-                    .ifPresent(setting -> {
-                        if (!setting.isReadonly()) {
-                            setting.setSettingValue(entry.getValue());
-                            systemSettingRepository.save(setting);
-                            log.info("Updated system setting: {}", setting.getSettingKey());
-                        }
+            SystemSetting setting = systemSettingRepository.findBySettingKey(entry.getKey())
+                    .orElseGet(() -> {
+                        // Upsert: a missing key must not make the save a silent no-op
+                        // (mirrors TenantSettingService.updateSettingValue).
+                        SystemSetting created = new SystemSetting();
+                        created.setSettingKey(entry.getKey());
+                        created.setCategory(entry.getKey().contains(".")
+                                ? entry.getKey().substring(0, entry.getKey().indexOf('.')).toUpperCase()
+                                : "GENERAL");
+                        return created;
                     });
+            if (!setting.isReadonly()) {
+                setting.setSettingValue(entry.getValue());
+                systemSettingRepository.save(setting);
+                log.info("Updated system setting: {}", setting.getSettingKey());
+            }
         }
     }
 

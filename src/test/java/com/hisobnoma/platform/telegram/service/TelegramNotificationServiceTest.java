@@ -138,6 +138,7 @@ class TelegramNotificationServiceTest {
                 .passwordHash("hash")
                 .telegramChatId(999L)
                 .build();
+        user2.setTenantId(TENANT_ID);
 
         when(preferenceRepository.findUserIdsWithTelegramEnabledForType(TENANT_ID, MobileAlert.AlertType.SYSTEM_ALERT))
                 .thenReturn(List.of(USER_ID, 20L));
@@ -151,6 +152,26 @@ class TelegramNotificationServiceTest {
         // Then
         verify(telegramApi).sendMessage(eq(CHAT_ID), contains("System Alert"));
         verify(telegramApi).sendMessage(eq(999L), contains("System Alert"));
+    }
+
+    @Test
+    void sendBroadcastAlert_skipsUserFromAnotherTenant() {
+        User foreignUser = User.builder()
+                .id(21L)
+                .username("foreign")
+                .passwordHash("hash")
+                .telegramChatId(777L)
+                .build();
+        foreignUser.setTenantId(99L); // different tenant — must never receive this alert
+
+        when(preferenceRepository.findUserIdsWithTelegramEnabledForType(TENANT_ID, MobileAlert.AlertType.SYSTEM_ALERT))
+                .thenReturn(List.of(21L));
+        when(userRepository.findById(21L)).thenReturn(Optional.of(foreignUser));
+
+        telegramNotificationService.sendBroadcastAlert(
+                TENANT_ID, MobileAlert.AlertType.SYSTEM_ALERT, "System Alert", "Maintenance window");
+
+        verify(telegramApi, never()).sendMessage(anyLong(), anyString());
     }
 
     @Test
