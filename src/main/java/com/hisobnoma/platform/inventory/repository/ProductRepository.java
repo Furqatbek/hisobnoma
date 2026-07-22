@@ -38,17 +38,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p WHERE p.barcode = :barcode")
     Optional<Product> findByBarcode(@Param("barcode") String barcode);
 
-    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.baseUom WHERE p.id = :id")
-    Optional<Product> findByIdWithDetails(@Param("id") Long id);
-
-    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.variants WHERE p.id = :id")
-    Optional<Product> findByIdWithVariants(@Param("id") Long id);
-
-    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.images WHERE p.id = :id")
-    Optional<Product> findByIdWithImages(@Param("id") Long id);
-
-    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.attributes WHERE p.id = :id")
-    Optional<Product> findByIdWithAttributes(@Param("id") Long id);
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category LEFT JOIN FETCH p.brand "
+            + "LEFT JOIN FETCH p.baseUom WHERE p.id = :id AND p.tenantId = :tenantId")
+    Optional<Product> findByIdWithDetails(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     @Query("SELECT p FROM Product p WHERE (p.tenantId = :tenantId OR p.tenantId IS NULL) AND p.category.id = :categoryId")
     Page<Product> findByCategoryIdAndTenantId(@Param("categoryId") Long categoryId, @Param("tenantId") Long tenantId, Pageable pageable);

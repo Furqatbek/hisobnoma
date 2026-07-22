@@ -63,7 +63,8 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public ProductDto getProduct(Long id) {
-        Product product = productRepository.findByIdWithDetails(id)
+        Long currentTenantId = securityContextHelper.getCurrentTenantId();
+        Product product = productRepository.findByIdWithDetails(id, currentTenantId)
                 .orElseThrow(() -> new NotFoundException("Product", id));
 
         ProductDto dto = productMapper.toDto(product);
@@ -86,8 +87,7 @@ public class ProductService {
         dto.setAttributes(attributeMapper.toDtoList(attributeRepository.findByProductIdOrderBySortOrder(id)));
 
         // Enrich with stock quantity
-        Long tenantId = securityContextHelper.getCurrentTenantId();
-        BigDecimal totalQty = stockRepository.getTotalQuantityByProduct(id, tenantId);
+        BigDecimal totalQty = stockRepository.getTotalQuantityByProduct(id, currentTenantId);
         dto.setStockQuantity(totalQty != null ? totalQty : BigDecimal.ZERO);
 
         // Fallback: derive primaryImageUrl from images if not set on product

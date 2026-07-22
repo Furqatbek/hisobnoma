@@ -168,7 +168,7 @@ class ProductServiceTest {
     @Test
     void getProduct_found_returnsDto() {
         // Given
-        when(productRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdWithDetails(1L, TENANT_ID)).thenReturn(Optional.of(product));
         when(productMapper.toDto(product)).thenReturn(productDto);
         when(variantRepository.findByProductIdOrderBySortOrder(1L)).thenReturn(Collections.emptyList());
         when(variantMapper.toDtoList(anyList())).thenReturn(Collections.emptyList());
@@ -190,7 +190,8 @@ class ProductServiceTest {
     @Test
     void getProduct_notFound_throwsNotFoundException() {
         // Given
-        when(productRepository.findByIdWithDetails(999L)).thenReturn(Optional.empty());
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(productRepository.findByIdWithDetails(999L, TENANT_ID)).thenReturn(Optional.empty());
 
         // When/Then
         assertThrows(NotFoundException.class, () -> productService.getProduct(999L));
@@ -212,7 +213,7 @@ class ProductServiceTest {
         when(productMapper.toEntity(request)).thenReturn(product);
         when(uomRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(uom));
         when(productRepository.save(any(Product.class))).thenReturn(product);
-        when(productRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdWithDetails(1L, TENANT_ID)).thenReturn(Optional.of(product));
         when(productMapper.toDto(product)).thenReturn(productDto);
         when(variantRepository.findByProductIdOrderBySortOrder(1L)).thenReturn(Collections.emptyList());
         when(variantMapper.toDtoList(anyList())).thenReturn(Collections.emptyList());
@@ -335,7 +336,7 @@ class ProductServiceTest {
         when(productRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(product));
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(productRepository.save(any(Product.class))).thenReturn(product);
-        when(productRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdWithDetails(1L, TENANT_ID)).thenReturn(Optional.of(product));
         when(productMapper.toDto(product)).thenReturn(productDto);
         when(variantRepository.findByProductIdOrderBySortOrder(1L)).thenReturn(Collections.emptyList());
         when(variantMapper.toDtoList(anyList())).thenReturn(Collections.emptyList());
@@ -626,7 +627,7 @@ class ProductServiceTest {
         // Given
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(productRepository.findBySkuAndTenantId("PROD-001", TENANT_ID)).thenReturn(Optional.of(product));
-        when(productRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdWithDetails(1L, TENANT_ID)).thenReturn(Optional.of(product));
         when(productMapper.toDto(product)).thenReturn(productDto);
         when(variantRepository.findByProductIdOrderBySortOrder(1L)).thenReturn(Collections.emptyList());
         when(variantMapper.toDtoList(anyList())).thenReturn(Collections.emptyList());

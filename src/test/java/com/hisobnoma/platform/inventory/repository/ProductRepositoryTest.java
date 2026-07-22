@@ -178,11 +178,13 @@ class ProductRepositoryTest {
 
         em.clear();
 
-        Optional<Product> result = productRepository.findByIdWithDetails(p.getId());
+        Optional<Product> result = productRepository.findByIdWithDetails(p.getId(), 1L);
 
         assertTrue(result.isPresent());
         assertNotNull(result.get().getCategory());
         assertNotNull(result.get().getBrand());
+        assertTrue(productRepository.findByIdWithDetails(p.getId(), 2L).isEmpty(),
+                "Another tenant must not load this product by id");
         assertNotNull(result.get().getBaseUom());
     }
 
