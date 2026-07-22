@@ -307,7 +307,7 @@ watchEffect(() => {
     <!-- Sidebar -->
     <aside
       :class="[
-        'fixed inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto lg:flex-shrink-0 flex flex-col',
+        'fixed inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:inset-auto lg:flex-shrink-0 flex flex-col',
         sidebarCollapsed ? 'lg:w-16 w-64' : 'w-64',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       ]"
@@ -392,7 +392,7 @@ watchEffect(() => {
 
             <div
               class="overflow-hidden transition-all duration-300 ease-in-out"
-              :style="{ maxHeight: isMenuExpanded(item.key) && !sidebarCollapsed ? (item.children.length * 40 + 8) + 'px' : '0px' }"
+              :style="{ maxHeight: isMenuExpanded(item.key) && !sidebarCollapsed ? (item.children.length * 80 + 16) + 'px' : '0px' }"
             >
               <div class="mt-1 ml-4 pl-4 border-l border-gray-200 space-y-1">
                 <RouterLink
