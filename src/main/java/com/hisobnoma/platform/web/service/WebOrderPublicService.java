@@ -50,6 +50,7 @@ public class WebOrderPublicService {
     private final TelegramNotificationService telegramNotificationService;
     private final PushSendService pushSendService;
     private final MobileAlertService mobileAlertService;
+    private final WebOrderNumberAllocator numberAllocator;
     private final WebPricingService pricingService;
     private final WebCouponService couponService;
     private final WebLoyaltyService loyaltyService;
@@ -254,13 +255,27 @@ public class WebOrderPublicService {
         }
     }
 
+    /**
+     * Numbers come from a per-tenant counter locked in its own transaction (see
+     * {@link WebOrderNumberAllocator}) — the previous count(*)+1 computed inside the open checkout
+     * transaction gave two concurrent buyers the same number and 500'd one of them on the unique
+     * index. The exists-check below skips stale numbers if the counter ever trails manually
+     * inserted rows; a first-use counter-insert race is retried (the losing insert rolls back only
+     * the allocator's transaction, not this checkout).
+     */
     private String generateOrderNumber(Long tenantId) {
-        long next = orderRepository.countByTenantIdAndCreatedAtAfter(tenantId, java.time.Instant.EPOCH) + 1;
-        String number = String.format("WO-%06d", next);
-        while (orderRepository.existsByTenantIdAndOrderNumber(tenantId, number)) {
-            number = String.format("WO-%06d", ++next);
+        for (int attempt = 0; attempt < 5; attempt++) {
+            String number;
+            try {
+                number = numberAllocator.next(tenantId);
+            } catch (org.springframework.dao.DataIntegrityViolationException firstUseRace) {
+                number = numberAllocator.next(tenantId);
+            }
+            if (!orderRepository.existsByTenantIdAndOrderNumber(tenantId, number)) {
+                return number;
+            }
         }
-        return number;
+        throw new BusinessException("Could not allocate an order number", "ORDER_NUMBER_ALLOCATION");
     }
 
     /**

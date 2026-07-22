@@ -44,6 +44,7 @@ class WebOrderPublicServiceTest {
     @Mock private TelegramNotificationService telegramNotificationService;
     @Mock private com.hisobnoma.platform.mobile.push.service.PushSendService pushSendService;
     @Mock private com.hisobnoma.platform.mobile.service.MobileAlertService mobileAlertService;
+    @Mock private WebOrderNumberAllocator numberAllocator;
     @Mock private WebPricingService pricingService;
     @Mock private WebCouponService couponService;
     @Mock private WebLoyaltyService loyaltyService;
@@ -60,6 +61,7 @@ class WebOrderPublicServiceTest {
     void setTenant() {
         // The service now fails closed without a tenant; simulate TenantFilter having set it.
         TenantContext.setCurrentTenant(TENANT_ID);
+        lenient().when(numberAllocator.next(TENANT_ID)).thenReturn("WO-000001");
     }
 
     @AfterEach
@@ -107,7 +109,6 @@ class WebOrderPublicServiceTest {
     void checkout_snapshotsServerSidePriceAndComputesTotal() {
         when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
         when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
-        when(orderRepository.countByTenantIdAndCreatedAtAfter(eq(TENANT_ID), any())).thenReturn(0L);
         when(orderRepository.existsByTenantIdAndOrderNumber(TENANT_ID, "WO-000001")).thenReturn(false);
         when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -399,7 +400,9 @@ class WebOrderPublicServiceTest {
     void checkout_generatesNextFreeOrderNumber() {
         when(rateLimiter.tryAcquire(anyString())).thenReturn(true);
         when(catalogRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(liveItem));
-        when(orderRepository.countByTenantIdAndCreatedAtAfter(eq(TENANT_ID), any())).thenReturn(7L);
+        // Counter trails a manually inserted order: the defensive exists-check skips WO-000008
+        // and takes the allocator's next number.
+        when(numberAllocator.next(TENANT_ID)).thenReturn("WO-000008", "WO-000009");
         when(orderRepository.existsByTenantIdAndOrderNumber(TENANT_ID, "WO-000008")).thenReturn(true);
         when(orderRepository.existsByTenantIdAndOrderNumber(TENANT_ID, "WO-000009")).thenReturn(false);
         when(orderRepository.save(any(WebOrder.class))).thenAnswer(inv -> inv.getArgument(0));
