@@ -93,6 +93,8 @@ class WebLoyaltyServiceTest {
 
     @Test
     void spend_clampsToBalanceAndPercent() {
+        when(webCustomerRepository.lockByIdAndTenantId(CUSTOMER_ID, TENANT_ID))
+                .thenReturn(java.util.Optional.of(new com.hisobnoma.platform.web.entity.WebCustomer()));
         when(loyaltyRepository.balanceByCustomer(TENANT_ID, CUSTOMER_ID))
                 .thenReturn(new BigDecimal("30000"));
         when(loyaltyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -111,6 +113,8 @@ class WebLoyaltyServiceTest {
 
     @Test
     void spend_belowMinRedeem_returnsZero() {
+        when(webCustomerRepository.lockByIdAndTenantId(CUSTOMER_ID, TENANT_ID))
+                .thenReturn(java.util.Optional.of(new com.hisobnoma.platform.web.entity.WebCustomer()));
         when(loyaltyRepository.balanceByCustomer(TENANT_ID, CUSTOMER_ID))
                 .thenReturn(new BigDecimal("3000"));
 

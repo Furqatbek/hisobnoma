@@ -16,6 +16,15 @@ public interface WebCustomerRepository extends JpaRepository<WebCustomer, Long> 
 
     Optional<WebCustomer> findByIdAndTenantId(Long id, Long tenantId);
 
+    /**
+     * Locks the customer row (SELECT ... FOR UPDATE) to serialize loyalty SPENDs per customer —
+     * without it, two concurrent checkouts both read the same balance and can overspend it.
+     */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT c FROM WebCustomer c WHERE c.id = :id AND c.tenantId = :tenantId")
+    Optional<WebCustomer> lockByIdAndTenantId(@org.springframework.data.repository.query.Param("id") Long id,
+                                              @org.springframework.data.repository.query.Param("tenantId") Long tenantId);
+
     Optional<WebCustomer> findByTenantIdAndPhone(Long tenantId, String phone);
 
     long countByTenantId(Long tenantId);

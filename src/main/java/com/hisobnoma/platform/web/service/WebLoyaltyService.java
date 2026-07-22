@@ -94,6 +94,11 @@ public class WebLoyaltyService {
             return BigDecimal.ZERO;
         }
 
+        // Serialize concurrent spends per customer: without this row lock, two simultaneous
+        // checkouts both read the same balance and can each spend it in full (negative balance).
+        webCustomerRepository.lockByIdAndTenantId(webCustomerId, tenantId)
+                .orElseThrow(() -> new ValidationException("Customer not found: " + webCustomerId));
+
         BigDecimal balance = loyaltyRepository.balanceByCustomer(tenantId, webCustomerId);
         BigDecimal minRedeem = getMinRedeem(tenantId);
         int maxPercent = getMaxRedeemPercent(tenantId);
