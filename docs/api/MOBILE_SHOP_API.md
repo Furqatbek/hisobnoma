@@ -84,7 +84,7 @@ price is ignored. `/price` is rate-limited ~5 per 10s per IP; `/validate-coupon`
 | GET | `/api/v1/web/orders/{orderNumber}?phone=` | Track an order (phone must match) |
 
 Checkout is rate-limited 5/min per IP+phone. On success the tenant's staff are notified (in-app
-alert + Telegram + APNs push). See [Placing an order](#3-place-an-order-checkout).
+alert + Telegram + APNs push). See [Placing an order](#5-place-an-order-checkout).
 
 ### Auth  ·  `/api/v1/web/auth`  ·  anonymous
 | Method | Path | Purpose |
@@ -112,6 +112,7 @@ Notification `type` values the app may receive: `ORDER_STATUS` (carries `orderNu
 | GET | `/me/referral-code` · `/me/referral-stats` | Referral program |
 | POST/DELETE | `/me/device-token` | Register / remove an FCM push token |
 
+<a id="payments"></a>
 ### Payments  ·  `/api/v1/web`
 | Method | Path | Purpose |
 |---|---|---|
