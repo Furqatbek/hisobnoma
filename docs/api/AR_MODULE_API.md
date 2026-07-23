@@ -117,7 +117,9 @@ DELETE /customers/{id}
 ```http
 PATCH /customers/{id}/credit-hold?hold={true|false}
 PATCH /customers/{id}/credit-limit?creditLimit={amount}
+PATCH /customers/{id}/activate           # reactivate a soft-deleted / inactive customer
 ```
+`credit-hold`, `credit-limit`, and `activate` all require `FINANCE_AR_WRITE`.
 
 ### Credit Check
 
@@ -129,6 +131,16 @@ GET /customers/{id}/can-invoice?amount={amount}
 ```json
 true
 ```
+
+### Other customer lookups
+
+```http
+GET /customers/active                    # only active customers (List<CustomerDto>)
+GET /customers/next-code                 # the next auto-generated customer code (plain string)
+GET /customers/credit-hold               # customers currently on credit hold (List<CustomerDto>)
+GET /customers/over-credit-limit         # customers whose balance exceeds their limit (List<CustomerDto>)
+```
+All four require `FINANCE_AR_READ`.
 
 ---
 
@@ -172,6 +184,21 @@ GET /ar-invoices/customer/{customerId}/unpaid
 ```http
 GET /ar-invoices/overdue
 ```
+
+### Customer Total Outstanding
+
+```http
+GET /ar-invoices/customer/{customerId}/outstanding
+```
+Returns the customer's total unpaid balance as a `BigDecimal`. Permission `FINANCE_AR_READ`.
+
+### Recompute Overdue Flags
+
+```http
+POST /ar-invoices/check-overdue
+```
+Sweeps posted invoices past their due date to status `OVERDUE` (used by the nightly job; safe to
+trigger manually). Permission `FINANCE_AR_WRITE`. Returns `200` with no body.
 
 ### Create Invoice
 
@@ -288,6 +315,15 @@ GET /ar-payments/{id}
 GET /ar-payments/number/{paymentNumber}
 ```
 
+### Payment Queries
+
+```http
+GET /ar-payments/date-range?startDate={yyyy-MM-dd}&endDate={yyyy-MM-dd}   # payments in a date range
+GET /ar-payments/undeposited                                             # completed but not yet deposited
+GET /ar-payments/total-by-date-range?startDate={yyyy-MM-dd}&endDate={yyyy-MM-dd}  # sum (BigDecimal)
+```
+All require `FINANCE_AR_READ`. `startDate`/`endDate` are ISO dates.
+
 ### Create Payment
 
 ```http
@@ -309,13 +345,23 @@ POST /ar-payments
 
 **Payment Methods:** `CASH`, `BANK_TRANSFER`, `CHECK`, `CREDIT_CARD`, `DEBIT_CARD`, `MOBILE_PAYMENT`
 
+### Create and Complete in One Step
+
+```http
+POST /ar-payments/pay
+```
+Same `CreateARPaymentRequest` body as `POST /ar-payments`, but creates the payment **and** completes
+it (posts to GL, applies allocations) in a single call — the common "record a payment now" path.
+Permission `FINANCE_AR_WRITE`.
+
 ### Allocate Payment to Invoice
 
 ```http
 POST /ar-payments/{id}/allocations
+DELETE /ar-payments/{id}/allocations/{allocationId}   # remove an allocation
 ```
 
-**Request Body:**
+**Request Body (POST):**
 ```json
 {
   "invoiceId": 1,
@@ -324,6 +370,7 @@ POST /ar-payments/{id}/allocations
   "writeOffAmount": 0.00
 }
 ```
+Both require `FINANCE_AR_WRITE`.
 
 ### Complete Payment
 
@@ -364,8 +411,17 @@ GET /credit-notes/customer/{customerId}
 ### Get Available Credit Notes
 
 ```http
-GET /credit-notes/customer/{customerId}/available
+GET /credit-notes/customer/{customerId}/available          # available credit notes (List)
+GET /credit-notes/customer/{customerId}/available-credit   # total available credit (BigDecimal)
 ```
+
+### Get Credit Notes by Status
+
+```http
+GET /credit-notes/status/{status}
+```
+`status` (`CreditNoteStatus`): `DRAFT`, `APPROVED`, `APPLIED`, `PARTIAL`, `CANCELLED` (paged;
+`FINANCE_AR_READ`).
 
 ### Get Credit Note
 
@@ -374,11 +430,13 @@ GET /credit-notes/{id}
 GET /credit-notes/number/{creditNoteNumber}
 ```
 
-### Create Credit Note
+### Create / Update Credit Note
 
 ```http
-POST /credit-notes
+POST /credit-notes            # create
+PUT  /credit-notes/{id}       # update a draft (same request body)
 ```
+Both require `FINANCE_AR_WRITE`.
 
 **Request Body:**
 ```json
@@ -420,8 +478,9 @@ POST /credit-notes/{id}/cancel?reason={reason}
 ### AR Aging Report
 
 ```http
-GET /ar-reports/aging
+GET /ar-reports/aging?asOfDate={yyyy-MM-dd}
 ```
+`asOfDate` is optional (defaults to today) — the balances are aged as of that date.
 
 **Response:**
 ```json

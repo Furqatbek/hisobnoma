@@ -457,6 +457,27 @@ POST /financial/trial-balance/export
 
 ---
 
+### Generate Income Statement
+
+```http
+POST /financial/income-statement
+POST /financial/income-statement/export
+```
+
+**Permission:** `REPORT_FINANCIAL_VIEW`
+
+**Request Body** (`GenerateReportRequest`, same shape as the other financial reports):
+```json
+{
+  "startDate": "2026-01-01",
+  "endDate": "2026-01-31"
+}
+```
+Returns an `IncomeStatementDTO` (revenue, expenses, net income for the period) wrapped in
+`ApiResponse`; the `/export` variant streams the file bytes (Excel/CSV/PDF per the request format).
+
+---
+
 ### Generate AR Aging Report
 
 ```http
@@ -592,6 +613,21 @@ POST /financial/ap-aging/export
 ```
 
 **Permission:** `REPORT_FINANCIAL_VIEW`
+
+---
+
+## HR Reports
+
+### Salary Report
+
+```http
+GET /hr/salary?year={yyyy}&month={1-12}
+```
+
+**Permission:** `REPORT_FINANCIAL_VIEW` **or** `HR_SALARY_READ`
+
+Returns a `SalaryReportDTO` (per-employee salary breakdown for the given month) wrapped in
+`ApiResponse`. `year` and `month` are required query params.
 
 ---
 
