@@ -3644,6 +3644,10 @@ web-shop and B2B public pattern: endpoints are anonymous at the Spring Security 
 (whitelisted under `/api/v1/agent/**`); the **tenant** comes from `X-Tenant-ID` on login,
 and the **agent identity** from a dedicated bearer token thereafter.
 
+> **Client contract:** a dedicated mobile-team doc with request/response shapes and a demo
+> walkthrough lives at [`api/MOBILE_AGENT_API.md`](api/MOBILE_AGENT_API.md) (peer to the shop
+> and push docs). The summary below is the platform-level reference.
+
 ## Auth (phone + SMS OTP)
 
 | Method | Endpoint | Description |
