@@ -4,6 +4,12 @@
 
 The POS (Point of Sale) module provides comprehensive transaction management for retail operations including terminal management, shift management, sales/returns/exchanges, payments, and integration with inventory and accounting systems.
 
+> **Scope:** this document covers the **core transaction** endpoints (terminals, shifts,
+> transactions, payments). The pricing/marketing endpoints — **promotions, coupons, price lists,
+> and the pricing engine** (`/api/v1/pos/promotions`, `/coupons`, `/price-lists`, `/pricing`) — are
+> documented separately in [`POS_PRICING_MODULE_API.md`](POS_PRICING_MODULE_API.md). The Pricing,
+> Price List, Promotion, and Coupon permission lists below apply to those endpoints.
+
 ## Authentication
 
 All endpoints require JWT Bearer token authentication and appropriate RBAC permissions:
