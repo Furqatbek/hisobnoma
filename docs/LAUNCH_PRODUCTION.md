@@ -105,7 +105,7 @@ docker compose -f docker-compose.prod.yml up -d --build app frontend
 ## 8. Disaster recovery
 
 - Backups: daily gzip dumps in the `hisobnoma_postgres_backups` volume (retention
-  `BACKUP_RETENTION_DAYS`, default 30); off-site S3 via `scripts/backup.sh` + `BACKUP_S3_*`
+  `BACKUP_RETENTION_DAYS`, default 30); off-site S3 via `scripts/backup.sh` + `S3_BUCKET`
 - Restore: `scripts/restore.sh` — **drill it against a scratch database before you need it**
 
 ## Launch-day checklist

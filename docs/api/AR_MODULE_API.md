@@ -152,7 +152,7 @@ GET /ar-invoices/customer/{customerId}
 GET /ar-invoices/status/{status}
 ```
 
-**Status Values:** `DRAFT`, `PENDING`, `SENT`, `PARTIAL`, `PAID`, `OVERDUE`, `CANCELLED`, `WRITTEN_OFF`
+**Status Values:** `DRAFT`, `PENDING`, `SENT`, `PARTIAL`, `PAID`, `OVERDUE`, `CANCELLED`, `DISPUTED`
 
 ### Get Invoice
 
@@ -185,6 +185,7 @@ POST /ar-invoices
   "customerId": 1,
   "invoiceDate": "2026-01-03",
   "dueDate": "2026-02-02",
+  "totalAmount": 1220000.00,
   "discountPercent": 5.00,
   "shippingAmount": 50000.00,
   "currency": "UZS",
@@ -276,7 +277,9 @@ GET /ar-payments/customer/{customerId}
 GET /ar-payments/status/{status}
 ```
 
-**Status Values:** `PENDING`, `COMPLETED`, `DEPOSITED`, `REFUNDED`, `CANCELLED`
+**Status Values:** `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED`, `CANCELLED`, `BOUNCED`
+(a completed payment can be flagged deposited via `markAsDeposited` — that sets a `deposited`
+boolean and keeps status `COMPLETED`; there is no `DEPOSITED` status.)
 
 ### Get Payment
 
@@ -401,7 +404,7 @@ Posts credit note to GL.
 ### Apply Credit to Invoice
 
 ```http
-POST /credit-notes/{id}/apply?invoiceId={invoiceId}&amount={amount}
+POST /credit-notes/{id}/apply-to-invoice?invoiceId={invoiceId}&amount={amount}
 ```
 
 ### Cancel Credit Note

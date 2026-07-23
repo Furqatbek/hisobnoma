@@ -130,7 +130,8 @@ collection on a visit that already has one is rejected (`COLLECTION_EXISTS`).
 { "customerId": 100, "visitId": 50, "routeId": 80,
   "paymentMethod": "CASH", "paymentTermsDays": 14,
   "discountAmount": 0, "deliveryFee": 0,
-  "deliveryAddress": "…", "notes": "…",
+  "deliveryAddress": "…", "deliveryLat": 41.31, "deliveryLng": 69.28,
+  "expectedDeliveryDate": "2026-07-24", "notes": "…",
   "confirmNow": true,
   "lines": [ { "productId": 10, "quantity": 3, "discountPercent": 0 } ] }
 ```

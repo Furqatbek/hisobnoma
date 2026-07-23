@@ -104,6 +104,21 @@ Create each buyer as a finance **Customer** (Финансы → Клиенты) 
 - **APNs push** — staff devices register via the admin mobile app (needs platform `APNS_*`
   configured; see [`api/MOBILE_PUSH_API.md`](api/MOBILE_PUSH_API.md)).
 
+## 9b. Subscription plan (optional)
+
+A new tenant defaults to the **STARTER** plan (`tenants.plan`, V85), which sets its
+`maxUsers`/`maxLocations` limits. The tenant admin can self-serve an upgrade/downgrade from the
+frontend (**Тариф режаси**) or via the API:
+
+- `GET /api/v1/admin/subscription` (`TENANT_SETTINGS_VIEW`) — current plan, usage, and the
+  switchable plan catalogue.
+- `POST /api/v1/admin/subscription/plan` `{ "plan": "BUSINESS" }` (`TENANT_SETTINGS_MANAGE`) —
+  applies the new tier's limits immediately. A downgrade is refused while current usage exceeds
+  the target plan's limits.
+
+Plans (`FREE`/`STARTER`/`BUSINESS`/`ENTERPRISE`) carry limits and an informational price; recurring
+billing is a later phase (see `MULTI_TENANCY.md` §9).
+
 ## 10. Verification checklist
 
 - [ ] `X-Tenant-ID: <id>` + `GET /api/v1/web/catalog/products` returns the tenant's LIVE items

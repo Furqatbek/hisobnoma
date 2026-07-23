@@ -1007,7 +1007,7 @@ Processes a refund for an approved payment on a completed transaction.
   the ledger entry is posted. This guarantees a rolled-back sale can never leave a GL entry.
 - If GL posting or AR invoice creation fails, the transaction is still completed; a background
   scheduler retries every 15 minutes (each retry isolated per transaction).
-- Manual inspection/retry endpoints (permission `POS_SALE_CREATE`):
+- Manual inspection/retry endpoints (permission `POS_REPORTS_VIEW`):
   - `GET /api/v1/pos/transactions/failed-gl` — completed transactions not yet posted to GL
   - `GET /api/v1/pos/transactions/failed-ar-invoice` — credit sales missing their AR invoice
   - `POST /api/v1/pos/transactions/{id}/retry-gl`

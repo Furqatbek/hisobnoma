@@ -101,25 +101,29 @@ docker compose up -d postgres redis
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-### Full Stack (with monitoring)
+### Full Stack
 
 ```bash
-# Start all services
+# Start all services (base compose: postgres, redis, backend, frontend)
 docker compose up -d
 
-# View logs
-docker compose logs -f app
+# View backend logs (the service is named `backend` in docker-compose.yml;
+# it is only called `app` in docker-compose.prod.yml)
+docker compose logs -f backend
 ```
+
+> The monitoring stack (Prometheus, Grafana, Loki, Promtail, Alertmanager) is **prod-only** —
+> it lives in `docker-compose.prod.yml`, not the base `docker-compose.yml`. See
+> [Production deployment](#production-deployment) to run it.
 
 ### Development URLs
 
 | Service | URL |
 |---------|-----|
-| Application | http://localhost:8080 |
+| Application (backend) | http://localhost:8080 |
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | Actuator | http://localhost:8080/actuator |
-| Prometheus | http://localhost:9090 |
-| Grafana | http://localhost:3000 |
+| Frontend | http://localhost:3000 |
 
 ---
 
@@ -579,7 +583,7 @@ the switches an operator must still set per environment:
    86400) into the `hisobnoma_postgres_backups` volume with `BACKUP_RETENTION_DAYS` (default 30)
    retention. Verify a dump exists after first deploy: `docker compose -f docker-compose.prod.yml
    exec postgres-backup ls -lh /backups`. Off-site copy (S3) still requires running
-   `scripts/backup.sh` with the `BACKUP_S3_BUCKET`/AWS vars (e.g. from host cron).
+   `scripts/backup.sh` with the `S3_BUCKET`/AWS vars (e.g. from host cron).
 5. **Logs** — Loki + promtail ship app/nginx/container logs; browse them in Grafana (the Loki
    datasource is pre-provisioned).
 6. **Restore drill** — test `scripts/restore.sh` against a staging copy before you need it.
