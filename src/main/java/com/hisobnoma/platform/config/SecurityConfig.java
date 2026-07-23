@@ -60,6 +60,7 @@ public class SecurityConfig {
             "/api/v1/mobile/auth/refresh",
             "/api/v1/web/**",
             "/api/v1/b2b/**",
+            "/api/v1/agent/**",
             "/uploads/**",
             "/actuator/health",
             "/actuator/info",

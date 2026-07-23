@@ -81,7 +81,17 @@ public class DistributionVisitService {
 
     @Transactional
     public DistributionVisitDto checkIn(VisitCheckInRequest request) {
-        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return doCheckIn(securityContextHelper.getCurrentTenantId(), request);
+    }
+
+    /** Agent-app check-in: the agent is the token's, never client-supplied. */
+    @Transactional
+    public DistributionVisitDto agentCheckIn(Long tenantId, Long agentId, VisitCheckInRequest request) {
+        request.setAgentId(agentId);
+        return doCheckIn(tenantId, request);
+    }
+
+    private DistributionVisitDto doCheckIn(Long tenantId, VisitCheckInRequest request) {
         if (agentRepository.findByIdAndTenantId(request.getAgentId(), tenantId).isEmpty()) {
             throw new NotFoundException("DistributionAgent", request.getAgentId());
         }
@@ -121,7 +131,23 @@ public class DistributionVisitService {
 
     @Transactional
     public DistributionVisitDto checkOut(Long id, VisitCheckOutRequest request) {
-        DistributionVisit visit = loadVisit(id);
+        return doCheckOut(loadVisit(id), request);
+    }
+
+    /**
+     * Agent-app check-out: loads the visit under the token's tenant and asserts the
+     * visit belongs to the calling agent (a mismatched id 404s — never a cross-agent edit).
+     */
+    @Transactional
+    public DistributionVisitDto agentCheckOut(Long tenantId, Long agentId, Long visitId,
+                                              VisitCheckOutRequest request) {
+        DistributionVisit visit = visitRepository.findByIdAndTenantId(visitId, tenantId)
+                .filter(v -> agentId.equals(v.getAgentId()))
+                .orElseThrow(() -> new NotFoundException("DistributionVisit", visitId));
+        return doCheckOut(visit, request);
+    }
+
+    private DistributionVisitDto doCheckOut(DistributionVisit visit, VisitCheckOutRequest request) {
         if (request.getCollectedAmount() != null && visit.getArPaymentId() != null) {
             // Money must never be double-recorded on a repeated checkout call.
             throw new BusinessException("Visit already has a recorded collection", "COLLECTION_EXISTS");

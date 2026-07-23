@@ -56,6 +56,11 @@ class AuthorizationCoverageArchTest {
             "B2bAuthController",
             "B2bCatalogController",
             "B2bOrderController",
+            // Agent mobile app: anonymous OTP login, then every endpoint validates
+            // the agent's own bearer token (AgentAuthService.requireAgent) and scopes
+            // strictly to that agent's tenant + id — no staff permission model
+            "AgentAuthController",
+            "AgentPortalController",
             // Login/refresh are anonymous; the rest operate only on the
             // caller's own account (id from their token)
             "AuthController",

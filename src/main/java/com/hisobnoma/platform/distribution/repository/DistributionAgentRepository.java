@@ -36,4 +36,15 @@ public interface DistributionAgentRepository extends JpaRepository<DistributionA
                                              @Param("search") String search, Pageable pageable);
 
     boolean existsByCodeAndTenantId(String code, Long tenantId);
+
+    /**
+     * Active agents matching a phone within a tenant — the OTP login resolver.
+     * A list (not Optional) so login can reject ambiguous phones shared by more
+     * than one active agent rather than silently pick one.
+     */
+    @Query("SELECT a FROM DistributionAgent a WHERE a.tenantId = :tenantId "
+            + "AND a.phone = :phone AND a.status = :status")
+    List<DistributionAgent> findByTenantIdAndPhoneAndStatus(@Param("tenantId") Long tenantId,
+                                                            @Param("phone") String phone,
+                                                            @Param("status") AgentStatus status);
 }

@@ -107,6 +107,7 @@ app:
     secret: ${JWT_SECRET:your-256-bit-secret-key-here-change-in-production-environment}
     access-token-expiration: ${JWT_ACCESS_EXPIRATION:86400000}     # 24 hours
     refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
+    agent-expiration: ${JWT_AGENT_EXPIRATION:2592000000}           # 30 days (agent mobile app)
     issuer: hisobnoma-platform
 
   # CORS — comma-separated origins; restrict in production

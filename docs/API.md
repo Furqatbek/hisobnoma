@@ -3365,11 +3365,9 @@ wholesale distribution module (routing, mobile selling, KPIs, and B2B marketplac
 later slices).
 
 > **Status:** routing, van loadouts, KPIs (incl. strike rate / drop size / trend), visit
-> cash collection against AR, and the B2B marketplace are all built and back-office-driven.
-> The remaining unbuilt piece is a **dedicated agent-facing mobile API** (agent login +
-> "my routes / visits / loadout for today" self-service). Today all distribution endpoints
-> are staff/back-office (`DISTRIBUTION_*` permissions); GPS/collection data is entered
-> through the admin panel until that agent app lands.
+> cash collection against AR, the B2B marketplace, **and the agent-facing mobile API**
+> (Slice 7 below) are all built. Staff endpoints use `DISTRIBUTION_*` permissions; the
+> agent app is a separate public, token-authenticated surface under `/api/v1/agent/**`.
 
 ### Endpoints
 
@@ -3636,6 +3634,56 @@ revenueAchievementPercent, strikeRatePercent, avgDropSize }`.
 - **Trend** returns `[{ date, revenue, orders, visits, collected }]` — one entry per day in
   `[from, to]` (missing days zero-filled so the chart has no gaps).
 - `from`/`to` are both inclusive dates.
+
+---
+
+# Distribution Module — Agent Mobile API (Slice 7)
+
+A **public, agent-facing** self-service surface for the field-sales mobile app. Mirrors the
+web-shop and B2B public pattern: endpoints are anonymous at the Spring Security layer
+(whitelisted under `/api/v1/agent/**`); the **tenant** comes from `X-Tenant-ID` on login,
+and the **agent identity** from a dedicated bearer token thereafter.
+
+## Auth (phone + SMS OTP)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/v1/agent/auth/request-otp | Send a 6-digit SMS code to the agent's phone |
+| POST | /api/v1/agent/auth/verify | Exchange phone+code for a bearer token |
+| GET | /api/v1/agent/me | The authenticated agent's profile |
+
+- **request-otp** body `{ phone }`. Always returns 200 (never reveals whether a phone is
+  registered); an SMS is sent only if the phone maps to an **ACTIVE** agent in the header
+  tenant. Abuse limits mirror the shop OTP: per-IP limiter, 60 s resend cooldown, ≤5
+  codes/day/phone, 5-minute code expiry, 5 wrong attempts per code. Only the salted SHA-256
+  hash is stored (`distribution_agent_otps`, V88).
+- **verify** body `{ phone, code }` → `{ token, agentId, code, name, phone }`. The phone must
+  resolve to exactly one active agent; an ambiguous phone (shared by >1 active agent) is
+  rejected (`AGENT_PHONE_AMBIGUOUS`) rather than logging in the wrong person.
+- **Token**: a JWT signed with a key **derived** from the staff secret
+  (`secret + "::distribution-agent"`), so it can never pass the staff / web / B2B signature
+  check. Subject=agentId, claims tenantId+code, 30-day expiry (`app.jwt.agent-expiration`).
+  The tenant is taken from the token on every request — never a header — and a
+  `SUSPENDED`/`TERMINATED` agent is rejected at use time even with a still-valid token.
+
+## Portal (token-guarded, `/api/v1/agent/me`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /me/summary | Today's snapshot: routes, visitsToday, hasActiveLoadout |
+| GET | /me/routes | The agent's assigned routes |
+| GET | /me/visits | The agent's visits (paginated) |
+| GET | /me/loadout/current | The agent's current (most recent LOADED) van loadout, or null |
+| GET | /me/orders | The agent's distribution orders (paginated) |
+| POST | /me/visits/check-in | Record a check-in `{ customerId, routeId?, routeStopId?, visitType?, latitude?, longitude?, notes? }` |
+| POST | /me/visits/{id}/check-out | Record outcome + optional cash collection `{ outcome, latitude?, longitude?, distributionOrderId?, collectedAmount?, notes? }` |
+
+- Every endpoint scopes strictly to `(tenant, agentId)` from the token — a client **never**
+  supplies an agentId. Check-in forces the agent to the token holder; check-out loads the
+  visit under the token's tenant and 404s if it belongs to another agent (no cross-agent edit).
+- **Cash collection** on check-out reuses the staff flow: `collectedAmount` creates a
+  completed, GL-posted AR payment allocated oldest-due-first across the customer's open
+  invoices, idempotent per visit. See "Visits" (Slice 4) for the full contract.
 
 ---
 
