@@ -117,6 +117,54 @@ public class WebPushService {
         return pushNotificationService.isDeliveryEnabled();
     }
 
+    // ---- staff-initiated manual sends ----
+
+    /** Outcome of a manual staff send: how many customers/devices were reached. */
+    public record ManualPushResult(int customers, int devices, boolean pushDeliveryEnabled) {
+    }
+
+    /**
+     * Manual staff message to ONE customer. Always lands as an in-app notification;
+     * the FCM leg additionally fires for each registered device (no-op while FCM
+     * is not configured — surfaced via {@code pushDeliveryEnabled}).
+     */
+    @Transactional
+    public ManualPushResult sendManualToCustomer(Long tenantId, Long webCustomerId,
+                                                 String title, String body) {
+        com.hisobnoma.platform.web.entity.WebCustomer customer = customerRepository
+                .findByIdAndTenantId(webCustomerId, tenantId)
+                .orElseThrow(() -> new com.hisobnoma.platform.common.exception.NotFoundException(
+                        "Web customer not found: " + webCustomerId));
+
+        int devices = tokenRepository.findByTenantIdAndWebCustomerId(tenantId, customer.getId()).size();
+        sendToCustomer(tenantId, customer.getId(), title, body, Map.of("type", "MANUAL"));
+        log.info("Manual push to customer {} ({} devices, tenant {})", customer.getId(), devices, tenantId);
+        return new ManualPushResult(1, devices, isDeliveryEnabled());
+    }
+
+    /**
+     * Manual staff message to a pre-resolved customer list (segment broadcast).
+     * One failed customer never aborts the rest.
+     */
+    @Transactional
+    public ManualPushResult sendManualBroadcast(Long tenantId,
+                                                List<com.hisobnoma.platform.web.entity.WebCustomer> customers,
+                                                String title, String body) {
+        int sent = 0;
+        int devices = 0;
+        for (com.hisobnoma.platform.web.entity.WebCustomer customer : customers) {
+            try {
+                devices += tokenRepository.findByTenantIdAndWebCustomerId(tenantId, customer.getId()).size();
+                sendToCustomer(tenantId, customer.getId(), title, body, Map.of("type", "MANUAL"));
+                sent++;
+            } catch (Exception e) {
+                log.warn("Manual push failed for customer {}: {}", customer.getId(), e.getMessage());
+            }
+        }
+        log.info("Manual push broadcast: {} customers, {} devices (tenant {})", sent, devices, tenantId);
+        return new ManualPushResult(sent, devices, isDeliveryEnabled());
+    }
+
     @Transactional(readOnly = true)
     public boolean hasPushToken(Long tenantId, Long webCustomerId) {
         return tokenRepository.existsByTenantIdAndWebCustomerId(tenantId, webCustomerId);

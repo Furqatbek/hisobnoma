@@ -8,6 +8,7 @@ import {
   LinkIcon,
   XMarkIcon,
   GiftIcon,
+  BellIcon,
   HeartIcon,
   ChevronDownIcon,
   ChevronUpIcon
@@ -43,6 +44,40 @@ const adjustBusy = ref(false)
 const expandedWishlist = ref(null)
 const wishlistItems = ref([])
 const wishlistLoading = ref(false)
+
+// Push modal state
+const pushTarget = ref(null)
+const pushTitle = ref('')
+const pushBody = ref('')
+const pushBusy = ref(false)
+
+function openPushModal(webCustomer) {
+  pushTarget.value = webCustomer
+  pushTitle.value = ''
+  pushBody.value = ''
+}
+
+async function submitPush() {
+  if (!pushTitle.value.trim() || !pushBody.value.trim()) return
+  pushBusy.value = true
+  try {
+    const response = await webCustomersApi.sendPush(pushTarget.value.id, {
+      title: pushTitle.value.trim(),
+      body: pushBody.value.trim()
+    })
+    const result = response.data.data
+    if (result.pushDeliveryEnabled && result.devices > 0) {
+      toast.success(t('webCustomers.pushSent', { devices: result.devices }))
+    } else {
+      toast.success(t('webCustomers.pushSentInApp'))
+    }
+    pushTarget.value = null
+  } catch (error) {
+    toast.error(error.response?.data?.message || t('webCustomers.actionError'))
+  } finally {
+    pushBusy.value = false
+  }
+}
 
 async function fetchCustomers(page = 0) {
   loading.value = true
@@ -288,6 +323,13 @@ onMounted(() => fetchCustomers())
                 <td class="px-4 py-3 text-right whitespace-nowrap space-x-1">
                   <button
                     class="btn-secondary text-sm py-1 px-3"
+                    @click="openPushModal(customer)"
+                    :title="$t('webCustomers.sendPush')"
+                  >
+                    <BellIcon class="h-4 w-4 inline" />
+                  </button>
+                  <button
+                    class="btn-secondary text-sm py-1 px-3"
                     @click="openLoyaltyModal(customer)"
                     :title="$t('webCustomers.loyalty')"
                   >
@@ -395,6 +437,39 @@ onMounted(() => fetchCustomers())
         </div>
         <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
           <button class="btn-secondary" @click="linkTarget = null">{{ $t('cancel') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Push modal -->
+    <div v-if="pushTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/40" @click="pushTarget = null"></div>
+      <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <BellIcon class="h-5 w-5 text-blue-600" />
+            {{ $t('webCustomers.sendPush') }}
+          </h3>
+          <p class="text-sm text-gray-500 mt-1">+{{ pushTarget.phone }} · {{ pushTarget.name || '' }}</p>
+        </div>
+        <div class="px-6 py-4 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">{{ $t('webCustomers.pushTitle') }}</label>
+            <input v-model="pushTitle" type="text" maxlength="100"
+                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">{{ $t('webCustomers.pushBody') }}</label>
+            <textarea v-model="pushBody" rows="3" maxlength="500"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+          </div>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+          <button class="btn-secondary text-sm" @click="pushTarget = null">{{ $t('cancel') }}</button>
+          <button class="btn-primary text-sm" :disabled="pushBusy || !pushTitle.trim() || !pushBody.trim()"
+                  @click="submitPush">
+            {{ pushBusy ? $t('saving') : $t('webCustomers.pushSend') }}
+          </button>
         </div>
       </div>
     </div>

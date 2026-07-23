@@ -42,5 +42,11 @@
   "wishlistCount": "Севимлилар сони",
   "wishlistEmpty": "Севимлилар рўйхати бўш",
   "wishlistUnavailable": "мавжуд эмас",
-  "wishlistPriceDrop": "нарх тушди"
+  "wishlistPriceDrop": "нарх тушди",
+  "sendPush": "Пуш хабар юбориш",
+  "pushTitle": "Сарлавҳа",
+  "pushBody": "Хабар матни",
+  "pushSend": "Юбориш",
+  "pushSent": "✓ Пуш юборилди ({devices} та қурилма)",
+  "pushSentInApp": "✓ Хабар иловадаги билдиришномаларга ёзилди"
 }

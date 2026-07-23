@@ -134,4 +134,58 @@ class WebPushServiceTest {
         when(tokenRepository.existsByTenantIdAndWebCustomerId(1L, 20L)).thenReturn(false);
         assertFalse(service.hasPushToken(1L, 20L));
     }
+
+    // ---- manual staff sends ----
+
+    @Test
+    void sendManualToCustomer_sendsAndReportsDevices() {
+        WebCustomer customer = WebCustomer.builder().phone("998901234567").tenantId(1L).build();
+        customer.setId(10L);
+        when(customerRepository.findByIdAndTenantId(10L, 1L)).thenReturn(Optional.of(customer));
+        when(tokenRepository.findByTenantIdAndWebCustomerId(1L, 10L)).thenReturn(List.of(
+                WebDeviceToken.builder().token("tok1").tenantId(1L).webCustomerId(10L).build(),
+                WebDeviceToken.builder().token("tok2").tenantId(1L).webCustomerId(10L).build()));
+        when(pushNotificationService.isDeliveryEnabled()).thenReturn(true);
+
+        WebPushService.ManualPushResult result = service.sendManualToCustomer(1L, 10L, "Aksiya", "50% chegirma");
+
+        assertEquals(1, result.customers());
+        assertEquals(2, result.devices());
+        assertTrue(result.pushDeliveryEnabled());
+        verify(notificationService).create(eq(1L), eq(10L), eq("Aksiya"), eq("50% chegirma"),
+                eq("MANUAL"), isNull(), isNull());
+        verify(pushNotificationService).sendToDevice(eq("tok1"), eq("Aksiya"), eq("50% chegirma"), any());
+        verify(pushNotificationService).sendToDevice(eq("tok2"), eq("Aksiya"), eq("50% chegirma"), any());
+    }
+
+    @Test
+    void sendManualToCustomer_unknownOrForeignCustomer_throws() {
+        when(customerRepository.findByIdAndTenantId(10L, 1L)).thenReturn(Optional.empty());
+
+        assertThrows(com.hisobnoma.platform.common.exception.NotFoundException.class,
+                () -> service.sendManualToCustomer(1L, 10L, "T", "B"));
+        verifyNoInteractions(pushNotificationService);
+    }
+
+    @Test
+    void sendManualBroadcast_oneFailureDoesNotAbortOthers() {
+        WebCustomer c1 = WebCustomer.builder().phone("998901111111").tenantId(1L).build();
+        c1.setId(11L);
+        WebCustomer c2 = WebCustomer.builder().phone("998902222222").tenantId(1L).build();
+        c2.setId(12L);
+
+        when(tokenRepository.findByTenantIdAndWebCustomerId(1L, 11L))
+                .thenThrow(new RuntimeException("DB error"));
+        when(tokenRepository.findByTenantIdAndWebCustomerId(1L, 12L))
+                .thenReturn(List.of(WebDeviceToken.builder().token("tok2").tenantId(1L).webCustomerId(12L).build()));
+        when(pushNotificationService.isDeliveryEnabled()).thenReturn(false);
+
+        WebPushService.ManualPushResult result =
+                service.sendManualBroadcast(1L, List.of(c1, c2), "T", "B");
+
+        assertEquals(1, result.customers());
+        assertEquals(1, result.devices());
+        assertFalse(result.pushDeliveryEnabled());
+        verify(pushNotificationService).sendToDevice(eq("tok2"), eq("T"), eq("B"), any());
+    }
 }

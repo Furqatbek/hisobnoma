@@ -106,6 +106,9 @@ Abuse limits: 60s cooldown between codes, max 5 codes/phone/day, 5 wrong attempt
 | PUT/DELETE | `/me/wishlist/{catalogItemId}` | Like / unlike a product |
 | GET | `/me/notifications` · `/me/notifications/unread-count` | In-app notifications |
 | PUT | `/me/notifications/{id}/read` · `/me/notifications/read-all` | Mark read |
+
+Notification `type` values the app may receive: `ORDER_STATUS` (carries `orderNumber` in push data),
+`GENERAL`, and `MANUAL` (a message staff composed in the admin panel — no reference data, just show it).
 | GET | `/me/referral-code` · `/me/referral-stats` | Referral program |
 | POST/DELETE | `/me/device-token` | Register / remove an FCM push token |
 

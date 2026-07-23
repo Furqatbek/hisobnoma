@@ -96,6 +96,39 @@ async function submitIssue() {
   }
 }
 
+// Push broadcast modal
+const showPush = ref(false)
+const pushForm = ref({ title: '', body: '' })
+const pushing = ref(false)
+const pushResult = ref(null)
+
+function openPush() {
+  pushForm.value = { title: '', body: '' }
+  pushResult.value = null
+  showPush.value = true
+}
+
+async function submitPush() {
+  if (!pushForm.value.title.trim() || !pushForm.value.body.trim() || !selected.value) return
+  pushing.value = true
+  pushResult.value = null
+  try {
+    const data = unwrapData(await webCustomersApi.sendSegmentPush(
+      selected.value.segment, selected.value.param, {
+        title: pushForm.value.title.trim(),
+        body: pushForm.value.body.trim()
+      }))
+    pushResult.value = t('segments.pushResult', {
+      customers: data?.customers ?? 0,
+      devices: data?.devices ?? 0
+    })
+  } catch (e) {
+    pushResult.value = e.response?.data?.message || e.message
+  } finally {
+    pushing.value = false
+  }
+}
+
 onMounted(loadCounts)
 </script>
 
@@ -151,6 +184,10 @@ onMounted(loadCounts)
           <button class="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-500"
                   @click="openIssue">
             {{ t('segments.issueCoupons') }}
+          </button>
+          <button class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+                  @click="openPush">
+            {{ t('segments.sendPush') }}
           </button>
           <button class="rounded-md bg-gray-100 px-3 py-2 text-sm hover:bg-gray-200"
                   @click="makeCampaign(selected)">
@@ -224,6 +261,39 @@ onMounted(loadCounts)
           <button class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500 disabled:opacity-50"
                   :disabled="issuing || !issueForm.promotionId" @click="submitIssue">
             {{ issuing ? t('saving') : t('segments.issue') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Push broadcast modal -->
+    <div v-if="showPush" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/40" @click="showPush = false"></div>
+      <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+        <h3 class="text-lg font-medium text-gray-900">{{ t('segments.sendPush') }}</h3>
+        <p class="mt-1 text-sm text-gray-500">
+          {{ t(`segments.${selected.key}`) }} — {{ customers.length }}
+        </p>
+        <div class="mt-4 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">{{ t('segments.pushTitle') }}</label>
+            <input v-model="pushForm.title" type="text" maxlength="100"
+                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">{{ t('segments.pushBody') }}</label>
+            <textarea v-model="pushForm.body" rows="3" maxlength="500"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+          </div>
+          <p v-if="pushResult" class="text-sm text-gray-700">{{ pushResult }}</p>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+          <button class="rounded-md bg-gray-100 px-4 py-2 text-sm hover:bg-gray-200" @click="showPush = false">
+            {{ t('close') }}
+          </button>
+          <button class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                  :disabled="pushing || !pushForm.title.trim() || !pushForm.body.trim()" @click="submitPush">
+            {{ pushing ? t('saving') : t('segments.pushSend') }}
           </button>
         </div>
       </div>

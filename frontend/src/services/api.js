@@ -831,6 +831,9 @@ export const webCustomersApi = {
   issueCoupon: (id, data) => api.post(`/web-customers/${id}/coupons`, data),
   issueSegmentCoupons: (segment, param, data) =>
     api.post(`/web-customers/segments/${segment}/coupons`, data, { params: { param } }),
+  sendPush: (id, data) => api.post(`/web-customers/${id}/push`, data),
+  sendSegmentPush: (segment, param, data) =>
+    api.post(`/web-customers/segments/${segment}/push`, data, { params: { param } }),
   getById: (id) => api.get(`/web-customers/${id}`),
   linkCustomer: (id, customerId) => api.post(`/web-customers/${id}/link-customer`, { customerId }),
   unlinkCustomer: (id) => api.post(`/web-customers/${id}/unlink-customer`),

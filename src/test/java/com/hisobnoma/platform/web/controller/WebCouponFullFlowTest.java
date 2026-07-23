@@ -498,6 +498,51 @@ class WebCouponFullFlowTest {
         assertEquals(1, couponListService.getAvailableCoupons(tenant.getId(), second.getId()).size());
     }
 
+    // ---- manual push notifications (same admin controller / fixtures) ----
+
+    @Test
+    void manualPush_toCustomer_createsInAppNotificationAndReportsDevices() throws Exception {
+        WebCustomer customer = saveWebCustomer("998906666666", "PushTarget");
+
+        mockMvc.perform(post("/api/v1/web-customers/" + customer.getId() + "/push")
+                        .with(authWith("WEB_CUSTOMER_MANAGE"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Aksiya\",\"body\":\"Yangi chegirmalar!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.customers", is(1)))
+                .andExpect(jsonPath("$.data.devices", is(0)));
+    }
+
+    @Test
+    void manualPush_toSegment_reachesEveryCustomer() throws Exception {
+        saveWebCustomer("998907777777", "SegA");
+        saveWebCustomer("998908888888", "SegB");
+
+        mockMvc.perform(post("/api/v1/web-customers/segments/NEVER_ORDERED/push")
+                        .with(authWith("WEB_CUSTOMER_MANAGE"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Aksiya\",\"body\":\"Yangi chegirmalar!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.customers", is(2)));
+    }
+
+    @Test
+    void manualPush_requiresManagePermission_andValidBody() throws Exception {
+        WebCustomer customer = saveWebCustomer("998909999999", "NoPerm");
+
+        mockMvc.perform(post("/api/v1/web-customers/" + customer.getId() + "/push")
+                        .with(authWith("WEB_CUSTOMER_VIEW"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\",\"body\":\"B\"}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/web-customers/" + customer.getId() + "/push")
+                        .with(authWith("WEB_CUSTOMER_MANAGE"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"\",\"body\":\"\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void issueCoupon_requiresPosCouponCreatePermission() throws Exception {
         Promotion promo = savePersonalPromotion();

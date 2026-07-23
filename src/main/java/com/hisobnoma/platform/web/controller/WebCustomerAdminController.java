@@ -1,6 +1,8 @@
 package com.hisobnoma.platform.web.controller;
 
 import com.hisobnoma.platform.auth.security.RequiresPermission;
+import com.hisobnoma.platform.auth.security.SecurityContextHelper;
+import com.hisobnoma.platform.web.service.WebPushService;
 import com.hisobnoma.platform.common.dto.ApiResponse;
 import com.hisobnoma.platform.common.dto.PageResponse;
 import com.hisobnoma.platform.web.dto.LoyaltyAdjustRequest;
@@ -32,6 +34,8 @@ public class WebCustomerAdminController {
     private final WebLoyaltyService loyaltyService;
     private final WebWishlistService wishlistService;
     private final com.hisobnoma.platform.web.service.WebCouponIssueService couponIssueService;
+    private final WebPushService webPushService;
+    private final SecurityContextHelper securityContextHelper;
 
     @GetMapping
     @RequiresPermission("WEB_CUSTOMER_VIEW")
@@ -135,5 +139,33 @@ public class WebCustomerAdminController {
         int issued = couponIssueService.issueToSegment(segment, param, request);
         return ResponseEntity.ok(ApiResponse.success(
                 java.util.Map.of("issued", issued), "Coupons issued"));
+    }
+
+    // ---- manual push notifications ----
+
+    /** Manual push to one customer's app (in-app notification + FCM to each device). */
+    @PostMapping("/{id}/push")
+    @RequiresPermission("WEB_CUSTOMER_MANAGE")
+    public ResponseEntity<ApiResponse<WebPushService.ManualPushResult>> sendPush(
+            @PathVariable Long id,
+            @Valid @RequestBody com.hisobnoma.platform.web.dto.SendPushRequest request) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return ResponseEntity.ok(ApiResponse.success(
+                webPushService.sendManualToCustomer(tenantId, id, request.getTitle(), request.getBody()),
+                "Push sent"));
+    }
+
+    /** Manual push to every customer in a segment. */
+    @PostMapping("/segments/{segment}/push")
+    @RequiresPermission("WEB_CUSTOMER_MANAGE")
+    public ResponseEntity<ApiResponse<WebPushService.ManualPushResult>> sendSegmentPush(
+            @PathVariable com.hisobnoma.platform.web.entity.WebSegmentType segment,
+            @RequestParam(required = false) Integer param,
+            @Valid @RequestBody com.hisobnoma.platform.web.dto.SendPushRequest request) {
+        Long tenantId = securityContextHelper.getCurrentTenantId();
+        var customers = couponIssueService.resolveSegment(tenantId, segment, param);
+        return ResponseEntity.ok(ApiResponse.success(
+                webPushService.sendManualBroadcast(tenantId, customers, request.getTitle(), request.getBody()),
+                "Push sent"));
     }
 }
