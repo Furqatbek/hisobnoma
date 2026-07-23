@@ -3676,6 +3676,7 @@ and the **agent identity** from a dedicated bearer token thereafter.
 | GET | /me/loadout/current | The agent's current (most recent LOADED) van loadout, or null |
 | GET | /me/orders | The agent's distribution orders (paginated) |
 | POST | /me/orders | Place an order from the field (see below) |
+| POST | /me/orders/{id}/deliver | Deliver + invoice the order on the spot (van sale) |
 | POST | /me/visits/check-in | Record a check-in `{ customerId, routeId?, routeStopId?, visitType?, latitude?, longitude?, notes? }` |
 | POST | /me/visits/{id}/check-out | Record outcome + optional cash collection `{ outcome, latitude?, longitude?, distributionOrderId?, collectedAmount?, notes? }` |
 
@@ -3695,6 +3696,14 @@ and the **agent identity** from a dedicated bearer token thereafter.
   `confirmNow: true` to immediately CONFIRM it (reserving van stock) — the typical van-sale
   capture. Fulfilment (deliver → invoice, with the cash/credit split and AR bridge)
   continues through the normal order lifecycle.
+- **On-the-spot fulfilment** — `POST /me/orders/{id}/deliver` body optional `{ cashCollected? }`
+  takes the agent's **own** order all the way to `INVOICED` in one call. The physical goods
+  are already on the van, so the warehouse states (PICKING/LOADED/IN_TRANSIT) are
+  auto-advanced; a DRAFT order is CONFIRMED first (reserving stock). Delivery deducts van
+  stock and applies the cash/credit split (`cashCollected` defaults to the full total for a
+  CASH order); the invoice step raises an AR receivable **only** for any credit portion (a
+  fully cash-settled sale raises none). Idempotent — a repeat call on an already-INVOICED
+  order returns it unchanged — and 404s on another agent's order.
 
 ---
 

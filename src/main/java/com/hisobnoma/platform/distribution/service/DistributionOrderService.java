@@ -250,7 +250,11 @@ public class DistributionOrderService {
 
     @Transactional
     public DistributionOrderDto deliver(Long id, DeliverDistributionOrderRequest request) {
-        DistributionOrder order = transition(id, DistributionOrderStatus.DELIVERED);
+        return doDeliver(id, securityContextHelper.getCurrentTenantId(), request);
+    }
+
+    private DistributionOrderDto doDeliver(Long id, Long tenantId, DeliverDistributionOrderRequest request) {
+        DistributionOrder order = transition(id, tenantId, DistributionOrderStatus.DELIVERED);
         order.setDeliveredAt(Instant.now());
         order.getLines().forEach(l -> l.setFulfilledQuantity(l.getQuantity()));
         applyCashSplit(order, request != null ? request.getCashCollected() : null);
@@ -259,9 +263,55 @@ public class DistributionOrderService {
         return orderMapper.toDto(order);
     }
 
+    /**
+     * Van-sale fulfilment from the agent app: take the agent's own order all the way to
+     * INVOICED in one call — the physical goods are already on the van, so the warehouse
+     * states (PICKING/LOADED/IN_TRANSIT) are auto-advanced. A DRAFT order is CONFIRMED first
+     * (reserving van stock). Idempotent: an already-INVOICED order is returned unchanged; an
+     * already-DELIVERED order is only invoiced.
+     */
+    @Transactional
+    public DistributionOrderDto agentDeliverAndInvoice(Long tenantId, Long agentId, Long orderId,
+                                                       DeliverDistributionOrderRequest request) {
+        DistributionOrder order = loadOrder(orderId, tenantId);
+        if (!agentId.equals(order.getAgentId())) {
+            throw new NotFoundException("DistributionOrder", orderId);
+        }
+        if (order.getStatus() == DistributionOrderStatus.CANCELLED) {
+            throw new BusinessException("Cancelled order cannot be delivered", "ORDER_CANCELLED");
+        }
+        if (order.getStatus() == DistributionOrderStatus.INVOICED) {
+            return orderMapper.toDto(order); // already fully closed
+        }
+        if (order.getStatus() != DistributionOrderStatus.DELIVERED) {
+            // Advance to IN_TRANSIT, skipping states already passed; CONFIRM reserves stock.
+            for (DistributionOrderStatus step : new DistributionOrderStatus[]{
+                    DistributionOrderStatus.CONFIRMED, DistributionOrderStatus.PICKING,
+                    DistributionOrderStatus.LOADED, DistributionOrderStatus.IN_TRANSIT}) {
+                DistributionOrder current = loadOrder(orderId, tenantId);
+                if (current.getStatus() == step) {
+                    continue;
+                }
+                if (current.getStatus().canTransitionTo(step)) {
+                    if (step == DistributionOrderStatus.CONFIRMED) {
+                        doConfirm(orderId, tenantId);
+                    } else {
+                        transition(orderId, tenantId, step);
+                    }
+                }
+            }
+            doDeliver(orderId, tenantId, request);
+        }
+        return doInvoice(orderId, tenantId);
+    }
+
     @Transactional
     public DistributionOrderDto invoice(Long id) {
-        DistributionOrder order = transition(id, DistributionOrderStatus.INVOICED);
+        return doInvoice(id, securityContextHelper.getCurrentTenantId());
+    }
+
+    private DistributionOrderDto doInvoice(Long id, Long tenantId) {
+        DistributionOrder order = transition(id, tenantId, DistributionOrderStatus.INVOICED);
 
         // Raise a receivable only for the credit (owed) portion. A fully cash-settled order
         // (creditAmount == 0) raises no AR invoice — avoiding a phantom receivable for money
@@ -272,7 +322,7 @@ public class DistributionOrderService {
             return orderMapper.toDto(order);
         }
 
-        ARInvoiceDto invoice = arInvoiceService.createInvoice(buildInvoiceRequest(order));
+        ARInvoiceDto invoice = arInvoiceService.createInvoice(buildInvoiceRequest(order), order.getTenantId());
         order.setArInvoiceId(invoice.getId());
         order.setArInvoiceNumber(invoice.getInvoiceNumber());
         log.info("Distribution order {} invoiced as {} (credit {})",

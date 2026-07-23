@@ -130,6 +130,14 @@ public class AgentPortalService {
                 request.toCreateRequest(), vanLocationId, request.isConfirmNow());
     }
 
+    /** Van-sale fulfilment: deliver + invoice the agent's own order in one call. */
+    @Transactional
+    public DistributionOrderDto deliverOrder(String bearer, Long orderId,
+                                             com.hisobnoma.platform.distribution.dto.DeliverDistributionOrderRequest request) {
+        DistributionAgent agent = agentAuthService.requireAgent(bearer);
+        return orderService.agentDeliverAndInvoice(agent.getTenantId(), agent.getId(), orderId, request);
+    }
+
     private VanLoadout currentLoadout(Long tenantId, Long agentId) {
         return loadoutRepository
                 .findByTenantIdAndAgentId(tenantId, agentId, Pageable.unpaged())

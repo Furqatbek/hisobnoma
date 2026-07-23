@@ -229,6 +229,81 @@ class AgentApiFullFlowTest {
         assertTrue(content.isArray() && content.size() >= 1);
     }
 
+    private long placeOrder(String token, String paymentMethod) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/agent/me/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerId\":" + customerId + ",\"paymentMethod\":\"" + paymentMethod + "\","
+                                + "\"confirmNow\":true,"
+                                + "\"lines\":[{\"productId\":" + productId + ",\"quantity\":2}]}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).at("/data/id").asLong();
+    }
+
+    @Test
+    void deliver_cashVanSale_fullySettledNoAr() throws Exception {
+        String token = loginAndGetToken(agentPhone);
+        long orderId = placeOrder(token, "CASH");
+
+        mockMvc.perform(post("/api/v1/agent/me/orders/" + orderId + "/deliver")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("INVOICED"))
+                // 2 x 10000 fully paid in cash → no receivable
+                .andExpect(jsonPath("$.data.cashCollected").value(20000))
+                .andExpect(jsonPath("$.data.creditAmount").value(0))
+                .andExpect(jsonPath("$.data.arInvoiceNumber").doesNotExist());
+    }
+
+    @Test
+    void deliver_creditSale_raisesArInvoice() throws Exception {
+        String token = loginAndGetToken(agentPhone);
+        long orderId = placeOrder(token, "CREDIT");
+
+        mockMvc.perform(post("/api/v1/agent/me/orders/" + orderId + "/deliver")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("INVOICED"))
+                .andExpect(jsonPath("$.data.creditAmount").value(20000))
+                .andExpect(jsonPath("$.data.arInvoiceNumber", not(emptyOrNullString())));
+    }
+
+    @Test
+    void deliver_secondCall_isIdempotent() throws Exception {
+        String token = loginAndGetToken(agentPhone);
+        long orderId = placeOrder(token, "CASH");
+        mockMvc.perform(post("/api/v1/agent/me/orders/" + orderId + "/deliver")
+                        .header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk());
+        // A repeat call on an already-INVOICED order returns it unchanged, not an error
+        mockMvc.perform(post("/api/v1/agent/me/orders/" + orderId + "/deliver")
+                        .header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("INVOICED"));
+    }
+
+    @Test
+    void deliver_anotherAgentsOrder_isNotFound() throws Exception {
+        String tokenA = loginAndGetToken(agentPhone);
+        long orderId = placeOrder(tokenA, "CASH");
+
+        String phoneB = "99890" + SEQ.incrementAndGet();
+        DistributionAgent b = DistributionAgent.builder()
+                .code("AG-2").name("Bek").phone(phoneB).status(AgentStatus.ACTIVE).build();
+        b.setTenantId(tenant.getId());
+        agentRepository.saveAndFlush(b);
+        String tokenB = loginAndGetToken(phoneB);
+
+        mockMvc.perform(post("/api/v1/agent/me/orders/" + orderId + "/deliver")
+                        .header("Authorization", "Bearer " + tokenB).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+    }
+
     @Test
     void placeOrder_missingLines_isBadRequest() throws Exception {
         String token = loginAndGetToken(agentPhone);

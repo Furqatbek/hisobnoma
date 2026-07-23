@@ -218,8 +218,12 @@ public class CustomerService {
      */
     @Transactional(readOnly = true)
     public boolean canBeInvoiced(Long customerId, BigDecimal invoiceAmount) {
-        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return canBeInvoiced(customerId, invoiceAmount, securityContextHelper.getCurrentTenantId());
+    }
 
+    /** Tenant-explicit variant for callers without a staff security context. */
+    @Transactional(readOnly = true)
+    public boolean canBeInvoiced(Long customerId, BigDecimal invoiceAmount, Long tenantId) {
         Customer customer = customerRepository.findByIdAndTenantId(customerId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Customer not found with id: " + customerId));
 

@@ -270,7 +270,7 @@ class DistributionOrderServiceTest {
         when(orderRepository.findByIdAndTenantId(50L, TENANT_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(any(DistributionOrder.class))).thenAnswer(inv -> inv.getArgument(0));
         ARInvoiceDto invoiceDto = ARInvoiceDto.builder().id(777L).invoiceNumber("INV-000777").build();
-        when(arInvoiceService.createInvoice(any(CreateARInvoiceRequest.class))).thenReturn(invoiceDto);
+        when(arInvoiceService.createInvoice(any(CreateARInvoiceRequest.class), any())).thenReturn(invoiceDto);
 
         service.invoice(50L);
 
@@ -279,7 +279,7 @@ class DistributionOrderServiceTest {
         assertEquals("INV-000777", order.getArInvoiceNumber());
 
         ArgumentCaptor<CreateARInvoiceRequest> captor = ArgumentCaptor.forClass(CreateARInvoiceRequest.class);
-        verify(arInvoiceService).createInvoice(captor.capture());
+        verify(arInvoiceService).createInvoice(captor.capture(), any());
         CreateARInvoiceRequest req = captor.getValue();
         assertEquals(50L, req.getSalesOrderId());
         assertEquals(100L, req.getCustomerId());
@@ -302,7 +302,7 @@ class DistributionOrderServiceTest {
 
         assertEquals(DistributionOrderStatus.INVOICED, order.getStatus());
         assertNull(order.getArInvoiceId());
-        verify(arInvoiceService, never()).createInvoice(any());
+        verify(arInvoiceService, never()).createInvoice(any(), any());
     }
 
     @Test
@@ -311,7 +311,7 @@ class DistributionOrderServiceTest {
                 .thenReturn(Optional.of(orderInStatus(DistributionOrderStatus.CONFIRMED, 9L)));
 
         assertThrows(BusinessException.class, () -> service.invoice(50L));
-        verify(arInvoiceService, never()).createInvoice(any());
+        verify(arInvoiceService, never()).createInvoice(any(), any());
     }
 
     // ---- cancel ----

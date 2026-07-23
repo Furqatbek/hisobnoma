@@ -179,7 +179,7 @@ class ARInvoiceServiceTest {
 
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(customerRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(customer));
-        when(customerService.canBeInvoiced(eq(1L), any())).thenReturn(true);
+        when(customerService.canBeInvoiced(eq(1L), any(), any())).thenReturn(true);
         when(arInvoiceRepository.findMaxInvoiceNumber(TENANT_ID)).thenReturn(null);
         when(arInvoiceMapper.toEntity(any())).thenReturn(invoice);
         when(arInvoiceRepository.save(any())).thenReturn(invoice);
@@ -234,7 +234,7 @@ class ARInvoiceServiceTest {
 
         when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
         when(customerRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(customer));
-        when(customerService.canBeInvoiced(eq(1L), any())).thenReturn(false);
+        when(customerService.canBeInvoiced(eq(1L), any(), any())).thenReturn(false);
 
         // When/Then
         assertThrows(BusinessException.class, () -> arInvoiceService.createInvoice(request));

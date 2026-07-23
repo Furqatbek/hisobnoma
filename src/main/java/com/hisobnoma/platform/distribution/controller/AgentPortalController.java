@@ -8,6 +8,7 @@ import com.hisobnoma.platform.distribution.dto.DistributionVisitDto;
 import com.hisobnoma.platform.distribution.dto.VanLoadoutDto;
 import com.hisobnoma.platform.distribution.dto.AgentCheckInRequest;
 import com.hisobnoma.platform.distribution.dto.AgentCreateOrderRequest;
+import com.hisobnoma.platform.distribution.dto.DeliverDistributionOrderRequest;
 import com.hisobnoma.platform.distribution.dto.VisitCheckOutRequest;
 import com.hisobnoma.platform.distribution.service.AgentPortalService;
 import jakarta.validation.Valid;
@@ -70,6 +71,16 @@ public class AgentPortalController {
             @RequestHeader(HttpHeaders.AUTHORIZATION) String auth,
             @Valid @RequestBody AgentCreateOrderRequest request) {
         return ResponseEntity.ok(ApiResponse.success(portalService.placeOrder(auth, request), "Order placed"));
+    }
+
+    /** Deliver + invoice an order on the spot (van sale). Body optional: `{ cashCollected? }`. */
+    @PostMapping("/orders/{id}/deliver")
+    public ResponseEntity<ApiResponse<DistributionOrderDto>> deliverOrder(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String auth,
+            @PathVariable Long id,
+            @RequestBody(required = false) DeliverDistributionOrderRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                portalService.deliverOrder(auth, id, request), "Order delivered"));
     }
 
     @PostMapping("/visits/check-in")

@@ -104,14 +104,21 @@ public class ARInvoiceService {
 
     @Transactional
     public ARInvoiceDto createInvoice(CreateARInvoiceRequest request) {
-        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return createInvoice(request, securityContextHelper.getCurrentTenantId());
+    }
 
+    /**
+     * Tenant-explicit variant for callers without a staff security context
+     * (e.g. the distribution agent app raising a receivable on a van sale).
+     */
+    @Transactional
+    public ARInvoiceDto createInvoice(CreateARInvoiceRequest request, Long tenantId) {
         // Validate customer exists
         Customer customer = customerRepository.findByIdAndTenantId(request.getCustomerId(), tenantId)
                 .orElseThrow(() -> new NotFoundException("Customer not found with id: " + request.getCustomerId()));
 
         // Check credit limit if applicable
-        if (!customerService.canBeInvoiced(customer.getId(), request.getTotalAmount())) {
+        if (!customerService.canBeInvoiced(customer.getId(), request.getTotalAmount(), tenantId)) {
             throw new BusinessException("Customer has exceeded credit limit or is on credit hold");
         }
 
