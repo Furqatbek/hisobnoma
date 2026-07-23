@@ -3364,6 +3364,13 @@ Field sales / route / van-sales agents and their territory coverage. First slice
 wholesale distribution module (routing, mobile selling, KPIs, and B2B marketplace follow in
 later slices).
 
+> **Status:** routing, van loadouts, KPIs (incl. strike rate / drop size / trend), visit
+> cash collection against AR, and the B2B marketplace are all built and back-office-driven.
+> The remaining unbuilt piece is a **dedicated agent-facing mobile API** (agent login +
+> "my routes / visits / loadout for today" self-service). Today all distribution endpoints
+> are staff/back-office (`DISTRIBUTION_*` permissions); GPS/collection data is entered
+> through the admin panel until that agent app lands.
+
 ### Endpoints
 
 | Method | Endpoint | Permission | Description |
@@ -3576,8 +3583,15 @@ A route has `code`, `name`, optional `agentId` / `territoryRegionId` / `dayOfWee
   `visitType` is `PLANNED`|`AD_HOC`|`RETURN_VISIT`; the visit starts `outcome=PENDING`,
   `checkInAt=now`. `agentId`/`customerId`/`routeId` are tenant-validated; `routeStopId`
   (if given) must belong to `routeId`.
-- **check-out** body: `{ outcome, latitude?, longitude?, distributionOrderId?, notes? }`.
+- **check-out** body: `{ outcome, latitude?, longitude?, distributionOrderId?, collectedAmount?, notes? }`.
   `outcome` is `ORDER_PLACED`|`NO_ORDER`|`PAYMENT_COLLECTED`|`RESCHEDULED`|`CLOSED`.
+- **Cash collection:** when `collectedAmount > 0`, check-out creates a completed
+  (GL-posted) AR payment for the customer, allocated **oldest-due-first** across their
+  open invoices (`PENDING`/`SENT`/`PARTIAL`/`OVERDUE`); any excess stays unallocated as a
+  customer advance. The visit stores `collectedAmount` + `arPaymentId`, and a repeated
+  check-out carrying a collection on a visit that already has one is rejected
+  (`COLLECTION_EXISTS`) so money is never double-recorded. These collections roll into the
+  agent's KPI `cashCollected`.
 - GPS is captured on the mobile/agent side; the admin panel shows coordinates and an
   "open in maps" link (no embedded map).
 
@@ -3605,16 +3619,22 @@ One target per agent per exact `(periodStart, periodEnd)` (unique).
 | Method | Endpoint | Permission | Description |
 |--------|----------|------------|-------------|
 | GET | /distribution/kpi/dashboard?from=&to= | DISTRIBUTION_KPI_VIEW | Per-agent KPIs for the period, ordered by revenue (leaderboard) |
+| GET | /distribution/kpi/trend?from=&to= | DISTRIBUTION_KPI_VIEW | Daily revenue/orders/visits/collections (zero-filled) for the trend chart |
 
 Returns one row per agent (every agent, zeros if no activity):
 `{ agentId, agentName, revenue, orders, visits, cashCollected, customersReached,
 targetRevenue, targetOrders, targetVisits, targetNewCustomers, targetCollection,
-revenueAchievementPercent }`.
+revenueAchievementPercent, strikeRatePercent, avgDropSize }`.
 
 - **Actuals** are computed live: revenue/orders/cash/distinct-customers from non-cancelled
   distribution orders with `orderDate` in `[from, to]`; visits from check-ins in the same span.
+  `cashCollected` sums cash-on-delivery order cash **and** visit AR collections.
+- **Efficiency metrics:** `strikeRatePercent = orders / visits × 100` (null when no visits);
+  `avgDropSize = revenue / orders` (null when no orders).
 - The **target** block is attached only when a target exists for exactly `[from, to]`;
   `revenueAchievementPercent = revenue / targetRevenue × 100` (null when no revenue target).
+- **Trend** returns `[{ date, revenue, orders, visits, collected }]` — one entry per day in
+  `[from, to]` (missing days zero-filled so the chart has no gaps).
 - `from`/`to` are both inclusive dates.
 
 ---
