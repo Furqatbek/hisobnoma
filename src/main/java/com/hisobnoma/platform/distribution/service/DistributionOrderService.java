@@ -102,7 +102,37 @@ public class DistributionOrderService {
 
     @Transactional
     public DistributionOrderDto createOrder(CreateDistributionOrderRequest request) {
-        Long tenantId = securityContextHelper.getCurrentTenantId();
+        return doCreateOrder(securityContextHelper.getCurrentTenantId(), request);
+    }
+
+    /**
+     * Field order placement from the agent app. The agent is always the token holder
+     * (never client-supplied); the source location defaults to the agent's current van
+     * loadout so the sale draws down van stock. When {@code confirmNow} is true the order
+     * is immediately CONFIRMED (reserving stock) — the typical van-sale capture.
+     */
+    @Transactional
+    public DistributionOrderDto agentCreateOrder(Long tenantId, Long agentId,
+                                                 CreateDistributionOrderRequest request,
+                                                 Long defaultSourceLocationId, boolean confirmNow) {
+        request.setAgentId(agentId);
+        if (request.getSourceLocationId() == null) {
+            request.setSourceLocationId(defaultSourceLocationId);
+        }
+        // The agent may only attach a visit that is their own.
+        if (request.getVisitId() != null) {
+            visitRepository.findByIdAndTenantId(request.getVisitId(), tenantId)
+                    .filter(v -> agentId.equals(v.getAgentId()))
+                    .orElseThrow(() -> new NotFoundException("DistributionVisit", request.getVisitId()));
+        }
+        DistributionOrderDto dto = doCreateOrder(tenantId, request);
+        if (confirmNow) {
+            return doConfirm(dto.getId(), tenantId);
+        }
+        return dto;
+    }
+
+    private DistributionOrderDto doCreateOrder(Long tenantId, CreateDistributionOrderRequest request) {
         Customer customer = requireCustomer(request.getCustomerId(), tenantId);
         validateAgent(request.getAgentId(), tenantId);
         validateSourceLocation(request.getSourceLocationId(), tenantId);
@@ -193,7 +223,11 @@ public class DistributionOrderService {
 
     @Transactional
     public DistributionOrderDto confirm(Long id) {
-        DistributionOrder order = transition(id, DistributionOrderStatus.CONFIRMED);
+        return doConfirm(id, securityContextHelper.getCurrentTenantId());
+    }
+
+    private DistributionOrderDto doConfirm(Long id, Long tenantId) {
+        DistributionOrder order = transition(id, tenantId, DistributionOrderStatus.CONFIRMED);
         resolveSourceLocation(order);
         reserveStock(order);
         return orderMapper.toDto(order);
@@ -265,12 +299,20 @@ public class DistributionOrderService {
     // ---- helpers ----
 
     private DistributionOrder loadOrder(Long id) {
-        return orderRepository.findByIdAndTenantId(id, securityContextHelper.getCurrentTenantId())
+        return loadOrder(id, securityContextHelper.getCurrentTenantId());
+    }
+
+    private DistributionOrder loadOrder(Long id, Long tenantId) {
+        return orderRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("DistributionOrder", id));
     }
 
     private DistributionOrder transition(Long id, DistributionOrderStatus target) {
-        DistributionOrder order = loadOrder(id);
+        return transition(id, securityContextHelper.getCurrentTenantId(), target);
+    }
+
+    private DistributionOrder transition(Long id, Long tenantId, DistributionOrderStatus target) {
+        DistributionOrder order = loadOrder(id, tenantId);
         if (!order.getStatus().canTransitionTo(target)) {
             throw new BusinessException(
                     "Cannot move order from " + order.getStatus() + " to " + target, "INVALID_STATUS_TRANSITION");
@@ -317,7 +359,8 @@ public class DistributionOrderService {
             Product product = productRepository.findByIdAndTenantId(req.getProductId(), tenantId)
                     .orElseThrow(() -> new NotFoundException("Product", req.getProductId()));
             BigDecimal unitPrice = pricingService.getProductPrice(
-                    product.getId(), null, req.getQuantity(), order.getCustomerId(), order.getSourceLocationId());
+                    product.getId(), null, req.getQuantity(), order.getCustomerId(),
+                    order.getSourceLocationId(), tenantId);
 
             DistributionOrderLine line = DistributionOrderLine.builder()
                     .productId(product.getId())
@@ -402,7 +445,9 @@ public class DistributionOrderService {
 
     private void resolveSourceLocation(DistributionOrder order) {
         if (order.getSourceLocationId() == null) {
-            locationRepository.findByTenantIdAndIsDefaultTrue(securityContextHelper.getCurrentTenantId())
+            // Use the order's own tenant (works for both staff and agent callers) rather
+            // than the staff security context, which is absent on agent-app requests.
+            locationRepository.findByTenantIdAndIsDefaultTrue(order.getTenantId())
                     .ifPresent(loc -> order.setSourceLocationId(loc.getId()));
         }
     }

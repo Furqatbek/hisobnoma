@@ -121,8 +121,8 @@ class DistributionOrderServiceTest {
         when(productRepository.findByIdAndTenantId(10L, TENANT_ID)).thenReturn(Optional.of(product(10L, "Cola", new BigDecimal("12000"))));
         when(productRepository.findByIdAndTenantId(11L, TENANT_ID)).thenReturn(Optional.of(product(11L, "Juice", new BigDecimal("8000"))));
         // ignore client price; server resolves
-        when(pricingService.getProductPrice(eq(10L), isNull(), any(), eq(100L), isNull())).thenReturn(new BigDecimal("12000"));
-        when(pricingService.getProductPrice(eq(11L), isNull(), any(), eq(100L), isNull())).thenReturn(new BigDecimal("8000"));
+        when(pricingService.getProductPrice(eq(10L), isNull(), any(), eq(100L), isNull(), eq(TENANT_ID))).thenReturn(new BigDecimal("12000"));
+        when(pricingService.getProductPrice(eq(11L), isNull(), any(), eq(100L), isNull(), eq(TENANT_ID))).thenReturn(new BigDecimal("8000"));
         when(orderRepository.findMaxOrderNumberByPrefix(eq(TENANT_ID), anyString())).thenReturn(null);
         when(orderRepository.existsByTenantIdAndOrderNumber(eq(TENANT_ID), anyString())).thenReturn(false);
         when(orderRepository.save(any(DistributionOrder.class))).thenAnswer(inv -> inv.getArgument(0));

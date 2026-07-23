@@ -47,6 +47,7 @@ public class AgentPortalService {
     private final DistributionOrderMapper orderMapper;
     private final com.hisobnoma.platform.distribution.mapper.DistributionVisitMapper visitMapper;
     private final DistributionVisitService visitService;
+    private final DistributionOrderService orderService;
 
     /** Today's snapshot for the home screen. */
     @Transactional(readOnly = true)
@@ -116,6 +117,17 @@ public class AgentPortalService {
     public DistributionVisitDto checkOut(String bearer, Long visitId, VisitCheckOutRequest request) {
         DistributionAgent agent = agentAuthService.requireAgent(bearer);
         return visitService.agentCheckOut(agent.getTenantId(), agent.getId(), visitId, request);
+    }
+
+    /** Field order placement: source defaults to the agent's current van loadout location. */
+    @Transactional
+    public DistributionOrderDto placeOrder(String bearer,
+                                           com.hisobnoma.platform.distribution.dto.AgentCreateOrderRequest request) {
+        DistributionAgent agent = agentAuthService.requireAgent(bearer);
+        VanLoadout loadout = currentLoadout(agent.getTenantId(), agent.getId());
+        Long vanLocationId = loadout != null ? loadout.getVehicleLocationId() : null;
+        return orderService.agentCreateOrder(agent.getTenantId(), agent.getId(),
+                request.toCreateRequest(), vanLocationId, request.isConfirmNow());
     }
 
     private VanLoadout currentLoadout(Long tenantId, Long agentId) {

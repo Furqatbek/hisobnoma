@@ -3675,6 +3675,7 @@ and the **agent identity** from a dedicated bearer token thereafter.
 | GET | /me/visits | The agent's visits (paginated) |
 | GET | /me/loadout/current | The agent's current (most recent LOADED) van loadout, or null |
 | GET | /me/orders | The agent's distribution orders (paginated) |
+| POST | /me/orders | Place an order from the field (see below) |
 | POST | /me/visits/check-in | Record a check-in `{ customerId, routeId?, routeStopId?, visitType?, latitude?, longitude?, notes? }` |
 | POST | /me/visits/{id}/check-out | Record outcome + optional cash collection `{ outcome, latitude?, longitude?, distributionOrderId?, collectedAmount?, notes? }` |
 
@@ -3684,6 +3685,16 @@ and the **agent identity** from a dedicated bearer token thereafter.
 - **Cash collection** on check-out reuses the staff flow: `collectedAmount` creates a
   completed, GL-posted AR payment allocated oldest-due-first across the customer's open
   invoices, idempotent per visit. See "Visits" (Slice 4) for the full contract.
+- **Field order placement** — `POST /me/orders` body
+  `{ customerId, visitId?, routeId?, paymentMethod?, paymentTermsDays?, discountAmount?,
+  deliveryFee?, deliveryAddress?, notes?, confirmNow?, lines:[{ productId, quantity,
+  discountPercent? }] }`. There is **no agentId** (forced to the token holder) and **no
+  sourceLocationId**: the sale defaults to drawing down the agent's current van loadout
+  location. Prices are resolved **server-side** (the client's numbers are ignored); an
+  attached `visitId` must be the agent's own. The order is created `DRAFT`; set
+  `confirmNow: true` to immediately CONFIRM it (reserving van stock) — the typical van-sale
+  capture. Fulfilment (deliver → invoice, with the cash/credit split and AR bridge)
+  continues through the normal order lifecycle.
 
 ---
 

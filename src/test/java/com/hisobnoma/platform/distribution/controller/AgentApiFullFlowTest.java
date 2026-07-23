@@ -11,7 +11,13 @@ import com.hisobnoma.platform.distribution.repository.DistributionAgentOtpReposi
 import com.hisobnoma.platform.distribution.repository.DistributionAgentRepository;
 import com.hisobnoma.platform.finance.entity.Customer;
 import com.hisobnoma.platform.finance.repository.CustomerRepository;
+import com.hisobnoma.platform.inventory.entity.Product;
+import com.hisobnoma.platform.inventory.entity.UnitOfMeasure;
+import com.hisobnoma.platform.inventory.repository.ProductRepository;
+import com.hisobnoma.platform.inventory.repository.UnitOfMeasureRepository;
 import com.hisobnoma.platform.sms.service.SmsService;
+
+import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -53,6 +59,8 @@ class AgentApiFullFlowTest {
     @Autowired private DistributionAgentRepository agentRepository;
     @Autowired private DistributionAgentOtpRepository otpRepository;
     @Autowired private CustomerRepository customerRepository;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private UnitOfMeasureRepository uomRepository;
 
     @MockBean private SmsService smsService;
 
@@ -62,6 +70,7 @@ class AgentApiFullFlowTest {
     private Tenant tenant;
     private DistributionAgent agent;
     private Long customerId;
+    private Long productId;
     private String agentPhone;
 
     @BeforeEach
@@ -82,6 +91,14 @@ class AgentApiFullFlowTest {
         c.setName("Osiyo");
         c.setTenantId(tenant.getId());
         customerId = customerRepository.saveAndFlush(c).getId();
+
+        UnitOfMeasure uom = UnitOfMeasure.builder().code("PCS").name("Pieces").build();
+        uom.setTenantId(tenant.getId());
+        uom = uomRepository.saveAndFlush(uom);
+        Product p = Product.builder().sku("SKU-1").name("Cola").sellingPrice(new BigDecimal("10000"))
+                .baseUom(uom).active(true).sellable(true).build();
+        p.setTenantId(tenant.getId());
+        productId = productRepository.saveAndFlush(p).getId();
     }
 
     private String loginAndGetToken(String phone) throws Exception {
@@ -180,6 +197,56 @@ class AgentApiFullFlowTest {
                 .andReturn();
         JsonNode content = objectMapper.readTree(visits.getResponse().getContentAsString()).at("/content");
         assertTrue(content.isArray() && content.size() >= 1);
+    }
+
+    @Test
+    void placeOrder_fromField_createsScopedDraftWithServerPricing() throws Exception {
+        String token = loginAndGetToken(agentPhone);
+
+        MvcResult result = mockMvc.perform(post("/api/v1/agent/me/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerId\":" + customerId + ",\"paymentMethod\":\"CREDIT\","
+                                + "\"lines\":[{\"productId\":" + productId + ",\"quantity\":3}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("DRAFT"))
+                .andExpect(jsonPath("$.data.agentId").value(agent.getId().intValue()))
+                .andExpect(jsonPath("$.data.customerId").value(customerId.intValue()))
+                // server priced: 3 x 10000
+                .andExpect(jsonPath("$.data.totalAmount").value(30000))
+                .andReturn();
+
+        // The order shows up in the agent's own list
+        String orderNumber = objectMapper.readTree(result.getResponse().getContentAsString())
+                .at("/data/orderNumber").asText();
+        assertFalse(orderNumber.isBlank());
+
+        MvcResult orders = mockMvc.perform(get("/api/v1/agent/me/orders")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode content = objectMapper.readTree(orders.getResponse().getContentAsString()).at("/content");
+        assertTrue(content.isArray() && content.size() >= 1);
+    }
+
+    @Test
+    void placeOrder_missingLines_isBadRequest() throws Exception {
+        String token = loginAndGetToken(agentPhone);
+        mockMvc.perform(post("/api/v1/agent/me/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerId\":" + customerId + ",\"lines\":[]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void placeOrder_withoutToken_isUnauthorized() throws Exception {
+        mockMvc.perform(post("/api/v1/agent/me/orders")
+                        .header("Authorization", "Bearer garbage")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerId\":" + customerId + ",\"lines\":[{\"productId\":"
+                                + productId + ",\"quantity\":1}]}"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

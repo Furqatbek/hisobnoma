@@ -7,6 +7,7 @@ import com.hisobnoma.platform.distribution.dto.DistributionRouteDto;
 import com.hisobnoma.platform.distribution.dto.DistributionVisitDto;
 import com.hisobnoma.platform.distribution.dto.VanLoadoutDto;
 import com.hisobnoma.platform.distribution.dto.AgentCheckInRequest;
+import com.hisobnoma.platform.distribution.dto.AgentCreateOrderRequest;
 import com.hisobnoma.platform.distribution.dto.VisitCheckOutRequest;
 import com.hisobnoma.platform.distribution.service.AgentPortalService;
 import jakarta.validation.Valid;
@@ -62,6 +63,13 @@ public class AgentPortalController {
             @RequestHeader(HttpHeaders.AUTHORIZATION) String auth,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(portalService.getMyOrders(auth, pageable));
+    }
+
+    @PostMapping("/orders")
+    public ResponseEntity<ApiResponse<DistributionOrderDto>> placeOrder(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String auth,
+            @Valid @RequestBody AgentCreateOrderRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(portalService.placeOrder(auth, request), "Order placed"));
     }
 
     @PostMapping("/visits/check-in")
