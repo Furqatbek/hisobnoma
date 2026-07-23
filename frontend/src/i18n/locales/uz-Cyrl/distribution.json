@@ -38,7 +38,12 @@
     "targetOrders": "Мақсад: буюртмалар",
     "targetVisits": "Мақсад: ташрифлар",
     "targetCollection": "Мақсад: йиғим",
-    "saveTargetError": "Мақсадни сақлаб бўлмади"
+    "saveTargetError": "Мақсадни сақлаб бўлмади",
+    "strikeRate": "Самара",
+    "strikeRateHint": "100 ташрифга нечта буюртма",
+    "avgDrop": "Ўртача буюртма",
+    "avgDropHint": "Битта буюртмага ўртача тушум",
+    "revenueTrend": "Тушум динамикаси"
   },
   "routeStatus": {
     "DRAFT": "Лойиҳа",
@@ -107,7 +112,34 @@
     "openMap": "Харитада очиш",
     "checkOutAction": "Чиқишни қайд этиш",
     "checkoutError": "Чиқишни қайд этиб бўлмади",
-    "notes": "Изоҳлар"
+    "notes": "Изоҳлар",
+    "collectedAmount": "Йиғилган нақд пул (сўм)",
+    "collectedAmountHint": "0 — йиғим йўқ",
+    "collectedAmountNote": "Мижознинг очиқ ҳисоб-фактуралари энг эскисидан бошлаб ёпилади"
+  },
+  "print": {
+    "print": "Чоп этиш",
+    "loadSheet": "Юклаш варақаси",
+    "deliveryNote": "Юк хати",
+    "agent": "Агент",
+    "customer": "Мижоз",
+    "date": "Сана",
+    "address": "Манзил",
+    "product": "Маҳсулот",
+    "sku": "Артикул",
+    "qty": "Миқдор",
+    "unit": "Бирлик",
+    "price": "Нарх",
+    "total": "Жами",
+    "subtotal": "Оралиқ жами",
+    "discount": "Чегирма",
+    "tax": "Солиқ",
+    "deliveryFee": "Етказиб бериш",
+    "grandTotal": "Умумий сумма",
+    "loadedValue": "Юкланган қиймат",
+    "issuedBy": "Берди (имзо)",
+    "receivedBy": "Қабул қилди (имзо)",
+    "deliveredBy": "Етказди (имзо)"
   },
   "vanStatus": {
     "DRAFT": "Лойиҳа",

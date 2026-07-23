@@ -6,8 +6,9 @@ import {
   distributionVanLoadoutsApi, distributionAgentsApi, warehousesApi, productsApi,
   unwrapData, unwrapList
 } from '@/services/api'
-import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, PlusIcon, TrashIcon, PrinterIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+import { printLoadSheet } from '@/utils/printDocument'
 
 const toast = useToastStore()
 const { t } = useI18n()
@@ -143,6 +144,12 @@ function soldPreview(line) {
   return Math.max(0, Number(line.quantityLoaded) - Number(r.quantityReturned || 0) - Number(r.quantityDamaged || 0))
 }
 
+function doPrint() {
+  if (!loadout.value) return
+  const agent = agents.value.find(a => a.id === loadout.value.agentId)
+  printLoadSheet(loadout.value, agent?.name, t)
+}
+
 onMounted(async () => {
   await fetchLookups()
   if (isDetail.value) await fetchLoadout()
@@ -165,6 +172,7 @@ onMounted(async () => {
         </div>
       </div>
       <div class="flex gap-2" v-if="loadout">
+        <button @click="doPrint" class="btn-secondary"><PrinterIcon class="h-4 w-4 mr-1 inline" />{{ $t('distribution.print.print') }}</button>
         <button v-if="loadout.status === 'DRAFT'" @click="runAction('load')" :disabled="acting" class="btn-primary">{{ $t('distribution.vanForm.load') }}</button>
         <button v-if="loadout.status === 'DRAFT' || loadout.status === 'LOADED'" @click="runAction('cancel')" :disabled="acting" class="btn-secondary text-red-600">{{ $t('distribution.vanForm.cancel') }}</button>
       </div>

@@ -32,10 +32,19 @@ function barClass(p) {
   return 'bg-red-500'
 }
 
+const trend = ref([])
+const maxTrendRevenue = computed(() =>
+  Math.max(1, ...trend.value.map(d => Number(d.revenue) || 0)))
+
+function trendTooltip(d) {
+  return `${d.date}: ${money(d.revenue)} · ${d.orders} ${t('distribution.kpi.orders')} · ${d.visits} ${t('distribution.kpi.visits')}`
+}
+
 async function fetchDashboard() {
   loading.value = true
   try {
     rows.value = unwrapData(await distributionKpiApi.dashboard(from.value, to.value)) || []
+    trend.value = unwrapData(await distributionKpiApi.trend(from.value, to.value)) || []
   } catch (error) {
     console.error('Failed to load KPI dashboard:', error)
   } finally {
@@ -128,6 +137,22 @@ onMounted(fetchDashboard)
       </div></div>
     </div>
 
+    <!-- Revenue trend -->
+    <div v-if="trend.length" class="card mb-6"><div class="card-body">
+      <p class="text-xs text-gray-500 uppercase mb-3">{{ $t('distribution.kpi.revenueTrend') }}</p>
+      <div class="flex items-end gap-1 h-32">
+        <div v-for="d in trend" :key="d.date" class="flex-1 flex flex-col items-center justify-end group">
+          <div class="w-full bg-primary-500 hover:bg-primary-600 rounded-t transition-colors"
+               :style="{ height: Math.max(2, (Number(d.revenue) / maxTrendRevenue) * 100) + '%' }"
+               :title="trendTooltip(d)"></div>
+        </div>
+      </div>
+      <div class="flex justify-between text-[10px] text-gray-400 mt-1">
+        <span>{{ trend[0]?.date }}</span>
+        <span>{{ trend[trend.length - 1]?.date }}</span>
+      </div>
+    </div></div>
+
     <div class="card">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -139,6 +164,8 @@ onMounted(fetchDashboard)
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('distribution.kpi.orders') }}</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('distribution.kpi.visits') }}</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('distribution.kpi.customers') }}</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase" :title="$t('distribution.kpi.strikeRateHint')">{{ $t('distribution.kpi.strikeRate') }}</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase" :title="$t('distribution.kpi.avgDropHint')">{{ $t('distribution.kpi.avgDrop') }}</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('distribution.kpi.cash') }}</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ $t('actions') }}</th>
             </tr>
@@ -161,6 +188,8 @@ onMounted(fetchDashboard)
               <td class="px-4 py-4 text-right text-sm text-gray-700">{{ row.orders }}<span v-if="row.targetOrders" class="text-gray-400"> / {{ row.targetOrders }}</span></td>
               <td class="px-4 py-4 text-right text-sm text-gray-700">{{ row.visits }}<span v-if="row.targetVisits" class="text-gray-400"> / {{ row.targetVisits }}</span></td>
               <td class="px-4 py-4 text-right text-sm text-gray-700">{{ row.customersReached }}</td>
+              <td class="px-4 py-4 text-right text-sm text-gray-700">{{ row.strikeRatePercent != null ? row.strikeRatePercent + '%' : '—' }}</td>
+              <td class="px-4 py-4 text-right text-sm text-gray-700">{{ row.avgDropSize != null ? money(row.avgDropSize) : '—' }}</td>
               <td class="px-4 py-4 text-right text-sm text-gray-700">{{ money(row.cashCollected) }}</td>
               <td class="px-4 py-4 text-right">
                 <button @click="openTarget(row)" class="inline-flex items-center text-primary-600 hover:text-primary-700 text-sm">

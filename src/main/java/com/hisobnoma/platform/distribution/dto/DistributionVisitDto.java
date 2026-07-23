@@ -30,5 +30,7 @@ public class DistributionVisitDto {
     private VisitType visitType;
     private VisitOutcome outcome;
     private Long distributionOrderId;
+    private BigDecimal collectedAmount;
+    private Long arPaymentId;
     private String notes;
 }

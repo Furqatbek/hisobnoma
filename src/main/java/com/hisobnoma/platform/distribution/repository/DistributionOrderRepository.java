@@ -64,4 +64,13 @@ public interface DistributionOrderRepository extends JpaRepository<DistributionO
                                     @Param("cancelled") DistributionOrderStatus cancelled,
                                     @Param("from") java.time.LocalDate from,
                                     @Param("to") java.time.LocalDate to);
+
+    /** Per-day order counts and revenue. Each row: [orderDate, orderCount, revenue]. */
+    @Query("SELECT o.orderDate, COUNT(o), COALESCE(SUM(o.totalAmount), 0) FROM DistributionOrder o " +
+           "WHERE o.tenantId = :tenantId AND o.status <> :cancelled " +
+           "AND o.orderDate >= :from AND o.orderDate <= :to GROUP BY o.orderDate")
+    List<Object[]> aggregateByDate(@Param("tenantId") Long tenantId,
+                                   @Param("cancelled") DistributionOrderStatus cancelled,
+                                   @Param("from") java.time.LocalDate from,
+                                   @Param("to") java.time.LocalDate to);
 }

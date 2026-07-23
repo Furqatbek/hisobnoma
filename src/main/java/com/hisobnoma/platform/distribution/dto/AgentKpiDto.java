@@ -35,4 +35,10 @@ public class AgentKpiDto {
 
     /** revenue / targetRevenue as a percentage; null when no revenue target is set. */
     private BigDecimal revenueAchievementPercent;
+
+    /** Orders per 100 visits (null when the agent had no visits in the period). */
+    private BigDecimal strikeRatePercent;
+
+    /** Average revenue per order (null when the agent had no orders). */
+    private BigDecimal avgDropSize;
 }

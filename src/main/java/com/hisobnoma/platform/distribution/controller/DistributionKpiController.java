@@ -29,4 +29,13 @@ public class DistributionKpiController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return ResponseEntity.ok(kpiService.getDashboard(from, to));
     }
+
+    /** Daily revenue/orders/visits/collections for the trend chart (zero-filled days). */
+    @GetMapping("/trend")
+    @PreAuthorize("hasAuthority('DISTRIBUTION_KPI_VIEW')")
+    public ResponseEntity<List<com.hisobnoma.platform.distribution.dto.DailyTrendDto>> trend(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(kpiService.getTrend(from, to));
+    }
 }

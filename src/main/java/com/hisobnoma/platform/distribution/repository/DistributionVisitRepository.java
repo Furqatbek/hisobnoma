@@ -39,4 +39,20 @@ public interface DistributionVisitRepository extends JpaRepository<DistributionV
            "AND v.checkInAt >= :from AND v.checkInAt < :to GROUP BY v.agentId")
     java.util.List<Object[]> countVisitsByAgent(@Param("tenantId") Long tenantId,
                                                 @Param("from") Instant from, @Param("to") Instant to);
+
+    /** Per-agent AR cash collected during visits. Each row: [agentId, sum]. */
+    @Query("SELECT v.agentId, COALESCE(SUM(v.collectedAmount), 0) FROM DistributionVisit v " +
+           "WHERE v.tenantId = :tenantId AND v.collectedAmount IS NOT NULL " +
+           "AND v.checkInAt >= :from AND v.checkInAt < :to GROUP BY v.agentId")
+    java.util.List<Object[]> sumCollectedByAgent(@Param("tenantId") Long tenantId,
+                                                 @Param("from") Instant from, @Param("to") Instant to);
+
+    /**
+     * Lightweight projection for the trend chart: [checkInAt, collectedAmount] pairs.
+     * Day-bucketing happens in Java — dialect-safe (no SQL date functions on Instant).
+     */
+    @Query("SELECT v.checkInAt, v.collectedAmount FROM DistributionVisit v " +
+           "WHERE v.tenantId = :tenantId AND v.checkInAt >= :from AND v.checkInAt < :to")
+    java.util.List<Object[]> visitTimesAndCollections(@Param("tenantId") Long tenantId,
+                                                      @Param("from") Instant from, @Param("to") Instant to);
 }

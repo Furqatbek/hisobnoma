@@ -71,6 +71,14 @@ public class DistributionVisit extends TenantAwareEntity {
     @Column(name = "distribution_order_id")
     private Long distributionOrderId;
 
+    /** Cash collected against the customer's outstanding AR invoices during this visit. */
+    @Column(name = "collected_amount", precision = 19, scale = 4)
+    private BigDecimal collectedAmount;
+
+    /** The AR payment created for {@link #collectedAmount} (completed + GL-posted). */
+    @Column(name = "ar_payment_id")
+    private Long arPaymentId;
+
     @Column(length = 1000)
     private String notes;
 }

@@ -96,6 +96,59 @@ class DistributionKpiServiceTest {
         AgentKpiDto bek = dash.get(0);
         assertNull(bek.getRevenueAchievementPercent());
         assertEquals(0, bek.getVisits()); // no visits recorded
+
+        // strike rate = 3 orders / 12 visits = 25.0%; avg drop = 300000 / 3 = 100000
+        assertEquals(0, new BigDecimal("25.0").compareTo(alisher.getStrikeRatePercent()));
+        assertEquals(0, new BigDecimal("100000").compareTo(alisher.getAvgDropSize()));
+        assertNull(bek.getStrikeRatePercent(), "No visits — strike rate undefined");
+        assertNull(dilnoza.getAvgDropSize(), "No orders — drop size undefined");
+    }
+
+    @Test
+    void dashboard_visitCollectionsAddToCashCollected() {
+        when(orderRepository.aggregateByAgent(eq(TENANT_ID), eq(DistributionOrderStatus.CANCELLED), eq(FROM), eq(TO)))
+                .thenReturn(List.<Object[]>of(new Object[]{5L, 1L, new BigDecimal("100000"), new BigDecimal("40000"), 1L}));
+        when(visitRepository.countVisitsByAgent(eq(TENANT_ID), any(Instant.class), any(Instant.class)))
+                .thenReturn(List.<Object[]>of());
+        when(visitRepository.sumCollectedByAgent(eq(TENANT_ID), any(Instant.class), any(Instant.class)))
+                .thenReturn(List.<Object[]>of(new Object[]{5L, new BigDecimal("75000")}));
+        when(targetRepository.findByTenantIdAndPeriod(TENANT_ID, FROM, TO)).thenReturn(List.of());
+        when(agentRepository.findAllByTenantId(TENANT_ID)).thenReturn(List.of(agent(5L, "Alisher")));
+
+        List<AgentKpiDto> dash = service.getDashboard(FROM, TO);
+
+        // 40000 order cash + 75000 visit collections
+        assertEquals(0, new BigDecimal("115000").compareTo(dash.get(0).getCashCollected()));
+    }
+
+    @Test
+    void trend_zeroFillsDaysAndBucketsVisitsByUtcDay() {
+        LocalDate from = LocalDate.of(2026, 7, 1);
+        LocalDate to = LocalDate.of(2026, 7, 3);
+        when(orderRepository.aggregateByDate(eq(TENANT_ID), eq(DistributionOrderStatus.CANCELLED), eq(from), eq(to)))
+                .thenReturn(List.<Object[]>of(
+                        new Object[]{LocalDate.of(2026, 7, 2), 2L, new BigDecimal("120000")}));
+        when(visitRepository.visitTimesAndCollections(eq(TENANT_ID), any(Instant.class), any(Instant.class)))
+                .thenReturn(List.of(
+                        new Object[]{Instant.parse("2026-07-01T09:00:00Z"), null},
+                        new Object[]{Instant.parse("2026-07-02T10:00:00Z"), new BigDecimal("30000")},
+                        new Object[]{Instant.parse("2026-07-02T15:00:00Z"), new BigDecimal("20000")}));
+
+        var trend = service.getTrend(from, to);
+
+        assertEquals(3, trend.size());
+        assertEquals(LocalDate.of(2026, 7, 1), trend.get(0).getDate());
+        assertEquals(1, trend.get(0).getVisits());
+        assertEquals(0, trend.get(0).getOrders());
+        assertEquals(0, BigDecimal.ZERO.compareTo(trend.get(0).getCollected()));
+
+        assertEquals(2, trend.get(1).getOrders());
+        assertEquals(0, new BigDecimal("120000").compareTo(trend.get(1).getRevenue()));
+        assertEquals(2, trend.get(1).getVisits());
+        assertEquals(0, new BigDecimal("50000").compareTo(trend.get(1).getCollected()));
+
+        assertEquals(0, trend.get(2).getVisits());
+        assertEquals(0, trend.get(2).getOrders());
     }
 
     @Test

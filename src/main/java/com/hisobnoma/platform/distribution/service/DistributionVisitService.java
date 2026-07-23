@@ -15,28 +15,46 @@ import com.hisobnoma.platform.distribution.mapper.DistributionVisitMapper;
 import com.hisobnoma.platform.distribution.repository.DistributionAgentRepository;
 import com.hisobnoma.platform.distribution.repository.DistributionRouteRepository;
 import com.hisobnoma.platform.distribution.repository.DistributionVisitRepository;
+import com.hisobnoma.platform.finance.dto.ARPaymentDto;
+import com.hisobnoma.platform.finance.dto.CreateARPaymentAllocationRequest;
+import com.hisobnoma.platform.finance.dto.CreateARPaymentRequest;
+import com.hisobnoma.platform.finance.entity.ARInvoice;
+import com.hisobnoma.platform.finance.entity.ARInvoiceStatus;
+import com.hisobnoma.platform.finance.entity.ARPaymentMethod;
 import com.hisobnoma.platform.finance.entity.Customer;
+import com.hisobnoma.platform.finance.repository.ARInvoiceRepository;
 import com.hisobnoma.platform.finance.repository.CustomerRepository;
+import com.hisobnoma.platform.finance.service.ARPaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class DistributionVisitService {
 
+    /** Invoice statuses an agent's collection may settle (posted, not fully paid). */
+    private static final List<ARInvoiceStatus> OPEN_INVOICE_STATUSES = List.of(
+            ARInvoiceStatus.PENDING, ARInvoiceStatus.SENT,
+            ARInvoiceStatus.PARTIAL, ARInvoiceStatus.OVERDUE);
+
     private final DistributionVisitRepository visitRepository;
     private final DistributionVisitMapper visitMapper;
     private final DistributionAgentRepository agentRepository;
     private final DistributionRouteRepository routeRepository;
     private final CustomerRepository customerRepository;
+    private final ARInvoiceRepository arInvoiceRepository;
+    private final ARPaymentService arPaymentService;
     private final SecurityContextHelper securityContextHelper;
 
     @Transactional(readOnly = true)
@@ -104,13 +122,67 @@ public class DistributionVisitService {
     @Transactional
     public DistributionVisitDto checkOut(Long id, VisitCheckOutRequest request) {
         DistributionVisit visit = loadVisit(id);
+        if (request.getCollectedAmount() != null && visit.getArPaymentId() != null) {
+            // Money must never be double-recorded on a repeated checkout call.
+            throw new BusinessException("Visit already has a recorded collection", "COLLECTION_EXISTS");
+        }
         visit.setCheckOutAt(Instant.now());
         visit.setOutcome(request.getOutcome());
         if (request.getLatitude() != null) visit.setCheckOutLat(request.getLatitude());
         if (request.getLongitude() != null) visit.setCheckOutLng(request.getLongitude());
         if (request.getDistributionOrderId() != null) visit.setDistributionOrderId(request.getDistributionOrderId());
         if (request.getNotes() != null) visit.setNotes(request.getNotes());
+
+        // Cash collection is NOT best-effort: if recording the payment fails,
+        // the whole checkout fails and the agent retries.
+        if (request.getCollectedAmount() != null) {
+            recordCollection(visit, request.getCollectedAmount());
+        }
         return visitMapper.toDto(visitRepository.save(visit));
+    }
+
+    /**
+     * Records cash the agent collected as a completed (GL-posted) AR payment,
+     * allocated oldest-due-first across the customer's open invoices. Any
+     * amount beyond the open balance stays on the payment as an advance.
+     */
+    private void recordCollection(DistributionVisit visit, BigDecimal amount) {
+        Long tenantId = visit.getTenantId() != null
+                ? visit.getTenantId()
+                : securityContextHelper.getCurrentTenantId();
+
+        List<CreateARPaymentAllocationRequest> allocations = new ArrayList<>();
+        BigDecimal remaining = amount;
+        List<ARInvoice> openInvoices = arInvoiceRepository.findUnpaidByCustomer(
+                tenantId, visit.getCustomerId(), OPEN_INVOICE_STATUSES);
+        for (ARInvoice invoice : openInvoices) {
+            if (remaining.signum() <= 0) break;
+            BigDecimal due = invoice.getBalanceDue();
+            if (due == null || due.signum() <= 0) continue;
+            BigDecimal alloc = remaining.min(due);
+            allocations.add(CreateARPaymentAllocationRequest.builder()
+                    .arInvoiceId(invoice.getId())
+                    .allocatedAmount(alloc)
+                    .build());
+            remaining = remaining.subtract(alloc);
+        }
+
+        ARPaymentDto payment = arPaymentService.createPayment(CreateARPaymentRequest.builder()
+                .customerId(visit.getCustomerId())
+                .paymentDate(LocalDate.now())
+                .paymentMethod(ARPaymentMethod.CASH)
+                .paymentAmount(amount)
+                .referenceNumber("VISIT-" + visit.getId())
+                .notes("Дистрибуция ташрифида йиғилган нақд пул (агент #" + visit.getAgentId() + ")")
+                .allocations(allocations)
+                .build());
+        arPaymentService.completePayment(payment.getId());
+
+        visit.setCollectedAmount(amount);
+        visit.setArPaymentId(payment.getId());
+        log.info("Visit {} collected {} from customer {} (payment {}, {} invoice(s) settled)",
+                visit.getId(), amount, visit.getCustomerId(), payment.getPaymentNumber(),
+                allocations.size());
     }
 
     private DistributionVisit loadVisit(Long id) {

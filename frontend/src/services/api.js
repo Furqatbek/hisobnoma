@@ -789,7 +789,8 @@ export const distributionVisitsApi = {
 
 // Distribution KPI + Targets API - Backend: /api/v1/distribution
 export const distributionKpiApi = {
-  dashboard: (from, to) => api.get('/distribution/kpi/dashboard', { params: { from, to } })
+  dashboard: (from, to) => api.get('/distribution/kpi/dashboard', { params: { from, to } }),
+  trend: (from, to) => api.get('/distribution/kpi/trend', { params: { from, to } })
 }
 export const distributionAgentTargetsApi = {
   byAgent: (agentId) => api.get(`/distribution/agent-targets/by-agent/${agentId}`),

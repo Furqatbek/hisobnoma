@@ -6,8 +6,9 @@ import {
   distributionOrdersApi, distributionAgentsApi, customersApi, productsApi,
   unwrapData, unwrapList
 } from '@/services/api'
-import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, PlusIcon, TrashIcon, PrinterIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+import { printDeliveryNote } from '@/utils/printDocument'
 
 const toast = useToastStore()
 const { t } = useI18n()
@@ -206,6 +207,12 @@ async function confirmOrder() {
   await runAction('confirm')
 }
 
+function doPrint() {
+  if (!order.value) return
+  const agent = agents.value.find(a => a.id === order.value.agentId)
+  printDeliveryNote(order.value, agent?.name, t)
+}
+
 onMounted(async () => {
   await fetchLookups()
   if (isEdit.value) await fetchOrder()
@@ -231,6 +238,9 @@ onMounted(async () => {
         </div>
       </div>
       <div class="flex gap-2">
+        <button v-if="order" @click="doPrint" class="btn-secondary">
+          <PrinterIcon class="h-4 w-4 mr-1 inline" />{{ $t('distribution.print.deliveryNote') }}
+        </button>
         <button
           v-if="order?.status === 'DRAFT'"
           @click="confirmOrder"

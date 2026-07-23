@@ -60,15 +60,17 @@ async function fetchVisits(page = 0) {
 
 function openCheckout(visit) {
   checkoutVisit.value = visit
-  checkoutForm.value = { outcome: 'ORDER_PLACED', notes: '' }
+  checkoutForm.value = { outcome: 'ORDER_PLACED', notes: '', collectedAmount: '' }
   showCheckout.value = true
 }
 
 async function submitCheckout() {
+  const collected = parseFloat(checkoutForm.value.collectedAmount)
   try {
     await distributionVisitsApi.checkOut(checkoutVisit.value.id, {
       outcome: checkoutForm.value.outcome,
-      notes: checkoutForm.value.notes || null
+      notes: checkoutForm.value.notes || null,
+      collectedAmount: Number.isFinite(collected) && collected > 0 ? collected : null
     })
     showCheckout.value = false
     fetchVisits(currentPage.value)
@@ -130,6 +132,9 @@ onMounted(() => { fetchAgents(); fetchVisits() })
                 <span :class="['inline-flex px-2 py-1 text-xs font-semibold rounded-full', outcomeClass[v.outcome] || 'bg-gray-100 text-gray-800']">
                   {{ $t('distribution.visitOutcome.' + v.outcome) }}
                 </span>
+                <div v-if="v.collectedAmount" class="text-xs text-green-700 mt-1 font-medium">
+                  +{{ Number(v.collectedAmount).toLocaleString('uz-UZ') }}
+                </div>
               </td>
               <td class="px-6 py-4 text-right">
                 <button v-if="v.outcome === 'PENDING'" @click="openCheckout(v)" class="inline-flex items-center text-primary-600 hover:text-primary-700 text-sm">
@@ -155,6 +160,12 @@ onMounted(() => { fetchAgents(); fetchVisits() })
           <select v-model="checkoutForm.outcome" class="input">
             <option v-for="o in OUTCOMES" :key="o" :value="o">{{ $t('distribution.visitOutcome.' + o) }}</option>
           </select>
+        </div>
+        <div>
+          <label class="label">{{ $t('distribution.visits.collectedAmount') }}</label>
+          <input v-model="checkoutForm.collectedAmount" type="number" min="0" step="1000" class="input"
+                 :placeholder="$t('distribution.visits.collectedAmountHint')" />
+          <p class="mt-1 text-xs text-gray-500">{{ $t('distribution.visits.collectedAmountNote') }}</p>
         </div>
         <div>
           <label class="label">{{ $t('distribution.visits.notes') }}</label>
