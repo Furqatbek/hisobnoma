@@ -52,6 +52,13 @@ public class MobileAdminActionController {
                 service.collectDebtorPayment(request), "Payment recorded"));
     }
 
+    @GetMapping("/hr/employees")
+    @PreAuthorize("hasAnyAuthority('MOBILE_SALARY_PAY', 'HR_SALARY_WRITE', 'HR_EMPLOYEE_READ')")
+    @Operation(summary = "Active employees for the salary/advance payee picker")
+    public ResponseEntity<ApiResponse<java.util.List<com.hisobnoma.platform.mobile.dto.MobileEmployeeOption>>> listEmployees() {
+        return ResponseEntity.ok(ApiResponse.success(service.listEmployeesForPicker()));
+    }
+
     @PostMapping("/hr/salary")
     @PreAuthorize("hasAnyAuthority('MOBILE_SALARY_PAY', 'HR_SALARY_WRITE')")
     @Operation(summary = "Record and pay a salary (create + mark paid, posts to GL)")

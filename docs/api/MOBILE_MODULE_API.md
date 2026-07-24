@@ -989,6 +989,7 @@ permission. All are tenant-scoped (from the staff JWT) and the finance/HR ones p
 |---|---|---|---|
 | POST | `/api/v1/mobile/expenses` | `MOBILE_EXPENSE_WRITE` | Record an expense |
 | POST | `/api/v1/mobile/finance/debtor-payment` | `MOBILE_AR_COLLECT` or `FINANCE_AR_WRITE` | Accept a debtor (customer) payment |
+| GET | `/api/v1/mobile/hr/employees` | `MOBILE_SALARY_PAY`, `HR_SALARY_WRITE`, or `HR_EMPLOYEE_READ` | Active employees for the payee picker |
 | POST | `/api/v1/mobile/hr/salary` | `MOBILE_SALARY_PAY` or `HR_SALARY_WRITE` | Record + pay a salary |
 | POST | `/api/v1/mobile/hr/advance` | `MOBILE_SALARY_PAY` or `HR_SALARY_WRITE` | Record a paid advance |
 
@@ -1030,6 +1031,18 @@ unallocated advance. Pass `invoiceId` to target a single invoice (must belong to
 `allocatedAmount`, `unallocatedAmount`). To build the UI, look up the customer's balance with
 `GET /api/v1/finance/ar-invoices/customer/{id}/outstanding` and unpaid invoices with
 `.../customer/{id}/unpaid` (see [`AR_MODULE_API.md`](AR_MODULE_API.md)).
+
+### List employees (payee picker)
+
+```http
+GET /api/v1/mobile/hr/employees
+```
+Active employees for the salary/advance payee picker. Guarded so anyone who can pay salaries
+(`MOBILE_SALARY_PAY` / `HR_SALARY_WRITE`) or read HR (`HR_EMPLOYEE_READ`) can load it. Response:
+`ApiResponse` with a lightweight list:
+```jsonc
+{ "success": true, "data": [ { "id": 7, "name": "Ali Valiyev", "position": "Cashier", "code": "EMP-007" }, … ] }
+```
 
 ### Record + pay a salary
 

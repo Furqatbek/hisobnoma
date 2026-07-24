@@ -53,6 +53,7 @@ public class MobileAdminActionService {
     private final ARInvoiceRepository arInvoiceRepository;
     private final SalaryService salaryService;
     private final SalaryAdvanceService salaryAdvanceService;
+    private final com.hisobnoma.platform.hr.service.EmployeeService employeeService;
 
     // ---- 1. Expense ----
 
@@ -134,5 +135,18 @@ public class MobileAdminActionService {
     @Transactional
     public SalaryAdvanceDto recordAdvance(CreateSalaryAdvanceRequest request) {
         return salaryAdvanceService.create(request);
+    }
+
+    /** Active employees for the salary/advance payee picker (lightweight id/name/position). */
+    @Transactional(readOnly = true)
+    public List<com.hisobnoma.platform.mobile.dto.MobileEmployeeOption> listEmployeesForPicker() {
+        return employeeService.getActive().stream()
+                .map(e -> com.hisobnoma.platform.mobile.dto.MobileEmployeeOption.builder()
+                        .id(e.getId())
+                        .name(e.getFullName())
+                        .position(e.getPositionName())
+                        .code(e.getEmployeeCode())
+                        .build())
+                .toList();
     }
 }

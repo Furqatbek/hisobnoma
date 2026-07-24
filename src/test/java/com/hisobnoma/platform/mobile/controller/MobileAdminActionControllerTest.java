@@ -105,6 +105,34 @@ class MobileAdminActionControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // ---- employee picker ----
+
+    @Test
+    @WithMockUser(authorities = "MOBILE_SALARY_PAY")
+    void listEmployees_withSalaryPerm_returns200() throws Exception {
+        when(service.listEmployeesForPicker()).thenReturn(java.util.List.of());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/v1/mobile/hr/employees"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "HR_EMPLOYEE_READ")
+    void listEmployees_withHrRead_returns200() throws Exception {
+        when(service.listEmployeesForPicker()).thenReturn(java.util.List.of());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/v1/mobile/hr/employees"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "SOME_OTHER_PERMISSION")
+    void listEmployees_wrongPermission_returns403() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/v1/mobile/hr/employees"))
+                .andExpect(status().isForbidden());
+    }
+
     // ---- salary / advance ----
 
     @Test

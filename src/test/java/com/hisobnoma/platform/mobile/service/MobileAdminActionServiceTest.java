@@ -186,6 +186,26 @@ class MobileAdminActionServiceTest {
         inOrder.verify(salaryService).markPaid(55L);
     }
 
+    @Mock private com.hisobnoma.platform.hr.service.EmployeeService employeeService;
+
+    @Test
+    void listEmployeesForPicker_mapsToLightweightOptions() {
+        com.hisobnoma.platform.hr.dto.EmployeeDto e = new com.hisobnoma.platform.hr.dto.EmployeeDto();
+        e.setId(7L);
+        e.setFullName("Ali Valiyev");
+        e.setPositionName("Cashier");
+        e.setEmployeeCode("EMP-007");
+        when(employeeService.getActive()).thenReturn(List.of(e));
+
+        var options = service.listEmployeesForPicker();
+
+        assertEquals(1, options.size());
+        assertEquals(7L, options.get(0).getId());
+        assertEquals("Ali Valiyev", options.get(0).getName());
+        assertEquals("Cashier", options.get(0).getPosition());
+        assertEquals("EMP-007", options.get(0).getCode());
+    }
+
     @Test
     void recordAdvance_delegatesToAdvanceService() {
         CreateSalaryAdvanceRequestStub req = new CreateSalaryAdvanceRequestStub();
