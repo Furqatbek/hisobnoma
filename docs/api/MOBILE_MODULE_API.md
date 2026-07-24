@@ -362,73 +362,27 @@ GET /dashboard/finance
 {
   "success": true,
   "data": {
-    "totalCashBalance": 5000000.00,
+    "totalCashBalance": 0,
     "totalBankBalance": 50000000.00,
     "arOutstanding": 15000000.00,
     "apOutstanding": 8000000.00,
-    "netCashPosition": 57000000.00,
-    "todayIncome": 1500000.00,
-    "todayExpenses": 800000.00,
-    "todayNetProfit": 700000.00,
-    "thisMonthIncome": 35000000.00,
-    "thisMonthExpenses": 22000000.00,
-    "thisMonthNetProfit": 13000000.00,
-    "profitMarginPercent": 37.14,
-    "cashFlow": {
-      "openingBalance": 4500000.00,
-      "totalInflows": 1500000.00,
-      "totalOutflows": 1000000.00,
-      "closingBalance": 5000000.00,
-      "recentFlows": [
-        {
-          "description": "Payment from Customer A",
-          "amount": 500000.00,
-          "type": "INFLOW",
-          "date": "2026-01-15T10:00:00Z"
-        }
-      ]
-    },
-    "receivables": {
-      "totalOutstanding": 15000000.00,
-      "current": 8000000.00,
-      "overdue1To30": 4000000.00,
-      "overdue31To60": 2000000.00,
-      "overdue61To90": 800000.00,
-      "overdueOver90": 200000.00,
-      "totalInvoices": 120,
-      "overdueInvoices": 35,
-      "topOverdueInvoices": [
-        {
-          "invoiceId": 1,
-          "invoiceNumber": "INV-2026-001",
-          "customerName": "Customer A",
-          "amount": 1500000.00,
-          "dueDate": "2025-12-15",
-          "daysOverdue": 31
-        }
-      ]
-    },
-    "payables": {
-      "totalOutstanding": 8000000.00,
-      "current": 5000000.00,
-      "dueSoon": 2000000.00,
-      "overdue": 1000000.00,
-      "totalInvoices": 80,
-      "dueSoonCount": 12,
-      "upcomingPayments": [
-        {
-          "invoiceId": 1,
-          "invoiceNumber": "BILL-2026-001",
-          "vendorName": "Vendor A",
-          "amount": 500000.00,
-          "dueDate": "2026-01-20",
-          "daysUntilDue": 5
-        }
-      ]
-    }
+    "todayRevenue": 1500000.00
   }
 }
 ```
+
+**Field meanings:**
+
+| Field | Meaning |
+|---|---|
+| `arOutstanding` | Total unpaid balance customers owe you (sum of AR-invoice `balanceDue`, excluding paid/cancelled). |
+| `apOutstanding` | Total you owe suppliers (sum of AP-invoice `balanceDue`, excluding paid/cancelled). |
+| `totalBankBalance` | Sum of current balances across active bank accounts. |
+| `totalCashBalance` | Cash on hand. **Currently a stub — always `0`** (no cash-drawer/till integration yet). |
+| `todayRevenue` | Today's completed-sales revenue (same source as `GET /dashboard/revenue`). |
+
+> Only these five fields are populated. (The `FinancialSummaryDTO` class also declares month/cash-flow/
+> aging sub-objects, but this endpoint does not fill them, so they are absent from the response.)
 
 ---
 

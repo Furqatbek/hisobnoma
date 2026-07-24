@@ -244,6 +244,8 @@ class MobileDashboardServiceTest {
         when(arInvoiceRepository.sumOutstandingBalance(eq(TENANT_ID), any())).thenReturn(new BigDecimal("200000.00"));
         when(apInvoiceRepository.sumOutstandingBalance(eq(TENANT_ID), any())).thenReturn(new BigDecimal("100000.00"));
         when(bankAccountRepository.sumTotalBalance(TENANT_ID)).thenReturn(new BigDecimal("500000.00"));
+        when(transactionRepository.sumCompletedSalesByDateRange(eq(TENANT_ID), any(), any()))
+                .thenReturn(new BigDecimal("750000.00"));
 
         // When
         FinancialSummaryDTO result = mobileDashboardService.getFinancialSummary();
@@ -253,8 +255,8 @@ class MobileDashboardServiceTest {
         assertEquals(new BigDecimal("500000.00"), result.getTotalBankBalance());
         assertEquals(new BigDecimal("200000.00"), result.getArOutstanding());
         assertEquals(new BigDecimal("100000.00"), result.getApOutstanding());
-        // netCashPosition = bank - ap + ar = 500000 - 100000 + 200000 = 600000
-        assertEquals(new BigDecimal("600000.00"), result.getNetCashPosition());
+        // todayRevenue = today's completed sales
+        assertEquals(new BigDecimal("750000.00"), result.getTodayRevenue());
     }
 
     @Test
@@ -273,6 +275,6 @@ class MobileDashboardServiceTest {
         assertEquals(BigDecimal.ZERO, result.getTotalBankBalance());
         assertEquals(BigDecimal.ZERO, result.getArOutstanding());
         assertEquals(BigDecimal.ZERO, result.getApOutstanding());
-        assertEquals(BigDecimal.ZERO, result.getNetCashPosition());
+        assertEquals(BigDecimal.ZERO, result.getTodayRevenue());
     }
 }

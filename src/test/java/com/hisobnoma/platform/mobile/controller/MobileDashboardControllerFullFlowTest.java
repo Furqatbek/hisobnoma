@@ -165,6 +165,6 @@ class MobileDashboardControllerFullFlowTest {
                 .andExpect(jsonPath("$.data.totalCashBalance").value(0))
                 .andExpect(jsonPath("$.data.arOutstanding").value(0))
                 .andExpect(jsonPath("$.data.apOutstanding").value(0))
-                .andExpect(jsonPath("$.data.netCashPosition").value(0));
+                .andExpect(jsonPath("$.data.todayRevenue").value(0));
     }
 }

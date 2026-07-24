@@ -206,12 +206,19 @@ public class MobileDashboardService {
         apOutstanding = apOutstanding != null ? apOutstanding : BigDecimal.ZERO;
         bankBalance = bankBalance != null ? bankBalance : BigDecimal.ZERO;
 
+        // Today's completed-sales revenue (same source as the revenue dashboard).
+        LocalDate today = LocalDate.now();
+        Instant todayStart = today.atStartOfDay(ZoneId.systemDefault()).toInstant();
+        Instant todayEnd = today.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        BigDecimal todayRevenue = transactionRepository.sumCompletedSalesByDateRange(tenantId, todayStart, todayEnd);
+        todayRevenue = todayRevenue != null ? todayRevenue : BigDecimal.ZERO;
+
         return FinancialSummaryDTO.builder()
                 .totalBankBalance(bankBalance)
                 .totalCashBalance(BigDecimal.ZERO) // Would need cash drawer integration
                 .arOutstanding(arOutstanding)
                 .apOutstanding(apOutstanding)
-                .netCashPosition(bankBalance.subtract(apOutstanding).add(arOutstanding))
+                .todayRevenue(todayRevenue)
                 .build();
     }
 

@@ -22,7 +22,8 @@ public class FinancialSummaryDTO {
     private BigDecimal totalBankBalance;
     private BigDecimal arOutstanding;
     private BigDecimal apOutstanding;
-    private BigDecimal netCashPosition;
+    /** Today's completed-sales revenue (replaces the old netCashPosition field). */
+    private BigDecimal todayRevenue;
 
     private BigDecimal todayIncome;
     private BigDecimal todayExpenses;
