@@ -16,6 +16,9 @@ All endpoints require JWT Bearer token authentication and appropriate RBAC permi
 - `MOBILE_SYNC_ACCESS` - Access offline sync data
 - `MOBILE_QUICK_SALE` - Create quick sales from mobile
 - `MOBILE_QUICK_COUNT` - Perform quick stock counts from mobile
+- `MOBILE_EXPENSE_WRITE` - Record an expense from mobile
+- `MOBILE_AR_COLLECT` - Accept/register a debtor (customer) payment from mobile
+- `MOBILE_SALARY_PAY` - Record a paid salary or advance from mobile
 - `MOBILE_PUSH_SEND` - Broadcast APNs push notifications to app users (see [MOBILE_PUSH_API.md](MOBILE_PUSH_API.md))
 
 ## Base URL
@@ -973,6 +976,98 @@ GET /sync/last-updated
   }
 }
 ```
+
+---
+
+## Admin Actions (Finance & HR)
+
+Write-actions for an admin on the go: record an expense, take a customer payment, and pay
+salaries/advances. Each accepts a mobile-specific permission **or** the underlying module
+permission. All are tenant-scoped (from the staff JWT) and the finance/HR ones post to the GL.
+
+| Method | Path | Permission | Purpose |
+|---|---|---|---|
+| POST | `/api/v1/mobile/expenses` | `MOBILE_EXPENSE_WRITE` | Record an expense |
+| POST | `/api/v1/mobile/finance/debtor-payment` | `MOBILE_AR_COLLECT` or `FINANCE_AR_WRITE` | Accept a debtor (customer) payment |
+| POST | `/api/v1/mobile/hr/salary` | `MOBILE_SALARY_PAY` or `HR_SALARY_WRITE` | Record + pay a salary |
+| POST | `/api/v1/mobile/hr/advance` | `MOBILE_SALARY_PAY` or `HR_SALARY_WRITE` | Record a paid advance |
+
+### Record an expense
+
+```http
+POST /api/v1/mobile/expenses
+```
+```jsonc
+{
+  "totalAmount": 50000,        // required, > 0
+  "category": "Transport",     // optional, defaults "Boshqa"
+  "createDate": "2026-07-24",  // optional, defaults today
+  "currency": "UZS",           // optional, defaults UZS
+  "notes": "Taxi to warehouse"
+}
+```
+Response: `ApiResponse` with `{ id, totalAmount }`.
+
+### Accept a debtor payment
+
+```http
+POST /api/v1/mobile/finance/debtor-payment
+```
+```jsonc
+{
+  "customerId": 100,           // required
+  "amount": 60000,             // required, > 0
+  "paymentMethod": "CASH",     // optional (CASH|CHECK|BANK_TRANSFER|CREDIT_CARD|DEBIT_CARD|MOBILE_PAYMENT|…), defaults CASH
+  "invoiceId": null,           // optional: apply to this one invoice; omit to auto-allocate
+  "referenceNumber": null,
+  "notes": null
+}
+```
+The payment is created **and completed** (posts to GL). By default it settles the customer's open
+invoices **oldest-due-first**; any amount beyond their open balance stays on the payment as an
+unallocated advance. Pass `invoiceId` to target a single invoice (must belong to that customer, else
+`INVOICE_CUSTOMER_MISMATCH`). Response: the completed `ARPaymentDto` (with `paymentNumber`,
+`allocatedAmount`, `unallocatedAmount`). To build the UI, look up the customer's balance with
+`GET /api/v1/finance/ar-invoices/customer/{id}/outstanding` and unpaid invoices with
+`.../customer/{id}/unpaid` (see [`AR_MODULE_API.md`](AR_MODULE_API.md)).
+
+### Record + pay a salary
+
+```http
+POST /api/v1/mobile/hr/salary
+```
+```jsonc
+{
+  "employeeId": 5,             // required
+  "periodYear": 2026,          // required
+  "periodMonth": 7,            // required
+  "baseAmount": 2000000,       // required
+  "bonusAmount": 0,
+  "deductionAmount": 0,
+  "notes": null
+}
+```
+Creates the salary record for the employee/period **and immediately marks it PAID** — posts to the
+GL and auto-deducts the employee's outstanding advances. Errors if a record for that period already
+exists (create it/pay it on the web admin instead). Response: the paid `SalaryRecordDto`.
+
+### Record a paid advance
+
+```http
+POST /api/v1/mobile/hr/advance
+```
+```jsonc
+{
+  "employeeId": 5,             // required
+  "amount": 500000,            // required, > 0
+  "periodYear": 2026,          // required
+  "periodMonth": 7,            // required
+  "advanceDate": "2026-07-24", // optional, defaults today
+  "notes": null
+}
+```
+Records a GIVEN advance and posts it to the GL (DR advance asset / CR cash). It is auto-deducted from
+the employee's next paid salary. Response: the `SalaryAdvanceDto`.
 
 ---
 

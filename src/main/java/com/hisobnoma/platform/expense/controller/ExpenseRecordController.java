@@ -33,6 +33,7 @@ import java.util.Map;
 public class ExpenseRecordController {
 
     private final ExpenseRecordRepository repository;
+    private final com.hisobnoma.platform.expense.service.ExpenseService expenseService;
 
     @GetMapping
     public ResponseEntity<PageResponse<ExpenseRecord>> getExpenses(
@@ -62,20 +63,9 @@ public class ExpenseRecordController {
             ));
         }
 
-        Long tenantId = resolveTenantId();
-
-        ExpenseRecord record = ExpenseRecord.builder()
-                .createDate(createDate)
-                .category(request.getCategory() != null ? request.getCategory() : "Boshqa")
-                .totalAmount(request.getTotalAmount())
-                .currency(request.getCurrency() != null ? request.getCurrency() : "UZS")
-                .generatedNotes(request.getGeneratedNotes())
-                .fullText(request.getFullText())
-                .tenantId(tenantId)
-                .build();
-
-        ExpenseRecord saved = repository.save(record);
-        log.info("Created expense record id={} tenant={} amount={}", saved.getId(), tenantId, saved.getTotalAmount());
+        ExpenseRecord saved = expenseService.create(resolveTenantId(), createDate,
+                request.getCategory(), request.getTotalAmount(), request.getCurrency(),
+                request.getGeneratedNotes(), request.getFullText());
 
         return ResponseEntity.ok(Map.of(
                 "id", saved.getId(),
