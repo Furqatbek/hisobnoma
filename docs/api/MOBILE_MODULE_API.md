@@ -1069,6 +1069,64 @@ POST /api/v1/mobile/hr/advance
 Records a GIVEN advance and posts it to the GL (DR advance asset / CR cash). It is auto-deducted from
 the employee's next paid salary. Response: the `SalaryAdvanceDto`.
 
+### Demo walkthrough — an admin does the books on mobile
+
+`$BASE` is the backend origin. After login every call sends `Authorization: Bearer <accessToken>`;
+the tenant rides in the token, so no `X-Tenant-ID` header is needed.
+
+**0. Sign in** (phone + SMS code) and keep the access token.
+
+```bash
+TOKEN=$(curl -s -X POST $BASE/api/v1/mobile/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"+998901234567","code":"123456"}' | jq -r .data.accessToken)
+```
+
+**1. Record a petty-cash expense** — 50 000 UZS for transport.
+
+```bash
+curl -X POST $BASE/api/v1/mobile/expenses \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"totalAmount":50000,"category":"Transport","notes":"Taxi to warehouse"}'
+# → 200 { data: { id, totalAmount } }
+```
+
+**2. Collect from a debtor** — a customer pays 60 000 toward what they owe. First check the balance,
+then take the cash; it settles their oldest invoices automatically.
+
+```bash
+curl -s $BASE/api/v1/finance/ar-invoices/customer/100/outstanding \
+  -H "Authorization: Bearer $TOKEN"                     # → e.g. 80000
+
+curl -X POST $BASE/api/v1/mobile/finance/debtor-payment \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"customerId":100,"amount":60000,"paymentMethod":"CASH"}'
+# → 200 { data: { paymentNumber, allocatedAmount, unallocatedAmount } }  (posted to GL, oldest-first)
+```
+
+**3. Pay a salary** — record and pay the employee's July salary in one step (posts to GL, nets off any
+outstanding advances).
+
+```bash
+curl -X POST $BASE/api/v1/mobile/hr/salary \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"employeeId":5,"periodYear":2026,"periodMonth":7,"baseAmount":2000000,"bonusAmount":200000}'
+# → 200 { data: { id, netAmount, status:"PAID" } }
+```
+
+**4. Give an advance** — hand another employee a 500 000 advance (posts to GL; auto-deducted from
+their next salary).
+
+```bash
+curl -X POST $BASE/api/v1/mobile/hr/advance \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"employeeId":6,"amount":500000,"periodYear":2026,"periodMonth":7}'
+# → 200 { data: { id, amount, status:"GIVEN" } }
+```
+
+Each of steps 1–4 needs the matching permission (`MOBILE_EXPENSE_WRITE`, `MOBILE_AR_COLLECT`,
+`MOBILE_SALARY_PAY`) or the underlying module permission; a token without it gets `403`.
+
 ---
 
 ## Alert Types
