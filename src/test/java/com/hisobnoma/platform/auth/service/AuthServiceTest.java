@@ -15,6 +15,8 @@ import com.hisobnoma.platform.common.exception.BusinessException;
 import com.hisobnoma.platform.common.exception.UnauthorizedException;
 import com.hisobnoma.platform.common.exception.ValidationException;
 import com.hisobnoma.platform.common.repository.TenantRepository;
+import com.hisobnoma.platform.common.tenant.TenantContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +33,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -495,6 +498,64 @@ class AuthServiceTest {
 
         // When / Then
         assertThrows(UnauthorizedException.class, () -> authService.getCurrentUserInfo());
+    }
+
+    // ---- getActiveUserList tenant resolution (pre-login screen) ----
+
+    @AfterEach
+    void clearTenant() {
+        TenantContext.clear();
+    }
+
+    @Test
+    void getActiveUsers_noTenant_singleActiveTenant_resolvesIt() {
+        // Given: no X-Tenant-ID in context, and a single-shop install
+        TenantContext.clear();
+        Tenant only = Tenant.builder().name("Shop").code("SHOP").active(true).build();
+        only.setId(TENANT_ID);
+        when(tenantRepository.findByActiveTrue()).thenReturn(List.of(only));
+        when(userRepository.findAllActiveUsersByTenantId(TENANT_ID)).thenReturn(List.of(user));
+
+        // When
+        var result = authService.getActiveUserList();
+
+        // Then
+        assertEquals(1, result.size());
+        assertEquals("admin", result.get(0).getUsername());
+        verify(userRepository).findAllActiveUsersByTenantId(TENANT_ID);
+    }
+
+    @Test
+    void getActiveUsers_noTenant_multipleActiveTenants_failsClosed() {
+        // Given: no X-Tenant-ID and more than one active tenant → must not leak
+        TenantContext.clear();
+        Tenant a = Tenant.builder().name("A").code("A").active(true).build();
+        a.setId(1L);
+        Tenant b = Tenant.builder().name("B").code("B").active(true).build();
+        b.setId(2L);
+        when(tenantRepository.findByActiveTrue()).thenReturn(List.of(a, b));
+
+        // When / Then
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> authService.getActiveUserList());
+        assertEquals("TENANT_REQUIRED", ex.getCode());
+        verify(userRepository, never()).findAllActiveUsersByTenantId(any());
+    }
+
+    @Test
+    void getActiveUsers_noTenant_configuredDefault_takesPrecedence() {
+        // Given: an explicit default configured (e.g. one "front" shop among several)
+        TenantContext.clear();
+        ReflectionTestUtils.setField(authService, "defaultLoginTenantId", 7L);
+        when(userRepository.findAllActiveUsersByTenantId(7L)).thenReturn(Collections.emptyList());
+
+        // When
+        var result = authService.getActiveUserList();
+
+        // Then: uses the configured tenant without consulting the tenant table
+        assertTrue(result.isEmpty());
+        verify(userRepository).findAllActiveUsersByTenantId(7L);
+        verify(tenantRepository, never()).findByActiveTrue();
     }
 
 }

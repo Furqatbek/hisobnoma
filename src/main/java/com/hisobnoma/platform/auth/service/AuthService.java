@@ -58,6 +58,11 @@ public class AuthService {
     @Value("${app.security.password-reset-expiration-minutes:60}")
     private int passwordResetExpirationMinutes;
 
+    // Optional tenant used for the pre-login user list when no X-Tenant-ID is
+    // supplied. 0 = unset; see resolveLoginScreenTenant().
+    @Value("${app.auth.default-tenant-id:0}")
+    private long defaultLoginTenantId;
+
     @Transactional
     public AuthResponse login(LoginRequest request, String ipAddress, String deviceInfo) {
         User user = userRepository.findByUsernameWithRolesAndPermissions(request.getUsername())
@@ -122,11 +127,12 @@ public class AuthService {
     }
 
     public List<UserListItem> getActiveUserList() {
-        // Pre-auth endpoint: tenant comes from the X-Tenant-ID header (or a still-valid
-        // JWT). Fail closed — without a tenant this would list every tenant's staff.
+        // Pre-auth endpoint: tenant normally comes from the X-Tenant-ID header (or a
+        // still-valid JWT). When absent, resolve a safe default rather than always
+        // failing closed, so the login screen works on a fresh device.
         Long tenantId = TenantContext.getCurrentTenant();
         if (tenantId == null) {
-            throw new BusinessException("X-Tenant-ID header is required", "TENANT_REQUIRED");
+            tenantId = resolveLoginScreenTenant();
         }
         return userRepository.findAllActiveUsersByTenantId(tenantId).stream()
                 .map(u -> {
@@ -151,6 +157,24 @@ public class AuthService {
                             .build();
                 })
                 .toList();
+    }
+
+    /**
+     * Resolves the tenant for the pre-login user list when the request carried no
+     * X-Tenant-ID. Order: an explicitly configured default, then the sole active
+     * tenant (single-shop install — unambiguous, no cross-tenant leak possible).
+     * With several active tenants and no configured default, still fail closed so
+     * we never expose one tenant's staff on another's login screen.
+     */
+    private Long resolveLoginScreenTenant() {
+        if (defaultLoginTenantId > 0) {
+            return defaultLoginTenantId;
+        }
+        List<Tenant> activeTenants = tenantRepository.findByActiveTrue();
+        if (activeTenants.size() == 1) {
+            return activeTenants.get(0).getId();
+        }
+        throw new BusinessException("X-Tenant-ID header is required", "TENANT_REQUIRED");
     }
 
     @Transactional
