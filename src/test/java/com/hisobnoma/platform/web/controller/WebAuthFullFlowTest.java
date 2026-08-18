@@ -203,7 +203,10 @@ class WebAuthFullFlowTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(1)))
-                .andExpect(jsonPath("$.content[0].orderNumber", is("WO-AUTH-01")));
+                .andExpect(jsonPath("$.content[0].orderNumber", is("WO-AUTH-01")))
+                // the my-orders list carries payment fields, same as the checkout/status DTO
+                .andExpect(jsonPath("$.content[0].paymentMethod", is("CASH")))
+                .andExpect(jsonPath("$.content[0].paymentStatus", is("NONE")));
     }
 
     @Test
