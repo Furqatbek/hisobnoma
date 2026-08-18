@@ -116,7 +116,11 @@ public class SecurityConfig {
         boolean wildcard = origins.stream().anyMatch(o -> o.equals("*") || o.contains("*"));
         configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "X-Tenant-ID"));
+        // Accept any request header. Safe because credentials are disabled (below), so
+        // there is no session/cookie to protect; a fixed allow-list here only causes
+        // preflight failures when a client (e.g. the mobile app) sends an extra header
+        // like Cache-Control or a custom X-* header. Origins remain restricted.
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));
         // Auth is a stateless Authorization header, never cookies — credentials MUST stay off so a
         // wildcard origin can't ride a victim's session. A wildcard + credentials would be critical;

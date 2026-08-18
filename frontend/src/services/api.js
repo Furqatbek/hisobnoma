@@ -1,6 +1,6 @@
 import axios from 'axios'
 import router from '@/router'
-import { getAccessToken, getRefreshToken, setTokens, clearTokens, getLastTenantId } from '@/services/tokenStorage'
+import { getAccessToken, getRefreshToken, setTokens, clearTokens, resolvePreAuthTenantId } from '@/services/tokenStorage'
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -112,9 +112,10 @@ export const authApi = {
   login: (credentials) => api.post('/auth/login', credentials),
   pinLogin: (credentials) => api.post('/auth/pin-login', credentials),
   // Pre-auth PIN screen: the backend requires X-Tenant-ID here (fails closed),
-  // so send the tenant remembered from the last successful login.
+  // so send the tenant remembered from the last login, or the one configured
+  // for this deployment (seeds the very first login on a fresh device).
   getUsersList: () => {
-    const tenantId = getLastTenantId()
+    const tenantId = resolvePreAuthTenantId()
     return api.get('/auth/users/list', tenantId ? { headers: { 'X-Tenant-ID': tenantId } } : {})
   },
   setPin: (pin) => api.put('/auth/set-pin', { pin }),

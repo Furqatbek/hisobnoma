@@ -108,6 +108,19 @@ class SecurityConfigIntegrationTest {
     }
 
     @Test
+    void cors_preflight_allowsArbitraryRequestHeaders() throws Exception {
+        // A client (e.g. the mobile app) sending a header outside the old fixed
+        // allow-list must not fail preflight. Credentials are disabled, so echoing
+        // any requested header is safe.
+        mockMvc.perform(options("/api/v1/users")
+                        .header("Origin", "https://app.hisobnoma.com")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "X-Tenant-ID, Cache-Control, X-App-Version"))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("Access-Control-Allow-Headers"));
+    }
+
+    @Test
     void cors_allowedOrigin_respondsWithCorsHeader() throws Exception {
         // GET with Origin header should include Access-Control-Allow-Origin in response
         mockMvc.perform(get("/api/v1/auth/users/list")
