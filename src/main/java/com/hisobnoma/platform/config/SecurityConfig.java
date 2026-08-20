@@ -62,6 +62,8 @@ public class SecurityConfig {
             "/api/v1/b2b/**",
             "/api/v1/agent/**",
             "/uploads/**",
+            "/privacy",
+            "/privacy.html",
             "/actuator/health",
             "/actuator/info",
             "/swagger-ui/**",

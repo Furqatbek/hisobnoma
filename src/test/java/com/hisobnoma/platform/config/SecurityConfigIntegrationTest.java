@@ -121,6 +121,20 @@ class SecurityConfigIntegrationTest {
     }
 
     @Test
+    void privacyHtml_isPubliclyServed() throws Exception {
+        mockMvc.perform(get("/privacy.html"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Sheben N1")));
+    }
+
+    @Test
+    void privacy_forwardsToPrivacyHtml_withoutAuth() throws Exception {
+        mockMvc.perform(get("/privacy"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/privacy.html"));
+    }
+
+    @Test
     void cors_allowedOrigin_respondsWithCorsHeader() throws Exception {
         // GET with Origin header should include Access-Control-Allow-Origin in response
         mockMvc.perform(get("/api/v1/auth/users/list")
