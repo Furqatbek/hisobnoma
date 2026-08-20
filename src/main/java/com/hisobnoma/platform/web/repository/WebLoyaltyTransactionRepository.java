@@ -5,6 +5,7 @@ import com.hisobnoma.platform.web.entity.WebLoyaltyTransactionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -57,4 +58,9 @@ public interface WebLoyaltyTransactionRepository extends JpaRepository<WebLoyalt
            "AND t.type = 'ADJUST' AND t.note LIKE 'Реферал%'")
     BigDecimal sumReferralRewards(@Param("tenantId") Long tenantId,
                                   @Param("customerId") Long customerId);
+
+    @Modifying
+    @Query("DELETE FROM WebLoyaltyTransaction t WHERE t.tenantId = :tenantId AND t.webCustomerId = :customerId")
+    void deleteAllByTenantIdAndWebCustomerId(@Param("tenantId") Long tenantId,
+                                             @Param("customerId") Long customerId);
 }

@@ -14,6 +14,7 @@ import com.hisobnoma.platform.web.dto.WebAuthResponse;
 import com.hisobnoma.platform.web.dto.WebNotificationDto;
 import com.hisobnoma.platform.web.dto.WishlistItemDto;
 import com.hisobnoma.platform.web.entity.WebCustomer;
+import com.hisobnoma.platform.web.service.WebAccountDeletionService;
 import com.hisobnoma.platform.web.service.WebAuthService;
 import com.hisobnoma.platform.web.service.WebCouponListService;
 import com.hisobnoma.platform.web.service.WebLoyaltyService;
@@ -46,6 +47,7 @@ public class WebAuthPublicController {
 
     private final ClientIpResolver clientIpResolver;
     private final WebAuthService authService;
+    private final WebAccountDeletionService accountDeletionService;
     private final WebCouponListService couponListService;
     private final WebLoyaltyService loyaltyService;
     private final WebNotificationService notificationService;
@@ -73,6 +75,18 @@ public class WebAuthPublicController {
     public ResponseEntity<ApiResponse<Map<String, String>>> me(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
         return ResponseEntity.ok(ApiResponse.success(authService.getProfile(authorization)));
+    }
+
+    /**
+     * Deletes the authenticated customer's own account (Apple 5.1.1(v) /
+     * Google Play). Immediate, irreversible; the loyalty balance is forfeited.
+     * Returns 409 {@code ACCOUNT_HAS_ACTIVE_ORDERS} while an order is in flight.
+     */
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse<Void>> deleteMe(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        accountDeletionService.deleteOwnAccount(authorization);
+        return ResponseEntity.ok(ApiResponse.success(null, "Account deleted"));
     }
 
     @GetMapping("/me/orders")

@@ -114,6 +114,15 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
 
+  # Online shop customer app
+  web:
+    # Fixed-OTP account for App Store / Google Play reviewers (they can't get a
+    # real +998 SMS). Disabled unless both are set. Keep these values stable —
+    # store reviewers use them on every update review.
+    review-account:
+      phone: ${WEB_REVIEW_ACCOUNT_PHONE:}
+      code: ${WEB_REVIEW_ACCOUNT_CODE:}
+
   # OTP Configuration
   otp:
     expiration-minutes: 5

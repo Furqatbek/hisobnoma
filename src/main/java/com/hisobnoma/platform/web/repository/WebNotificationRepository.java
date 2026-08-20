@@ -31,4 +31,9 @@ public interface WebNotificationRepository extends JpaRepository<WebNotification
            "WHERE n.tenantId = :tenantId AND n.webCustomerId = :customerId AND n.read = false")
     int markAllRead(@Param("tenantId") Long tenantId,
                     @Param("customerId") Long customerId);
+
+    @Modifying
+    @Query("DELETE FROM WebNotification n WHERE n.tenantId = :tenantId AND n.webCustomerId = :customerId")
+    void deleteAllByTenantIdAndWebCustomerId(@Param("tenantId") Long tenantId,
+                                             @Param("customerId") Long customerId);
 }

@@ -207,7 +207,22 @@ class AuthControllerFullFlowTest {
     }
 
     @Test
-    void getActiveUsers_withoutTenant_failsClosed() throws Exception {
+    void getActiveUsers_withoutTenant_singleActiveTenant_resolvesIt() throws Exception {
+        // Single-shop install: with exactly one active tenant there is no ambiguity,
+        // so the login screen resolves it without an X-Tenant-ID header.
+        mockMvc.perform(get("/api/v1/auth/users/list"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.username=='authflowuser')]").isNotEmpty());
+    }
+
+    @Test
+    void getActiveUsers_withoutTenant_multipleActiveTenants_failsClosed() throws Exception {
+        // A second active tenant makes the choice ambiguous → fail closed so one
+        // tenant's staff can never leak onto another tenant's login screen.
+        tenantRepository.saveAndFlush(Tenant.builder()
+                .name("Second Active Tenant").code("FULLFLOW_AUTH_2ND").active(true)
+                .maxUsers(100).maxLocations(10).build());
+
         mockMvc.perform(get("/api/v1/auth/users/list"))
                 .andExpect(status().is4xxClientError());
     }

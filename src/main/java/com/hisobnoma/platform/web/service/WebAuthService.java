@@ -64,12 +64,26 @@ public class WebAuthService {
 
     private final SecureRandom random = new SecureRandom();
 
+    // Fixed-OTP account for App Store / Google Play reviewers, who cannot receive a
+    // real +998 SMS. Disabled unless both are configured. The reviewer signs in with
+    // this phone + fixed code; no SMS is sent and rate limits / daily caps don't apply.
+    @org.springframework.beans.factory.annotation.Value("${app.web.review-account.phone:}")
+    private String reviewAccountPhone;
+    @org.springframework.beans.factory.annotation.Value("${app.web.review-account.code:}")
+    private String reviewAccountCode;
+
     @Transactional
     public void requestOtp(String rawPhone, String sourceIp) {
         Long tenantId = resolveTenantId();
         String phone = normalizePhone(rawPhone);
         if (phone.length() < 9 || phone.length() > 15) {
             throw new ValidationException("Invalid phone number");
+        }
+
+        if (isReviewAccount(phone)) {
+            // Store reviewer: fixed code, no SMS, no rate limit / daily cap.
+            log.info("OTP requested for review account (tenant {}) — fixed code, no SMS", tenantId);
+            return;
         }
 
         if (!rateLimiter.tryAcquire("otp|" + sourceIp)) {
@@ -115,23 +129,30 @@ public class WebAuthService {
         Long tenantId = resolveTenantId();
         String phone = normalizePhone(rawPhone);
 
-        WebOtpCode otp = otpRepository
-                .findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(tenantId, phone)
-                .filter(c -> c.getExpiresAt().isAfter(Instant.now()))
-                .orElseThrow(() -> new ValidationException("Code expired or not requested"));
+        if (isReviewAccount(phone)) {
+            // Store reviewer: accept only the fixed code; no OTP record is consulted.
+            if (reviewAccountCode.isBlank() || !reviewAccountCode.equals(code)) {
+                throw new ValidationException("Invalid code");
+            }
+        } else {
+            WebOtpCode otp = otpRepository
+                    .findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(tenantId, phone)
+                    .filter(c -> c.getExpiresAt().isAfter(Instant.now()))
+                    .orElseThrow(() -> new ValidationException("Code expired or not requested"));
 
-        if (otp.getAttempts() >= MAX_ATTEMPTS) {
-            throw new TooManyRequestsException("Too many wrong attempts, request a new code");
-        }
+            if (otp.getAttempts() >= MAX_ATTEMPTS) {
+                throw new TooManyRequestsException("Too many wrong attempts, request a new code");
+            }
 
-        if (!otp.getCodeHash().equals(hash(otp.getSalt(), code))) {
-            otp.setAttempts(otp.getAttempts() + 1);
+            if (!otp.getCodeHash().equals(hash(otp.getSalt(), code))) {
+                otp.setAttempts(otp.getAttempts() + 1);
+                otpRepository.save(otp);
+                throw new ValidationException("Invalid code");
+            }
+
+            otp.setUsed(true);
             otpRepository.save(otp);
-            throw new ValidationException("Invalid code");
         }
-
-        otp.setUsed(true);
-        otpRepository.save(otp);
 
         Instant now = Instant.now();
         WebCustomer customer = webCustomerRepository.findByTenantIdAndPhone(tenantId, phone)
@@ -233,6 +254,12 @@ public class WebAuthService {
 
     static String normalizePhone(String phone) {
         return phone == null ? "" : phone.replaceAll("[^0-9]", "");
+    }
+
+    /** True when the (normalized) phone is the configured store-review account. */
+    private boolean isReviewAccount(String normalizedPhone) {
+        return reviewAccountPhone != null && !reviewAccountPhone.isBlank()
+                && normalizePhone(reviewAccountPhone).equals(normalizedPhone);
     }
 
     private static String stripBearer(String header) {

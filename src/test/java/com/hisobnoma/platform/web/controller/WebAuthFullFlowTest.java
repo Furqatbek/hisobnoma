@@ -37,6 +37,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
@@ -136,6 +137,12 @@ class WebAuthFullFlowTest {
         return orderRepository.saveAndFlush(order);
     }
 
+    private WebOrder persistOrderWithStatus(String phone, String number, WebOrderStatus status) {
+        WebOrder order = persistOrder(phone, number);
+        order.setStatus(status);
+        return orderRepository.saveAndFlush(order);
+    }
+
     // ---- OTP flow ----
 
     @Test
@@ -212,6 +219,61 @@ class WebAuthFullFlowTest {
     @Test
     void myOrders_withoutTokenIsRejected() throws Exception {
         mockMvc.perform(get("/api/v1/web/me/orders")
+                        .header(TENANT_HEADER, tenant.getId())
+                        .header("Authorization", "Bearer garbage"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---- account deletion (DELETE /web/me) ----
+
+    @Test
+    void deleteMe_wipesAccountAnonymisesOrdersAndInvalidatesToken() throws Exception {
+        String phone = uniquePhone();
+        String normalized = phone.replaceAll("[^0-9]", "");
+        WebOrder completed = persistOrderWithStatus(phone, "WO-DEL-01", WebOrderStatus.COMPLETED);
+        String token = loginAndGetToken(phone, "Ali Valiyev");
+
+        mockMvc.perform(delete("/api/v1/web/me")
+                        .header(TENANT_HEADER, tenant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)));
+
+        // Token no longer resolves — the customer row is gone.
+        mockMvc.perform(get("/api/v1/web/me")
+                        .header(TENANT_HEADER, tenant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+
+        // Order is kept for accounting but anonymised + detached.
+        WebOrder reloaded = orderRepository.findById(completed.getId()).orElseThrow();
+        assertThat(reloaded.getPhoneNormalized(), is(nullValue()));
+        assertThat(reloaded.getCustomerName(), is("Deleted user"));
+        assertThat(orderRepository.countByTenantIdAndPhoneNormalized(tenant.getId(), normalized), is(0L));
+    }
+
+    @Test
+    void deleteMe_blockedWhileOrderActive() throws Exception {
+        String phone = uniquePhone();
+        persistOrderWithStatus(phone, "WO-DEL-02", WebOrderStatus.DELIVERING);
+        String token = loginAndGetToken(phone, "Ali");
+
+        mockMvc.perform(delete("/api/v1/web/me")
+                        .header(TENANT_HEADER, tenant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code", is("ACCOUNT_HAS_ACTIVE_ORDERS")));
+
+        // Account still works after a blocked delete.
+        mockMvc.perform(get("/api/v1/web/me")
+                        .header(TENANT_HEADER, tenant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void deleteMe_withoutTokenIsRejected() throws Exception {
+        mockMvc.perform(delete("/api/v1/web/me")
                         .header(TENANT_HEADER, tenant.getId())
                         .header("Authorization", "Bearer garbage"))
                 .andExpect(status().isUnauthorized());

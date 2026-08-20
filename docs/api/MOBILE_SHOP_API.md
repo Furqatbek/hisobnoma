@@ -99,6 +99,7 @@ Abuse limits: 60s cooldown between codes, max 5 codes/phone/day, 5 wrong attempt
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/me` | Current customer (`phone`, `name`, `customerCode`, `tenantSlug`) |
+| DELETE | `/me` | **Delete the account** (irreversible) — see [Account deletion](#account-deletion) |
 | GET | `/me/orders?page=&size=` | Order history |
 | GET | `/me/loyalty` | Points balance + ledger |
 | GET | `/me/coupons` | Coupons available to the customer |
@@ -271,6 +272,52 @@ curl -s -X POST   "$BASE/me/device-token" -H "$TENANT" -H "$AUTH" \
 
 ---
 
+<a id="account-deletion"></a>
+## Account deletion — `DELETE /api/v1/web/me`
+
+Customer-initiated, in-app account deletion (Apple Guideline 5.1.1(v) / Google
+Play Data Safety). Requires the customer bearer token; the account to delete is
+taken **from the token only** — never from a parameter — so a caller can only
+delete their own account.
+
+```bash
+curl -s -X DELETE "$BASE/me" -H "$TENANT" -H "$AUTH"
+# → 200 { "success": true, "message": "Account deleted" }
+```
+
+**Behaviour (decisions for the client copy):**
+
+| Question | Answer |
+|---|---|
+| Immediate or grace period? | **Immediate & irreversible.** No 30-day window. |
+| Loyalty / cashback balance | **Forfeited** — the ledger is deleted. Warn the user in the dialog. |
+| Active orders (`NEW`/`CONFIRMED`/`DELIVERING`) | **Blocked** → `409 ACCOUNT_HAS_ACTIVE_ORDERS`. Show the returned `message` and tell the user to wait until delivery completes. |
+| Re-registration | **Allowed and clean** — the same phone can sign up again with fresh history/balance. |
+| Deletion reason from user | **Not needed** — the server records the deletion itself. |
+
+**What happens to the data:**
+- **Deleted:** customer record, auth/OTP records, all tokens (every existing
+  token stops working immediately → subsequent calls get `401`), device tokens
+  (no further pushes), wishlist, notifications, loyalty balance + ledger,
+  referral code + stats. Bonuses already granted to *other* customers are kept.
+- **Kept but anonymised:** completed/cancelled **orders** are retained for
+  accounting, with the personal fields (name, phone, address, note) stripped and
+  the customer link removed, so they can't be matched back to a person.
+
+On `200`/`204` the client should wipe the local session + cached data and return
+to the catalog. On `409`, keep the session and surface `message`.
+
+## Store-review sign-in (fixed OTP)
+
+App Store / Google Play reviewers can't receive a `+998` SMS, so the backend can
+provision a **fixed-OTP account**: a configured phone whose code is always the
+configured value, exempt from OTP rate limits and the daily cap, and an ordinary
+customer otherwise. It is disabled unless the deployment sets both
+`WEB_REVIEW_ACCOUNT_PHONE` and `WEB_REVIEW_ACCOUNT_CODE`. Put the provisioned
+phone + code into Google Play "App access" and Apple "App Review Information".
+
+---
+
 ## Errors
 
 | Status | Code | Meaning |
@@ -279,6 +326,7 @@ curl -s -X POST   "$BASE/me/device-token" -H "$TENANT" -H "$AUTH" \
 | 400 | `VALIDATION_ERROR` | Missing/invalid body (e.g. no lines, invalid coupon) |
 | 401 | `UNAUTHORIZED` | Missing/expired customer token on a `/me/**` call |
 | 404 | `NOT_FOUND` | Unknown product / order (or a tracking phone that doesn't match) |
+| 409 | `ACCOUNT_HAS_ACTIVE_ORDERS` | Account deletion blocked while an order is in flight |
 | 429 | `TOO_MANY_REQUESTS` | Rate limit hit (OTP, checkout, cart preview, coupon) |
 | 503 | `PAYMENT_NOT_CONFIGURED` | Online payment requested while cash-only |
 

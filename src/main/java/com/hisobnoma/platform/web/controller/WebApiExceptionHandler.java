@@ -78,7 +78,9 @@ public class WebApiExceptionHandler {
             "PAYMENT_NOT_CONFIGURED", "Онлайн тўлов ҳозирча мавжуд эмас",
             "NOT_FOUND", "Топилмади",
             "UNAUTHORIZED", "Сессия муддати тугаган. Қайтадан киринг",
-            "VALIDATION_FAILED", "Киритилган маълумотлар нотўғри ёки тўлиқ эмас"
+            "VALIDATION_FAILED", "Киритилган маълумотлар нотўғри ёки тўлиқ эмас",
+            "ACCOUNT_HAS_ACTIVE_ORDERS",
+                    "Сизда фаол буюртмалар бор. Аккаунтни ўчиришдан олдин уларнинг етказилишини кутинг"
     );
 
     @ExceptionHandler(BusinessException.class)

@@ -339,4 +339,62 @@ class WebAuthServiceTest {
 
         assertEquals("t", response.getToken());
     }
+
+    // ---- store-review account (fixed OTP) ----
+
+    private static final String REVIEW_PHONE = "998900000000";
+
+    private void enableReviewAccount() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "reviewAccountPhone", "+998 90 000 00 00");
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "reviewAccountCode", "123456");
+    }
+
+    @Test
+    void requestOtp_reviewAccount_skipsSmsRateLimitAndDbRecord() {
+        enableReviewAccount();
+
+        service.requestOtp("+998 90 000 00 00", "1.2.3.4");
+
+        verifyNoInteractions(rateLimiter);
+        verify(otpRepository, never()).save(any());
+        verifyNoInteractions(smsService);
+    }
+
+    @Test
+    void verifyOtp_reviewAccount_fixedCode_logsInWithoutOtpRecord() {
+        enableReviewAccount();
+        when(webCustomerRepository.findByTenantIdAndPhone(TENANT_ID, REVIEW_PHONE))
+                .thenReturn(Optional.empty());
+        when(webCustomerRepository.save(any(WebCustomer.class))).thenAnswer(inv -> {
+            WebCustomer c = inv.getArgument(0);
+            if (c.getId() == null) c.setId(77L);
+            return c;
+        });
+        when(tokenService.generateToken(any(WebCustomer.class))).thenReturn("review-token");
+
+        WebAuthResponse response = service.verifyOtp("+998 90 000 00 00", "123456", "Reviewer", null);
+
+        assertEquals("review-token", response.getToken());
+        // The fixed-code path never consults the OTP table.
+        verify(otpRepository, never()).findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(any(), any());
+    }
+
+    @Test
+    void verifyOtp_reviewAccount_wrongCode_throws() {
+        enableReviewAccount();
+
+        assertThrows(ValidationException.class,
+                () -> service.verifyOtp(REVIEW_PHONE, "000000", "Reviewer", null));
+        verify(webCustomerRepository, never()).save(any());
+    }
+
+    @Test
+    void verifyOtp_reviewAccountNotConfigured_phoneUsesNormalOtpPath() {
+        // No review account configured → the review phone is treated as any other phone.
+        when(otpRepository.findTopByTenantIdAndPhoneAndUsedFalseOrderByCreatedAtDesc(TENANT_ID, REVIEW_PHONE))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ValidationException.class,
+                () -> service.verifyOtp(REVIEW_PHONE, "123456", "X", null));
+    }
 }

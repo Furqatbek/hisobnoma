@@ -4,6 +4,7 @@ import com.hisobnoma.platform.web.entity.WebWishlistItem;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -25,6 +26,11 @@ public interface WebWishlistItemRepository extends JpaRepository<WebWishlistItem
 
     void deleteByTenantIdAndWebCustomerIdAndCatalogItemId(
             Long tenantId, Long webCustomerId, Long catalogItemId);
+
+    @Modifying
+    @Query("DELETE FROM WebWishlistItem w WHERE w.tenantId = :tenantId AND w.webCustomerId = :webCustomerId")
+    void deleteAllByTenantIdAndWebCustomerId(
+            @Param("tenantId") Long tenantId, @Param("webCustomerId") Long webCustomerId);
 
     long countByTenantIdAndCatalogItemId(Long tenantId, Long catalogItemId);
 
