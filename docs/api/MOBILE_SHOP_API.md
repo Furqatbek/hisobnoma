@@ -312,9 +312,12 @@ to the catalog. On `409`, keep the session and surface `message`.
 App Store / Google Play reviewers can't receive a `+998` SMS, so the backend can
 provision a **fixed-OTP account**: a configured phone whose code is always the
 configured value, exempt from OTP rate limits and the daily cap, and an ordinary
-customer otherwise. It is disabled unless the deployment sets both
-`WEB_REVIEW_ACCOUNT_PHONE` and `WEB_REVIEW_ACCOUNT_CODE`. Put the provisioned
-phone + code into Google Play "App access" and Apple "App Review Information".
+customer otherwise. **A real OTP SMS is never sent to a review number.** It is
+disabled unless the deployment sets both `WEB_REVIEW_ACCOUNT_PHONE` and
+`WEB_REVIEW_ACCOUNT_CODE`; `WEB_REVIEW_ACCOUNT_PHONE` may be a comma-separated
+list to provision more than one review number (all share the fixed code). Put
+the provisioned phone + code into Google Play "App access" and Apple "App Review
+Information".
 
 ---
 

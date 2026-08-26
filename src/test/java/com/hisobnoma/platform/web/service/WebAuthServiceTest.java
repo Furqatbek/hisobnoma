@@ -361,6 +361,20 @@ class WebAuthServiceTest {
     }
 
     @Test
+    void requestOtp_anyOfMultipleReviewNumbers_neverGetsSms() {
+        // Several comma-separated review numbers: none of them receive a real SMS.
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                service, "reviewAccountPhone", "+998900000000, 998900000001");
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "reviewAccountCode", "123456");
+
+        service.requestOtp("998900000000", "1.2.3.4");
+        service.requestOtp("+998 90 000 00 01", "1.2.3.4");
+
+        verifyNoInteractions(smsService);
+        verify(otpRepository, never()).save(any());
+    }
+
+    @Test
     void verifyOtp_reviewAccount_fixedCode_logsInWithoutOtpRecord() {
         enableReviewAccount();
         when(webCustomerRepository.findByTenantIdAndPhone(TENANT_ID, REVIEW_PHONE))

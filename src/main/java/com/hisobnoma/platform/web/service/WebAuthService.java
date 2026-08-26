@@ -64,9 +64,10 @@ public class WebAuthService {
 
     private final SecureRandom random = new SecureRandom();
 
-    // Fixed-OTP account for App Store / Google Play reviewers, who cannot receive a
-    // real +998 SMS. Disabled unless both are configured. The reviewer signs in with
-    // this phone + fixed code; no SMS is sent and rate limits / daily caps don't apply.
+    // Fixed-OTP account(s) for App Store / Google Play reviewers, who cannot receive a
+    // real +998 SMS. Disabled unless both are configured. A reviewer signs in with one
+    // of these phones + the fixed code; no SMS is ever sent to them and rate limits /
+    // daily caps don't apply. The phone value may be a comma-separated list of numbers.
     @org.springframework.beans.factory.annotation.Value("${app.web.review-account.phone:}")
     private String reviewAccountPhone;
     @org.springframework.beans.factory.annotation.Value("${app.web.review-account.code:}")
@@ -256,10 +257,21 @@ public class WebAuthService {
         return phone == null ? "" : phone.replaceAll("[^0-9]", "");
     }
 
-    /** True when the (normalized) phone is the configured store-review account. */
+    /**
+     * True when the (normalized) phone is one of the configured store-review
+     * accounts. {@code reviewAccountPhone} may hold several comma-separated
+     * numbers (e.g. one per store); a real OTP SMS is never sent to any of them.
+     */
     private boolean isReviewAccount(String normalizedPhone) {
-        return reviewAccountPhone != null && !reviewAccountPhone.isBlank()
-                && normalizePhone(reviewAccountPhone).equals(normalizedPhone);
+        if (reviewAccountPhone == null || reviewAccountPhone.isBlank()) {
+            return false;
+        }
+        for (String candidate : reviewAccountPhone.split(",")) {
+            if (!candidate.isBlank() && normalizePhone(candidate).equals(normalizedPhone)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String stripBearer(String header) {
