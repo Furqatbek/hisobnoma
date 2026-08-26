@@ -38,6 +38,11 @@ services:
       # Pin CORS to the real frontend origin(s) in .env — the app-side default is '*'.
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://temurmchj.uz}
       TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
+      # Fixed-OTP account for App Store / Google Play reviewers (they can't get a real
+      # +998 SMS). Defaulted to the values published in the store metadata so review
+      # sign-in works out of the box; override in .env to rotate. See MOBILE_SHOP_API.md.
+      WEB_REVIEW_ACCOUNT_PHONE: ${WEB_REVIEW_ACCOUNT_PHONE:-+998900000000}
+      WEB_REVIEW_ACCOUNT_CODE: ${WEB_REVIEW_ACCOUNT_CODE:-123456}
       RATELIMIT_REDIS: ${RATELIMIT_REDIS:-true}
       # SMS (OTP / alerts) — set SMS_ENABLED=true + token in .env to turn on.
       SMS_ENABLED: ${SMS_ENABLED:-false}
