@@ -41,6 +41,13 @@ public class JwtTokenProvider {
     @Value("${app.jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
 
+    // Mobile app access-token lifetime. Defaults to ~100 years (effectively permanent):
+    // the admin mobile app is a long-lived trusted install and must not log users out.
+    // Scoped to mobile logins only — the web admin panel keeps the short access-token-expiration.
+    // Trade-off: a permanent token can only be revoked by rotating app.jwt.secret.
+    @Value("${app.jwt.mobile-access-token-expiration:3153600000000}")
+    private long mobileAccessTokenExpiration;
+
     @Value("${app.jwt.issuer}")
     private String issuer;
 
@@ -94,8 +101,17 @@ public class JwtTokenProvider {
     }
 
     public String generateAccessToken(UserPrincipal userPrincipal) {
+        return generateAccessToken(userPrincipal, accessTokenExpiration);
+    }
+
+    /** Effectively-permanent access token for the admin mobile app (see mobileAccessTokenExpiration). */
+    public String generateMobileAccessToken(UserPrincipal userPrincipal) {
+        return generateAccessToken(userPrincipal, mobileAccessTokenExpiration);
+    }
+
+    public String generateAccessToken(UserPrincipal userPrincipal, long ttlMillis) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
+        Date expiryDate = new Date(now.getTime() + ttlMillis);
 
         Set<String> permissions = userPrincipal.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -173,6 +189,10 @@ public class JwtTokenProvider {
 
     public long getAccessTokenExpiration() {
         return accessTokenExpiration;
+    }
+
+    public long getMobileAccessTokenExpiration() {
+        return mobileAccessTokenExpiration;
     }
 
     public long getRefreshTokenExpiration() {

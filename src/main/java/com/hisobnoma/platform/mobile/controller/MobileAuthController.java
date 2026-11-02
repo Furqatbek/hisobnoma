@@ -43,14 +43,15 @@ public class MobileAuthController {
             HttpServletRequest httpRequest) {
         String ipAddress = getClientIpAddress(httpRequest);
         String deviceInfo = httpRequest.getHeader("User-Agent");
-        AuthResponse response = authService.login(request, ipAddress, deviceInfo);
+        // Mobile logins get an effectively-permanent access token (see JwtTokenProvider).
+        AuthResponse response = authService.login(request, ipAddress, deviceInfo, true);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/refresh")
     @Operation(summary = "Refresh token", description = "Refresh access token using refresh token")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
-        AuthResponse response = authService.refreshToken(request);
+        AuthResponse response = authService.refreshToken(request, true);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

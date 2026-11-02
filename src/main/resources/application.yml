@@ -107,6 +107,9 @@ app:
     secret: ${JWT_SECRET:your-256-bit-secret-key-here-change-in-production-environment}
     access-token-expiration: ${JWT_ACCESS_EXPIRATION:86400000}     # 24 hours
     refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
+    # Mobile app access token — effectively permanent (~100 years) so the admin app never logs
+    # users out. Scoped to /api/v1/mobile/auth logins only; the web admin keeps the 24h token above.
+    mobile-access-token-expiration: ${JWT_MOBILE_ACCESS_EXPIRATION:3153600000000}
     agent-expiration: ${JWT_AGENT_EXPIRATION:2592000000}           # 30 days (agent mobile app)
     issuer: hisobnoma-platform
 

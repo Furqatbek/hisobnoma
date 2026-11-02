@@ -34,6 +34,8 @@ services:
       # dead variable the app never read).
       JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-86400000}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
+      # Mobile app token is effectively permanent (~100 years); scoped to mobile logins only.
+      JWT_MOBILE_ACCESS_EXPIRATION: ${JWT_MOBILE_ACCESS_EXPIRATION:-3153600000000}
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
       # Pin CORS to the real frontend origin(s) in .env — the app-side default is '*'.
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://temurmchj.uz}

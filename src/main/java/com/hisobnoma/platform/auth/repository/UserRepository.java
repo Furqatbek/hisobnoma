@@ -54,6 +54,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByTenantIdAndEnabledTrue(Long tenantId);
 
+    /** Staff in a tenant who have linked their Telegram (for broadcasting reports). */
+    java.util.List<User> findByTenantIdAndTelegramChatIdIsNotNull(Long tenantId);
+
     @Query("SELECT u FROM User u WHERE u.tenantId = :tenantId AND u.enabled = true "
             + "ORDER BY u.firstName, u.username")
     List<User> findAllActiveUsersByTenantId(@Param("tenantId") Long tenantId);

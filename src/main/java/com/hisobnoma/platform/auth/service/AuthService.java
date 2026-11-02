@@ -65,6 +65,15 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request, String ipAddress, String deviceInfo) {
+        return login(request, ipAddress, deviceInfo, false);
+    }
+
+    /**
+     * @param mobileToken when true, mint an effectively-permanent access token for the
+     *                    admin mobile app (the web admin panel always passes false).
+     */
+    @Transactional
+    public AuthResponse login(LoginRequest request, String ipAddress, String deviceInfo, boolean mobileToken) {
         User user = userRepository.findByUsernameWithRolesAndPermissions(request.getUsername())
                 .or(() -> userRepository.findByPhoneWithRolesAndPermissions(request.getUsername()))
                 .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
@@ -86,10 +95,13 @@ public class AuthService {
 
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
 
-            String accessToken = tokenProvider.generateAccessToken(userPrincipal);
+            String accessToken = mobileToken
+                    ? tokenProvider.generateMobileAccessToken(userPrincipal)
+                    : tokenProvider.generateAccessToken(userPrincipal);
             String refreshToken = createRefreshToken(user, ipAddress, deviceInfo, request.isRememberMe());
 
-            return buildAuthResponse(accessToken, refreshToken, user, userPrincipal, request.isRememberMe());
+            return buildAuthResponse(accessToken, refreshToken, user, userPrincipal,
+                    request.isRememberMe(), mobileToken);
 
         } catch (BadCredentialsException e) {
             handleFailedLogin(user);
@@ -190,6 +202,11 @@ public class AuthService {
 
     @Transactional
     public AuthResponse refreshToken(RefreshTokenRequest request) {
+        return refreshToken(request, false);
+    }
+
+    @Transactional
+    public AuthResponse refreshToken(RefreshTokenRequest request, boolean mobileToken) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(request.getRefreshToken())
                 .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
 
@@ -202,7 +219,9 @@ public class AuthService {
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
 
         UserPrincipal userPrincipal = UserPrincipal.create(user);
-        String newAccessToken = tokenProvider.generateAccessToken(userPrincipal);
+        String newAccessToken = mobileToken
+                ? tokenProvider.generateMobileAccessToken(userPrincipal)
+                : tokenProvider.generateAccessToken(userPrincipal);
 
         // Rotate refresh token - preserve the original expiry duration
         boolean wasRemembered = refreshToken.isRemembered();
@@ -210,7 +229,7 @@ public class AuthService {
         refreshTokenRepository.save(refreshToken);
         String newRefreshToken = createRefreshToken(user, refreshToken.getIpAddress(), refreshToken.getDeviceInfo(), wasRemembered);
 
-        return buildAuthResponse(newAccessToken, newRefreshToken, user, userPrincipal, wasRemembered);
+        return buildAuthResponse(newAccessToken, newRefreshToken, user, userPrincipal, wasRemembered, mobileToken);
     }
 
     @Transactional
@@ -347,11 +366,20 @@ public class AuthService {
 
     private AuthResponse buildAuthResponse(String accessToken, String refreshToken,
                                            User user, UserPrincipal userPrincipal, boolean rememberMe) {
+        return buildAuthResponse(accessToken, refreshToken, user, userPrincipal, rememberMe, false);
+    }
+
+    private AuthResponse buildAuthResponse(String accessToken, String refreshToken,
+                                           User user, UserPrincipal userPrincipal,
+                                           boolean rememberMe, boolean mobileToken) {
+        long accessExpMs = mobileToken
+                ? tokenProvider.getMobileAccessTokenExpiration()
+                : tokenProvider.getAccessTokenExpiration();
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
-                .expiresIn(tokenProvider.getAccessTokenExpiration() / 1000)
+                .expiresIn(accessExpMs / 1000)
                 .rememberMe(rememberMe)
                 .user(buildUserInfo(user, userPrincipal))
                 .build();

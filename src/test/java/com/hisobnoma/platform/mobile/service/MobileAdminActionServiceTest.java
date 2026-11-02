@@ -44,6 +44,7 @@ class MobileAdminActionServiceTest {
     @Mock private ARInvoiceRepository arInvoiceRepository;
     @Mock private SalaryService salaryService;
     @Mock private SalaryAdvanceService salaryAdvanceService;
+    @Mock private com.hisobnoma.platform.inventory.repository.ProductRepository productRepository;
 
     @InjectMocks private MobileAdminActionService service;
 
@@ -215,5 +216,54 @@ class MobileAdminActionServiceTest {
 
     /** Minimal alias so we don't import the concrete request twice. */
     static class CreateSalaryAdvanceRequestStub extends com.hisobnoma.platform.hr.dto.CreateSalaryAdvanceRequest {
+    }
+
+    // ---- product price ----
+
+    private com.hisobnoma.platform.inventory.entity.Product product(String selling, String min) {
+        com.hisobnoma.platform.inventory.entity.Product p =
+                com.hisobnoma.platform.inventory.entity.Product.builder()
+                        .name("Cement")
+                        .sellingPrice(selling == null ? null : new BigDecimal(selling))
+                        .minSellingPrice(min == null ? null : new BigDecimal(min))
+                        .build();
+        p.setId(77L);
+        return p;
+    }
+
+    @Test
+    void updateProductPrice_updatesWhenAboveMin() {
+        var req = com.hisobnoma.platform.mobile.dto.MobileUpdatePriceRequest.builder()
+                .productId(77L).sellingPrice(new BigDecimal("12000")).build();
+        var p = product("10000", "9000");
+        when(productRepository.findByIdAndTenantId(77L, TENANT)).thenReturn(Optional.of(p));
+        when(productRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var result = service.updateProductPrice(req);
+
+        assertEquals(new BigDecimal("12000"), result.getSellingPrice());
+        assertEquals(new BigDecimal("12000"), p.getSellingPrice());
+        verify(productRepository).save(p);
+    }
+
+    @Test
+    void updateProductPrice_belowMinRejected() {
+        var req = com.hisobnoma.platform.mobile.dto.MobileUpdatePriceRequest.builder()
+                .productId(77L).sellingPrice(new BigDecimal("8000")).build();
+        var p = product("10000", "9000");
+        when(productRepository.findByIdAndTenantId(77L, TENANT)).thenReturn(Optional.of(p));
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> service.updateProductPrice(req));
+        assertEquals("PRICE_BELOW_MIN", ex.getCode());
+        verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    void updateProductPrice_unknownProduct_throwsNotFound() {
+        var req = com.hisobnoma.platform.mobile.dto.MobileUpdatePriceRequest.builder()
+                .productId(77L).sellingPrice(new BigDecimal("12000")).build();
+        when(productRepository.findByIdAndTenantId(77L, TENANT)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> service.updateProductPrice(req));
     }
 }

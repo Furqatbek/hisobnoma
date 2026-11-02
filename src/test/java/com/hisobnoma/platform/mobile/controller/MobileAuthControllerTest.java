@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -62,7 +63,7 @@ class MobileAuthControllerTest {
                 .tokenType("Bearer").expiresIn(3600)
                 .user(AuthResponse.UserInfo.builder().id(1L).username("admin").roles(Set.of("ADMIN")).build())
                 .build();
-        when(authService.login(any(LoginRequest.class), any(), any())).thenReturn(response);
+        when(authService.login(any(LoginRequest.class), any(), any(), anyBoolean())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/mobile/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -76,7 +77,7 @@ class MobileAuthControllerTest {
         RefreshTokenRequest request = RefreshTokenRequest.builder().refreshToken("valid-token").build();
         AuthResponse response = AuthResponse.builder()
                 .accessToken("new-token").refreshToken("new-refresh").tokenType("Bearer").expiresIn(3600).build();
-        when(authService.refreshToken(any())).thenReturn(response);
+        when(authService.refreshToken(any(), anyBoolean())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/mobile/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -372,4 +372,22 @@ class JwtTokenProviderTest {
         assertThrows(JwtException.class, () ->
                 tokenProvider.getUsernameFromToken("bad.token.string"));
     }
+
+    @Test
+    void generateMobileAccessToken_usesMobileLifetime_effectivelyPermanent() {
+        long tenYearsMs = 10L * 365 * 24 * 3600 * 1000;
+        ReflectionTestUtils.setField(tokenProvider, "mobileAccessTokenExpiration", 3153600000000L); // ~100y
+
+        String mobileToken = tokenProvider.generateMobileAccessToken(buildPrincipal("u", 1L, 1L));
+        String webToken = tokenProvider.generateAccessToken(buildPrincipal("u", 1L, 1L));
+
+        long now = System.currentTimeMillis();
+        long mobileExp = parseClaims(mobileToken).getExpiration().getTime();
+        long webExp = parseClaims(webToken).getExpiration().getTime();
+
+        // Mobile token outlives the 1h web token by many years.
+        assertTrue(mobileExp > now + tenYearsMs, "mobile token should last ~100 years");
+        assertTrue(mobileExp > webExp);
+        assertTrue(tokenProvider.validateToken(mobileToken));
+    }
 }

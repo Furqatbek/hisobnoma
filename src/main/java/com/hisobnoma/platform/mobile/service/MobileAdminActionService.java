@@ -54,6 +54,46 @@ public class MobileAdminActionService {
     private final SalaryService salaryService;
     private final SalaryAdvanceService salaryAdvanceService;
     private final com.hisobnoma.platform.hr.service.EmployeeService employeeService;
+    private final com.hisobnoma.platform.inventory.repository.ProductRepository productRepository;
+
+    // ---- Product price ----
+
+    @Transactional
+    public com.hisobnoma.platform.mobile.dto.MobileProductPriceDto updateProductPrice(
+            com.hisobnoma.platform.mobile.dto.MobileUpdatePriceRequest request) {
+        Long tenantId = securityContextHelper.getRequiredTenantId();
+        com.hisobnoma.platform.inventory.entity.Product product =
+                productRepository.findByIdAndTenantId(request.getProductId(), tenantId)
+                        .orElseThrow(() -> new NotFoundException("Product not found"));
+
+        BigDecimal newPrice = request.getSellingPrice();
+        if (newPrice == null || newPrice.signum() <= 0) {
+            throw new BusinessException("Selling price must be greater than zero", "INVALID_PRICE");
+        }
+        // Respect the product's floor so a mobile edit can't sell below the configured minimum.
+        if (product.getMinSellingPrice() != null
+                && newPrice.compareTo(product.getMinSellingPrice()) < 0) {
+            throw new BusinessException(
+                    "Price is below the minimum allowed (" + product.getMinSellingPrice() + ")",
+                    "PRICE_BELOW_MIN");
+        }
+
+        product.setSellingPrice(newPrice);
+        if (request.getWholesalePrice() != null) {
+            product.setWholesalePrice(request.getWholesalePrice());
+        }
+        productRepository.save(product);
+        log.info("Mobile price update: product {} sellingPrice -> {} (tenant {})",
+                product.getId(), newPrice, tenantId);
+
+        return com.hisobnoma.platform.mobile.dto.MobileProductPriceDto.builder()
+                .productId(product.getId())
+                .name(product.getName())
+                .sellingPrice(product.getSellingPrice())
+                .wholesalePrice(product.getWholesalePrice())
+                .minSellingPrice(product.getMinSellingPrice())
+                .build();
+    }
 
     // ---- 1. Expense ----
 

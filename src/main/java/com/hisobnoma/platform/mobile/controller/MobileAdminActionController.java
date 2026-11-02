@@ -9,7 +9,11 @@ import com.hisobnoma.platform.hr.dto.SalaryAdvanceDto;
 import com.hisobnoma.platform.hr.dto.SalaryRecordDto;
 import com.hisobnoma.platform.mobile.dto.MobileDebtorPaymentRequest;
 import com.hisobnoma.platform.mobile.dto.MobileExpenseRequest;
+import com.hisobnoma.platform.mobile.dto.MobileProductPriceDto;
+import com.hisobnoma.platform.mobile.dto.MobileTelegramShareResult;
+import com.hisobnoma.platform.mobile.dto.MobileUpdatePriceRequest;
 import com.hisobnoma.platform.mobile.service.MobileAdminActionService;
+import com.hisobnoma.platform.mobile.service.MobileDebtorShareService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -32,6 +36,7 @@ import java.util.Map;
 public class MobileAdminActionController {
 
     private final MobileAdminActionService service;
+    private final MobileDebtorShareService debtorShareService;
 
     @PostMapping("/expenses")
     @PreAuthorize("hasAnyAuthority('MOBILE_EXPENSE_WRITE')")
@@ -73,5 +78,22 @@ public class MobileAdminActionController {
     public ResponseEntity<ApiResponse<SalaryAdvanceDto>> recordAdvance(
             @Valid @RequestBody CreateSalaryAdvanceRequest request) {
         return ResponseEntity.ok(ApiResponse.success(service.recordAdvance(request), "Advance recorded"));
+    }
+
+    @PatchMapping("/inventory/price")
+    @PreAuthorize("hasAnyAuthority('MOBILE_PRICE_WRITE', 'INVENTORY_PRODUCT_UPDATE')")
+    @Operation(summary = "Change a product's selling price (respects the product's min price)")
+    public ResponseEntity<ApiResponse<MobileProductPriceDto>> updatePrice(
+            @Valid @RequestBody MobileUpdatePriceRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(service.updateProductPrice(request), "Price updated"));
+    }
+
+    @PostMapping("/finance/debtors/telegram")
+    @PreAuthorize("hasAnyAuthority('MOBILE_AR_COLLECT', 'FINANCE_AR_READ')")
+    @Operation(summary = "Share the debtors list to Telegram (target=self or group)")
+    public ResponseEntity<ApiResponse<MobileTelegramShareResult>> shareDebtorsToTelegram(
+            @RequestParam(defaultValue = "self") String target) {
+        return ResponseEntity.ok(ApiResponse.success(
+                debtorShareService.shareDebtors(target), "Debtors list sent to Telegram"));
     }
 }

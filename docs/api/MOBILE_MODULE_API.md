@@ -31,6 +31,14 @@ All endpoints require JWT Bearer token authentication and appropriate RBAC permi
 
 ## Mobile Authentication
 
+> **Token lifetime.** Mobile logins (`/api/v1/mobile/auth/login`, `/api/v1/mobile/auth/refresh`)
+> issue an **effectively permanent access token** (~100 years) so the app never logs the user out,
+> controlled by `WEB`-style env `JWT_MOBILE_ACCESS_EXPIRATION` (default set in the prod compose).
+> This is scoped to the mobile app only — the web admin panel keeps its short-lived token. A
+> permanent token can only be revoked by rotating `JWT_SECRET` (which signs everyone out), or by
+> changing the user's password (revokes their refresh tokens). `expiresIn` in the response reflects
+> this long lifetime.
+
 ### Login
 
 ```http
@@ -946,8 +954,32 @@ permission. All are tenant-scoped (from the staff JWT) and the finance/HR ones p
 | GET | `/api/v1/mobile/hr/employees` | `MOBILE_SALARY_PAY`, `HR_SALARY_WRITE`, or `HR_EMPLOYEE_READ` | Active employees for the payee picker |
 | POST | `/api/v1/mobile/hr/salary` | `MOBILE_SALARY_PAY` or `HR_SALARY_WRITE` | Record + pay a salary |
 | POST | `/api/v1/mobile/hr/advance` | `MOBILE_SALARY_PAY` or `HR_SALARY_WRITE` | Record a paid advance |
+| PATCH | `/api/v1/mobile/inventory/price` | `MOBILE_PRICE_WRITE` or `INVENTORY_PRODUCT_UPDATE` | Change a product's selling price |
+| POST | `/api/v1/mobile/finance/debtors/telegram?target=self\|group` | `MOBILE_AR_COLLECT` or `FINANCE_AR_READ` | Send the debtors list to Telegram |
 
-### Record an expense
+### Change a product price
+
+```
+PATCH /api/v1/mobile/inventory/price
+{ "productId": 42, "sellingPrice": 12000, "wholesalePrice": 10000 }
+```
+
+`sellingPrice` is required and must be > 0; `wholesalePrice` is optional. If the product has a
+`minSellingPrice`, a lower `sellingPrice` is rejected with `400 PRICE_BELOW_MIN`. Returns the
+product's updated price fields.
+
+### Share the debtors list to Telegram
+
+```
+POST /api/v1/mobile/finance/debtors/telegram?target=self      # the caller's own linked chat
+POST /api/v1/mobile/finance/debtors/telegram?target=group     # every linked staff chat in the tenant
+```
+
+Sends the current debtors (customers with a positive outstanding balance, largest first) as a
+Telegram message. `target=self` requires the caller to have linked Telegram (else
+`400 TELEGRAM_NOT_LINKED`); `target=group` sends to all tenant staff who have (else
+`400 TELEGRAM_NO_RECIPIENTS`). Returns `{ target, recipients, sent }`.
+
 
 ```http
 POST /api/v1/mobile/expenses
