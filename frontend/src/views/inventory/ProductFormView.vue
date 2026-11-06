@@ -180,13 +180,27 @@ async function handleSaveVendor() {
 
   savingVendor.value = true
   try {
-    if (editingVendorLink.value) {
-      await productsApi.updateVendor(route.params.id, editingVendorLink.value.id, vendorForm)
+    if (isEdit.value) {
+      if (editingVendorLink.value) {
+        await productsApi.updateVendor(route.params.id, editingVendorLink.value.id, vendorForm)
+      } else {
+        await productsApi.addVendor(route.params.id, vendorForm)
+      }
+      await loadProductVendors()
     } else {
-      await productsApi.addVendor(route.params.id, vendorForm)
+      // Create mode: no product id yet — buffer locally, sent inline with the product on save.
+      const v = vendors.value.find(x => x.id === vendorForm.vendorId)
+      const entry = {
+        ...vendorForm,
+        id: editingVendorLink.value?.id ?? `tmp-${Date.now()}`,
+        vendorName: v?.name ?? '',
+        vendorCode: v?.code ?? ''
+      }
+      const idx = productVendors.value.findIndex(x => x.id === entry.id)
+      if (idx >= 0) productVendors.value.splice(idx, 1, entry)
+      else productVendors.value.push(entry)
     }
     showVendorModal.value = false
-    await loadProductVendors()
   } catch (error) {
     console.error('Failed to save vendor:', error)
     toast.error(error.response?.data?.message || t('failedToSave'))
@@ -198,8 +212,12 @@ async function handleSaveVendor() {
 async function handleRemoveVendor(pv) {
   if (!confirm(t('inventory.productForm.confirmRemoveVendor', { name: pv.vendorName }))) return
   try {
-    await productsApi.removeVendor(route.params.id, pv.id)
-    await loadProductVendors()
+    if (isEdit.value) {
+      await productsApi.removeVendor(route.params.id, pv.id)
+      await loadProductVendors()
+    } else {
+      productVendors.value = productVendors.value.filter(x => x.id !== pv.id)
+    }
   } catch (error) {
     console.error('Failed to remove vendor:', error)
   }
@@ -267,13 +285,28 @@ async function handleSaveAltUom() {
 
   savingAltUom.value = true
   try {
-    if (editingAltUom.value) {
-      await productsApi.updateUom(route.params.id, editingAltUom.value.id, altUomForm)
+    if (isEdit.value) {
+      if (editingAltUom.value) {
+        await productsApi.updateUom(route.params.id, editingAltUom.value.id, altUomForm)
+      } else {
+        await productsApi.addUom(route.params.id, altUomForm)
+      }
+      await loadProductAltUoms()
     } else {
-      await productsApi.addUom(route.params.id, altUomForm)
+      // Create mode: buffer locally, sent inline with the product on save.
+      const u = uoms.value.find(x => x.id === altUomForm.uomId)
+      const entry = {
+        ...altUomForm,
+        id: editingAltUom.value?.id ?? `tmp-${Date.now()}`,
+        uomName: u?.name ?? '',
+        uomCode: u?.code ?? ''
+      }
+      if (entry.defaultSale) productAltUoms.value.forEach(x => { x.defaultSale = false })
+      const idx = productAltUoms.value.findIndex(x => x.id === entry.id)
+      if (idx >= 0) productAltUoms.value.splice(idx, 1, entry)
+      else productAltUoms.value.push(entry)
     }
     showAltUomModal.value = false
-    await loadProductAltUoms()
   } catch (error) {
     console.error('Failed to save product UOM:', error)
     toast.error(error.response?.data?.message || t('failedToSave'))
@@ -285,8 +318,12 @@ async function handleSaveAltUom() {
 async function handleRemoveAltUom(pu) {
   if (!confirm(t('inventory.productForm.confirmRemoveUom', { name: pu.uomName }))) return
   try {
-    await productsApi.removeUom(route.params.id, pu.id)
-    await loadProductAltUoms()
+    if (isEdit.value) {
+      await productsApi.removeUom(route.params.id, pu.id)
+      await loadProductAltUoms()
+    } else {
+      productAltUoms.value = productAltUoms.value.filter(x => x.id !== pu.id)
+    }
   } catch (error) {
     console.error('Failed to remove product UOM:', error)
   }
@@ -412,13 +449,21 @@ async function handleSaveVariant() {
   if (!variantForm.name?.trim()) return
   savingVariant.value = true
   try {
-    if (editingVariant.value) {
-      await productsApi.updateVariant(route.params.id, editingVariant.value.id, variantForm)
+    if (isEdit.value) {
+      if (editingVariant.value) {
+        await productsApi.updateVariant(route.params.id, editingVariant.value.id, variantForm)
+      } else {
+        await productsApi.addVariant(route.params.id, variantForm)
+      }
+      await loadVariants()
     } else {
-      await productsApi.addVariant(route.params.id, variantForm)
+      // Create mode: buffer locally, sent inline with the product on save.
+      const entry = { ...variantForm, id: editingVariant.value?.id ?? `tmp-${Date.now()}` }
+      const idx = productVariants.value.findIndex(x => x.id === entry.id)
+      if (idx >= 0) productVariants.value.splice(idx, 1, entry)
+      else productVariants.value.push(entry)
     }
     showVariantModal.value = false
-    await loadVariants()
   } catch (error) {
     console.error('Failed to save variant:', error)
     toast.error(error.response?.data?.message || t('failedToSave'))
@@ -430,8 +475,12 @@ async function handleSaveVariant() {
 async function handleDeleteVariant(v) {
   if (!confirm(t('inventory.productForm.confirmDeleteVariant', { name: v.name }))) return
   try {
-    await productsApi.deleteVariant(route.params.id, v.id)
-    await loadVariants()
+    if (isEdit.value) {
+      await productsApi.deleteVariant(route.params.id, v.id)
+      await loadVariants()
+    } else {
+      productVariants.value = productVariants.value.filter(x => x.id !== v.id)
+    }
   } catch (error) {
     console.error('Failed to delete variant:', error)
   }
@@ -497,9 +546,42 @@ async function handleSubmit() {
       await productsApi.update(route.params.id, form)
       router.push('/inventory/products')
     } else {
-      const res = await productsApi.create(form)
+      // One atomic request: product + suppliers + selling units + variants together.
+      // The backend saves them in a single transaction, so a bad supplier/unit rolls
+      // the whole create back rather than leaving a half-set-up product.
+      const payload = {
+        ...form,
+        vendors: productVendors.value.map(pv => ({
+          vendorId: pv.vendorId,
+          vendorSku: pv.vendorSku || null,
+          vendorProductName: pv.vendorProductName || null,
+          unitCost: pv.unitCost,
+          minOrderQuantity: pv.minOrderQuantity,
+          leadTimeDays: pv.leadTimeDays,
+          preferred: !!pv.preferred,
+          active: pv.active !== false,
+          notes: pv.notes || null
+        })),
+        alternateUoms: productAltUoms.value.map(pu => ({
+          uomId: pu.uomId,
+          conversionFactor: pu.conversionFactor,
+          sellingPrice: pu.sellingPrice,
+          defaultSale: !!pu.defaultSale,
+          active: pu.active !== false,
+          sortOrder: pu.sortOrder ?? 0
+        })),
+        variants: productVariants.value.map(v => ({
+          name: v.name,
+          sku: v.sku || null,
+          barcode: v.barcode || null,
+          costPrice: v.costPrice,
+          sellingPrice: v.sellingPrice,
+          active: v.active !== false
+        }))
+      }
+      const res = await productsApi.create(payload)
       const created = unwrapData(res)
-      // Redirect to edit page so user can immediately add vendors/images
+      // Land on the saved product — images still need an id to upload against.
       router.replace(`/inventory/products/${created.id}/edit`)
     }
   } catch (error) {
@@ -749,7 +831,6 @@ async function handleSubmit() {
         <div class="card-header flex items-center justify-between">
           <h3 class="text-lg font-medium">{{ $t('inventory.productForm.vendors') }}</h3>
           <button
-            v-if="isEdit"
             type="button"
             @click="openAddVendorModal"
             class="btn-primary text-sm flex items-center gap-1"
@@ -759,8 +840,7 @@ async function handleSubmit() {
           </button>
         </div>
         <div class="card-body">
-          <!-- Edit mode: vendor list -->
-          <div v-if="isEdit">
+          <div>
             <div v-if="productVendors.length === 0" class="text-center py-6 text-gray-500 text-sm">
               {{ $t('inventory.productForm.noVendors') }}
             </div>
@@ -826,10 +906,6 @@ async function handleSubmit() {
             </div>
           </div>
 
-          <!-- Create mode: hint -->
-          <div v-else class="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
-            <span class="text-sm text-gray-500">{{ $t('inventory.productForm.vendorsAfterCreate') }}</span>
-          </div>
         </div>
       </div>
 
@@ -841,7 +917,6 @@ async function handleSubmit() {
             <p class="text-sm text-gray-500 mt-0.5">{{ $t('inventory.productForm.altUomsSubtitle') }}</p>
           </div>
           <button
-            v-if="isEdit"
             type="button"
             @click="openAddAltUomModal"
             class="btn-primary text-sm flex items-center gap-1"
@@ -851,8 +926,7 @@ async function handleSubmit() {
           </button>
         </div>
         <div class="card-body">
-          <!-- Edit mode: UOM list -->
-          <div v-if="isEdit">
+          <div>
             <div v-if="productAltUoms.length === 0" class="text-center py-6 text-gray-500 text-sm">
               {{ $t('inventory.productForm.noAltUoms') }}
             </div>
@@ -921,11 +995,6 @@ async function handleSubmit() {
             </div>
           </div>
 
-          <!-- Create mode: hint -->
-          <div v-else class="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
-            <ScaleIcon class="h-5 w-5 text-gray-400 flex-shrink-0" />
-            <span class="text-sm text-gray-500">{{ $t('inventory.productForm.altUomsAfterCreate') }}</span>
-          </div>
         </div>
       </div>
 
@@ -934,7 +1003,6 @@ async function handleSubmit() {
         <div class="card-header flex items-center justify-between">
           <h3 class="text-lg font-medium">{{ $t('inventory.productForm.variants') }}</h3>
           <button
-            v-if="isEdit"
             type="button"
             @click="openAddVariantModal"
             class="btn-primary text-sm flex items-center gap-1"
@@ -944,7 +1012,7 @@ async function handleSubmit() {
           </button>
         </div>
         <div class="card-body">
-          <div v-if="isEdit">
+          <div>
             <div v-if="productVariants.length === 0" class="text-center py-6 text-gray-500 text-sm">
               {{ $t('inventory.productForm.noVariants') }}
             </div>
@@ -987,9 +1055,6 @@ async function handleSubmit() {
                 </tbody>
               </table>
             </div>
-          </div>
-          <div v-else class="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
-            <span class="text-sm text-gray-500">{{ $t('inventory.productForm.variantsAfterCreate') }}</span>
           </div>
         </div>
       </div>

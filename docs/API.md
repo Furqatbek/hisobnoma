@@ -1194,9 +1194,38 @@ Create a new product.
       "searchable": true,
       "filterable": true
     }
+  ],
+  "vendors": [
+    {
+      "vendorId": 5,
+      "vendorSku": "APL-IP15P-256",
+      "unitCost": 950.00,
+      "minOrderQuantity": 10,
+      "leadTimeDays": 7,
+      "preferred": true,
+      "active": true
+    }
+  ],
+  "alternateUoms": [
+    {
+      "uomId": 7,
+      "conversionFactor": 12,
+      "sellingPrice": 15000.00,
+      "defaultSale": false,
+      "active": true,
+      "sortOrder": 1
+    }
   ]
 }
 ```
+
+`variants`, `attributes`, `vendors` (suppliers) and `alternateUoms` (selling units) are all
+optional and are saved in the **same transaction** as the product — one request sets the whole
+product up, and an invalid vendor or UOM rolls the entire create back rather than leaving a
+half-configured product. Each uses the same shape as its standalone endpoint
+(`POST /inventory/products/{id}/vendors`, `POST /inventory/products/{id}/uoms`), which remain
+available for editing after creation. Images still require the product id
+(`POST /inventory/products/{id}/images`).
 
 **Response:** (HTTP 201 Created)
 ```json

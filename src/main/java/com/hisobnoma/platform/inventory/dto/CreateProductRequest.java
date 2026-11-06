@@ -134,6 +134,12 @@ public class CreateProductRequest {
     private List<CreateVariantRequest> variants;
     private List<CreateAttributeRequest> attributes;
 
+    /** Suppliers to link on creation — saved in the same transaction as the product. */
+    private List<CreateProductVendorRequest> vendors;
+
+    /** Alternate (selling) units to configure on creation — saved in the same transaction. */
+    private List<CreateProductUomRequest> alternateUoms;
+
     @Data
     @Builder
     @NoArgsConstructor

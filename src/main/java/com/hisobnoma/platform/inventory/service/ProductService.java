@@ -46,6 +46,8 @@ public class ProductService {
     private final SkuGeneratorService skuGeneratorService;
     private final BarcodeService barcodeService;
     private final SecurityContextHelper securityContextHelper;
+    private final ProductVendorService productVendorService;
+    private final ProductUomService productUomService;
 
     @Transactional(readOnly = true)
     public PageResponse<ProductDto> getProducts(Pageable pageable) {
@@ -255,6 +257,19 @@ public class ProductService {
                 attribute.setProduct(product);
                 attribute.setTenantId(tenantId);
                 attributeRepository.save(attribute);
+            }
+        }
+
+        // Link suppliers and configure selling units in the SAME transaction as the product,
+        // so a bad vendor/UOM rolls the whole create back instead of leaving a half-set-up product.
+        if (request.getVendors() != null && !request.getVendors().isEmpty()) {
+            for (com.hisobnoma.platform.inventory.dto.CreateProductVendorRequest vendorRequest : request.getVendors()) {
+                productVendorService.addVendorToProduct(product.getId(), vendorRequest);
+            }
+        }
+        if (request.getAlternateUoms() != null && !request.getAlternateUoms().isEmpty()) {
+            for (com.hisobnoma.platform.inventory.dto.CreateProductUomRequest uomRequest : request.getAlternateUoms()) {
+                productUomService.create(product.getId(), uomRequest);
             }
         }
 

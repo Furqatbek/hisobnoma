@@ -61,6 +61,10 @@ class ProductServiceTest {
     private BarcodeService barcodeService;
     @Mock
     private SecurityContextHelper securityContextHelper;
+    @Mock
+    private ProductVendorService productVendorService;
+    @Mock
+    private ProductUomService productUomService;
 
     @InjectMocks
     private ProductService productService;
@@ -228,6 +232,77 @@ class ProductServiceTest {
         // Then
         assertNotNull(result);
         verify(productRepository).save(any(Product.class));
+    }
+
+    @Test
+    void createProduct_withVendorsAndUoms_linksThemToNewProductInline() {
+        // Given: suppliers + selling units sent with the product itself
+        CreateProductVendorRequest vendorReq = new CreateProductVendorRequest();
+        vendorReq.setVendorId(5L);
+        vendorReq.setUnitCost(new BigDecimal("80.00"));
+        CreateProductUomRequest uomReq = new CreateProductUomRequest();
+        uomReq.setUomId(7L);
+        uomReq.setConversionFactor(new BigDecimal("12"));
+
+        CreateProductRequest request = CreateProductRequest.builder()
+                .name("New Product")
+                .sellingPrice(new BigDecimal("100.00"))
+                .baseUomId(1L)
+                .vendors(List.of(vendorReq))
+                .alternateUoms(List.of(uomReq))
+                .build();
+
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(skuGeneratorService.generateSkuFromName("New Product")).thenReturn("NEW-PROD-001");
+        when(productMapper.toEntity(request)).thenReturn(product);
+        when(uomRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(uom));
+        when(productRepository.save(any(Product.class))).thenReturn(product);
+        when(productRepository.findByIdWithDetails(1L, TENANT_ID)).thenReturn(Optional.of(product));
+        when(productMapper.toDto(product)).thenReturn(productDto);
+        when(variantRepository.findByProductIdOrderBySortOrder(1L)).thenReturn(Collections.emptyList());
+        when(variantMapper.toDtoList(anyList())).thenReturn(Collections.emptyList());
+        when(imageRepository.findByProductIdOrderBySortOrder(1L)).thenReturn(Collections.emptyList());
+        when(attributeRepository.findByProductIdOrderBySortOrder(1L)).thenReturn(Collections.emptyList());
+        when(attributeMapper.toDtoList(anyList())).thenReturn(Collections.emptyList());
+        when(stockRepository.getTotalQuantityByProduct(1L, TENANT_ID)).thenReturn(BigDecimal.ZERO);
+
+        // When
+        productService.createProduct(request);
+
+        // Then: both are attached to the newly created product's id, in the same call
+        verify(productVendorService).addVendorToProduct(1L, vendorReq);
+        verify(productUomService).create(1L, uomReq);
+    }
+
+    @Test
+    void createProduct_inlineVendorFailure_propagatesSoWholeCreateRollsBack() {
+        // Given: an unknown vendor sent inline
+        CreateProductVendorRequest vendorReq = new CreateProductVendorRequest();
+        vendorReq.setVendorId(999L);
+        CreateProductUomRequest uomReq = new CreateProductUomRequest();
+        uomReq.setUomId(7L);
+        uomReq.setConversionFactor(BigDecimal.ONE);
+
+        CreateProductRequest request = CreateProductRequest.builder()
+                .name("New Product")
+                .sellingPrice(new BigDecimal("100.00"))
+                .baseUomId(1L)
+                .vendors(List.of(vendorReq))
+                .alternateUoms(List.of(uomReq))
+                .build();
+
+        when(securityContextHelper.getCurrentTenantId()).thenReturn(TENANT_ID);
+        when(skuGeneratorService.generateSkuFromName("New Product")).thenReturn("NEW-PROD-001");
+        when(productMapper.toEntity(request)).thenReturn(product);
+        when(uomRepository.findByIdAndTenantId(1L, TENANT_ID)).thenReturn(Optional.of(uom));
+        when(productRepository.save(any(Product.class))).thenReturn(product);
+        when(productVendorService.addVendorToProduct(eq(1L), any()))
+                .thenThrow(new NotFoundException("Vendor not found: 999"));
+
+        // When / Then: the exception escapes the @Transactional method (=> rollback),
+        // and we never get as far as configuring the UOM.
+        assertThrows(NotFoundException.class, () -> productService.createProduct(request));
+        verify(productUomService, never()).create(anyLong(), any());
     }
 
     @Test
