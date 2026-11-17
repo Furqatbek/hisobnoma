@@ -6,11 +6,15 @@ import PosDiscountModal from '@/components/pos/PosDiscountModal.vue'
 import PosOpenShiftModal from '@/components/pos/PosOpenShiftModal.vue'
 import PosDeliveryModal from '@/components/pos/PosDeliveryModal.vue'
 import PosCloseShiftModal from '@/components/pos/PosCloseShiftModal.vue'
+import PosConfirmModal from '@/components/pos/PosConfirmModal.vue'
+import PosSaleCompleteModal from '@/components/pos/PosSaleCompleteModal.vue'
+import PosHeldCartsModal from '@/components/pos/PosHeldCartsModal.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { formatCurrency } from '@/utils/format'
 import { useI18n } from 'vue-i18n'
-import { customersApi, deliveryRegionsApi, deliveryVillagesApi, posApi, pricingApi, productsApi, shiftsApi, terminalsApi, unwrapData, unwrapList } from '@/services/api'
+import { categoriesApi, customersApi, deliveryRegionsApi, deliveryVillagesApi, posApi, pricingApi, productsApi, shiftsApi, terminalsApi, unwrapData, unwrapList } from '@/services/api'
 import { ScaleIcon } from '@heroicons/vue/24/outline'
 import {
   MagnifyingGlassIcon,
@@ -25,16 +29,23 @@ import {
   DocumentTextIcon,
   ClockIcon,
   MapPinIcon,
-  PencilSquareIcon
+  PencilSquareIcon,
+  PauseIcon
 } from '@heroicons/vue/24/outline'
 
 const toast = useToastStore()
+const authStore = useAuthStore()
 
 const { t } = useI18n()
 
 // State
 const products = ref([])
 const quickProducts = ref([])
+// Category browsing
+const categories = ref([])
+const selectedCategoryId = ref(null)
+const categoryProducts = ref([])
+const categoryLoading = ref(false)
 const searchQuery = ref('')
 const loading = ref(false)
 
@@ -62,6 +73,10 @@ const cart = reactive({
   items: [],
   customerId: null,
   customerName: '',
+  // Shown next to the customer and used to pre-check debt sales
+  customerBalance: 0,
+  customerCreditLimit: 0,
+  customerCreditHold: false,
   deliveryRegionId: null,
   deliveryRegionName: '',
   deliveryVillageId: null,
@@ -123,6 +138,28 @@ const couponError = ref('')
 const couponValidating = ref(false)
 
 const showNewCustomerModal = ref(false)
+
+// The sale just completed (drives the confirmation / receipt dialog)
+const completedSale = ref(null)
+
+// Held (parked) sales, kept in this browser
+const showHeldModal = ref(false)
+const heldCarts = ref([])
+
+// In-app confirmation dialog (replaces the browser's confirm())
+const confirmState = reactive({ show: false, message: '', danger: false, resolve: null })
+
+function askConfirm(message, danger = false) {
+  return new Promise(resolve => {
+    Object.assign(confirmState, { show: true, message, danger, resolve })
+  })
+}
+
+function answerConfirm(result) {
+  const resolve = confirmState.resolve
+  Object.assign(confirmState, { show: false, resolve: null })
+  resolve?.(result)
+}
 
 // Payment methods available
 const paymentMethods = computed(() => [
@@ -270,17 +307,51 @@ async function handleSearchEnter() {
   }
 }
 
-async function loadAllCustomers() {
-  if (allCustomers.value.length > 0) return // already loaded
+async function fetchCategories() {
+  try {
+    categories.value = unwrapList(await categoriesApi.getAll())
+  } catch (error) {
+    console.error('Failed to load categories:', error)
+  }
+}
+
+async function selectCategory(categoryId) {
+  selectedCategoryId.value = categoryId
+  categoryProducts.value = []
+  if (!categoryId) return
+  categoryLoading.value = true
+  try {
+    const list = unwrapList(await productsApi.getByCategory(categoryId, { size: 200 }))
+    if (selectedCategoryId.value === categoryId) {
+      categoryProducts.value = list.filter(p => p.active !== false && p.sellable !== false)
+    }
+  } catch (error) {
+    console.error('Failed to load category products:', error)
+  } finally {
+    if (selectedCategoryId.value === categoryId) categoryLoading.value = false
+  }
+}
+
+// Products shown when not searching: the chosen category, or the default list.
+const browseProducts = computed(() =>
+  selectedCategoryId.value ? categoryProducts.value : quickProducts.value
+)
+
+// Customers are searched on the server; only one page is ever held in the browser.
+let customerSeq = 0
+
+async function loadCustomers(query = '') {
+  const seq = ++customerSeq
   customersLoading.value = true
   try {
-    const response = await customersApi.getAll({ size: 1000, sort: 'name,asc' })
-    const data = unwrapList(response)
-    allCustomers.value = Array.isArray(data) ? data : []
+    const response = query
+      ? await customersApi.search(query)
+      : await customersApi.getAll({ size: 50, sort: 'name,asc' })
+    if (seq === customerSeq) allCustomers.value = unwrapList(response)
   } catch (error) {
     console.error('Failed to load customers:', error)
   } finally {
-    customersLoading.value = false
+    if (seq === customerSeq) customersLoading.value = false
   }
 }
 
@@ -344,6 +415,13 @@ async function addToCartWithUom(product, selectedUom) {
       // Lowest price allowed for one sale unit (0 = no floor).
       minPrice: (Number(product.minSellingPrice) || 0) * factor,
       priceEdited: false,
+      // Quantity step: products sold by weight/length use their own step;
+      // everything else moves in whole units.
+      fractional: !!product.fractional,
+      step: product.fractional ? (Number(product.orderStep) > 0 ? Number(product.orderStep) : 0.5) : 1,
+      // Stock on hand in base units (only meaningful when the product tracks stock)
+      trackStock: !!product.trackInventory,
+      stock: product.stockQuantity != null ? Number(product.stockQuantity) : null,
       quantity: 1,
       productUomId: selectedUom?.id || null,
       uomCode: selectedUom?.uomCode || null,
@@ -352,6 +430,9 @@ async function addToCartWithUom(product, selectedUom) {
     }
     item.price = await customerPriceFor(item)
     cart.items.push(item)
+    if (item.trackStock && item.stock != null && item.stock <= 0) {
+      toast.error(t('pos.outOfStock', { name: item.name }))
+    }
   }
 
   pendingProduct.value = null
@@ -384,8 +465,14 @@ function selectBaseUom() {
   }
 }
 
+// True when the line asks for more than is on hand (in base units).
+function overStock(item) {
+  if (!item.trackStock || item.stock == null) return false
+  return item.quantity * (Number(item.conversionFactor) || 1) > item.stock
+}
+
 function updateQuantity(item, delta) {
-  const newQty = Math.round((item.quantity + delta) * 10) / 10
+  const newQty = Math.round((item.quantity + delta) * 1000) / 1000
   if (newQty <= 0) {
     removeFromCart(item)
   } else {
@@ -401,7 +488,7 @@ function startEditQty(item) {
 function saveEditQty(item) {
   const newQty = parseFloat(editingQtyValue.value)
   if (!isNaN(newQty) && newQty > 0) {
-    item.quantity = Math.round(newQty * 10) / 10
+    item.quantity = Math.round(newQty * 1000) / 1000
   }
   editingQtyKey.value = null
 }
@@ -435,22 +522,42 @@ function cancelEditPrice() {
   editingPriceKey.value = null
 }
 
+function setCustomer(customer) {
+  cart.customerId = customer?.id ?? null
+  cart.customerName = customer?.name ?? ''
+  cart.customerBalance = Number(customer?.currentBalance) || 0
+  cart.customerCreditLimit = Number(customer?.creditLimit) || 0
+  cart.customerCreditHold = !!customer?.creditHold
+}
+
 function selectCustomer(customer) {
-  cart.customerId = customer.id
-  cart.customerName = customer.name
+  setCustomer(customer)
   showCustomerModal.value = false
   repriceCart()
 }
 
 function openCustomerModal() {
   showCustomerModal.value = true
-  loadAllCustomers()
+  loadCustomers()
 }
 
 function clearCustomer() {
-  cart.customerId = null
-  cart.customerName = ''
+  setCustomer(null)
   repriceCart()
+}
+
+// Why this customer cannot take `amount` more on credit, or null if they can.
+// A quick check for the cashier — the server still makes the final decision.
+function creditProblem(amount) {
+  if (!cart.customerId) return null
+  if (cart.customerCreditHold) return t('pos.customerOnCreditHold')
+  const limit = cart.customerCreditLimit
+  if (limit > 0 && cart.customerBalance + amount > limit) {
+    return t('pos.creditLimitExceeded', {
+      available: formatCurrency(Math.max(0, limit - cart.customerBalance))
+    })
+  }
+  return null
 }
 
 // Delivery address functions
@@ -717,6 +824,17 @@ function addPaymentSplit() {
 
   const paymentAmount = Math.min(currentPayment.amount, remainingAmount.value)
 
+  if (currentPayment.method === 'CREDIT') {
+    const alreadyOnCredit = payments.value
+      .filter(p => p.method === 'CREDIT')
+      .reduce((sum, p) => sum + p.amount, 0)
+    const problem = creditProblem(alreadyOnCredit + paymentAmount)
+    if (problem) {
+      toast.error(problem)
+      return
+    }
+  }
+
   if (currentPayment.method === 'CASH' && (Number(currentPayment.received) || 0) < paymentAmount) {
     toast.error(t('pos.receivedLessThanAmount'))
     return
@@ -807,22 +925,13 @@ async function submitSale() {
     if (couponDiscount.value && couponCode.value.trim()) {
       request.couponCode = couponCode.value.trim()
     }
-    await posApi.checkout(request)
+    const sale = unwrapData(await posApi.checkout(request))
 
-    // Check before clearing
-    const hasDebtPayment = payments.value.some(p => p.method === 'CREDIT')
-
-    // Reset cart
-    cart.items = []
-    cart.customerId = null
-    cart.customerName = ''
-    clearDeliveryAddress()
+    resetCart()
     payments.value = []
-    clearTransactionDiscount()
-    clearCoupon()
     showPaymentModal.value = false
-
-    toast.success(hasDebtPayment ? t('pos.saleCompletedWithDebt') : t('pos.saleComplete'))
+    // Confirmation with the change due and the receipt to print.
+    completedSale.value = sale
   } catch (error) {
     console.error('Payment failed:', error)
 
@@ -849,7 +958,13 @@ async function sellAsDebt() {
 
   if (!(await refreshQuote())) return
 
-  if (!confirm(t('pos.confirmDebtSale', { amount: formatCurrency(total.value), customer: cart.customerName }))) {
+  const problem = creditProblem(total.value)
+  if (problem) {
+    toast.error(problem)
+    return
+  }
+
+  if (!(await askConfirm(t('pos.confirmDebtSale', { amount: formatCurrency(total.value), customer: cart.customerName })))) {
     return
   }
 
@@ -863,15 +978,90 @@ async function sellAsDebt() {
   await processPayment()
 }
 
-function clearCart() {
-  if (confirm(t('pos.clearCart') + '?')) {
-    cart.items = []
-    cart.customerId = null
-    cart.customerName = ''
-    clearDeliveryAddress()
-    clearTransactionDiscount()
-    clearCoupon()
+// Empty the cart and everything attached to it.
+function resetCart() {
+  cart.items = []
+  setCustomer(null)
+  clearDeliveryAddress()
+  clearTransactionDiscount()
+  clearCoupon()
+}
+
+async function clearCart() {
+  if (await askConfirm(t('pos.clearCart') + '?', true)) {
+    resetCart()
   }
+}
+
+// ---- Cart persistence and held sales (kept in this browser, per user) ----
+
+const storageKey = (name) => `pos_${name}_v1_${authStore.user?.id ?? 'anon'}`
+
+function snapshotCart() {
+  return JSON.parse(JSON.stringify({ cart, discount: transactionDiscount }))
+}
+
+function restoreSnapshot(snapshot) {
+  if (!snapshot?.cart) return
+  Object.assign(cart, snapshot.cart)
+  // A coupon is not carried over, so its discount must not be either.
+  const discount = snapshot.discount || {}
+  if (discount.type && !String(discount.reason || '').startsWith(t('pos.couponApplied'))) {
+    Object.assign(transactionDiscount, discount)
+  } else {
+    clearTransactionDiscount()
+  }
+}
+
+function readStorage(name, fallback) {
+  try {
+    const raw = localStorage.getItem(storageKey(name))
+    return raw ? JSON.parse(raw) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function writeStorage(name, value) {
+  try {
+    localStorage.setItem(storageKey(name), JSON.stringify(value))
+  } catch {
+    // storage unavailable — the cart simply won't survive a reload
+  }
+}
+
+// Save the cart on every change so a refresh or a visit to another page keeps it.
+watch(() => JSON.stringify([cart, transactionDiscount]), () => {
+  writeStorage('cart', snapshotCart())
+})
+
+function holdCart() {
+  if (cart.items.length === 0) return
+  heldCarts.value.push({
+    id: Date.now(),
+    heldAt: new Date().toISOString(),
+    customerName: cart.customerName,
+    itemCount: cart.items.length,
+    total: total.value,
+    snapshot: snapshotCart()
+  })
+  writeStorage('held', heldCarts.value)
+  resetCart()
+}
+
+function resumeHeld(held) {
+  // Park whatever is in the cart now rather than losing it.
+  holdCart()
+  heldCarts.value = heldCarts.value.filter(h => h.id !== held.id)
+  writeStorage('held', heldCarts.value)
+  restoreSnapshot(held.snapshot)
+  showHeldModal.value = false
+}
+
+async function removeHeld(held) {
+  if (!(await askConfirm(t('pos.confirmRemoveHeld'), true))) return
+  heldCarts.value = heldCarts.value.filter(h => h.id !== held.id)
+  writeStorage('held', heldCarts.value)
 }
 
 async function createQuickCustomer(form) {
@@ -887,8 +1077,7 @@ async function createQuickCustomer(form) {
       email: form.email || null
     })
     const customer = unwrapData(response)
-    cart.customerId = customer.id
-    cart.customerName = customer.name
+    setCustomer(customer)
     showNewCustomerModal.value = false
     repriceCart()
   } catch (error) {
@@ -1037,13 +1226,16 @@ onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
   fetchTerminals().then(() => fetchCurrentShift())
   fetchQuickProducts()
+  fetchCategories()
+  restoreSnapshot(readStorage('cart', null))
+  heldCarts.value = readStorage('held', [])
 })
 </script>
 
 <template>
-  <div class="h-[calc(100vh-10rem)] flex gap-6">
+  <div class="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:h-[calc(100vh-10rem)]">
     <!-- Left Panel - Product List -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col min-h-0 h-[55vh] lg:h-auto">
       <!-- Search -->
       <div class="card mb-3">
         <div class="card-body py-3">
@@ -1060,6 +1252,26 @@ onMounted(() => {
             />
           </div>
         </div>
+      </div>
+
+      <!-- Categories -->
+      <div v-if="categories.length > 0" class="flex gap-2 overflow-x-auto pb-2 mb-1 flex-shrink-0">
+        <button
+          @click="selectCategory(null)"
+          class="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap border transition-colors"
+          :class="selectedCategoryId === null ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+        >
+          {{ $t('all') }}
+        </button>
+        <button
+          v-for="category in categories"
+          :key="category.id"
+          @click="selectCategory(category.id)"
+          class="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap border transition-colors"
+          :class="selectedCategoryId === category.id ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+        >
+          {{ category.name }}
+        </button>
       </div>
 
       <!-- Search Results (list rows) -->
@@ -1107,9 +1319,12 @@ onMounted(() => {
 
       <!-- Quick Product List (list rows) -->
       <div v-else class="card flex-1 overflow-hidden">
-        <div v-if="quickProducts.length > 0" class="overflow-y-auto h-full divide-y divide-gray-100">
+        <div v-if="categoryLoading" class="flex items-center justify-center h-full">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+        <div v-else-if="browseProducts.length > 0" class="overflow-y-auto h-full divide-y divide-gray-100">
           <button
-            v-for="product in quickProducts"
+            v-for="product in browseProducts"
             :key="product.id"
             @click="addToCart(product)"
             class="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary-50 active:bg-primary-100 transition-colors text-left"
@@ -1148,7 +1363,7 @@ onMounted(() => {
     </div>
 
     <!-- Right Panel - Cart -->
-    <div class="w-96 flex flex-col">
+    <div class="w-full lg:w-96 flex flex-col min-h-0">
       <!-- Terminal Warning -->
       <div v-if="terminals.length === 0" class="mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
         <p class="text-sm text-red-700">{{ $t('pos.noTerminalAvailable') }}</p>
@@ -1187,21 +1402,52 @@ onMounted(() => {
             <h2 class="text-lg font-medium">{{ $t('pos.cart') }}</h2>
             <p v-if="terminals.length === 1" class="text-xs text-gray-500">{{ terminals[0]?.name || terminals[0]?.terminalCode }}</p>
           </div>
-          <button
-            v-if="cart.items.length > 0"
-            @click="clearCart"
-            class="text-sm text-red-600 hover:text-red-700"
-          >
-            {{ $t('pos.clearCart') }}
-          </button>
+          <div class="flex items-center gap-3">
+            <button
+              v-if="heldCarts.length > 0"
+              @click="showHeldModal = true"
+              class="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              {{ $t('pos.heldSales') }} ({{ heldCarts.length }})
+            </button>
+            <button
+              v-if="cart.items.length > 0"
+              @click="holdCart"
+              class="flex items-center text-sm text-gray-600 hover:text-gray-800"
+              :title="$t('pos.hold')"
+            >
+              <PauseIcon class="h-4 w-4 mr-1" />
+              {{ $t('pos.hold') }}
+            </button>
+            <button
+              v-if="cart.items.length > 0"
+              @click="clearCart"
+              class="text-sm text-red-600 hover:text-red-700"
+            >
+              {{ $t('pos.clearCart') }}
+            </button>
+          </div>
         </div>
 
         <!-- Customer -->
         <div class="px-4 py-3 border-b bg-gray-50">
           <div v-if="cart.customerId" class="flex items-center justify-between">
-            <div class="flex items-center">
-              <UserIcon class="h-5 w-5 text-gray-400 mr-2" />
-              <span class="font-medium">{{ cart.customerName }}</span>
+            <div class="flex items-center min-w-0">
+              <UserIcon class="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" />
+              <div class="min-w-0">
+                <p class="font-medium truncate">{{ cart.customerName }}</p>
+                <p
+                  v-if="cart.customerCreditHold || cart.customerBalance > 0 || cart.customerCreditLimit > 0"
+                  class="text-xs"
+                  :class="cart.customerCreditHold ? 'text-red-600' : 'text-gray-500'"
+                >
+                  <template v-if="cart.customerCreditHold">{{ $t('pos.customerOnCreditHold') }}</template>
+                  <template v-else>
+                    {{ $t('pos.customerDebt') }}: {{ formatCurrency(cart.customerBalance) }}
+                    <span v-if="cart.customerCreditLimit > 0"> / {{ $t('pos.creditLimit') }}: {{ formatCurrency(cart.customerCreditLimit) }}</span>
+                  </template>
+                </p>
+              </div>
             </div>
             <button @click="clearCustomer" class="text-gray-400 hover:text-red-500">
               <XMarkIcon class="h-4 w-4" />
@@ -1305,23 +1551,24 @@ onMounted(() => {
                 <div class="flex items-center gap-1">
                   <button
                     @click="updateQuantity(item, -1)"
-                    class="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200"
+                    class="h-10 w-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200"
                   >
                     <MinusIcon class="h-4 w-4" />
                   </button>
                   <button
-                    @click="updateQuantity(item, -0.5)"
-                    class="h-8 px-1.5 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200 text-xs font-medium text-gray-600"
+                    v-if="item.fractional"
+                    @click="updateQuantity(item, -item.step)"
+                    class="h-10 px-2 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200 text-xs font-medium text-gray-600"
                   >
-                    -½
+                    -{{ item.step }}
                   </button>
                   <input
                     v-if="editingQtyKey === item._uomKey"
                     v-model="editingQtyValue"
                     type="number"
-                    step="0.1"
-                    min="0.1"
-                    class="w-14 h-8 text-center font-bold text-sm border border-primary-400 rounded-lg outline-none focus:ring-1 focus:ring-primary-500"
+                    step="any"
+                    min="0"
+                    class="w-16 h-10 text-center font-bold text-sm border border-primary-400 rounded-lg outline-none focus:ring-1 focus:ring-primary-500"
                     @blur="saveEditQty(item)"
                     @keyup.enter="saveEditQty(item)"
                     @keyup.escape="editingQtyKey = null"
@@ -1332,17 +1579,18 @@ onMounted(() => {
                   <span
                     v-else
                     @click="startEditQty(item)"
-                    class="w-10 text-center font-bold text-sm cursor-pointer hover:text-primary-600 hover:bg-primary-50 rounded-lg py-1 transition-colors"
+                    class="min-w-[2.5rem] px-1 text-center font-bold text-sm cursor-pointer hover:text-primary-600 hover:bg-primary-50 rounded-lg py-2 transition-colors"
                   >{{ item.quantity }}</span>
                   <button
-                    @click="updateQuantity(item, 0.5)"
-                    class="h-8 px-1.5 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200 text-xs font-medium text-gray-600"
+                    v-if="item.fractional"
+                    @click="updateQuantity(item, item.step)"
+                    class="h-10 px-2 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200 text-xs font-medium text-gray-600"
                   >
-                    +½
+                    +{{ item.step }}
                   </button>
                   <button
                     @click="updateQuantity(item, 1)"
-                    class="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200"
+                    class="h-10 w-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200"
                   >
                     <PlusIcon class="h-4 w-4" />
                   </button>
@@ -1350,19 +1598,22 @@ onMounted(() => {
                 <div class="flex items-center gap-1">
                   <button
                     @click="openItemDiscount(index)"
-                    class="h-8 text-xs px-2 rounded-lg border hover:bg-gray-100 active:bg-gray-200"
+                    class="h-10 text-xs px-2 rounded-lg border hover:bg-gray-100 active:bg-gray-200"
                     :class="lineDiscount(item) ? 'text-green-600 border-green-300 bg-green-50' : 'text-gray-400 border-gray-200'"
                   >
                     {{ lineDiscount(item) ? ('-' + formatCurrency(lineDiscount(item))) : '%' }}
                   </button>
                   <button
                     @click="removeFromCart(item)"
-                    class="h-8 w-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100"
+                    class="h-10 w-10 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100"
                   >
                     <TrashIcon class="h-4 w-4" />
                   </button>
                 </div>
               </div>
+              <p v-if="overStock(item)" class="mt-1 text-xs text-red-600">
+                {{ $t('pos.stockLeft', { n: item.stock }) }}
+              </p>
             </li>
           </ul>
         </div>
@@ -1618,6 +1869,7 @@ onMounted(() => {
       :loading="customersLoading"
       @close="showCustomerModal = false"
       @select="selectCustomer"
+      @search="loadCustomers"
       @new-customer="showCustomerModal = false; showNewCustomerModal = true"
     />
     <PosQuickAddCustomerModal
@@ -1671,6 +1923,27 @@ onMounted(() => {
       @close="showUomModal = false"
       @select-base="selectBaseUom"
       @select-uom="puom => addToCartWithUom(pendingProduct, puom)"
+    />
+
+    <!-- Sale completed: change due + receipt -->
+    <PosSaleCompleteModal :sale="completedSale" @close="completedSale = null" />
+
+    <!-- Held sales -->
+    <PosHeldCartsModal
+      :show="showHeldModal"
+      :carts="heldCarts"
+      @close="showHeldModal = false"
+      @resume="resumeHeld"
+      @remove="removeHeld"
+    />
+
+    <!-- Confirmation -->
+    <PosConfirmModal
+      :show="confirmState.show"
+      :message="confirmState.message"
+      :danger="confirmState.danger"
+      @confirm="answerConfirm(true)"
+      @cancel="answerConfirm(false)"
     />
 
     <!-- Discount -->

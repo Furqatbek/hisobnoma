@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
+import { formatCurrency } from '@/utils/format'
 import { XMarkIcon, MagnifyingGlassIcon, PlusIcon } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
@@ -8,30 +9,20 @@ const props = defineProps({
   loading: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['close', 'select', 'new-customer'])
+const emit = defineEmits(['close', 'select', 'new-customer', 'search'])
 
 const filter = ref('')
+let searchTimer = null
 
 watch(() => props.show, (open) => {
   if (open) filter.value = ''
 })
 
-const filteredCustomers = computed(() => {
-  const q = filter.value.toLowerCase().trim()
-  if (!q) return props.customers
-  return props.customers.filter(c => {
-    const name = (c.name || '').toLowerCase()
-    const code = (c.code || '').toLowerCase()
-    const phone = (c.phone || c.mobilePhone || '').toLowerCase()
-    return name.includes(q) || code.includes(q) || phone.includes(q)
-  })
-})
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value || 0)
+// The list is searched on the server (debounced) instead of loading every
+// customer into the browser and filtering there.
+function onFilterInput() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => emit('search', filter.value.trim()), 300)
 }
 </script>
 
@@ -52,6 +43,7 @@ function formatCurrency(value) {
           <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             v-model="filter"
+            @input="onFilterInput"
             type="text"
             :placeholder="$t('pos.filterCustomerPlaceholder')"
             class="input pl-9 text-sm"
@@ -62,12 +54,12 @@ function formatCurrency(value) {
         <div v-if="loading" class="flex items-center justify-center py-8">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         </div>
-        <div v-else-if="filteredCustomers.length === 0" class="text-center py-6 text-sm text-gray-400">
+        <div v-else-if="customers.length === 0" class="text-center py-6 text-sm text-gray-400">
           {{ $t('pos.noCustomersFound') }}
         </div>
         <div v-else class="max-h-72 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
           <button
-            v-for="customer in filteredCustomers"
+            v-for="customer in customers"
             :key="customer.id"
             @click="emit('select', customer)"
             class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-primary-50 active:bg-primary-100 transition-colors"
