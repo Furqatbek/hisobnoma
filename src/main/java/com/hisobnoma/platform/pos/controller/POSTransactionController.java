@@ -26,6 +26,7 @@ public class POSTransactionController {
 
     private final POSTransactionService transactionService;
     private final POSPaymentService paymentService;
+    private final com.hisobnoma.platform.pos.service.POSCheckoutService checkoutService;
 
     // ==================== Transaction CRUD ====================
 
@@ -96,6 +97,21 @@ public class POSTransactionController {
             @Valid @RequestBody CreateTransactionRequest request) {
         POSTransactionDto transaction = transactionService.createTransaction(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(transaction));
+    }
+
+    /** Authoritative totals for a cart — nothing is saved. */
+    @PostMapping("/quote")
+    @RequiresPermission("POS_SALE_CREATE")
+    public ResponseEntity<ApiResponse<PosQuoteDto>> quote(@Valid @RequestBody PosCheckoutRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(checkoutService.quote(request)));
+    }
+
+    /** Sell a whole cart (lines, discount, payments, completion) in one atomic call. */
+    @PostMapping("/checkout")
+    @RequiresPermission({"POS_SALE_CREATE", "POS_PAYMENT_PROCESS"})
+    public ResponseEntity<ApiResponse<POSTransactionDto>> checkout(@Valid @RequestBody PosCheckoutRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(checkoutService.checkout(request)));
     }
 
     @PostMapping("/{id}/lines")

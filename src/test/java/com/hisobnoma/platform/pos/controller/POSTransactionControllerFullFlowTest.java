@@ -561,6 +561,140 @@ class POSTransactionControllerFullFlowTest {
                 .andExpect(jsonPath("$.data.completedAt").isNotEmpty());
     }
 
+    // ---- Atomic checkout + quote ----
+
+    private PosCheckoutRequest.PosCheckoutRequestBuilder cartOf(Product p, String qty, String unitPrice) {
+        return PosCheckoutRequest.builder()
+                .terminalId(terminal.getId())
+                .items(List.of(CreateTransactionRequest.LineItem.builder()
+                        .productId(p.getId())
+                        .quantity(new BigDecimal(qty))
+                        .unitPrice(unitPrice == null ? null : new BigDecimal(unitPrice))
+                        .build()));
+    }
+
+    private long saleCount() {
+        entityManager.flush();
+        return transactionRepository.count();
+    }
+
+    @Test
+    void checkout_sellsWholeCartInOneCall() throws Exception {
+        PosCheckoutRequest req = cartOf(product, "2", null)
+                .discountPercent(new BigDecimal("10"))
+                .expectedTotal(new BigDecimal("90000"))
+                .payments(List.of(
+                        PosCheckoutRequest.Payment.builder().paymentType(POSPaymentType.CARD)
+                                .amount(new BigDecimal("40000")).build(),
+                        PosCheckoutRequest.Payment.builder().paymentType(POSPaymentType.CASH)
+                                .amount(new BigDecimal("50000")).tenderedAmount(new BigDecimal("60000")).build()))
+                .build();
+
+        mockMvc.perform(post(BASE_URL + "/checkout").with(fullAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.totalAmount").value(90000))
+                .andExpect(jsonPath("$.data.balanceDue").value(0));
+    }
+
+    @Test
+    void checkout_totalMismatch_isRejectedAndNothingIsSaved() throws Exception {
+        long before = saleCount();
+        PosCheckoutRequest req = cartOf(product, "2", null)
+                .expectedTotal(new BigDecimal("90000")) // real total is 100000
+                .payments(List.of(PosCheckoutRequest.Payment.builder()
+                        .paymentType(POSPaymentType.CASH).amount(new BigDecimal("90000")).build()))
+                .build();
+
+        mockMvc.perform(post(BASE_URL + "/checkout").with(fullAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("TOTAL_CHANGED"));
+    }
+
+    @Test
+    void checkout_underpaid_isRejected() throws Exception {
+        PosCheckoutRequest req = cartOf(product, "1", null)
+                .payments(List.of(PosCheckoutRequest.Payment.builder()
+                        .paymentType(POSPaymentType.CASH).amount(new BigDecimal("10000")).build()))
+                .build();
+
+        mockMvc.perform(post(BASE_URL + "/checkout").with(fullAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void quote_returnsTotalsWithoutSavingASale() throws Exception {
+        long before = saleCount();
+        PosCheckoutRequest req = cartOf(product, "2", null)
+                .discountAmount(new BigDecimal("5000"))
+                .build();
+
+        mockMvc.perform(post(BASE_URL + "/quote").with(fullAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.subtotal").value(100000))
+                .andExpect(jsonPath("$.data.discountAmount").value(5000))
+                .andExpect(jsonPath("$.data.totalAmount").value(95000));
+
+        entityManager.clear();
+        org.junit.jupiter.api.Assertions.assertEquals(before, transactionRepository.count(),
+                "a quote must not leave a sale behind");
+    }
+
+    @Test
+    void sale_belowMinimumSellingPrice_isRejected() throws Exception {
+        Product floored = productRepository.saveAndFlush(Product.builder()
+                .sku("SKU-TX-MIN").name("Floored Product")
+                .category(category).baseUom(uom)
+                .sellingPrice(new BigDecimal("50000"))
+                .minSellingPrice(new BigDecimal("45000"))
+                .costPrice(new BigDecimal("30000"))
+                .trackInventory(false).active(true).sellable(true)
+                .tenantId(tenant.getId()).build());
+
+        mockMvc.perform(post(BASE_URL + "/quote").with(fullAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(cartOf(floored, "1", "40000").build())))
+                .andExpect(status().is4xxClientError())
+                .andExpect(jsonPath("$.code").value("PRICE_BELOW_MIN"));
+
+        // At the floor is fine.
+        mockMvc.perform(post(BASE_URL + "/quote").with(fullAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(cartOf(floored, "1", "45000").build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalAmount").value(45000));
+    }
+
+    @Test
+    void checkout_discountWithoutPermission_isForbidden() throws Exception {
+        UserPrincipal principal = new UserPrincipal(
+                user.getId(), user.getUsername(), "password123", tenant.getId(),
+                true, true, List.of(
+                        new SimpleGrantedAuthority("POS_SALE_CREATE"),
+                        new SimpleGrantedAuthority("POS_PAYMENT_PROCESS")));
+        RequestPostProcessor cashierAuth = authentication(new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities()));
+
+        PosCheckoutRequest req = cartOf(product, "1", null)
+                .discountPercent(new BigDecimal("50"))
+                .payments(List.of(PosCheckoutRequest.Payment.builder()
+                        .paymentType(POSPaymentType.CASH).amount(new BigDecimal("25000")).build()))
+                .build();
+
+        mockMvc.perform(post(BASE_URL + "/checkout").with(cashierAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isForbidden());
+    }
+
     // ---- 17. GET /failed-gl ----
 
     @Test

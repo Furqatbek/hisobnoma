@@ -51,6 +51,8 @@
   "confirmDebtSale": "{customer} га {amount} сўм насияга сотишни тасдиқлайсизми?",
   "customerRequiredForDebt": "Насия сотув учун мижоз танлаш шарт",
   "paymentLessThanTotal": "Тўлов суммаси жами суммадан кам",
+  "priceBelowMin": "Нарх рухсат этилган минимал нархдан паст (энг ками: {min})",
+  "totalChanged": "Жами сумма янгиланди. Суммани текшириб, тўловни қайта қабул қилинг",
   "receivedLessThanAmount": "Қабул қилинган нақд пул тўлов суммасидан кам",
   "openShiftToSell": "Сотиш учун сменани очинг",
   "paymentFailed": "Тўлов амалга ошмади",

@@ -96,8 +96,10 @@ const currentPayment = reactive({
   received: 0
 })
 
-// Tax settings - can be manually controlled
-const taxRate = ref(0) // 0% tax by default
+// The server's authoritative totals for the current cart (null until quoted).
+// Tax and the final total come from here — never from a locally typed rate.
+const quote = ref(null)
+let quoteSeq = 0
 
 // Discount state
 const showDiscountModal = ref(false)
@@ -161,8 +163,8 @@ const transactionDiscountAmount = computed(() => {
 const totalDiscount = computed(() => itemDiscountTotal.value + transactionDiscountAmount.value)
 
 const discountedSubtotal = computed(() => subtotal.value - totalDiscount.value)
-const tax = computed(() => discountedSubtotal.value * (taxRate.value / 100))
-const total = computed(() => discountedSubtotal.value + tax.value)
+const tax = computed(() => quote.value ? Number(quote.value.taxAmount) || 0 : 0)
+const total = computed(() => quote.value ? Number(quote.value.totalAmount) || 0 : discountedSubtotal.value)
 
 // Total paid from split payments
 const totalPaid = computed(() => {
@@ -327,31 +329,53 @@ async function addToCartWithUom(product, selectedUom) {
   if (existingItem) {
     existingItem.quantity++
   } else {
-    let price = selectedUom ? selectedUom.effectiveSellingPrice : product.sellingPrice
-
-    if (cart.customerId) {
-      const customerPrice = await fetchProductPrice(product.id)
-      if (customerPrice?.price != null) {
-        price = customerPrice.price
-      }
-    }
-
-    cart.items.push({
+    const factor = Number(selectedUom?.conversionFactor) || 1
+    const basePrice = selectedUom ? selectedUom.effectiveSellingPrice : product.sellingPrice
+    const item = {
       _uomKey: uomKey,
       productId: product.id,
       name: product.name,
       sku: product.sku,
-      price,
+      price: basePrice,
+      // List price in the sale unit, and the product's base list price — used to
+      // re-price the line when the customer changes.
+      basePrice,
+      listPrice: product.sellingPrice,
+      // Lowest price allowed for one sale unit (0 = no floor).
+      minPrice: (Number(product.minSellingPrice) || 0) * factor,
+      priceEdited: false,
       quantity: 1,
       productUomId: selectedUom?.id || null,
       uomCode: selectedUom?.uomCode || null,
       uomName: selectedUom?.uomName || null,
       conversionFactor: selectedUom?.conversionFactor || null
-    })
+    }
+    item.price = await customerPriceFor(item)
+    cart.items.push(item)
   }
 
   pendingProduct.value = null
   productUoms.value = []
+}
+
+// The price a line should have for the current customer. A customer-specific
+// price (one that differs from the list price) is per base unit, so it is scaled
+// to the sale unit; otherwise the line keeps its own list price.
+async function customerPriceFor(item) {
+  if (!cart.customerId) return item.basePrice
+  const customerPrice = await fetchProductPrice(item.productId)
+  const price = Number(customerPrice?.price)
+  if (!Number.isFinite(price) || price === Number(item.listPrice)) return item.basePrice
+  return price * (Number(item.conversionFactor) || 1)
+}
+
+// Re-price the whole cart when the customer changes. Prices the cashier typed
+// by hand are left alone.
+async function repriceCart() {
+  for (const item of cart.items) {
+    if (item.priceEdited) continue
+    item.price = await customerPriceFor(item)
+  }
 }
 
 function selectBaseUom() {
@@ -396,8 +420,13 @@ function startEditPrice(item) {
 
 function saveEditPrice(item) {
   const newPrice = parseFloat(editingPriceValue.value)
-  if (!isNaN(newPrice) && newPrice >= 0) {
-    item.price = newPrice
+  if (!isNaN(newPrice) && newPrice >= 0 && newPrice !== item.price) {
+    if (item.minPrice > 0 && newPrice < item.minPrice) {
+      toast.error(t('pos.priceBelowMin', { min: formatCurrency(item.minPrice) }))
+    } else {
+      item.price = newPrice
+      item.priceEdited = true
+    }
   }
   editingPriceKey.value = null
 }
@@ -410,6 +439,7 @@ function selectCustomer(customer) {
   cart.customerId = customer.id
   cart.customerName = customer.name
   showCustomerModal.value = false
+  repriceCart()
 }
 
 function openCustomerModal() {
@@ -420,6 +450,7 @@ function openCustomerModal() {
 function clearCustomer() {
   cart.customerId = null
   cart.customerName = ''
+  repriceCart()
 }
 
 // Delivery address functions
@@ -593,12 +624,85 @@ async function fetchProductPrice(productId) {
   }
 }
 
-function openPayment() {
-  if (cart.items.length === 0) return
+// The sale exactly as the server will receive it (without payments).
+function buildSaleRequest() {
+  const request = {
+    terminalId: selectedTerminalId.value,
+    customerId: cart.customerId,
+    deliveryRegionId: cart.deliveryRegionId || undefined,
+    deliveryVillageId: cart.deliveryVillageId || undefined,
+    items: cart.items.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: item.price,
+      discountAmount: lineDiscount(item) || undefined,
+      discountReason: item.discountReason || undefined,
+      productUomId: item.productUomId || undefined
+    }))
+  }
+  if (transactionDiscount.type && transactionDiscount.value > 0) {
+    if (transactionDiscount.type === 'percent') {
+      request.discountPercent = transactionDiscount.value
+    } else {
+      request.discountAmount = transactionDiscountAmount.value
+    }
+    request.discountReason = transactionDiscount.reason || undefined
+  }
+  return request
+}
+
+// Ask the server what this cart really costs (tax included). Returns false and
+// shows the reason when the cart cannot be sold as it is (e.g. price below minimum).
+async function refreshQuote() {
+  if (!selectedTerminalId.value || cart.items.length === 0) {
+    quote.value = null
+    return true
+  }
+  const seq = ++quoteSeq
+  try {
+    const data = unwrapData(await posApi.quote(buildSaleRequest()))
+    if (seq === quoteSeq) quote.value = data
+    return true
+  } catch (error) {
+    if (seq === quoteSeq) {
+      quote.value = null
+      toast.error(error.response?.data?.message || error.message)
+    }
+    return false
+  }
+}
+
+// Start the payment form over against the current total.
+function resetPaymentForm() {
   payments.value = []
-  currentPayment.method = 'CASH'
   currentPayment.amount = total.value
   currentPayment.received = total.value
+}
+
+// Anything that changes what the cart costs invalidates the quote. While the
+// payment dialog is open (coupon or discount applied there) the total is fetched
+// again and the amount to collect follows it.
+const cartSignature = computed(() => JSON.stringify([
+  cart.items.map(i => [i._uomKey, i.price, i.quantity, i.discount, i.discountPercent]),
+  transactionDiscount.type,
+  transactionDiscount.value,
+  cart.customerId
+]))
+
+watch(cartSignature, async () => {
+  quote.value = null
+  quoteSeq++
+  if (showPaymentModal.value && !processing.value) {
+    await refreshQuote()
+    resetPaymentForm()
+  }
+})
+
+async function openPayment() {
+  if (cart.items.length === 0) return
+  if (!(await refreshQuote())) return
+  currentPayment.method = 'CASH'
+  resetPaymentForm()
   showPaymentModal.value = true
 }
 
@@ -688,85 +792,22 @@ async function submitSale() {
     return
   }
 
-  let transactionId = null
   try {
-    // Create transaction
-    const transactionData = {
-      terminalId: selectedTerminalId.value,
-      transactionType: 'SALE',
-      customerId: cart.customerId,
-      deliveryRegionId: cart.deliveryRegionId || undefined,
-      deliveryVillageId: cart.deliveryVillageId || undefined,
-      items: cart.items.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        unitPrice: item.price,
-        discountAmount: lineDiscount(item) || undefined,
-        discountReason: item.discountReason || undefined,
-        productUomId: item.productUomId || undefined
+    // One atomic call: the server creates the sale, applies the discount, takes
+    // the payments and completes it — or saves nothing at all.
+    const request = {
+      ...buildSaleRequest(),
+      expectedTotal: total.value,
+      payments: payments.value.map(p => ({
+        paymentType: p.method,
+        amount: p.amount,
+        tenderedAmount: p.method === 'CASH' ? p.received : undefined
       }))
     }
-
-    const txResponse = await posApi.createTransaction(transactionData)
-    const txData = unwrapData(txResponse)
-    transactionId = txData.id
-
-    // Apply transaction-level discount if set
-    let backendTotal = Number(txData.totalAmount) || 0
-    if (transactionDiscount.type && transactionDiscount.value > 0) {
-      const discountData = { reason: transactionDiscount.reason || undefined }
-      if (transactionDiscount.type === 'percent') {
-        discountData.percent = transactionDiscount.value
-      } else {
-        discountData.amount = transactionDiscountAmount.value
-      }
-      const discountResponse = await posApi.applyDiscount(transactionId, discountData)
-      const discountTxData = unwrapData(discountResponse)
-      backendTotal = Number(discountTxData.totalAmount) || backendTotal
+    if (couponDiscount.value && couponCode.value.trim()) {
+      request.couponCode = couponCode.value.trim()
     }
-
-    // Use the backend's authoritative totalAmount for payments.
-    // The frontend total may differ from the backend (e.g. per-product tax)
-    // so adjust the last payment to cover the exact backend balance.
-    const frontendTotal = payments.value.reduce((sum, p) => sum + p.amount, 0)
-    if (Math.abs(frontendTotal - backendTotal) > 0.001) {
-      // Scale all payments proportionally to match backend total
-      const ratio = backendTotal / frontendTotal
-      for (const p of payments.value) {
-        p.amount = Math.round(p.amount * ratio * 100) / 100
-      }
-      // Fix any rounding remainder on the last payment
-      const adjusted = payments.value.reduce((sum, p) => sum + p.amount, 0)
-      const diff = backendTotal - adjusted
-      if (payments.value.length > 0) {
-        payments.value[payments.value.length - 1].amount += diff
-      }
-    }
-
-    // Add all payments
-    for (const payment of payments.value) {
-      await posApi.addPayment(transactionId, {
-        paymentType: payment.method,
-        amount: payment.amount
-      })
-    }
-
-    // Complete transaction
-    await posApi.completeTransaction(transactionId)
-
-    // Record coupon redemption if a coupon was applied
-    if (couponDiscount.value && couponCode.value) {
-      try {
-        await pricingApi.recordCouponRedemption(
-          couponCode.value,
-          cart.customerId,
-          transactionId,
-          couponDiscount.value.discountAmount || transactionDiscountAmount.value
-        )
-      } catch (e) {
-        console.error('Failed to record coupon redemption:', e)
-      }
-    }
+    await posApi.checkout(request)
 
     // Check before clearing
     const hasDebtPayment = payments.value.some(p => p.method === 'CREDIT')
@@ -785,13 +826,13 @@ async function submitSale() {
   } catch (error) {
     console.error('Payment failed:', error)
 
-    // Auto-void the orphaned transaction so it doesn't block shift closure
-    if (transactionId) {
-      try {
-        await posApi.voidTransaction(transactionId, 'Auto-voided: payment processing failed')
-      } catch (voidError) {
-        console.error('Failed to auto-void transaction:', voidError)
-      }
+    // The server's total no longer matches what was shown: show the new total
+    // and let the cashier take payment again. Nothing was saved.
+    if (error.response?.data?.code === 'TOTAL_CHANGED') {
+      await refreshQuote()
+      resetPaymentForm()
+      toast.error(t('pos.totalChanged'))
+      return
     }
 
     toast.error(t('pos.paymentFailed') + ': ' + (error.response?.data?.message || error.message))
@@ -805,6 +846,8 @@ async function sellAsDebt() {
     showCustomerModal.value = true
     return
   }
+
+  if (!(await refreshQuote())) return
 
   if (!confirm(t('pos.confirmDebtSale', { amount: formatCurrency(total.value), customer: cart.customerName }))) {
     return
@@ -827,6 +870,7 @@ function clearCart() {
     cart.customerName = ''
     clearDeliveryAddress()
     clearTransactionDiscount()
+    clearCoupon()
   }
 }
 
@@ -846,6 +890,7 @@ async function createQuickCustomer(form) {
     cart.customerId = customer.id
     cart.customerName = customer.name
     showNewCustomerModal.value = false
+    repriceCart()
   } catch (error) {
     console.error('Failed to create customer:', error)
     toast.error(t('pos.failedToCreateCustomer') + ': ' + (error.response?.data?.message || error.message))
@@ -1357,19 +1402,8 @@ onMounted(() => {
             </button>
           </div>
 
-          <div class="flex justify-between items-center text-sm">
-            <div class="flex items-center gap-2">
-              <span class="text-gray-500">{{ $t('pos.tax') }}</span>
-              <input
-                v-model.number="taxRate"
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                class="w-16 px-2 py-1 text-xs border rounded"
-              />
-              <span class="text-gray-400 text-xs">%</span>
-            </div>
+          <div v-if="tax > 0" class="flex justify-between text-sm">
+            <span class="text-gray-500">{{ $t('pos.tax') }}</span>
             <span>{{ formatCurrency(tax) }}</span>
           </div>
           <div class="flex justify-between text-lg font-bold pt-2 border-t">

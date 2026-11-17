@@ -48,6 +48,9 @@ class POSTransactionControllerTest {
     @MockBean
     private POSPaymentService paymentService;
 
+    @MockBean
+    private com.hisobnoma.platform.pos.service.POSCheckoutService checkoutService;
+
     private RequestPostProcessor userWithPermission(String... permissions) {
         UserPrincipal principal = new UserPrincipal(
                 1L, "admin", "pw", 1L, true, true,

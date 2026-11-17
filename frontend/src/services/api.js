@@ -297,6 +297,10 @@ export const shiftsApi = {
 // POS API - Backend: /api/v1/pos/transactions
 export const posApi = {
   createTransaction: (data) => api.post('/pos/transactions', data),
+  // Authoritative totals for a cart (nothing is saved)
+  quote: (data) => api.post('/pos/transactions/quote', data),
+  // Whole sale — lines, discount, payments, completion — in one atomic call
+  checkout: (data) => api.post('/pos/transactions/checkout', data),
   getTransaction: (id) => api.get(`/pos/transactions/${id}`),
   getTransactions: (params) => api.get('/pos/transactions', { params }),
   addLineItem: (transactionId, data) => api.post(`/pos/transactions/${transactionId}/items`, data),

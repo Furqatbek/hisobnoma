@@ -252,6 +252,10 @@ public class POSTransactionService {
 
                 BigDecimal lineDiscount = item.getDiscountAmount() != null ? item.getDiscountAmount() : BigDecimal.ZERO;
 
+                if (transaction.getTransactionType() == TransactionType.SALE) {
+                    enforceMinSellingPrice(product, productUom, unitPrice, saleQuantity, lineDiscount);
+                }
+
                 if (product.getTaxCode() != null) {
                     taxCode = product.getTaxCode();
                     TaxRate rate = taxCalculationService.getApplicableRate(taxCode, LocalDate.now());
@@ -830,6 +834,31 @@ public class POSTransactionService {
     private void validateTransactionModifiable(POSTransaction transaction) {
         if (transaction.getStatus() != TransactionStatus.PENDING) {
             throw new BusinessException("Transaction cannot be modified in status: " + transaction.getStatus());
+        }
+    }
+
+    /**
+     * A sale line may not go below the product's minimum selling price. The price actually
+     * charged per sale unit (after the line discount) is compared with the floor, which is
+     * scaled to the sale unit when an alternate UOM is used.
+     */
+    private void enforceMinSellingPrice(Product product, ProductUom productUom, BigDecimal unitPrice,
+                                        BigDecimal saleQuantity, BigDecimal lineDiscount) {
+        BigDecimal min = product.getMinSellingPrice();
+        if (min == null || min.signum() <= 0 || unitPrice == null
+                || saleQuantity == null || saleQuantity.signum() <= 0) {
+            return;
+        }
+        BigDecimal floor = productUom != null
+                ? min.multiply(productUom.toBaseQuantity(BigDecimal.ONE))
+                : min;
+        BigDecimal charged = unitPrice.subtract(
+                lineDiscount.divide(saleQuantity, 4, RoundingMode.HALF_UP));
+        if (charged.compareTo(floor) < 0) {
+            throw new BusinessException(
+                    "Price for " + product.getName() + " is below the minimum allowed ("
+                            + floor.stripTrailingZeros().toPlainString() + ")",
+                    "PRICE_BELOW_MIN");
         }
     }
 

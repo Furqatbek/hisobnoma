@@ -378,6 +378,57 @@ Marks the shift as reconciled for audit purposes.
 
 ---
 
+## One-Call Checkout (recommended for selling)
+
+A sale can be made with **one request** instead of create → discount → payments → complete.
+Everything happens in a single database transaction: either the sale is completed or nothing is
+saved, so there is never a half-finished sale to void.
+
+### Quote a cart
+
+```http
+POST /transactions/quote
+```
+
+Permission: `POS_SALE_CREATE`. Returns the server's authoritative totals (tax included) for a
+cart without saving anything. Show `totalAmount` to the cashier before taking payment.
+
+```json
+{
+  "terminalId": 1,
+  "customerId": 12,
+  "items": [ { "productId": 100, "quantity": 2, "unitPrice": 50000, "discountAmount": 0, "productUomId": null } ],
+  "discountPercent": 10,
+  "discountReason": "Loyal customer"
+}
+```
+
+Response `data`: `{ "subtotal": 100000, "discountAmount": 10000, "taxAmount": 0, "totalAmount": 90000 }`
+
+### Checkout
+
+```http
+POST /transactions/checkout
+```
+
+Permissions: `POS_SALE_CREATE` **and** `POS_PAYMENT_PROCESS` (plus `POS_DISCOUNT_APPLY` when a
+sale-level discount is sent). Same body as the quote, plus:
+
+| Field | Meaning |
+|---|---|
+| `payments[]` | `{ paymentType, amount, tenderedAmount }` — required; must cover the total |
+| `expectedTotal` | The total the cashier was shown. If the server's total differs, the request fails with `409 TOTAL_CHANGED` and nothing is saved — quote again and re-take payment |
+| `couponCode` | Coupon whose discount is included in `discountAmount`; its redemption is recorded with the sale |
+
+Use either `discountPercent` or `discountAmount` for the sale-level discount, not both.
+Returns `201` with the completed transaction.
+
+**Minimum price.** A sale line whose charged unit price (after its line discount) is below the
+product's `minSellingPrice` is rejected with `400 PRICE_BELOW_MIN`. The floor is scaled to the
+sale unit when an alternate UOM is used. This applies to `POST /transactions` as well.
+
+---
+
 ## Transaction Management
 
 ### List Transactions
