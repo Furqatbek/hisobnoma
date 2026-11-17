@@ -415,10 +415,10 @@ async function addToCartWithUom(product, selectedUom) {
       // Lowest price allowed for one sale unit (0 = no floor).
       minPrice: (Number(product.minSellingPrice) || 0) * factor,
       priceEdited: false,
-      // Quantity step: products sold by weight/length use their own step;
-      // everything else moves in whole units.
+      // Small quantity step: products sold by weight/length use their own order
+      // step; every other product steps by a half.
       fractional: !!product.fractional,
-      step: product.fractional ? (Number(product.orderStep) > 0 ? Number(product.orderStep) : 0.5) : 1,
+      step: product.fractional && Number(product.orderStep) > 0 ? Number(product.orderStep) : 0.5,
       // Stock on hand in base units (only meaningful when the product tracks stock)
       trackStock: !!product.trackInventory,
       stock: product.stockQuantity != null ? Number(product.stockQuantity) : null,
@@ -463,6 +463,16 @@ function selectBaseUom() {
   if (pendingProduct.value) {
     addToCartWithUom(pendingProduct.value, null)
   }
+}
+
+// The small +/- step for a line (a half unless the product defines its own).
+function smallStep(item) {
+  return item.fractional && Number(item.step) > 0 ? Number(item.step) : 0.5
+}
+
+function smallStepLabel(item) {
+  const step = smallStep(item)
+  return step === 0.5 ? '½' : step
 }
 
 // True when the line asks for more than is on hand (in base units).
@@ -1556,11 +1566,10 @@ onMounted(() => {
                     <MinusIcon class="h-4 w-4" />
                   </button>
                   <button
-                    v-if="item.fractional"
-                    @click="updateQuantity(item, -item.step)"
+                    @click="updateQuantity(item, -smallStep(item))"
                     class="h-10 px-2 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200 text-xs font-medium text-gray-600"
                   >
-                    -{{ item.step }}
+                    -{{ smallStepLabel(item) }}
                   </button>
                   <input
                     v-if="editingQtyKey === item._uomKey"
@@ -1582,11 +1591,10 @@ onMounted(() => {
                     class="min-w-[2.5rem] px-1 text-center font-bold text-sm cursor-pointer hover:text-primary-600 hover:bg-primary-50 rounded-lg py-2 transition-colors"
                   >{{ item.quantity }}</span>
                   <button
-                    v-if="item.fractional"
-                    @click="updateQuantity(item, item.step)"
+                    @click="updateQuantity(item, smallStep(item))"
                     class="h-10 px-2 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 active:bg-gray-200 text-xs font-medium text-gray-600"
                   >
-                    +{{ item.step }}
+                    +{{ smallStepLabel(item) }}
                   </button>
                   <button
                     @click="updateQuantity(item, 1)"
