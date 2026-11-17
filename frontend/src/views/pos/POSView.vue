@@ -7,7 +7,8 @@ import PosOpenShiftModal from '@/components/pos/PosOpenShiftModal.vue'
 import PosDeliveryModal from '@/components/pos/PosDeliveryModal.vue'
 import PosCloseShiftModal from '@/components/pos/PosCloseShiftModal.vue'
 import { useToastStore } from '@/stores/toast'
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
+import { formatCurrency } from '@/utils/format'
 import { useI18n } from 'vue-i18n'
 import { customersApi, deliveryRegionsApi, deliveryVillagesApi, posApi, pricingApi, productsApi, shiftsApi, terminalsApi, unwrapData, unwrapList } from '@/services/api'
 import { ScaleIcon } from '@heroicons/vue/24/outline'
@@ -75,6 +76,8 @@ const selectedRegionId = ref(null)
 const selectedVillageId = ref(null)
 
 const showPaymentModal = ref(false)
+// True while a sale is being submitted — blocks double submission.
+const processing = ref(false)
 const showCustomerModal = ref(false)
 
 // Price editing state
@@ -133,8 +136,16 @@ const subtotal = computed(() => {
 })
 
 // Total item-level discounts
+// A percent discount is recomputed from the current price x quantity, so it stays
+// correct when the quantity or price changes after the discount was set.
+function lineDiscount(item) {
+  const lineTotal = item.price * item.quantity
+  if (item.discountPercent) return lineTotal * (item.discountPercent / 100)
+  return Math.min(item.discount || 0, lineTotal)
+}
+
 const itemDiscountTotal = computed(() => {
-  return cart.items.reduce((sum, item) => sum + (item.discount || 0), 0)
+  return cart.items.reduce((sum, item) => sum + lineDiscount(item), 0)
 })
 
 // Transaction-level discount amount
@@ -171,6 +182,18 @@ const change = computed(() => {
   return 0
 })
 
+// Cash handed over must cover the cash amount being paid.
+const cashShort = computed(() =>
+  remainingAmount.value > 0 &&
+  currentPayment.method === 'CASH' &&
+  currentPayment.amount > 0 &&
+  (Number(currentPayment.received) || 0) < Math.min(currentPayment.amount, remainingAmount.value)
+)
+
+function paymentMethodLabel(method) {
+  return paymentMethods.value.find(m => m.value === method)?.label || method
+}
+
 // Whether the sale can be completed (existing splits + current form cover the total)
 const canCompleteSale = computed(() => {
   const currentAmount = currentPayment.amount > 0 ? Math.min(currentPayment.amount, remainingAmount.value) : 0
@@ -189,20 +212,59 @@ async function fetchQuickProducts() {
   }
 }
 
-async function searchProducts() {
+let searchTimer = null
+let searchSeq = 0
+
+// Debounced: one request after typing pauses, not one per keystroke.
+function searchProducts() {
+  clearTimeout(searchTimer)
   if (!searchQuery.value.trim()) {
+    searchSeq++
     products.value = []
+    loading.value = false
     return
   }
-
   loading.value = true
+  searchTimer = setTimeout(runSearch, 250)
+}
+
+async function runSearch() {
+  const query = searchQuery.value.trim()
+  if (!query) return
+  const seq = ++searchSeq
   try {
-    const response = await productsApi.search(searchQuery.value)
-    products.value = unwrapList(response)
+    const response = await productsApi.search(query)
+    // Ignore a slow response that a newer search has superseded.
+    if (seq === searchSeq) products.value = unwrapList(response)
   } catch (error) {
     console.error('Search failed:', error)
   } finally {
-    loading.value = false
+    if (seq === searchSeq) loading.value = false
+  }
+}
+
+// Enter in the search box (what a barcode scanner sends): add the exact barcode
+// match straight to the cart; otherwise add the only search result, if there is one.
+async function handleSearchEnter() {
+  const query = searchQuery.value.trim()
+  if (!query) return
+  clearTimeout(searchTimer)
+  searchSeq++
+  loading.value = false
+  try {
+    const product = unwrapData(await productsApi.getByBarcode(query))
+    if (product?.id) {
+      addToCart(product)
+      return
+    }
+  } catch {
+    // not a barcode — fall through to a normal search
+  }
+  await runSearch()
+  if (products.value.length === 1) {
+    addToCart(products.value[0])
+  } else if (products.value.length === 0) {
+    toast.error(t('pos.noProductsFound'))
   }
 }
 
@@ -551,6 +613,11 @@ function addPaymentSplit() {
 
   const paymentAmount = Math.min(currentPayment.amount, remainingAmount.value)
 
+  if (currentPayment.method === 'CASH' && (Number(currentPayment.received) || 0) < paymentAmount) {
+    toast.error(t('pos.receivedLessThanAmount'))
+    return
+  }
+
   payments.value.push({
     method: currentPayment.method,
     amount: paymentAmount,
@@ -579,6 +646,21 @@ function selectPaymentMethod(method) {
 }
 
 async function processPayment() {
+  if (processing.value) return
+  processing.value = true
+  try {
+    await submitSale()
+  } finally {
+    processing.value = false
+  }
+}
+
+async function submitSale() {
+  if (cashShort.value) {
+    toast.error(t('pos.receivedLessThanAmount'))
+    return
+  }
+
   // Validate debt sales require customer
   const hasDebt = payments.value.some(p => p.method === 'CREDIT') ||
                   (remainingAmount.value > 0 && currentPayment.method === 'CREDIT')
@@ -619,7 +701,7 @@ async function processPayment() {
         productId: item.productId,
         quantity: item.quantity,
         unitPrice: item.price,
-        discountAmount: item.discount || undefined,
+        discountAmount: lineDiscount(item) || undefined,
         discountReason: item.discountReason || undefined,
         productUomId: item.productUomId || undefined
       }))
@@ -699,7 +781,7 @@ async function processPayment() {
     clearCoupon()
     showPaymentModal.value = false
 
-    toast.error(hasDebtPayment ? t('pos.saleCompletedWithDebt') : t('pos.saleComplete'))
+    toast.success(hasDebtPayment ? t('pos.saleCompletedWithDebt') : t('pos.saleComplete'))
   } catch (error) {
     console.error('Payment failed:', error)
 
@@ -746,13 +828,6 @@ function clearCart() {
     clearDeliveryAddress()
     clearTransactionDiscount()
   }
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value || 0)
 }
 
 async function createQuickCustomer(form) {
@@ -907,6 +982,12 @@ watch(selectedTerminalId, () => {
   fetchCurrentShift()
 })
 
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+  clearTimeout(barcodeTimeout)
+  clearTimeout(searchTimer)
+})
+
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
   fetchTerminals().then(() => fetchCurrentShift())
@@ -926,6 +1007,7 @@ onMounted(() => {
             <input
               v-model="searchQuery"
               @input="searchProducts"
+              @keydown.enter.prevent="handleSearchEnter"
               type="text"
               :placeholder="$t('pos.searchPlaceholder')"
               class="input pl-10 text-lg"
@@ -953,6 +1035,9 @@ onMounted(() => {
             <div class="flex-1 min-w-0">
               <div class="font-medium text-gray-900 truncate">{{ product.name }}</div>
               <div class="text-xs text-gray-400">{{ product.sku }}</div>
+            </div>
+            <div class="text-sm font-semibold text-gray-900 whitespace-nowrap flex-shrink-0">
+              {{ formatCurrency(product.sellingPrice) }}
             </div>
             <div
               :class="[
@@ -993,6 +1078,9 @@ onMounted(() => {
             <div class="flex-1 min-w-0">
               <div class="font-medium text-gray-900 truncate">{{ product.name }}</div>
               <div class="text-xs text-gray-400">{{ product.sku }}</div>
+            </div>
+            <div class="text-sm font-semibold text-gray-900 whitespace-nowrap flex-shrink-0">
+              {{ formatCurrency(product.sellingPrice) }}
             </div>
             <div
               :class="[
@@ -1218,9 +1306,9 @@ onMounted(() => {
                   <button
                     @click="openItemDiscount(index)"
                     class="h-8 text-xs px-2 rounded-lg border hover:bg-gray-100 active:bg-gray-200"
-                    :class="item.discount ? 'text-green-600 border-green-300 bg-green-50' : 'text-gray-400 border-gray-200'"
+                    :class="lineDiscount(item) ? 'text-green-600 border-green-300 bg-green-50' : 'text-gray-400 border-gray-200'"
                   >
-                    {{ item.discount ? ('-' + formatCurrency(item.discount)) : '%' }}
+                    {{ lineDiscount(item) ? ('-' + formatCurrency(lineDiscount(item))) : '%' }}
                   </button>
                   <button
                     @click="removeFromCart(item)"
@@ -1293,6 +1381,15 @@ onMounted(() => {
         <!-- Payment Buttons -->
         <div class="p-3 border-t space-y-2">
           <button
+            v-if="!currentShift && terminals.length > 0"
+            @click="showOpenShiftModal = true"
+            class="btn-primary w-full py-4 text-lg rounded-xl active:scale-[0.98] transition-transform"
+          >
+            <ClockIcon class="h-6 w-6 mr-2" />
+            {{ $t('pos.openShiftToSell') }}
+          </button>
+          <button
+            v-else
             @click="openPayment"
             :disabled="cart.items.length === 0 || !currentShift"
             class="btn-primary w-full py-4 text-lg rounded-xl active:scale-[0.98] transition-transform"
@@ -1302,8 +1399,8 @@ onMounted(() => {
           </button>
           <button
             @click="sellAsDebt"
-            :disabled="cart.items.length === 0 || !currentShift"
-            class="w-full py-3 text-sm border-2 border-orange-500 text-orange-600 rounded-xl hover:bg-orange-50 active:bg-orange-100 transition-colors flex items-center justify-center"
+            :disabled="processing || cart.items.length === 0 || !currentShift"
+            class="w-full py-3 text-sm border-2 border-orange-500 disabled:opacity-50 text-orange-600 rounded-xl hover:bg-orange-50 active:bg-orange-100 transition-colors flex items-center justify-center"
           >
             <DocumentTextIcon class="h-5 w-5 mr-2" />
             {{ $t('pos.sellAsDebt') }}
@@ -1315,7 +1412,7 @@ onMounted(() => {
     <!-- Payment Modal -->
     <div v-if="showPaymentModal" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showPaymentModal = false"></div>
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="!processing && (showPaymentModal = false)"></div>
         <div class="relative bg-white rounded-lg max-w-lg w-full p-6">
           <h3 class="text-xl font-bold text-gray-900 mb-4">{{ $t('pos.paymentMethod') }}</h3>
 
@@ -1384,7 +1481,7 @@ onMounted(() => {
                 class="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
               >
                 <div class="flex items-center">
-                  <span class="text-sm font-medium">{{ payment.method }}</span>
+                  <span class="text-sm font-medium">{{ paymentMethodLabel(payment.method) }}</span>
                 </div>
                 <div class="flex items-center gap-2">
                   <span class="font-medium">{{ formatCurrency(payment.amount) }}</span>
@@ -1443,6 +1540,7 @@ onMounted(() => {
                 min="0"
                 class="input text-lg text-center"
               />
+              <p v-if="cashShort" class="mt-1 text-sm text-red-600">{{ $t('pos.receivedLessThanAmount') }}</p>
               <div v-if="change > 0" class="mt-2 p-3 bg-green-50 rounded-lg text-center">
                 <p class="text-sm text-green-600">{{ $t('pos.change') }}</p>
                 <p class="text-2xl font-bold text-green-700">{{ formatCurrency(change) }}</p>
@@ -1453,8 +1551,8 @@ onMounted(() => {
             <button
               v-if="currentPayment.amount > 0"
               @click="addPaymentSplit"
-              :disabled="currentPayment.method === 'CREDIT' && !cart.customerId"
-              class="w-full py-2 border-2 border-primary-500 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
+              :disabled="cashShort || (currentPayment.method === 'CREDIT' && !cart.customerId)"
+              class="w-full py-2 border-2 disabled:opacity-50 border-primary-500 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
             >
               <PlusIcon class="h-5 w-5 inline mr-1" />
               {{ $t('pos.addSplit') }}
@@ -1463,16 +1561,16 @@ onMounted(() => {
 
           <!-- Action Buttons -->
           <div class="flex space-x-3 mt-6">
-            <button @click="showPaymentModal = false" class="btn-secondary flex-1">
+            <button @click="showPaymentModal = false" :disabled="processing" class="btn-secondary flex-1">
               {{ $t('cancel') }}
             </button>
             <button
               @click="processPayment"
-              :disabled="!canCompleteSale || (currentPayment.method === 'CREDIT' && !cart.customerId)"
+              :disabled="processing || cashShort || !canCompleteSale || (currentPayment.method === 'CREDIT' && !cart.customerId)"
               class="btn-primary flex-1"
             >
               <CheckIcon class="h-5 w-5 mr-2" />
-              {{ $t('pos.completeSale') }}
+              {{ processing ? $t('pos.processing') : $t('pos.completeSale') }}
             </button>
           </div>
         </div>

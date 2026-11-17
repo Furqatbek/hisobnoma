@@ -51,6 +51,8 @@
   "confirmDebtSale": "{customer} га {amount} сўм насияга сотишни тасдиқлайсизми?",
   "customerRequiredForDebt": "Насия сотув учун мижоз танлаш шарт",
   "paymentLessThanTotal": "Тўлов суммаси жами суммадан кам",
+  "receivedLessThanAmount": "Қабул қилинган нақд пул тўлов суммасидан кам",
+  "openShiftToSell": "Сотиш учун сменани очинг",
   "paymentFailed": "Тўлов амалга ошмади",
   "failedToCreateCustomer": "Мижоз яратишда хатолик",
   "noTerminalAvailable": "Фаол терминал топилмади",
