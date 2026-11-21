@@ -425,7 +425,8 @@ Returns `201` with the completed transaction.
 
 **Minimum price.** A sale line whose charged unit price (after its line discount) is below the
 product's `minSellingPrice` is rejected with `400 PRICE_BELOW_MIN`. The floor is scaled to the
-sale unit when an alternate UOM is used. This applies to `POST /transactions` as well.
+sale unit when an alternate UOM is used. This applies everywhere a sale line is written:
+`POST /transactions`, adding a line, updating a line, and the mobile quick-sale.
 
 ---
 

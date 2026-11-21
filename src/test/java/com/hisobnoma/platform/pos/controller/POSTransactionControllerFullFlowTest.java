@@ -674,6 +674,57 @@ class POSTransactionControllerFullFlowTest {
     }
 
     @Test
+    void addLineAndUpdateLine_belowMinimumSellingPrice_areRejected() throws Exception {
+        Product floored = productRepository.saveAndFlush(Product.builder()
+                .sku("SKU-TX-MIN2").name("Floored Product 2")
+                .category(category).baseUom(uom)
+                .sellingPrice(new BigDecimal("50000"))
+                .minSellingPrice(new BigDecimal("45000"))
+                .costPrice(new BigDecimal("30000"))
+                .trackInventory(false).active(true).sellable(true)
+                .tenantId(tenant.getId()).build());
+        String linesUrl = BASE_URL + "/" + existingTransaction.getId() + "/lines";
+
+        // Adding a line below the floor (the path the mobile quick-sale uses) is refused...
+        mockMvc.perform(post(linesUrl).with(fullAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(AddLineRequest.builder()
+                                .productId(floored.getId()).quantity(BigDecimal.ONE)
+                                .unitPrice(new BigDecimal("40000")).build())))
+                .andExpect(status().is4xxClientError())
+                .andExpect(jsonPath("$.code").value("PRICE_BELOW_MIN"));
+
+        // ...also when a discount takes an acceptable price under it.
+        mockMvc.perform(post(linesUrl).with(fullAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(AddLineRequest.builder()
+                                .productId(floored.getId()).quantity(BigDecimal.ONE)
+                                .unitPrice(new BigDecimal("50000"))
+                                .discountAmount(new BigDecimal("10000")).build())))
+                .andExpect(status().is4xxClientError())
+                .andExpect(jsonPath("$.code").value("PRICE_BELOW_MIN"));
+
+        // At list price it is accepted; lowering it afterwards is refused.
+        MvcResult added = mockMvc.perform(post(linesUrl).with(fullAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(AddLineRequest.builder()
+                                .productId(floored.getId()).quantity(new BigDecimal("2")).build())))
+                .andExpect(status().is2xxSuccessful())
+                .andReturn();
+        long lineId = objectMapper.readTree(added.getResponse().getContentAsString())
+                .path("data").path("lines").get(0).path("id").asLong();
+        entityManager.flush();
+        entityManager.clear();
+
+        mockMvc.perform(put(linesUrl + "/" + lineId).with(fullAuth())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(UpdateLineRequest.builder()
+                                .unitPrice(new BigDecimal("44999")).build())))
+                .andExpect(status().is4xxClientError())
+                .andExpect(jsonPath("$.code").value("PRICE_BELOW_MIN"));
+    }
+
+    @Test
     void checkout_discountWithoutPermission_isForbidden() throws Exception {
         UserPrincipal principal = new UserPrincipal(
                 user.getId(), user.getUsername(), "password123", tenant.getId(),

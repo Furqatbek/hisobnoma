@@ -353,6 +353,18 @@ public class POSTransactionService {
         String taxCode = null;
         BigDecimal lineDiscount = request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO;
 
+        if (transaction.getTransactionType() == TransactionType.SALE) {
+            // A percent discount counts too: use whichever discount is larger.
+            BigDecimal effectiveDiscount = lineDiscount;
+            if (request.getDiscountPercent() != null) {
+                BigDecimal percentDiscount = unitPrice.multiply(saleQuantity)
+                        .multiply(request.getDiscountPercent())
+                        .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                effectiveDiscount = effectiveDiscount.max(percentDiscount);
+            }
+            enforceMinSellingPrice(product, productUom, unitPrice, saleQuantity, effectiveDiscount);
+        }
+
         if (product.getTaxCode() != null) {
             taxCode = product.getTaxCode();
             TaxRate rate = taxCalculationService.getApplicableRate(taxCode, LocalDate.now());
@@ -426,6 +438,11 @@ public class POSTransactionService {
         }
 
         BigDecimal oldQuantity = line.getQuantity();
+        // Base units per sale unit for this line (1 unless it was sold in an alternate UOM).
+        BigDecimal unitFactor = line.getSaleQuantity() != null && line.getSaleQuantity().signum() > 0
+                && oldQuantity != null
+                ? oldQuantity.divide(line.getSaleQuantity(), 6, RoundingMode.HALF_UP)
+                : BigDecimal.ONE;
 
         if (request.getQuantity() != null) {
             line.setQuantity(request.getQuantity());
@@ -444,6 +461,14 @@ public class POSTransactionService {
 
         // calculateLineTotal() recalculates tax on the post-discount amount
         line.calculateLineTotal();
+
+        if (transaction.getTransactionType() == TransactionType.SALE && !line.isReturn()
+                && line.getQuantity() != null && unitFactor.signum() > 0) {
+            BigDecimal saleUnits = line.getQuantity().divide(unitFactor, 6, RoundingMode.HALF_UP);
+            enforceMinSellingPrice(line.getProduct(), unitFactor, line.getUnitPrice(), saleUnits,
+                    line.getDiscountAmount() != null ? line.getDiscountAmount() : BigDecimal.ZERO);
+        }
+
         transaction.recalculateTotals();
         transaction = transactionRepository.save(transaction);
 
@@ -844,14 +869,20 @@ public class POSTransactionService {
      */
     private void enforceMinSellingPrice(Product product, ProductUom productUom, BigDecimal unitPrice,
                                         BigDecimal saleQuantity, BigDecimal lineDiscount) {
+        enforceMinSellingPrice(product,
+                productUom != null ? productUom.toBaseQuantity(BigDecimal.ONE) : BigDecimal.ONE,
+                unitPrice, saleQuantity, lineDiscount);
+    }
+
+    /** @param unitFactor base units per sale unit (1 when sold in the base unit) */
+    private void enforceMinSellingPrice(Product product, BigDecimal unitFactor, BigDecimal unitPrice,
+                                        BigDecimal saleQuantity, BigDecimal lineDiscount) {
         BigDecimal min = product.getMinSellingPrice();
         if (min == null || min.signum() <= 0 || unitPrice == null
                 || saleQuantity == null || saleQuantity.signum() <= 0) {
             return;
         }
-        BigDecimal floor = productUom != null
-                ? min.multiply(productUom.toBaseQuantity(BigDecimal.ONE))
-                : min;
+        BigDecimal floor = min.multiply(unitFactor);
         BigDecimal charged = unitPrice.subtract(
                 lineDiscount.divide(saleQuantity, 4, RoundingMode.HALF_UP));
         if (charged.compareTo(floor) < 0) {

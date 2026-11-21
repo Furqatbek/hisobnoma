@@ -654,6 +654,10 @@ POST /pos/quick-sale
 
 **Required Permissions:** `MOBILE_QUICK_SALE` or `POS_SALE_CREATE`
 
+**Minimum price.** A line whose `unitPrice` (after its `discountAmount`) is below the product's
+`minSellingPrice` is rejected with `400 PRICE_BELOW_MIN` and the sale is not saved. The barcode
+lookup returns `minSellingPrice`, so the app can check before submitting.
+
 **Request Body:**
 ```json
 {
